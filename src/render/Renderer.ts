@@ -9,6 +9,11 @@ import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
 
+// Lightweight scene dimming for menu and pause overlays
+const MENU_DIM_RGB = '8, 2, 26';
+const MENU_DIM_ALPHA = 0.6;
+const MENU_DIM_SPEED = 8;
+
 export class Renderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -19,23 +24,31 @@ export class Renderer {
   public screenShake = 0;
   public screenFlash = 0;
 
+  private menuDim = MENU_DIM_ALPHA;
+  private lastRenderTime = performance.now();
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+
     const context = canvas.getContext('2d');
     if (!context) {
       throw new Error('Canvas 2D context not supported');
     }
+
     this.ctx = context;
 
     this.resizeObserver = new ResizeObserver(() => this.fitToDisplay());
     this.resizeObserver.observe(this.canvas);
+
     this.fitToDisplay();
   }
 
   public fitToDisplay(): void {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
     this.canvas.width = this.canvas.clientWidth * dpr;
     this.canvas.height = this.canvas.clientHeight * dpr;
+
     this.scale = this.canvas.width / GAME_WIDTH;
   }
 
@@ -49,15 +62,17 @@ export class Renderer {
 
   public update(dt: number, gameState: GameState, serveTime: number): void {
     const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : 0.12;
+
     this.background.laserIntensity +=
       (targetLaserIntensity - this.background.laserIntensity) * Math.min(1, dt * 2.5);
 
     this.screenShake *= Math.exp(-dt * SCREEN_SHAKE_DECAY);
+
     this.screenFlash = Math.max(0, this.screenFlash - dt * SCREEN_FLASH_DECAY);
   }
 
   public render(
-    _gameState: GameState,
+    gameState: GameState,
     gameMode: GameMode,
     paddles: [Paddle, Paddle],
     ball: Ball,
@@ -71,25 +86,35 @@ export class Renderer {
   ): void {
     const ctx = this.ctx;
 
-    // Reset transform to handle high DPI
+    // Independent clock for dimming, including while paused
+    const now = performance.now();
+    const frameDt = Math.min(0.1, (now - this.lastRenderTime) / 1000);
+    this.lastRenderTime = now;
+
+    const dimTarget = gameState === 'play' ? 0 : MENU_DIM_ALPHA;
+
+    this.menuDim += (dimTarget - this.menuDim) * Math.min(1, frameDt * MENU_DIM_SPEED);
+
+    // Reset transform for high-DPI displays
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
 
-    // Render animated background
+    // Animated background
     this.background.render(ctx, analyser, gameTime, this.screenShake, isRotated);
 
     ctx.save();
 
-    // Apply screen shake offset
+    // Screen shake
     if (this.screenShake > 0.2) {
       const shakeX = (Math.random() - 0.5) * this.screenShake;
       const shakeY = (Math.random() - 0.5) * this.screenShake;
+
       ctx.translate(shakeX, shakeY);
     }
 
     // Court boundaries
     CourtRenderer.render(ctx);
 
-    // HUD (scores, "GET READY" prompt)
+    // HUD
     if (gameMode > 0) {
       HudRenderer.render(ctx, paddles, serveTime, readyText, gameTime, isRotated);
     }
@@ -97,11 +122,12 @@ export class Renderer {
     // Paddles
     paddles.forEach((paddle) => EntityRenderer.renderPaddle(ctx, paddle));
 
-    // Neon glowing Ball
+    // Ball
     EntityRenderer.renderBall(ctx, ball, rally, gameTime, serveTime);
 
-    // Particles & Shockwave rings
+    // Particles and shockwaves
     EntityRenderer.renderParticles(ctx, particleSystem.particles);
+
     EntityRenderer.renderShockwaves(ctx, particleSystem.rings);
 
     ctx.restore();
@@ -110,9 +136,17 @@ export class Renderer {
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
 
-    // Screen flash overlay
+    // Lightweight menu / pause overlay
+    // No canvas filters, extra buffers, or blur passes
+    if (this.menuDim > 0.003) {
+      ctx.fillStyle = `rgba(${MENU_DIM_RGB}, ${this.menuDim})`;
+      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    }
+
+    // Screen flash
     if (this.screenFlash > 0) {
       ctx.fillStyle = `rgba(255, 255, 255, ${this.screenFlash * 0.25})`;
+
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     }
   }

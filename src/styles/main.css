@@ -51,7 +51,7 @@ body {
   position: relative;
   isolation: isolate;
 
-  width: min(96vw, calc(80vh * 1.6));
+  width: min(96vw, calc(80vh * 1.45));
   aspect-ratio: 8 / 5;
 
   overflow: hidden;
@@ -113,9 +113,6 @@ body {
 
   padding: 12px;
   text-align: center;
-
-  background: rgba(8, 2, 26, 0.6);
-  backdrop-filter: blur(3px);
 
   transition:
     opacity 0.35s,

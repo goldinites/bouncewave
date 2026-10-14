@@ -32,6 +32,7 @@ import { UIManager } from '@/ui/UIManager';
 import { AiController } from '@/core/AiController';
 import { InputHandler } from '@/core/InputHandler';
 import { Physics } from '@/core/Physics';
+import { FpsMeter } from '@/debug/FpsMeter';
 
 export class Game {
   private settings: UserSettings;
@@ -55,6 +56,8 @@ export class Game {
   private rally = 0;
   private lastTimestamp = 0;
   private isRunning = false;
+
+  private readonly fpsMeter = new FpsMeter();
 
   constructor(canvas: HTMLCanvasElement) {
     this.settings = SettingsStorage.load();
@@ -126,8 +129,6 @@ export class Game {
   }
 
   public start(mode: GameMode = GameMode.PLAYER_VS_AI): void {
-    this.audio.music.newSong();
-    this.renderer.background.nextBackground();
     this.renderer.addFlash(SCREEN_FLASH_START);
 
     this.gameMode = mode;
@@ -141,6 +142,8 @@ export class Game {
   }
 
   public toMenu(): void {
+    this.audio.music.newSong();
+    this.renderer.background.nextBackground();
     this.gameMode = GameMode.DEMO;
     this.paddles[0].resetScore();
     this.paddles[1].resetScore();
@@ -282,6 +285,8 @@ export class Game {
   private gameLoop(timestamp: number): void {
     if (!this.isRunning) return;
 
+    this.fpsMeter.tick(timestamp);
+
     const dt = Math.min(0.033, (timestamp - this.lastTimestamp) / 1000);
     this.lastTimestamp = timestamp;
 
@@ -310,5 +315,6 @@ export class Game {
     this.isRunning = false;
     this.renderer.dispose();
     this.audio.music.dispose();
+    this.fpsMeter.dispose();
   }
 }
