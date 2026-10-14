@@ -9,7 +9,7 @@ A retro-futuristic, synthwave-themed Canvas Pong game decomposed and refactored 
 - **Procedural Synthwave Music Engine**: Dynamic Web Audio API synthesizer generating multitrack retro synthwave music with adaptive intensity responding in real-time to ball speeds, rallies, and game points.
 - **Dynamic 2D Visualizer**:
   - Laser light show with audio spectrum analyzer and oscilloscope.
-  - Memphis 80s/90s geometric aesthetic with CRT/VHS scanlines, chromatic glitching, and OSD playback timer.
+  - Memphis 80s/90s geometric aesthetic with CRT/VHS scan lines, chromatic glitching, and OSD playback timer.
 - **Physics & Particle Engine**: Accurate sub-step deflection collisions, acceleration, particle bursts, shockwave rings, and screen shake.
 - **AI Opponents**: 4 configurable difficulty levels (Easy, Normal, Hard, Insane) with realistic human-like error modeling.
 - **Full Localization (i18n)**: English and Russian languages supported.
@@ -82,8 +82,8 @@ The project follows clean architecture principles with single-responsibility mod
 
 ## 💻 Available Scripts
 
-- `npm run dev` — Run local development server with Hot Module Reloading (HMR) at http://localhost:3000.
-- `npm run build` — Typecheck (`tsc`) and compile optimized production bundle to `dist/`.
+- `npm run dev` — Run a local development server with Hot Module Reloading (HMR) at http://localhost:3000.
+- `npm run build` — Typecheck (`tsc`) and compile an optimized production bundle to `dist/`.
 - `npm run preview` — Locally preview the production build.
 - `npm test` — Run all unit test suites via Vitest.
 - `npm run lint` — Lint codebase with ESLint.

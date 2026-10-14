@@ -15,7 +15,7 @@ export interface TranslationSchema {
   on: string;
   off: string;
   lang: string;
-  lname: string;
+  lang_name: string;
   pause: string;
   win: string;
   lose: string;

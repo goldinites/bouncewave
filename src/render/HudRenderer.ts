@@ -2,6 +2,10 @@ import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
 import { Paddle } from '@/entities/Paddle';
 
 export class HudRenderer {
+  private static displayedScores: [number, number] = [-1, -1];
+  private static scorePop: [number, number] = [0, 0];
+  private static lastAnimationTime = 0;
+
   public static render(
     ctx: CanvasRenderingContext2D,
     paddles: [Paddle, Paddle],
@@ -10,13 +14,39 @@ export class HudRenderer {
     time: number,
     isRotated: boolean,
   ): void {
+    const now = performance.now();
+
+    const dt =
+      this.lastAnimationTime === 0 ? 0 : Math.min((now - this.lastAnimationTime) / 1000, 0.05);
+
+    this.lastAnimationTime = now;
+
+    const scores = [paddles[0].score, paddles[1].score] as const;
+
+    scores.forEach((score, index) => {
+      if (this.displayedScores[index] === -1) {
+        this.displayedScores[index] = score;
+      } else if (this.displayedScores[index] !== score) {
+        this.displayedScores[index] = score;
+        this.scorePop[index] = 1;
+      }
+
+      this.scorePop[index] = Math.max(0, this.scorePop[index] - dt / 0.22);
+    });
+
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = "900 64px Orbitron, 'Russo One', sans-serif";
+    ctx.font = "700 64px Orbitron, 'Russo One', sans-serif";
 
     // Player scores
     paddles.forEach((paddle, index) => {
+      const pop = Math.sin((1 - this.scorePop[index]) * Math.PI);
+
+      const scale = 1 + pop * 0.5;
+
+      ctx.save();
+
       ctx.shadowColor = paddle.color;
       ctx.shadowBlur = 22;
       ctx.fillStyle = paddle.color;
@@ -24,7 +54,19 @@ export class HudRenderer {
 
       const posX = GAME_WIDTH / 2 + (index ? 1 : -1) * 90;
       const posY = 82;
-      this.renderText(ctx, String(paddle.score), posX, posY, isRotated);
+
+      ctx.translate(posX, posY);
+
+      if (isRotated) {
+        ctx.rotate(Math.PI / 2);
+      }
+
+      ctx.scale(scale, scale);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(paddle.score), 0, 0);
+
+      ctx.restore();
     });
 
     // "GET READY" indicator

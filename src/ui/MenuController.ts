@@ -105,7 +105,7 @@ export class MenuController {
     const difficultyLabel = `${this.i18n.t('diff')}: ${currentDiffInfo[0]}`;
     const musicLabel = `${this.i18n.t('music')}: ${this.i18n.t(this.settings.musicMuted ? 'off' : 'on')}`;
     const soundLabel = `${this.i18n.t('sound')}: ${this.i18n.t(this.settings.soundMuted ? 'off' : 'on')}`;
-    const languageLabel = `${this.i18n.t('lang')}: ${this.i18n.t('lname')}`;
+    const languageLabel = `${this.i18n.t('lang')}: ${this.i18n.t('lang_name')}`;
 
     this.uiManager.showMenu(
       this.i18n.t('settings'),

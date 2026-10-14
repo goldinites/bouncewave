@@ -259,7 +259,7 @@ export class BackgroundRenderer {
       ctx.restore();
     }
 
-    // VHS noise glitches & scanlines
+    // VHS noise glitches & scan lines
     ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
     for (let i = 0; i < 5; i++) {
       ctx.fillRect(
