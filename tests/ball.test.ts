@@ -1,0 +1,52 @@
+import { describe, expect, it } from 'vitest';
+import {
+  BALL_INITIAL_RADIUS,
+  BALL_INITIAL_SPEED,
+  BALL_TRAIL_MAX_LENGTH,
+  GAME_HEIGHT,
+  GAME_WIDTH,
+} from '@/constants/game.constants';
+import { Ball } from '@/entities/Ball';
+
+describe('Ball', () => {
+  it('serves ball towards direction with initial speed', () => {
+    const ball = new Ball();
+    ball.serve(1);
+
+    expect(ball.x).toBe(GAME_WIDTH / 2);
+    expect(ball.y).toBe(GAME_HEIGHT / 2);
+    expect(ball.speed).toBe(BALL_INITIAL_SPEED);
+    expect(ball.vx).toBeGreaterThan(0);
+    expect(ball.trail).toEqual([]);
+  });
+
+  it('serves ball leftwards when direction is -1', () => {
+    const ball = new Ball();
+    ball.serve(-1);
+
+    expect(ball.vx).toBeLessThan(0);
+  });
+
+  it('manages trail length without exceeding maximum', () => {
+    const ball = new Ball();
+    for (let i = 0; i < 20; i++) {
+      ball.x = i * 10;
+      ball.y = i * 5;
+      ball.updateTrail();
+    }
+
+    expect(ball.trail.length).toBe(BALL_TRAIL_MAX_LENGTH);
+    expect(ball.trail[ball.trail.length - 1]).toEqual({ x: 190, y: 95 });
+  });
+
+  it('updates dynamic radius on high rally and speed', () => {
+    const ball = new Ball();
+    ball.speed = 800;
+
+    const initialRadius = ball.radius;
+    ball.updateRadius(0.1, 14, 920);
+
+    expect(ball.radius).toBeGreaterThan(initialRadius);
+    expect(ball.radius).toBeGreaterThan(BALL_INITIAL_RADIUS);
+  });
+});

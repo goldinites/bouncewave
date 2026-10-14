@@ -1,0 +1,304 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0320;
+  --pink: #ff2bd6;
+  --cyan: #19f0ff;
+  --text: #f4e9ff;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: radial-gradient(ellipse at 50% 30%, #2a0a5e 0, var(--bg) 70%);
+  color: var(--text);
+  font-family: 'Orbitron', 'Russo One', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+#stage {
+  position: relative;
+  width: min(96vw, calc(80vh * 1.6));
+  aspect-ratio: 8/5;
+  border: 2px solid var(--cyan);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  box-shadow:
+    0 0 22px var(--cyan),
+    0 0 80px rgba(255, 43, 214, 0.45),
+    inset 0 0 40px rgba(25, 240, 255, 0.25);
+}
+
+#c {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: none;
+}
+
+#stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px 4px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55));
+  animation: flick 5s infinite;
+}
+
+@keyframes flick {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 0.75;
+  }
+}
+
+#ui {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+  text-align: center;
+  background: rgba(8, 2, 26, 0.6);
+  backdrop-filter: blur(3px);
+  transition: opacity 0.35s;
+}
+
+#ui.off {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+h1 {
+  margin: 0;
+  font-weight: 900;
+  font-size: clamp(22px, 5.6vw, 58px);
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-shadow:
+    0 0 6px #fff,
+    0 0 18px var(--pink),
+    0 0 42px var(--pink),
+    3px 0 rgba(25, 240, 255, 0.8),
+    -3px 0 rgba(255, 43, 214, 0.8);
+  animation: glitch 3.4s infinite;
+}
+
+@keyframes glitch {
+  0%,
+  90%,
+  100% {
+    transform: none;
+  }
+  92% {
+    transform: translate(-4px, 1px) skewX(-6deg);
+  }
+  94% {
+    transform: translate(4px, -1px) skewX(5deg);
+  }
+  96% {
+    transform: none;
+  }
+}
+
+#sub {
+  margin: 0;
+  font-size: clamp(10px, 1.9vw, 15px);
+  color: var(--cyan);
+  letter-spacing: 0.14em;
+  text-shadow: 0 0 8px var(--cyan);
+}
+
+#btns {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+  min-width: clamp(170px, 38%, 280px);
+}
+
+button {
+  --c: var(--cyan);
+  font: 700 clamp(11px, 2vw, 15px) inherit;
+  font-family: inherit;
+  letter-spacing: 0.1em;
+  color: var(--c);
+  background: rgba(8, 2, 26, 0.5);
+  border: 2px solid var(--c);
+  border-radius: 8px;
+  padding: 0.85em 1.5em;
+  cursor: pointer;
+  filter: drop-shadow(0 0 6px var(--c));
+  transition:
+    transform 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+button + button {
+  --c: var(--pink);
+}
+
+button + button + button {
+  --c: #b79bff;
+}
+
+button:hover,
+button:focus-visible {
+  background: var(--c);
+  color: #12002e;
+  transform: translateY(-2px);
+  outline: none;
+}
+
+#hint {
+  margin: 0;
+  font-size: clamp(10px, 1.6vw, 13px);
+  color: #b9a4e6;
+  text-align: center;
+  padding: 0 12px;
+  line-height: 1.6;
+}
+
+#fit {
+  display: contents;
+}
+
+#sub:empty {
+  display: none;
+}
+
+#pbtn {
+  display: none;
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  right: 10px;
+  z-index: 5;
+  padding: 0.5em 0.85em;
+  font-size: 14px;
+  transition: opacity 0.3s;
+}
+
+#pbtn.x {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  #pbtn {
+    display: block;
+  }
+}
+
+@media (max-height: 520px) {
+  #hint {
+    display: none;
+  }
+
+  #stage {
+    width: min(96vw, calc(92vh * 1.6));
+  }
+
+  #btns {
+    gap: 6px;
+  }
+
+  #btns button {
+    padding: 0.6em 1.2em;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  :root {
+    --w: min(96vw, 50vh);
+  }
+
+  #fit {
+    display: block;
+    position: relative;
+    flex: none;
+    width: var(--w);
+    height: calc(var(--w) * 1.6);
+  }
+
+  #stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(var(--w) * 1.6);
+    height: var(--w);
+    aspect-ratio: auto;
+    transform: translate(-50%, -50%) rotate(-90deg);
+  }
+
+  #stage::after {
+    background:
+      repeating-linear-gradient(to right, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px 4px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55));
+  }
+
+  #ui {
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    width: var(--w);
+    height: calc(var(--w) * 1.6);
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+
+  h1 {
+    font-size: clamp(30px, 11vw, 52px);
+  }
+
+  #sub,
+  #hint {
+    font-size: 12px;
+  }
+
+  #btns button {
+    font-size: 15px;
+    padding: 1em 1.4em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  h1,
+  #stage::after {
+    animation: none;
+  }
+}
