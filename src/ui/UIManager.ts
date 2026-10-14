@@ -18,12 +18,12 @@ export class UIManager {
   constructor(i18n: I18nManager) {
     this.i18n = i18n;
 
-    this.uiOverlay = this.getRequiredElement<HTMLElement>('ui');
-    this.titleElement = this.getRequiredElement<HTMLElement>('title');
-    this.subtitleElement = this.getRequiredElement<HTMLElement>('sub');
-    this.buttonsContainer = this.getRequiredElement<HTMLElement>('btns');
-    this.hintElement = this.getRequiredElement<HTMLElement>('hint');
-    this.pauseButton = this.getRequiredElement<HTMLButtonElement>('pbtn');
+    this.uiOverlay = this.getRequiredElement<HTMLElement>('gameUI');
+    this.titleElement = this.getRequiredElement<HTMLElement>('gameTitle');
+    this.subtitleElement = this.getRequiredElement<HTMLElement>('gameSubtitle');
+    this.buttonsContainer = this.getRequiredElement<HTMLElement>('gameButtons');
+    this.hintElement = this.getRequiredElement<HTMLElement>('gameHint');
+    this.pauseButton = this.getRequiredElement<HTMLButtonElement>('pauseButton');
 
     this.isCoarsePointer = window.matchMedia('(pointer:coarse)').matches;
     this.updateHint();
@@ -50,7 +50,7 @@ export class UIManager {
       this.buttonsContainer.appendChild(btn);
     });
 
-    this.uiOverlay.classList.remove('off');
+    this.uiOverlay.classList.remove('game__ui--hidden');
 
     const targetButton = (this.buttonsContainer.children[focusIndex] ||
       this.buttonsContainer.firstChild) as HTMLElement | null;
@@ -58,11 +58,11 @@ export class UIManager {
   }
 
   public hideMenu(): void {
-    this.uiOverlay.classList.add('off');
+    this.uiOverlay.classList.add('game__ui--hidden');
   }
 
   public setPauseButtonVisibility(visible: boolean): void {
-    this.pauseButton.classList.toggle('x', !visible);
+    this.pauseButton.classList.toggle('game-pause--hidden', !visible);
   }
 
   public bindPauseButton(onClick: () => void): void {

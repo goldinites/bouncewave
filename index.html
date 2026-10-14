@@ -1,29 +1,34 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>PING PONG</title>
+    <title>Retrowave Pong</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="icon" href="/favicon.svg" />
     <link
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Russo+One&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
-    <div id="fit">
-      <div id="stage">
-        <canvas id="c" width="800" height="500"></canvas>
-        <div id="ui">
-          <h1 id="title">PING PONG</h1>
-          <p id="sub"></p>
-          <div id="btns"></div>
+    <div class="game" id="gameContainer">
+      <div class="game__stage" id="gameStage">
+        <canvas class="game__canvas" id="gameCanvas" width="800" height="500"></canvas>
+        <div class="game__ui" id="gameUI">
+          <h1 class="game__title" id="gameTitle">PING PONG</h1>
+          <p class="game__subtitle" id="gameSubtitle"></p>
+          <div class="game__buttons" id="gameButtons"></div>
         </div>
       </div>
     </div>
-    <p id="hint"></p>
-    <button id="pbtn" aria-label="Pause">II</button>
+
+    <p class="game-hint" id="gameHint"></p>
+
+    <button class="game-pause" id="pauseButton" aria-label="Pause">II</button>
+
     <script type="module" src="/src/index.ts"></script>
   </body>
 </html>

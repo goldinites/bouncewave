@@ -21,7 +21,7 @@ export const BALL_TRAIL_MAX_LENGTH = 9;
 export const BALL_OUT_OF_BOUNDS_OFFSET = 30;
 export const BALL_MAX_TRAIL_RALLY = 14;
 
-export const WINNING_SCORE = 7;
+export const WINNING_SCORE = 10;
 
 export const SERVE_DELAY_NORMAL = 1.2;
 export const SERVE_DELAY_START = 1.5;

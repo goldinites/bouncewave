@@ -92,6 +92,10 @@ export class MenuController {
           label: this.i18n.t('settings'),
           action: () => this.showSettingsMenu(() => this.showGameOverMenu(winnerIndex, scores, 1)),
         },
+        {
+          label: this.i18n.t('menu'),
+          action: () => this.actions.onReturnToMainMenu(),
+        },
       ],
       focusIndex,
       this.actions.onUnlockAudio,
