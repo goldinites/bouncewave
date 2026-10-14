@@ -46,4 +46,4 @@ export const CSS_CLASSES = {
   GAME_PAUSE_HIDDEN: 'game__pause--hidden',
   CRT_GLITCH_ACTIVE: 'crt-glitch-active',
   VICTORY_BURST_ACTIVE: 'victory-burst-active',
-};
+} as const;

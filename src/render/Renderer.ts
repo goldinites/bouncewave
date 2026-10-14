@@ -85,11 +85,11 @@ export class Renderer {
   }
 
   public triggerCrtGlitch(duration = LOSS_DURATION): void {
-    this.triggerFinalEffect('crt-glitch-active', duration);
+    this.triggerFinalEffect(CSS_CLASSES.CRT_GLITCH_ACTIVE, duration);
   }
 
   public triggerVictoryEffect(duration = VICTORY_DURATION): void {
-    this.triggerFinalEffect('victory-burst-active', duration);
+    this.triggerFinalEffect(CSS_CLASSES.VICTORY_BURST_ACTIVE, duration);
   }
 
   public addShake(amount: number): void {
