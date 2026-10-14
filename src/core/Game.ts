@@ -13,12 +13,14 @@ import {
   WINNING_SCORE,
 } from '@/constants/game.constants';
 import {
+  LOSS_DURATION,
   PARTICLE_SCORE_BURST_COUNT,
   PARTICLE_SCORE_BURST_SPEED,
   SCORE_SHOCKWAVE_EXPANSION_SPEED,
   SCREEN_FLASH_SCORE,
   SCREEN_FLASH_START,
   SCREEN_SHAKE_SCORE,
+  VICTORY_DURATION,
 } from '@/constants/visual.constants';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
@@ -57,6 +59,9 @@ export class Game {
   private rally = 0;
   private lastTimestamp = 0;
   private isRunning = false;
+
+  private isFinalSequence = false;
+  private finalSequenceTimer: number | null = null;
 
   private readonly fpsMeter = new FpsMeter();
 
@@ -156,6 +161,8 @@ export class Game {
   }
 
   public togglePause(): void {
+    if (this.isFinalSequence) return;
+
     if (this.gameState === 'paused') {
       this.resume();
       return;
@@ -208,7 +215,7 @@ export class Game {
     this.audio.sfx.playScore();
 
     if (scoringPaddle.score >= WINNING_SCORE) {
-      this.handleGameOver(scoringPlayerIndex);
+      this.beginFinalSequence(scoringPlayerIndex);
       return;
     }
 
@@ -216,7 +223,6 @@ export class Game {
   }
 
   private handleGameOver(winnerIndex: number): void {
-    this.audio.sfx.playGameOver();
     this.gameMode = GameMode.DEMO;
     this.gameState = 'menu';
     this.uiManager.setPauseButtonVisibility(false);
@@ -225,6 +231,35 @@ export class Game {
       this.paddles[0].score,
       this.paddles[1].score,
     ]);
+  }
+
+  private beginFinalSequence(winnerIndex: number): void {
+    if (this.isFinalSequence) return;
+
+    this.isFinalSequence = true;
+
+    const playerWon = winnerIndex === 0;
+
+    if (playerWon) {
+      this.renderer.triggerVictoryEffect(VICTORY_DURATION);
+
+      this.renderer.addFlash(0.9);
+      this.renderer.addShake(12);
+    } else {
+      this.renderer.triggerCrtGlitch(LOSS_DURATION);
+      this.renderer.addShake(18);
+    }
+
+    this.audio.sfx.playGameOver();
+
+    this.finalSequenceTimer = window.setTimeout(
+      () => {
+        this.finalSequenceTimer = null;
+        this.isFinalSequence = false;
+        this.handleGameOver(winnerIndex);
+      },
+      playerWon ? VICTORY_DURATION : LOSS_DURATION,
+    );
   }
 
   private update(dt: number): void {
@@ -291,23 +326,25 @@ export class Game {
     const dt = Math.min(0.033, (timestamp - this.lastTimestamp) / 1000);
     this.lastTimestamp = timestamp;
 
-    if (this.gameState !== 'paused') {
-      this.update(dt);
-    }
+    if (!this.isFinalSequence) {
+      if (this.gameState !== 'paused') {
+        this.update(dt);
+      }
 
-    this.renderer.render(
-      this.gameState,
-      this.gameMode,
-      this.paddles,
-      this.ball,
-      this.particleSystem,
-      this.audio.music.getAnalyser(),
-      this.gameTime,
-      this.serveTime,
-      this.rally,
-      this.i18n.t('ready'),
-      this.inputHandler.isRotated,
-    );
+      this.renderer.render(
+        this.gameState,
+        this.gameMode,
+        this.paddles,
+        this.ball,
+        this.particleSystem,
+        this.audio.music.getAnalyser(),
+        this.gameTime,
+        this.serveTime,
+        this.rally,
+        this.i18n.t('ready'),
+        this.inputHandler.isRotated,
+      );
+    }
 
     requestAnimationFrame((t) => this.gameLoop(t));
   }
@@ -317,5 +354,10 @@ export class Game {
     this.renderer.dispose();
     this.audio.music.dispose();
     this.fpsMeter.dispose();
+
+    if (this.finalSequenceTimer !== null) {
+      window.clearTimeout(this.finalSequenceTimer);
+      this.finalSequenceTimer = null;
+    }
   }
 }

@@ -18,6 +18,9 @@ export const SCREEN_SHAKE_SCORE = 14;
 export const SCREEN_FLASH_SCORE = 0.8;
 export const SCREEN_FLASH_START = 1.0;
 
+export const VICTORY_DURATION = 900;
+export const LOSS_DURATION = 700;
+
 export const MEMPHIS_SHAPE_COUNT = 24;
 
 export const LASER_CONFIGURATIONS: LaserConfig[] = [

@@ -1,5 +1,10 @@
-import { GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
-import { SCREEN_FLASH_DECAY, SCREEN_SHAKE_DECAY } from '@/constants/visual.constants';
+import { CSS_CLASSES, GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
+import {
+  LOSS_DURATION,
+  SCREEN_FLASH_DECAY,
+  SCREEN_SHAKE_DECAY,
+  VICTORY_DURATION,
+} from '@/constants/visual.constants';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { ParticleSystem } from '@/entities/ParticleSystem';
@@ -27,8 +32,12 @@ export class Renderer {
   private menuDim = MENU_DIM_ALPHA;
   private lastRenderTime = performance.now();
 
+  private stage: HTMLElement | null = null;
+  private finalEffectTimer: number | null = null;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+    this.stage = canvas.closest('#gameStage');
 
     const context = canvas.getContext('2d');
     if (!context) {
@@ -50,6 +59,37 @@ export class Renderer {
     this.canvas.height = this.canvas.clientHeight * dpr;
 
     this.scale = this.canvas.width / GAME_WIDTH;
+  }
+
+  private triggerFinalEffect(
+    className: 'crt-glitch-active' | 'victory-burst-active',
+    duration: number,
+  ): void {
+    if (!this.stage) return;
+
+    if (this.finalEffectTimer !== null) {
+      window.clearTimeout(this.finalEffectTimer);
+      this.finalEffectTimer = null;
+    }
+
+    this.stage.classList.remove(CSS_CLASSES.CRT_GLITCH_ACTIVE, CSS_CLASSES.VICTORY_BURST_ACTIVE);
+
+    void this.stage.offsetWidth;
+
+    this.stage.classList.add(className);
+
+    this.finalEffectTimer = window.setTimeout(() => {
+      this.stage?.classList.remove(className);
+      this.finalEffectTimer = null;
+    }, duration);
+  }
+
+  public triggerCrtGlitch(duration = LOSS_DURATION): void {
+    this.triggerFinalEffect('crt-glitch-active', duration);
+  }
+
+  public triggerVictoryEffect(duration = VICTORY_DURATION): void {
+    this.triggerFinalEffect('victory-burst-active', duration);
   }
 
   public addShake(amount: number): void {
@@ -153,5 +193,12 @@ export class Renderer {
 
   public dispose(): void {
     this.resizeObserver.disconnect();
+
+    if (this.finalEffectTimer !== null) {
+      window.clearTimeout(this.finalEffectTimer);
+      this.finalEffectTimer = null;
+    }
+
+    this.stage?.classList.remove(CSS_CLASSES.CRT_GLITCH_ACTIVE, CSS_CLASSES.VICTORY_BURST_ACTIVE);
   }
 }

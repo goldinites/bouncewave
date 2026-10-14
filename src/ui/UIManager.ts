@@ -1,4 +1,5 @@
 import { I18nManager } from '@/i18n/I18nManager';
+import { CSS_CLASSES } from '@/constants/game.constants';
 
 export interface MenuItem {
   label: string;
@@ -49,15 +50,15 @@ export class UIManager {
       this.buttonsContainer.appendChild(btn);
     });
 
-    this.uiOverlay.classList.remove('game__ui--hidden');
+    this.uiOverlay.classList.remove(CSS_CLASSES.GAME_UI_HIDDEN);
   }
 
   public hideMenu(): void {
-    this.uiOverlay.classList.add('game__ui--hidden');
+    this.uiOverlay.classList.add(CSS_CLASSES.GAME_UI_HIDDEN);
   }
 
   public setPauseButtonVisibility(visible: boolean): void {
-    this.pauseButton.classList.toggle('game-pause--hidden', !visible);
+    this.pauseButton.classList.toggle(CSS_CLASSES.GAME_PAUSE_HIDDEN, !visible);
   }
 
   public bindPauseButton(onClick: () => void): void {

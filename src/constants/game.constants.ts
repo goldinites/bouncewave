@@ -40,3 +40,10 @@ export const COLORS = {
   WHITE: '#ffffff',
   OVERLAY_BG: 'rgba(8, 2, 26, 0.6)',
 } as const;
+
+export const CSS_CLASSES = {
+  GAME_UI_HIDDEN: 'game__ui--hidden',
+  GAME_PAUSE_HIDDEN: 'game__pause--hidden',
+  CRT_GLITCH_ACTIVE: 'crt-glitch-active',
+  VICTORY_BURST_ACTIVE: 'victory-burst-active',
+};
