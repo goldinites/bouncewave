@@ -248,6 +248,7 @@ export class Game {
       } else {
         this.ball.updateTrail();
         const rallyRef = { current: this.rally };
+        let scored = false;
 
         Physics.updateBallMovement(
           this.ball,
@@ -260,12 +261,15 @@ export class Game {
           {
             onWallBounce: () => this.audio.sfx.playWallBounce(),
             onPaddleHit: (_idx, r) => this.audio.sfx.playPaddleHit(r),
-            onScore: (winner) => this.handleScore(winner),
+            onScore: (winner) => {
+              scored = true;
+              this.handleScore(winner);
+            },
             onScreenShake: (amount) => this.renderer.addShake(amount),
           },
         );
 
-        this.rally = rallyRef.current;
+        this.rally = scored ? 0 : rallyRef.current;
       }
     }
 
