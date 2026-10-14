@@ -36,18 +36,87 @@ body {
   overflow: hidden;
 }
 
+/*#stage {*/
+/*  position: relative;*/
+/*  width: min(96vw, calc(80vh * 1.6));*/
+/*  aspect-ratio: 8/5;*/
+/*  border: 2px solid var(--cyan);*/
+/*  border-radius: 14px;*/
+/*  overflow: hidden;*/
+/*  background: #000;*/
+/*  box-shadow:*/
+/*    0 0 22px var(--cyan),*/
+/*    0 0 80px rgba(255, 43, 214, 0.45),*/
+/*    inset 0 0 40px rgba(25, 240, 255, 0.25);*/
+/*}*/
+
 #stage {
+  --border-width: 2px;
   position: relative;
+  isolation: isolate;
   width: min(96vw, calc(80vh * 1.6));
-  aspect-ratio: 8/5;
-  border: 2px solid var(--cyan);
+  aspect-ratio: 8 / 5;
+  border: var(--border-width) solid transparent;
   border-radius: 14px;
   overflow: hidden;
-  background: #000;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(135deg, var(--cyan), var(--pink), var(--cyan)) border-box;
+  background-size:
+    100% 100%,
+    300% 300%;
+  animation: neon-border 5s ease-in-out infinite;
   box-shadow:
-    0 0 22px var(--cyan),
-    0 0 80px rgba(255, 43, 214, 0.45),
+    0 0 12px var(--cyan),
+    0 0 30px rgba(255, 43, 214, 0.4),
     inset 0 0 40px rgba(25, 240, 255, 0.25);
+}
+
+@keyframes neon-border {
+  0%,
+  100% {
+    background-position:
+      0 0,
+      0 50%;
+    box-shadow:
+      0 0 10px var(--cyan),
+      0 0 25px rgba(255, 43, 214, 0.3),
+      0 0 45px rgba(25, 240, 255, 0.1),
+      inset 0 0 35px rgba(25, 240, 255, 0.2);
+  }
+
+  25% {
+    background-position:
+      0 0,
+      35% 50%;
+    box-shadow:
+      0 0 14px var(--cyan),
+      0 0 32px rgba(255, 43, 214, 0.4),
+      0 0 55px rgba(25, 240, 255, 0.16),
+      inset 0 0 40px rgba(25, 240, 255, 0.24);
+  }
+
+  50% {
+    background-position:
+      0 0,
+      100% 50%;
+    box-shadow:
+      0 0 17px var(--pink),
+      0 0 38px rgba(25, 240, 255, 0.4),
+      0 0 60px rgba(255, 43, 214, 0.15),
+      inset 0 0 42px rgba(255, 43, 214, 0.18);
+  }
+
+  75% {
+    background-position:
+      0 0,
+      65% 50%;
+    box-shadow:
+      0 0 12px var(--pink),
+      0 0 28px rgba(25, 240, 255, 0.3),
+      0 0 45px rgba(255, 43, 214, 0.1),
+      inset 0 0 35px rgba(255, 43, 214, 0.16);
+  }
 }
 
 #c {
