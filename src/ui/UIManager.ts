@@ -33,7 +33,6 @@ export class UIManager {
     title: string,
     subtitle: string,
     items: MenuItem[],
-    focusIndex = 0,
     onAnyClick?: () => void,
   ): void {
     this.titleElement.textContent = title;
@@ -51,10 +50,6 @@ export class UIManager {
     });
 
     this.uiOverlay.classList.remove('game__ui--hidden');
-
-    const targetButton = (this.buttonsContainer.children[focusIndex] ||
-      this.buttonsContainer.firstChild) as HTMLElement | null;
-    targetButton?.focus();
   }
 
   public hideMenu(): void {

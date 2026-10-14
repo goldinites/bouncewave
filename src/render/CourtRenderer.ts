@@ -1,4 +1,5 @@
 import {
+  COLORS,
   COURT_NET_DASH_PATTERN,
   COURT_NET_LINE_WIDTH,
   GAME_HEIGHT,
@@ -11,11 +12,11 @@ export class CourtRenderer {
 
     // Glowing boundary rails (linear gradient cyan -> pink)
     const railGradient = ctx.createLinearGradient(0, 0, GAME_WIDTH, 0);
-    railGradient.addColorStop(0, '#19f0ff');
-    railGradient.addColorStop(1, '#ff2bd6');
+    railGradient.addColorStop(0, COLORS.CYAN);
+    railGradient.addColorStop(1, COLORS.PINK);
 
     ctx.fillStyle = railGradient;
-    ctx.shadowColor = '#ff2bd6';
+    ctx.shadowColor = COLORS.PINK;
     ctx.shadowBlur = 14;
 
     // Top rail

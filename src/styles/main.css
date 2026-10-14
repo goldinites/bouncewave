@@ -1,17 +1,6 @@
 @import 'reset.css';
-
-:root {
-  color-scheme: dark;
-  box-sizing: border-box;
-
-  --bg: #0b0320;
-  --pink: #ff2bd6;
-  --cyan: #19f0ff;
-  --text: #f4e9ff;
-
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
+@import "vars.css";
+@import "animations.css";
 
 html {
   height: 100%;
@@ -59,7 +48,7 @@ body {
   border-radius: 14px;
 
   background:
-    linear-gradient(#000, #000) padding-box,
+    linear-gradient(var(--black), var(--black)) padding-box,
     linear-gradient(135deg, var(--cyan), var(--pink), var(--cyan)) border-box;
 
   background-size:
@@ -128,7 +117,7 @@ body {
 .game__title {
   margin: 0;
 
-  color: #fff;
+  color: var(--white);
   font-size: clamp(22px, 5.6vw, 58px);
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -190,7 +179,7 @@ body {
 }
 
 .game__buttons button:nth-child(3) {
-  --button-color: #b79bff;
+  --button-color: var(--purple);
 }
 
 .game-button:hover,
@@ -213,7 +202,7 @@ body {
   margin: 0;
   padding: 0 12px;
 
-  color: #b9a4e6;
+  color: var(--purple);
   font-size: clamp(10px, 1.6vw, 13px);
   line-height: 1.6;
   text-align: center;
@@ -229,7 +218,7 @@ body {
   right: 10px;
   z-index: 5;
 
-  padding: 0.5em 0.85em;
+  padding: 5px 6px;
 
   border: 2px solid var(--button-color);
   border-radius: 8px;
@@ -249,169 +238,6 @@ body {
 .game-pause--hidden {
   opacity: 0;
   pointer-events: none;
-}
-
-@keyframes neon-border {
-  0%,
-  100% {
-    background-position:
-      0 0,
-      0 50%;
-
-    box-shadow:
-      0 0 10px var(--cyan),
-      0 0 25px rgba(255, 43, 214, 0.3),
-      0 0 45px rgba(25, 240, 255, 0.1),
-      inset 0 0 35px rgba(25, 240, 255, 0.2);
-  }
-
-  25% {
-    background-position:
-      0 0,
-      35% 50%;
-
-    box-shadow:
-      0 0 14px var(--cyan),
-      0 0 32px rgba(255, 43, 214, 0.4),
-      0 0 55px rgba(25, 240, 255, 0.16),
-      inset 0 0 40px rgba(25, 240, 255, 0.24);
-  }
-
-  50% {
-    background-position:
-      0 0,
-      100% 50%;
-
-    box-shadow:
-      0 0 17px var(--pink),
-      0 0 38px rgba(25, 240, 255, 0.4),
-      0 0 60px rgba(255, 43, 214, 0.15),
-      inset 0 0 42px rgba(255, 43, 214, 0.18);
-  }
-
-  75% {
-    background-position:
-      0 0,
-      65% 50%;
-
-    box-shadow:
-      0 0 12px var(--pink),
-      0 0 28px rgba(25, 240, 255, 0.3),
-      0 0 45px rgba(255, 43, 214, 0.1),
-      inset 0 0 35px rgba(255, 43, 214, 0.16);
-  }
-}
-
-@keyframes screen-flicker {
-  0%,
-  100% {
-    opacity: 0.9;
-  }
-
-  50% {
-    opacity: 1;
-  }
-
-  92% {
-    opacity: 0.75;
-  }
-}
-
-@keyframes glitch {
-  0%,
-  79%,
-  82%,
-  85%,
-  88%,
-  100% {
-    clip-path: inset(0);
-    transform: translate(0);
-    filter: none;
-  }
-
-  80% {
-    clip-path: inset(12% 0 72% 0);
-    transform: translateX(-10px);
-    filter: drop-shadow(5px 0 var(--pink)) drop-shadow(-5px 0 var(--cyan));
-  }
-
-  81% {
-    clip-path: inset(42% 0 38% 0);
-    transform: translateX(8px);
-    filter: drop-shadow(-7px 0 var(--pink)) drop-shadow(7px 0 var(--cyan));
-  }
-
-  83% {
-    clip-path: inset(68% 0 12% 0);
-    transform: translateX(-6px);
-    filter: drop-shadow(6px 0 var(--cyan)) drop-shadow(-4px 0 var(--pink));
-  }
-
-  84% {
-    opacity: 0.9;
-    clip-path: inset(25% 0 60% 0);
-    transform: translateX(12px);
-    filter: drop-shadow(-8px 0 var(--pink)) drop-shadow(8px 0 var(--cyan));
-  }
-
-  86% {
-    opacity: 1;
-    clip-path: inset(5% 0 5% 0);
-    transform: translateX(-3px);
-    filter: drop-shadow(4px 0 var(--pink)) drop-shadow(-4px 0 var(--cyan));
-  }
-
-  87% {
-    opacity: 0.7;
-    clip-path: inset(48% 0 45% 0);
-    transform: translateX(5px);
-    filter: drop-shadow(-6px 0 var(--cyan));
-  }
-}
-
-@keyframes glitch-button {
-  0%,
-  2%,
-  5%,
-  8%,
-  100% {
-    transform: translate(0);
-    filter: none;
-    opacity: 1;
-  }
-
-  1% {
-    transform: translateX(-10px);
-    filter: drop-shadow(5px 0 var(--pink)) drop-shadow(-5px 0 var(--cyan));
-  }
-
-  2% {
-    transform: translateX(8px);
-    filter: drop-shadow(-7px 0 var(--pink)) drop-shadow(7px 0 var(--cyan));
-  }
-
-  3% {
-    transform: translateX(-6px);
-    filter: drop-shadow(6px 0 var(--cyan)) drop-shadow(-4px 0 var(--pink));
-  }
-
-  4% {
-    opacity: 0.9;
-    transform: translateX(12px);
-    filter: drop-shadow(-8px 0 var(--pink)) drop-shadow(8px 0 var(--cyan));
-  }
-
-  5% {
-    opacity: 1;
-    transform: translateX(-3px);
-    filter: drop-shadow(4px 0 var(--pink)) drop-shadow(-4px 0 var(--cyan));
-  }
-
-  6% {
-    opacity: 0.7;
-    transform: translateX(5px);
-    filter: drop-shadow(-6px 0 var(--cyan));
-  }
 }
 
 @media (pointer: coarse) {

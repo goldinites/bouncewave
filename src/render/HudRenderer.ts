@@ -1,4 +1,4 @@
-import { GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
+import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
 import { Paddle } from '@/entities/Paddle';
 
 export class HudRenderer {
@@ -12,6 +12,7 @@ export class HudRenderer {
   ): void {
     ctx.save();
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.font = "900 64px Orbitron, 'Russo One', sans-serif";
 
     // Player scores
@@ -29,12 +30,12 @@ export class HudRenderer {
     // "GET READY" indicator
     if (serveTime > 0) {
       ctx.font = "700 22px Orbitron, 'Russo One', sans-serif";
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 12;
+      ctx.fillStyle = COLORS.WHITE;
+      ctx.shadowColor = COLORS.WHITE;
+      ctx.shadowBlur = 6;
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
 
-      this.renderText(ctx, readyText, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 44, isRotated);
+      this.renderText(ctx, readyText, GAME_WIDTH / 2, GAME_HEIGHT / 2, isRotated);
     }
 
     ctx.restore();
@@ -48,11 +49,19 @@ export class HudRenderer {
     isRotated: boolean,
   ): void {
     ctx.save();
-    ctx.translate(x, y);
+
     if (isRotated) {
+      ctx.translate(x, y);
       ctx.rotate(Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 0, 0);
+    } else {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y);
     }
-    ctx.fillText(text, 0, 0);
+
     ctx.restore();
   }
 }

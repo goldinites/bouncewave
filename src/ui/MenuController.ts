@@ -33,7 +33,7 @@ export class MenuController {
     this.actions = actions;
   }
 
-  public showMainMenu(focusIndex = 0): void {
+  public showMainMenu(): void {
     this.uiManager.showMenu(
       'PING PONG',
       '',
@@ -44,15 +44,14 @@ export class MenuController {
         },
         {
           label: this.i18n.t('settings'),
-          action: () => this.showSettingsMenu(() => this.showMainMenu(1)),
+          action: () => this.showSettingsMenu(() => this.showMainMenu()),
         },
       ],
-      focusIndex,
       this.actions.onUnlockAudio,
     );
   }
 
-  public showPauseMenu(focusIndex = 0): void {
+  public showPauseMenu(): void {
     this.uiManager.showMenu(
       this.i18n.t('pause'),
       '',
@@ -63,19 +62,18 @@ export class MenuController {
         },
         {
           label: this.i18n.t('settings'),
-          action: () => this.showSettingsMenu(() => this.showPauseMenu(1)),
+          action: () => this.showSettingsMenu(() => this.showPauseMenu()),
         },
         {
           label: this.i18n.t('menu'),
           action: () => this.actions.onReturnToMainMenu(),
         },
       ],
-      focusIndex,
       this.actions.onUnlockAudio,
     );
   }
 
-  public showGameOverMenu(winnerIndex: number, scores: [number, number], focusIndex = 0): void {
+  public showGameOverMenu(winnerIndex: number, scores: [number, number]): void {
     const isPlayerWin = winnerIndex === 0;
     const title = this.i18n.t(isPlayerWin ? 'win' : 'lose');
     const subtitle = `${scores[0]} : ${scores[1]}`;
@@ -90,19 +88,18 @@ export class MenuController {
         },
         {
           label: this.i18n.t('settings'),
-          action: () => this.showSettingsMenu(() => this.showGameOverMenu(winnerIndex, scores, 1)),
+          action: () => this.showSettingsMenu(() => this.showGameOverMenu(winnerIndex, scores)),
         },
         {
           label: this.i18n.t('menu'),
           action: () => this.actions.onReturnToMainMenu(),
         },
       ],
-      focusIndex,
       this.actions.onUnlockAudio,
     );
   }
 
-  public showSettingsMenu(onBack: () => void, focusIndex = 0): void {
+  public showSettingsMenu(onBack: () => void): void {
     const currentDiffInfo = this.i18n.getDifficultyInfo(this.settings.difficulty);
 
     const difficultyLabel = `${this.i18n.t('diff')}: ${currentDiffInfo[0]}`;
@@ -119,7 +116,7 @@ export class MenuController {
           action: () => {
             this.settings.difficulty = ((this.settings.difficulty + 1) % 4) as DifficultyLevel;
             SettingsStorage.save(this.settings);
-            this.showSettingsMenu(onBack, 0);
+            this.showSettingsMenu(onBack);
           },
         },
         {
@@ -127,7 +124,7 @@ export class MenuController {
           action: () => {
             this.settings.musicMuted = !this.settings.musicMuted;
             SettingsStorage.save(this.settings);
-            this.showSettingsMenu(onBack, 1);
+            this.showSettingsMenu(onBack);
           },
         },
         {
@@ -136,7 +133,7 @@ export class MenuController {
             this.settings.soundMuted = !this.settings.soundMuted;
             SettingsStorage.save(this.settings);
             this.sfx.playSettingsClick();
-            this.showSettingsMenu(onBack, 2);
+            this.showSettingsMenu(onBack);
           },
         },
         {
@@ -146,7 +143,7 @@ export class MenuController {
             this.settings.language = this.i18n.language;
             SettingsStorage.save(this.settings);
             this.uiManager.updateHint();
-            this.showSettingsMenu(onBack, 3);
+            this.showSettingsMenu(onBack);
           },
         },
         {
@@ -154,7 +151,6 @@ export class MenuController {
           action: onBack,
         },
       ],
-      focusIndex,
       this.actions.onUnlockAudio,
     );
   }

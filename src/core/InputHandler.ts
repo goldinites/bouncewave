@@ -64,8 +64,7 @@ export class InputHandler {
         ? (e.clientX - rect.left) / rect.width
         : (e.clientY - rect.top) / rect.height;
 
-      const targetY = normalizedY * GAME_HEIGHT;
-      this.lastPointerY = targetY;
+      this.lastPointerY = normalizedY * GAME_HEIGHT;
     };
 
     window.addEventListener('pointermove', handlePointer);

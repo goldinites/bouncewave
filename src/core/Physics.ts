@@ -77,8 +77,7 @@ export class Physics {
         const isCollidingY = Math.abs(ball.y - paddle.y) <= PADDLE_HEIGHT / 2 + ball.radius * 0.8;
 
         if (isCollidingX && isCollidingY) {
-          const relativeIntersectY = clamp((ball.y - paddle.y) / (PADDLE_HEIGHT / 2), -1, 1);
-          const bounceAngle = relativeIntersectY * 1.0;
+          const bounceAngle = clamp((ball.y - paddle.y) / (PADDLE_HEIGHT / 2), -1, 1);
           const direction = i === 0 ? 1 : -1;
 
           ball.speed = Math.min(

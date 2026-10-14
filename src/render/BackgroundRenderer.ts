@@ -1,4 +1,4 @@
-import { GAME_HEIGHT, GAME_WIDTH, TWO_PI } from '@/constants/game.constants';
+import { COLORS, GAME_HEIGHT, GAME_WIDTH, TWO_PI } from '@/constants/game.constants';
 import { LASER_CONFIGURATIONS, MEMPHIS_SHAPE_COUNT } from '@/constants/visual.constants';
 import { MemphisShape, MemphisShapeKind } from '@/types/game.types';
 import { clamp, randomRange } from '@/utils/math';
@@ -20,7 +20,7 @@ export class BackgroundRenderer {
   }
 
   private initMemphisShapes(): void {
-    const colors = ['#19f0ff', '#ff2bd6', '#ffe53b', '#b79bff'];
+    const colors = [COLORS.CYAN, COLORS.PINK, COLORS.YELLOW, COLORS.PURPLE];
     this.memphisShapes = Array.from({ length: MEMPHIS_SHAPE_COUNT }, (_, i) => ({
       kind: (i % 6) as MemphisShapeKind,
       x: Math.random() * GAME_WIDTH,
@@ -154,7 +154,7 @@ export class BackgroundRenderer {
 
     // Center oscilloscope wave
     ctx.globalAlpha = 0.06 + 0.24 * this.laserIntensity;
-    ctx.strokeStyle = '#19f0ff';
+    ctx.strokeStyle = COLORS.CYAN;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     for (let i = 0; i <= 64; i++) {
@@ -283,7 +283,7 @@ export class BackgroundRenderer {
     ctx.textAlign = 'left';
     ctx.font = "700 16px 'Russo One', Orbitron, monospace";
     ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.shadowColor = '#19f0ff';
+    ctx.shadowColor = COLORS.CYAN;
     ctx.shadowBlur = 6;
 
     const seconds = Math.floor(time);

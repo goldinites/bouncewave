@@ -1,4 +1,4 @@
-import { PADDLE_HEIGHT, PADDLE_WIDTH, TWO_PI } from '@/constants/game.constants';
+import { COLORS, PADDLE_HEIGHT, PADDLE_WIDTH, TWO_PI } from '@/constants/game.constants';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { Particle, ShockwaveRing } from '@/types/game.types';
@@ -31,6 +31,10 @@ export class EntityRenderer {
     time: number,
     serveTime: number,
   ): void {
+    ctx.save();
+
+    ctx.globalAlpha = serveTime > 0 ? 0.05 : 1;
+
     const rallyIntensity = Math.min(1, rally / 14);
     const hue = 52 + rallyIntensity * 30;
     const sat = 20 + rallyIntensity * 80;
@@ -72,7 +76,7 @@ export class EntityRenderer {
     ctx.shadowBlur = currentRadius * (1.4 + rallyIntensity * 1.6) * flicker;
 
     const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, currentRadius);
-    coreGradient.addColorStop(0, '#ffffff');
+    coreGradient.addColorStop(0, COLORS.WHITE);
     coreGradient.addColorStop(0.45, `hsl(${hue - 6}, ${sat}%, ${Math.min(96, lit + 6)}%)`);
     coreGradient.addColorStop(1, `hsl(${hue + 14}, ${glowSat}%, ${lit - 12}%)`);
 

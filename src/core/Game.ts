@@ -2,6 +2,7 @@ import { AudioEngine } from '@/audio/AudioEngine';
 import { DIFFICULTY_CONFIGS } from '@/constants/difficulty.constants';
 import {
   BALL_INITIAL_SPEED,
+  COLORS,
   GAME_WIDTH,
   PADDLE_OFFSET_X,
   PADDLE_WIDTH,
@@ -83,8 +84,8 @@ export class Game {
 
     this.particleSystem = new ParticleSystem();
 
-    const paddle1 = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
-    const paddle2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
+    const paddle1 = new Paddle(0, PADDLE_OFFSET_X, COLORS.CYAN);
+    const paddle2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, COLORS.PINK);
     this.paddles = [paddle1, paddle2];
 
     this.ball = new Ball();
