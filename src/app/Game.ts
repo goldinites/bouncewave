@@ -108,6 +108,20 @@ export class Game {
       this.togglePause();
     });
 
+    // Errors outside the game loop (input and button handlers): shown in the ?fps overlay
+    window.addEventListener(
+      'error',
+      (event) => this.fpsMeter.reportError(event.error ?? event.message),
+      {
+        signal: this.listeners.signal,
+      },
+    );
+    window.addEventListener(
+      'unhandledrejection',
+      (event) => this.fpsMeter.reportError(event.reason),
+      { signal: this.listeners.signal },
+    );
+
     // Auto-pause when the tab is hidden (AudioEngine suspends the sound on its own)
     document.addEventListener(
       'visibilitychange',
@@ -164,7 +178,13 @@ export class Game {
   }
 
   private onMatchEvent(event: MatchEvent): void {
-    this.effects.handle(event);
+    // Effects are presentation only: if one fails (e.g. the browser rejects an audio change),
+    // the match and its menus must still go on
+    try {
+      this.effects.handle(event);
+    } catch (error) {
+      this.fpsMeter.reportError(error);
+    }
 
     if (event.type === 'gameOver') {
       this.uiManager.setPauseButtonVisibility(false);
@@ -175,6 +195,17 @@ export class Game {
   private gameLoop(timestamp: number): void {
     if (!this.isRunning) return;
 
+    // Ask for the next frame first: an error in this one must not stop the game for good
+    this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
+
+    try {
+      this.runFrame(timestamp);
+    } catch (error) {
+      this.fpsMeter.reportError(error);
+    }
+  }
+
+  private runFrame(timestamp: number): void {
     this.fpsMeter.tick(timestamp);
 
     const realDt = Math.min(MAX_FRAME_DT, (timestamp - this.lastTimestamp) / 1000);
@@ -198,8 +229,6 @@ export class Game {
       this.renderer.update(realDt, frame);
     }
     this.renderer.render(frame, realDt);
-
-    this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
   }
 
   private buildMusicState(): MusicState {

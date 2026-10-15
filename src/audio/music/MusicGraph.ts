@@ -7,6 +7,8 @@ const DRAMA_FILTER_MIN_FREQ = 550;
 const DRAMA_FILTER_MAX_FREQ = 20000;
 
 const ECHO_FEEDBACK = 0.4;
+// Echo time follows the tempo, which drifts a little every step; smaller changes are skipped
+const ECHO_TIME_TOLERANCE = 0.002; // s
 const ANALYSER_FFT_SIZE = 256;
 const ANALYSER_SMOOTHING = 0.75;
 
@@ -24,6 +26,10 @@ const ANALYSER_SMOOTHING = 0.75;
  * - dramaFilter muffles on match point; separate so it never fights the tone filter
  * - tapeDelay sits at 0 ms until a tape stop sweeps it to bend the pitch down
  * - duckGain dips the music under end-of-match stings, independent of the mute gain
+ *
+ * Parameters are only automated when their value changes: every automation call adds an event
+ * to the parameter's timeline, and the scheduler would otherwise add dozens per second for as
+ * long as the game runs.
  */
 export class MusicGraph {
   public readonly context: AudioContext;
@@ -41,6 +47,12 @@ export class MusicGraph {
   private readonly duckGain: GainNode;
   private readonly master: GainNode;
   private dramaLevel = 0;
+  // Last values handed to the audio graph; null until first set
+  private isMuted: boolean | null = null;
+  private toneFrequency: number | null = null;
+  private echoTime: number | null = null;
+  /** Audio-clock time the running tape stop's curves end; nothing may overlap them until then. */
+  private tapeStopEndsAt = 0;
 
   constructor(context: AudioContext) {
     this.context = context;
@@ -94,16 +106,22 @@ export class MusicGraph {
   }
 
   public setMuted(isMuted: boolean): void {
+    if (isMuted === this.isMuted) return;
+    this.isMuted = isMuted;
     this.master.gain.setTargetAtTime(isMuted ? 0 : MUSIC_MASTER_LEVEL, this.now, 0.05);
   }
 
   /** Overall brightness of the mix, scheduled to change at `time`. */
   public setToneFilter(frequency: number, time: number): void {
+    if (frequency === this.toneFrequency) return;
+    this.toneFrequency = frequency;
     this.toneFilter.frequency.setTargetAtTime(frequency, time, 0.2);
   }
 
   /** Echo time for leads, kept in sync with the tempo. */
   public setEchoTime(seconds: number, time: number): void {
+    if (this.echoTime !== null && Math.abs(seconds - this.echoTime) < ECHO_TIME_TOLERANCE) return;
+    this.echoTime = seconds;
     this.echo.delayTime.setTargetAtTime(seconds, time, 0.1);
   }
 
@@ -121,10 +139,7 @@ export class MusicGraph {
 
   /** Dip the music so the victory sting sits on top; stays down until `recover`. */
   public duck(): void {
-    const gain = this.duckGain.gain;
-    gain.cancelScheduledValues(this.now);
-    gain.setValueAtTime(gain.value, this.now);
-    gain.linearRampToValueAtTime(MUSIC_DUCK_LEVEL, this.now + 0.08);
+    this.rampDuckGain(MUSIC_DUCK_LEVEL, 0.08);
   }
 
   /**
@@ -153,6 +168,7 @@ export class MusicGraph {
         this.now,
         duration,
       );
+      this.tapeStopEndsAt = this.now + duration;
       return true;
     } catch {
       // Overlapping automation is rejected by some browsers; skip the effect rather than break audio
@@ -162,14 +178,36 @@ export class MusicGraph {
 
   /** Undo `duck` / `tapeStop`. */
   public recover(): void {
-    const delay = this.tapeDelay.delayTime;
-    delay.cancelScheduledValues(this.now);
-    delay.setValueAtTime(0, this.now);
-
+    // Safari rejects automation that overlaps a running curve, which would leave the music
+    // silent, so a tape stop that is still running (finale skipped) plays out first
+    const at = this.afterTapeStop();
+    try {
+      const delay = this.tapeDelay.delayTime;
+      delay.cancelScheduledValues(at);
+      delay.setValueAtTime(0, at);
+    } catch {
+      // Leave the pitch bend as is rather than break audio
+    }
     // After a tape stop the level is at 0, so the delay jump above is inaudible
-    const gain = this.duckGain.gain;
-    gain.cancelScheduledValues(this.now);
-    gain.setValueAtTime(gain.value, this.now);
-    gain.linearRampToValueAtTime(1, this.now + 0.6);
+    this.rampDuckGain(1, 0.6);
+  }
+
+  /** Earliest time new automation may start: now, or when a running tape stop ends. */
+  private afterTapeStop(): number {
+    return Math.max(this.now, this.tapeStopEndsAt);
+  }
+
+  /** Ramps the duck gain to `level` over `seconds`, after any running tape stop. */
+  private rampDuckGain(level: number, seconds: number): void {
+    const at = this.afterTapeStop();
+    try {
+      const gain = this.duckGain.gain;
+      gain.cancelScheduledValues(at);
+      // Without a running curve, start from the current level; otherwise from where it ends
+      if (at === this.now) gain.setValueAtTime(gain.value, at);
+      gain.linearRampToValueAtTime(level, at + seconds);
+    } catch {
+      // Keep the current level rather than break audio
+    }
   }
 }
