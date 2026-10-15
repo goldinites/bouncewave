@@ -8,6 +8,7 @@ import {
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
+import { getTargetBpm, glideTempo } from '@/audio/music/tempo';
 import { CHORD_TYPES, MUSIC_TRACKS } from '@/audio/music/tracks';
 import { GameState } from '@/match/GameState';
 import { clamp } from '@/shared/math';
@@ -24,7 +25,6 @@ const RESYNC_THRESHOLD = 0.1;
 const RESYNC_DELAY = 0.05;
 
 const STEPS_PER_SONG = 256;
-const TEMPO_INTENSITY_BPM = 8; // full intensity plays this many BPM faster
 const ECHO_STEPS = 3; // lead echo time, in steps
 const TONE_FILTER: Record<GameState, number> = { paused: 450, menu: 2800, play: 16000 };
 
@@ -40,6 +40,8 @@ export class MusicEngine {
 
   private state: MusicState = INITIAL_MUSIC_STATE;
   private intensity = 0.3;
+  /** Current tempo, gliding toward the target; null until the first step sets it. */
+  private bpm: number | null = null;
   private climaxLevel = 0;
   private isDropPending = false;
   private isTapeStopped = false;
@@ -155,7 +157,10 @@ export class MusicEngine {
       const step = this.currentStep;
       const time = this.nextStepTime;
       const track = this.getTrack(step);
-      const stepDuration = 60 / (track.bpm + TEMPO_INTENSITY_BPM * this.intensity) / 4;
+      const targetBpm = getTargetBpm(track.bpm, this.intensity);
+      const bpm = this.bpm ?? targetBpm;
+      const stepDuration = 60 / bpm / 4;
+      this.bpm = glideTempo(bpm, targetBpm, stepDuration);
       const bar = (step >> 4) & 3;
 
       // Remember chord changes (even while muted) so hits can be tuned to the audible bar
