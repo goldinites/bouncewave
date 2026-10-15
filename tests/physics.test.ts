@@ -1,28 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTY_CONFIGS } from '@/constants/difficulty.constants';
-import {
-  COURT_BOTTOM_WALL,
-  COURT_TOP_WALL,
-  GAME_HEIGHT,
-  GAME_WIDTH,
-  PADDLE_HEIGHT,
-  PADDLE_OFFSET_X,
-  PADDLE_SPIN_DEADZONE,
-  PADDLE_SPIN_MAX_ANGLE,
-  PADDLE_WIDTH,
-  PERFECT_HIT_BOOST,
-  PERFECT_HIT_BOOST_DURATION,
-} from '@/constants/game.constants';
-import { Physics, PhysicsEvent } from '@/match/Physics';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { DifficultyLevel } from '@/types/difficulty.types';
+import { Ball } from '@/match/Ball';
+import { COURT, PADDLE } from '@/match/config';
+import { DifficultyLevel, DIFFICULTY_CONFIGS } from '@/match/difficulty';
+import { Paddle } from '@/match/Paddle';
+import { PERFECT_HIT, Physics, PhysicsEvent, SPIN } from '@/match/Physics';
 
 const NORMAL = DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL];
 
 const makePaddles = (): [Paddle, Paddle] => [
-  new Paddle(0, PADDLE_OFFSET_X, '#19f0ff'),
-  new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6'),
+  new Paddle(0, PADDLE.OFFSET_X, '#19f0ff'),
+  new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, '#ff2bd6'),
 ];
 
 const ofType = <T extends PhysicsEvent['type']>(events: PhysicsEvent[], type: T) =>
@@ -38,7 +25,7 @@ const hitLeftPaddleAt = (offsetY: number, paddleVelocity = 0) => {
   left.targetY = 250;
   left.velocity = paddleVelocity;
 
-  ball.x = left.x + PADDLE_WIDTH + 2;
+  ball.x = left.x + PADDLE.WIDTH + 2;
   ball.y = 250 + offsetY;
   ball.vx = -400;
   ball.vy = 0;
@@ -52,7 +39,7 @@ describe('Physics.step', () => {
   it('bounces off the top wall and reports it', () => {
     const ball = new Ball();
     ball.x = 400;
-    ball.y = COURT_TOP_WALL + 5;
+    ball.y = COURT.TOP_WALL + 5;
     ball.vy = -300;
     ball.vx = 200;
 
@@ -65,7 +52,7 @@ describe('Physics.step', () => {
   it('bounces off the bottom wall and reports it', () => {
     const ball = new Ball();
     ball.x = 400;
-    ball.y = GAME_HEIGHT - COURT_BOTTOM_WALL - 5;
+    ball.y = COURT.HEIGHT - COURT.BOTTOM_WALL - 5;
     ball.vy = 300;
     ball.vx = 200;
 
@@ -84,20 +71,20 @@ describe('Physics.step', () => {
     expect(hit).toMatchObject({ paddleIndex: 0, isPerfect: true, speed: ball.speed });
   });
 
-  it('only moves the ball: paddles, glow and AI aim are left to the caller', () => {
+  it('only moves the ball: the paddles are left as they were', () => {
     const { paddles } = hitLeftPaddleAt(0);
 
-    expect(paddles[0].glow).toBe(0);
-    expect(paddles[1].errorOffset).toBe(0);
+    expect(paddles[0]).toMatchObject({ y: 250, targetY: 250, velocity: 0, score: 0 });
+    expect(paddles[1]).toEqual(makePaddles()[1]);
   });
 
   it('rewards a center hit with a temporary boost and marks it perfect', () => {
     const perfect = hitLeftPaddleAt(0);
-    const offCenter = hitLeftPaddleAt(PADDLE_HEIGHT * 0.2);
+    const offCenter = hitLeftPaddleAt(PADDLE.HEIGHT * 0.2);
 
     // Base speed progression is identical; only the temporary boost differs
     expect(perfect.ball.speed).toBe(offCenter.ball.speed);
-    expect(perfect.ball.speedMultiplier).toBeCloseTo(1 + PERFECT_HIT_BOOST);
+    expect(perfect.ball.speedMultiplier).toBeCloseTo(1 + PERFECT_HIT.BOOST);
     expect(offCenter.ball.speedMultiplier).toBe(1);
     expect(ofType(offCenter.events, 'paddleHit')[0].isPerfect).toBe(false);
   });
@@ -110,18 +97,18 @@ describe('Physics.step', () => {
       ball.vx = 400;
       ball.vy = 0;
       ball.speed = 400;
-      if (boosted) ball.applyBoost(PERFECT_HIT_BOOST, PERFECT_HIT_BOOST_DURATION);
+      if (boosted) ball.applyBoost(PERFECT_HIT.BOOST, PERFECT_HIT.BOOST_DURATION);
 
       Physics.step(ball, makePaddles(), NORMAL, 0.016);
       return ball.x - 400;
     };
 
-    expect(run(true)).toBeCloseTo(run(false) * (1 + PERFECT_HIT_BOOST));
+    expect(run(true)).toBeCloseTo(run(false) * (1 + PERFECT_HIT.BOOST));
   });
 
   it('sends edge hits out at a sharper angle than mid hits', () => {
-    const mid = hitLeftPaddleAt(PADDLE_HEIGHT * 0.25);
-    const edge = hitLeftPaddleAt(PADDLE_HEIGHT * 0.48);
+    const mid = hitLeftPaddleAt(PADDLE.HEIGHT * 0.25);
+    const edge = hitLeftPaddleAt(PADDLE.HEIGHT * 0.48);
 
     const angleOf = (b: Ball) => Math.abs(Math.atan2(b.vy, b.vx));
     expect(angleOf(edge.ball)).toBeGreaterThan(angleOf(mid.ball) * 2);
@@ -156,9 +143,9 @@ describe('Physics angles', () => {
 
   it('ignores tiny paddle speeds and caps the spin nudge', () => {
     expect(Physics.getSpinAngle(0)).toBe(0);
-    expect(Physics.getSpinAngle(PADDLE_SPIN_DEADZONE)).toBe(0);
+    expect(Physics.getSpinAngle(SPIN.DEADZONE)).toBe(0);
     expect(Physics.getSpinAngle(300)).toBeGreaterThan(0);
     expect(Physics.getSpinAngle(-300)).toBeCloseTo(-Physics.getSpinAngle(300));
-    expect(Physics.getSpinAngle(100000)).toBeLessThanOrEqual(PADDLE_SPIN_MAX_ANGLE);
+    expect(Physics.getSpinAngle(100000)).toBeLessThanOrEqual(SPIN.MAX_ANGLE);
   });
 });

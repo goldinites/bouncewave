@@ -1,53 +1,44 @@
-import {
-  GAME_HEIGHT,
-  PADDLE_BOTTOM_MARGIN,
-  PADDLE_HEIGHT,
-  PADDLE_TOP_MARGIN,
-} from '@/constants/game.constants';
-import { DEMO_AI_ERROR } from '@/constants/difficulty.constants';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { DifficultyConfig } from '@/types/difficulty.types';
-import { GameMode } from '@/types/game.types';
-import { clamp } from '@/utils/math';
+import { Ball } from '@/match/Ball';
+import { COURT } from '@/match/config';
+import { AiSkill } from '@/match/difficulty';
+import { Paddle } from '@/match/Paddle';
+import { clamp } from '@/shared/math';
 
+const AIM_DEADZONE = 6; // px; closer than this the paddle holds still
+
+/** Steers the CPU paddles (and both paddles in the demo) toward the ball. */
 export class AiController {
-  private static readonly DEMO_SPEED = 400;
-  private static readonly DEADZONE = 6;
+  /** Where each paddle aims relative to the ball, re-rolled whenever the ball heads its way. */
+  private readonly aimErrors: [number, number] = [0, 0];
 
-  public static update(
-    paddle: Paddle,
-    ball: Ball,
-    gameMode: GameMode,
-    difficultyConfig: DifficultyConfig,
-    dt: number,
-  ): void {
+  public update(paddle: Paddle, ball: Ball, skill: AiSkill, dt: number): void {
     const isMovingTowardPaddle = paddle.index === 1 ? ball.vx > 0 : ball.vx < 0;
-    const desiredY = isMovingTowardPaddle ? ball.y + paddle.errorOffset : GAME_HEIGHT / 2;
+    const desiredY = isMovingTowardPaddle
+      ? ball.y + this.aimErrors[paddle.index]
+      : COURT.HEIGHT / 2;
     const deltaY = desiredY - paddle.targetY;
 
-    const maxMovePerFrame =
-      (gameMode === GameMode.DEMO ? this.DEMO_SPEED : difficultyConfig.speed) * dt;
+    const maxMovePerFrame = skill.speed * dt;
 
-    if (Math.abs(deltaY) > this.DEADZONE) {
-      paddle.targetY += clamp(deltaY, -maxMovePerFrame, maxMovePerFrame);
-    }
-
-    const minY = PADDLE_TOP_MARGIN + PADDLE_HEIGHT / 2;
-    const maxY = GAME_HEIGHT - PADDLE_BOTTOM_MARGIN - PADDLE_HEIGHT / 2;
-    paddle.targetY = clamp(paddle.targetY, minY, maxY);
+    const move =
+      Math.abs(deltaY) > AIM_DEADZONE ? clamp(deltaY, -maxMovePerFrame, maxMovePerFrame) : 0;
+    paddle.setTargetY(paddle.targetY + move);
   }
 
   /**
    * Picks a fresh aim error for a paddle that is about to receive the ball, so the AI
    * misjudges each return a little differently. Call it when the opponent hits the ball.
    */
-  public static rollAimError(
-    paddle: Paddle,
-    gameMode: GameMode,
-    difficultyConfig: DifficultyConfig,
-  ): void {
-    const maxError = gameMode === GameMode.DEMO ? DEMO_AI_ERROR : difficultyConfig.error;
-    paddle.errorOffset = (Math.random() - 0.5) * maxError;
+  public rollAimError(paddle: Paddle, skill: AiSkill): void {
+    this.aimErrors[paddle.index] = (Math.random() - 0.5) * skill.error;
+  }
+
+  public getAimError(paddle: Paddle): number {
+    return this.aimErrors[paddle.index];
+  }
+
+  /** Forgets the aim errors (a new match, or back to the menu). */
+  public reset(): void {
+    this.aimErrors.fill(0);
   }
 }

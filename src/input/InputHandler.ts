@@ -1,6 +1,8 @@
-import { GAME_HEIGHT, PADDLE_SPEED } from '@/constants/game.constants';
-import { Paddle } from '@/entities/Paddle';
-import { clamp } from '@/utils/math';
+import { COURT } from '@/match/config';
+import { Paddle } from '@/match/Paddle';
+import { clamp } from '@/shared/math';
+
+const PADDLE_SPEED = 500; // px/s under keyboard control
 
 export interface InputHandlerCallbacks {
   onUnlockAudio: () => void;
@@ -105,7 +107,7 @@ export class InputHandler {
         ? (e.clientX - rect.left) / rect.width
         : (e.clientY - rect.top) / rect.height;
 
-      this.lastPointerY = normalizedY * GAME_HEIGHT;
+      this.lastPointerY = normalizedY * COURT.HEIGHT;
     };
 
     window.addEventListener('pointermove', handlePointer, { signal });

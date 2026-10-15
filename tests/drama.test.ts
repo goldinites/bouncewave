@@ -1,28 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import {
-  GAME_WIDTH,
-  PADDLE_OFFSET_X,
-  PADDLE_WIDTH,
-  WINNING_SCORE,
-} from '@/constants/game.constants';
-import {
-  DRAMA_MATCH_POINT_LEVEL,
-  DRAMA_SLOWMO_DURATION,
-  DRAMA_SLOWMO_SCALE,
-} from '@/constants/visual.constants';
-import { MatchPointDrama } from '@/fx/MatchPointDrama';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
+import { DRAMA, MatchPointDrama } from '@/fx/MatchPointDrama';
+import { Ball } from '@/match/Ball';
+import { COURT, PADDLE, WINNING_SCORE } from '@/match/config';
+import { Paddle } from '@/match/Paddle';
 
 const setup = (leftScore: number, rightScore: number) => {
-  const left = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
-  const right = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
+  const left = new Paddle(0, PADDLE.OFFSET_X, '#19f0ff');
+  const right = new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, '#ff2bd6');
   left.score = leftScore;
   right.score = rightScore;
   const paddles: [Paddle, Paddle] = [left, right];
 
   const ball = new Ball();
-  ball.x = GAME_WIDTH / 2;
+  ball.x = COURT.WIDTH / 2;
   ball.vx = -400;
   return { ball, paddles, left, right };
 };
@@ -51,14 +41,14 @@ describe('MatchPointDrama', () => {
     const drama = new MatchPointDrama();
     run(drama, 1, true, ball, paddles);
 
-    expect(drama.level).toBeCloseTo(DRAMA_MATCH_POINT_LEVEL, 2);
+    expect(drama.level).toBeCloseTo(DRAMA.MATCH_POINT_LEVEL, 2);
     expect(drama.timeScale).toBe(1);
   });
 
   it('detects the deciding ball only once it is behind the defender', () => {
     const { ball, paddles, left } = setup(0, WINNING_SCORE - 1);
 
-    ball.x = left.x + PADDLE_WIDTH + 20;
+    ball.x = left.x + PADDLE.WIDTH + 20;
     expect(MatchPointDrama.isDecidingBallPast(ball, paddles)).toBe(false);
 
     ball.x = left.x - ball.radius - 1;
@@ -83,10 +73,10 @@ describe('MatchPointDrama', () => {
     ball.x = left.x - ball.radius - 1;
 
     run(drama, 0.3, true, ball, paddles);
-    expect(drama.timeScale).toBeLessThan(DRAMA_SLOWMO_SCALE + 0.05);
+    expect(drama.timeScale).toBeLessThan(DRAMA.SLOWMO_SCALE + 0.05);
     expect(drama.level).toBeGreaterThan(0.8);
 
-    run(drama, DRAMA_SLOWMO_DURATION + 0.5, true, ball, paddles);
+    run(drama, DRAMA.SLOWMO_DURATION + 0.5, true, ball, paddles);
     expect(drama.timeScale).toBeGreaterThan(0.99);
   });
 

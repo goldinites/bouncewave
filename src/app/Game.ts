@@ -1,18 +1,18 @@
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
-import { DIFFICULTY_CONFIGS } from '@/constants/difficulty.constants';
-import { COLORS, GAME_WIDTH, PADDLE_OFFSET_X, PADDLE_WIDTH } from '@/constants/game.constants';
-import { EffectsDirector } from '@/fx/EffectsDirector';
-import { InputHandler } from '@/input/InputHandler';
-import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { FpsMeter } from '@/debug/FpsMeter';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { ParticleSystem } from '@/entities/ParticleSystem';
+import { EffectsDirector } from '@/fx/EffectsDirector';
+import { ParticleSystem } from '@/fx/ParticleSystem';
 import { I18nManager } from '@/i18n/I18nManager';
+import { InputHandler } from '@/input/InputHandler';
+import { Ball } from '@/match/Ball';
+import { COURT, PADDLE } from '@/match/config';
+import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { Paddle } from '@/match/Paddle';
 import { Renderer, RenderFrame } from '@/render/Renderer';
-import { SettingsStorage } from '@/storage/SettingsStorage';
-import { UserSettings } from '@/types/audio.types';
+import { SettingsStore } from '@/settings/SettingsStore';
+import { COLORS } from '@/shared/palette';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
 
@@ -24,7 +24,7 @@ const MAX_FRAME_DT = 0.033;
  * (EffectsDirector), input, audio, rendering and the DOM menus together.
  */
 export class Game {
-  private readonly settings: UserSettings;
+  private readonly settings = new SettingsStore();
   private readonly i18n: I18nManager;
   private readonly audio: AudioEngine;
   private readonly renderer: Renderer;
@@ -45,21 +45,27 @@ export class Game {
   private readonly listeners = new AbortController();
 
   constructor(canvas: HTMLCanvasElement) {
-    this.settings = SettingsStorage.load();
-    this.i18n = new I18nManager(this.settings.language);
+    this.i18n = new I18nManager(this.settings.current.language);
 
     this.paddles = [
-      new Paddle(0, PADDLE_OFFSET_X, COLORS.CYAN),
-      new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, COLORS.PINK),
+      new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN),
+      new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, COLORS.PINK),
     ];
 
     this.audio = new AudioEngine(
-      () => this.settings.soundMuted,
+      () => this.settings.current.soundMuted,
       () => this.flow.gameState === 'play',
     );
 
     this.renderer = new Renderer(canvas);
     this.uiManager = new UIManager(this.i18n);
+
+    // The UI language follows the settings
+    this.settings.subscribe(({ language }) => {
+      if (language === this.i18n.language) return;
+      this.i18n.language = language;
+      this.uiManager.updateHint();
+    });
 
     this.inputHandler = new InputHandler(canvas, {
       onUnlockAudio: () => this.unlockAudio(),
@@ -80,7 +86,7 @@ export class Game {
       paddles: this.paddles,
       ball: this.ball,
       input: this.inputHandler,
-      getDifficulty: () => DIFFICULTY_CONFIGS[this.settings.difficulty],
+      getDifficulty: () => DIFFICULTY_CONFIGS[this.settings.current.difficulty],
       onEvent: (event) => this.onMatchEvent(event),
     });
 
@@ -191,7 +197,7 @@ export class Game {
     if (!isPaused) {
       this.renderer.update(realDt, frame);
     }
-    this.renderer.render(frame);
+    this.renderer.render(frame, realDt);
 
     this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
   }
@@ -201,17 +207,17 @@ export class Game {
       gameState: this.flow.gameState,
       serveTime: this.flow.serveTime,
       ballSpeed: this.ball.speed,
-      maxBallSpeed: DIFFICULTY_CONFIGS[this.settings.difficulty].maxSpeed,
+      maxBallSpeed: DIFFICULTY_CONFIGS[this.settings.current.difficulty].maxSpeed,
       rally: this.flow.rally,
       scores: [this.paddles[0].score, this.paddles[1].score],
-      isMuted: this.settings.musicMuted,
+      isMuted: this.settings.current.musicMuted,
     };
   }
 
   private buildRenderFrame(): RenderFrame {
     return {
       gameState: this.flow.gameState,
-      gameMode: this.flow.gameMode,
+      isDemo: this.flow.isDemo,
       paddles: this.paddles,
       ball: this.ball,
       particles: this.particles,
@@ -223,6 +229,7 @@ export class Game {
       isRotated: this.inputHandler.isRotated,
       vignette: this.effects.tension,
       climax: this.effects.climaxLevel,
+      paddleGlow: this.effects.paddleGlow,
     };
   }
 

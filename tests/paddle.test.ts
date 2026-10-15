@@ -1,18 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import {
-  GAME_HEIGHT,
-  PADDLE_BOTTOM_MARGIN,
-  PADDLE_HEIGHT,
-  PADDLE_TOP_MARGIN,
-} from '@/constants/game.constants';
-import { Paddle } from '@/entities/Paddle';
+import { COURT, PADDLE } from '@/match/config';
+import { Paddle } from '@/match/Paddle';
 
 describe('Paddle', () => {
   it('initializes with centered position', () => {
     const paddle = new Paddle(0, 34, '#19f0ff');
     expect(paddle.x).toBe(34);
-    expect(paddle.y).toBe(GAME_HEIGHT / 2);
-    expect(paddle.targetY).toBe(GAME_HEIGHT / 2);
+    expect(paddle.y).toBe(COURT.HEIGHT / 2);
+    expect(paddle.targetY).toBe(COURT.HEIGHT / 2);
     expect(paddle.score).toBe(0);
   });
 
@@ -21,12 +16,12 @@ describe('Paddle', () => {
 
     // Attempt to set position beyond top boundary
     paddle.setTargetY(-100);
-    const minY = PADDLE_TOP_MARGIN + PADDLE_HEIGHT / 2;
+    const minY = PADDLE.TOP_MARGIN + PADDLE.HEIGHT / 2;
     expect(paddle.targetY).toBe(minY);
 
     // Attempt to set position beyond bottom boundary
-    paddle.setTargetY(GAME_HEIGHT + 100);
-    const maxY = GAME_HEIGHT - PADDLE_BOTTOM_MARGIN - PADDLE_HEIGHT / 2;
+    paddle.setTargetY(COURT.HEIGHT + 100);
+    const maxY = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - PADDLE.HEIGHT / 2;
     expect(paddle.targetY).toBe(maxY);
   });
 
@@ -58,7 +53,7 @@ describe('Paddle', () => {
     paddle.targetY = paddle.y + 200; // a jerky touch jump
 
     paddle.update(0.016);
-    const rawSpeed = (paddle.y - GAME_HEIGHT / 2) / 0.016;
+    const rawSpeed = (paddle.y - COURT.HEIGHT / 2) / 0.016;
     expect(paddle.velocity).toBeLessThan(rawSpeed * 0.25);
   });
 
@@ -70,7 +65,7 @@ describe('Paddle', () => {
 
     paddle.resetScore();
     expect(paddle.score).toBe(0);
-    expect(paddle.y).toBe(GAME_HEIGHT / 2);
-    expect(paddle.targetY).toBe(GAME_HEIGHT / 2);
+    expect(paddle.y).toBe(COURT.HEIGHT / 2);
+    expect(paddle.targetY).toBe(COURT.HEIGHT / 2);
   });
 });

@@ -1,26 +1,23 @@
-import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
-import { Paddle } from '@/entities/Paddle';
+import { COURT } from '@/match/config';
+import { Paddle } from '@/match/Paddle';
+import { COLORS } from '@/shared/palette';
+
+const SCORE_POP_DURATION = 0.22; // s for a changed score to swell and settle
 
 export class HudRenderer {
   private displayedScores: [number, number] = [-1, -1];
   private scorePop: [number, number] = [0, 0];
-  private lastAnimationTime = 0;
 
+  /** @param dt wall-clock seconds since the last frame (the HUD keeps animating in pause) */
   public render(
     ctx: CanvasRenderingContext2D,
+    dt: number,
     paddles: [Paddle, Paddle],
     serveTime: number,
     readyText: string,
     time: number,
     isRotated: boolean,
   ): void {
-    const now = performance.now();
-
-    const dt =
-      this.lastAnimationTime === 0 ? 0 : Math.min((now - this.lastAnimationTime) / 1000, 0.05);
-
-    this.lastAnimationTime = now;
-
     const scores = [paddles[0].score, paddles[1].score] as const;
 
     scores.forEach((score, index) => {
@@ -31,7 +28,7 @@ export class HudRenderer {
         this.scorePop[index] = 1;
       }
 
-      this.scorePop[index] = Math.max(0, this.scorePop[index] - dt / 0.22);
+      this.scorePop[index] = Math.max(0, this.scorePop[index] - dt / SCORE_POP_DURATION);
     });
 
     ctx.save();
@@ -52,7 +49,7 @@ export class HudRenderer {
       ctx.fillStyle = paddle.color;
       ctx.globalAlpha = 0.9;
 
-      const posX = GAME_WIDTH / 2 + (index ? 1 : -1) * 90;
+      const posX = COURT.WIDTH / 2 + (index ? 1 : -1) * 90;
       const posY = 82;
 
       ctx.translate(posX, posY);
@@ -77,7 +74,7 @@ export class HudRenderer {
       ctx.shadowBlur = 6;
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
 
-      this.renderText(ctx, readyText, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 8, isRotated);
+      this.renderText(ctx, readyText, COURT.WIDTH / 2, COURT.HEIGHT / 2 + 8, isRotated);
     }
 
     ctx.restore();

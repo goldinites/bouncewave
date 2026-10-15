@@ -1,10 +1,31 @@
-import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
-import {
-  CELEBRATION_HUE_SWING,
-  CLIMAX_SPECTRUM_DAMPING,
-  LASER_CONFIGURATIONS,
-} from '@/constants/visual.constants';
+import { COURT } from '@/match/config';
 import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
+import { COLORS } from '@/shared/palette';
+
+type LaserConfig = [
+  x: number,
+  y: number,
+  baseAngle: number,
+  sweep: number,
+  speed: number,
+  phase: number,
+  hue: number,
+];
+
+const LASER_CONFIGURATIONS: LaserConfig[] = [
+  [0, 0, 0.8, 0.45, 0.7, 0, 185],
+  [0, 0, 0.45, 0.4, -0.9, 2, 320],
+  [COURT.WIDTH, 0, 2.35, 0.45, 0.8, 1, 320],
+  [COURT.WIDTH, 0, 2.7, 0.4, -0.6, 4, 185],
+  [COURT.WIDTH / 2, 0, 1.57, 0.8, 0.5, 3, 270],
+  [COURT.WIDTH * 0.25, COURT.HEIGHT, -1.2, 0.5, 0.8, 5, 320],
+  [COURT.WIDTH * 0.75, COURT.HEIGHT, -1.95, 0.5, -0.7, 6, 185],
+];
+
+// The climax mix is louder, so spectrum bars lose up to this share of alpha and height
+const CLIMAX_SPECTRUM_DAMPING = 0.3;
+// Victory sweeps each beam's hue by up to this many degrees
+const CELEBRATION_HUE_SWING = 180;
 
 const BEAM_LENGTH = 900;
 const BAR_COUNT = 32;
@@ -16,8 +37,8 @@ const WAVE_POINTS = 64;
 export class LaserBackground implements Background {
   public render(frame: BackgroundFrame): void {
     const { ctx, pulse, laserIntensity } = frame;
-    const centerX = GAME_WIDTH / 2;
-    const centerY = GAME_HEIGHT * 0.45;
+    const centerX = COURT.WIDTH / 2;
+    const centerY = COURT.HEIGHT * 0.45;
 
     const bgGradient = ctx.createRadialGradient(
       centerX,
@@ -25,15 +46,15 @@ export class LaserBackground implements Background {
       10,
       centerX,
       centerY,
-      GAME_WIDTH * 0.7,
+      COURT.WIDTH * 0.7,
     );
     bgGradient.addColorStop(0, '#2b0a5c');
     bgGradient.addColorStop(1, '#05010d');
     ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
     ctx.fillStyle = `rgba(90, 70, 255, ${pulse * 0.1 * laserIntensity})`;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -73,7 +94,7 @@ export class LaserBackground implements Background {
   private renderSpectrumBars({ ctx, spectrum, time, climax }: BackgroundFrame): void {
     // The climax mix is louder, so calm the bars down to keep the focus on play
     const spectrumCalm = 1 - CLIMAX_SPECTRUM_DAMPING * climax;
-    const barWidth = GAME_WIDTH / BAR_COUNT;
+    const barWidth = COURT.WIDTH / BAR_COUNT;
     const barHeights: number[] = [];
     for (let i = 0; i < BAR_COUNT; i++) {
       barHeights.push(
@@ -87,7 +108,7 @@ export class LaserBackground implements Background {
       ctx.fillStyle = `hsl(${185 + j * 10}, 100%, ${55 + j}%)`;
       for (let i = 0; i < BAR_COUNT; i++) {
         if (barHeights[i] > j) {
-          ctx.fillRect(i * barWidth + 2, GAME_HEIGHT - 24 - j * 8, barWidth - 4, 6);
+          ctx.fillRect(i * barWidth + 2, COURT.HEIGHT - 24 - j * 8, barWidth - 4, 6);
         }
       }
     }
@@ -110,9 +131,9 @@ export class LaserBackground implements Background {
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     for (let i = 0; i <= WAVE_POINTS; i++) {
-      const x = (i / WAVE_POINTS) * GAME_WIDTH;
+      const x = (i / WAVE_POINTS) * COURT.WIDTH;
       const waveOffset = spectrum.getWaveform(i * 4) * 70;
-      const y = GAME_HEIGHT / 2 + waveOffset + Math.sin(i * 0.35 + time * 3) * 5;
+      const y = COURT.HEIGHT / 2 + waveOffset + Math.sin(i * 0.35 + time * 3) * 5;
       if (i === 0) {
         ctx.moveTo(x, y);
       } else {
@@ -125,14 +146,14 @@ export class LaserBackground implements Background {
   /** Dark elliptical shadow behind the court so the play area stays readable. */
   private renderVignette(ctx: CanvasRenderingContext2D): void {
     ctx.save();
-    ctx.translate(GAME_WIDTH / 2, GAME_HEIGHT / 2);
-    ctx.scale((GAME_WIDTH * 0.5) / (GAME_HEIGHT * 0.4), 1);
-    const vignetteGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, GAME_HEIGHT * 0.4);
+    ctx.translate(COURT.WIDTH / 2, COURT.HEIGHT / 2);
+    ctx.scale((COURT.WIDTH * 0.5) / (COURT.HEIGHT * 0.4), 1);
+    const vignetteGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, COURT.HEIGHT * 0.4);
     vignetteGrad.addColorStop(0, 'rgba(4, 1, 12, 0.92)');
     vignetteGrad.addColorStop(0.55, 'rgba(4, 1, 12, 0.82)');
     vignetteGrad.addColorStop(1, 'rgba(4, 1, 12, 0)');
     ctx.fillStyle = vignetteGrad;
-    ctx.fillRect(-GAME_WIDTH, -GAME_HEIGHT, GAME_WIDTH * 2, GAME_HEIGHT * 2);
+    ctx.fillRect(-COURT.WIDTH, -COURT.HEIGHT, COURT.WIDTH * 2, COURT.HEIGHT * 2);
     ctx.restore();
   }
 }

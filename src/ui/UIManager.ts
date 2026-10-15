@@ -1,5 +1,9 @@
 import { I18nManager } from '@/i18n/I18nManager';
-import { CSS_CLASSES } from '@/constants/game.constants';
+
+const CSS_CLASSES = {
+  GAME_UI_HIDDEN: 'game__ui--hidden',
+  GAME_PAUSE_HIDDEN: 'game-pause--hidden',
+} as const;
 
 export interface MenuItem {
   label: string;

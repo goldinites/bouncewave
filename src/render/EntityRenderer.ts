@@ -1,26 +1,30 @@
-import { COLORS, PADDLE_HEIGHT, PADDLE_WIDTH, TWO_PI } from '@/constants/game.constants';
-import { CLIMAX_BALL_HUE } from '@/constants/visual.constants';
-import { getRallyHeat } from '@/entities/heat';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { Particle, ShockwaveRing } from '@/types/game.types';
+import { Particle, ShockwaveRing } from '@/fx/ParticleSystem';
+import { Ball } from '@/match/Ball';
+import { PADDLE } from '@/match/config';
+import { getRallyHeat } from '@/match/heat';
+import { Paddle } from '@/match/Paddle';
+import { TWO_PI } from '@/shared/math';
+import { COLORS } from '@/shared/palette';
+
+const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
 
 export class EntityRenderer {
-  public static renderPaddle(ctx: CanvasRenderingContext2D, paddle: Paddle): void {
-    const topY = paddle.y - PADDLE_HEIGHT / 2;
+  /** @param glow hit glow in [0, 1] */
+  public static renderPaddle(ctx: CanvasRenderingContext2D, paddle: Paddle, glow: number): void {
+    const topY = paddle.y - PADDLE.HEIGHT / 2;
 
     ctx.save();
     ctx.shadowColor = paddle.color;
-    ctx.shadowBlur = 18 + paddle.glow * 30;
+    ctx.shadowBlur = 18 + glow * 30;
     ctx.fillStyle = paddle.color;
 
-    this.roundRect(ctx, paddle.x, topY, PADDLE_WIDTH, PADDLE_HEIGHT, 6);
+    this.roundRect(ctx, paddle.x, topY, PADDLE.WIDTH, PADDLE.HEIGHT, 6);
     ctx.fill();
 
     // Inner bright neon core
     ctx.shadowBlur = 0;
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + paddle.glow * 0.3})`;
-    this.roundRect(ctx, paddle.x + PADDLE_WIDTH / 2 - 2, topY + 8, 4, PADDLE_HEIGHT - 16, 2);
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + glow * 0.3})`;
+    this.roundRect(ctx, paddle.x + PADDLE.WIDTH / 2 - 2, topY + 8, 4, PADDLE.HEIGHT - 16, 2);
     ctx.fill();
 
     ctx.restore();

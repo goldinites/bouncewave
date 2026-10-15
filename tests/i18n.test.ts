@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { I18nManager } from '@/i18n/I18nManager';
-import { DifficultyLevel } from '@/types/difficulty.types';
+import { isLanguage, LANGUAGES, nextLanguage } from '@/i18n/translations';
+import { DifficultyLevel } from '@/match/difficulty';
 
 describe('I18nManager', () => {
   it('initializes with default language', () => {
@@ -16,12 +17,21 @@ describe('I18nManager', () => {
     expect(i18n.t('pause')).toBe('ПАУЗА');
   });
 
-  it('toggles language between en and ru', () => {
-    const i18n = new I18nManager('en');
-    expect(i18n.toggleLanguage()).toBe('ru');
-    expect(i18n.language).toBe('ru');
-    expect(i18n.toggleLanguage()).toBe('en');
-    expect(i18n.language).toBe('en');
+  it('cycles through the languages there are dictionaries for', () => {
+    expect(LANGUAGES).toEqual(['en', 'ru']);
+    expect(nextLanguage('en')).toBe('ru');
+    expect(nextLanguage('ru')).toBe('en');
+    expect(isLanguage('ru')).toBe(true);
+    expect(isLanguage('de')).toBe(false);
+  });
+
+  it('switches language and marks the document with it, from the start', () => {
+    const i18n = new I18nManager('ru');
+    expect(document.documentElement.lang).toBe('ru');
+
+    i18n.language = 'en';
+    expect(i18n.t('play')).toBe('PLAY');
+    expect(document.documentElement.lang).toBe('en');
   });
 
   it('returns difficulty description tuples for all levels', () => {

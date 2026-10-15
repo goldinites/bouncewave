@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { LOCAL_STORAGE_KEY } from '@/constants/audio.constants';
-import { SettingsStorage } from '@/storage/SettingsStorage';
-import { DifficultyLevel } from '@/types/difficulty.types';
+import { DifficultyLevel } from '@/match/difficulty';
+import { LOCAL_STORAGE_KEY, SettingsStorage } from '@/settings/SettingsStorage';
 
 class MemoryStorage implements Storage {
   private store: Record<string, string> = {};
@@ -80,5 +79,10 @@ describe('SettingsStorage', () => {
     mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ d: 99 }));
     const loaded = SettingsStorage.load();
     expect(loaded.difficulty).toBe(DifficultyLevel.NORMAL);
+  });
+
+  it('rejects a stored difficulty that is in range but not a level', () => {
+    mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ d: 1.5 }));
+    expect(SettingsStorage.load().difficulty).toBe(DifficultyLevel.NORMAL);
   });
 });

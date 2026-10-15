@@ -1,5 +1,5 @@
 import { Arrangement } from '@/audio/music/Arrangement';
-import { HarmonyTimeline } from '@/audio/music/HarmonyTimeline';
+import { Harmony, HarmonyTimeline } from '@/audio/music/HarmonyTimeline';
 import { Instruments } from '@/audio/music/Instruments';
 import {
   getTargetIntensity,
@@ -8,15 +8,12 @@ import {
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import {
-  CHORD_TYPES,
-  HARMONY_HISTORY,
-  MUSIC_TRACKS,
-  TAPE_STOP_DURATION,
-} from '@/constants/audio.constants';
-import { Harmony } from '@/types/audio.types';
-import { GameState } from '@/types/game.types';
-import { clamp } from '@/utils/math';
+import { CHORD_TYPES, MUSIC_TRACKS } from '@/audio/music/tracks';
+import { GameState } from '@/match/GameState';
+import { clamp } from '@/shared/math';
+
+const HARMONY_HISTORY = 4; // scheduled bar changes kept to find what is audible now
+const TAPE_STOP_DURATION = 1.1; // s for the music to grind to a halt on defeat
 
 // Look-ahead scheduling: wake up often, schedule a little ahead on the precise audio clock
 const SCHEDULER_INTERVAL_MS = 25;

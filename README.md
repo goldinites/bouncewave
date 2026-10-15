@@ -32,51 +32,30 @@ The project follows clean architecture principles with single-responsibility mod
 ├── vite.config.ts               # Bundler configuration with aliases & Vitest setup
 ├── src/
 │   ├── index.ts                 # Application bootstrap entry point
-│   ├── audio/                   # Web Audio API engine
-│   │   ├── AudioEngine.ts       # AudioContext lifecycle and coordination
-│   │   ├── MusicEngine.ts       # Procedural synth sequencer & audio analyzer
-│   │   └── SoundEffects.ts      # Synthesized sound effects (paddle, bounce, score, game over)
-│   ├── constants/               # Named constants (eliminated all magic numbers)
-│   │   ├── audio.constants.ts   # Musical scales, chords, basslines, SFX frequencies
-│   │   ├── difficulty.constants.ts # Speeds, error margins, and acceleration per difficulty
-│   │   ├── game.constants.ts    # Board dimensions, speeds, colors, scoring rules
-│   │   └── visual.constants.ts  # Particle lifetimes, lasers, screen shake/flash
-│   ├── core/                    # Core game engine logic
-│   │   ├── AiController.ts      # CPU opponent logic
-│   │   ├── Game.ts              # Game coordinator & main requestAnimationFrame loop
-│   │   ├── InputHandler.ts      # Keyboard, mouse, touch, and orientation events
-│   │   └── Physics.ts           # Collision detection, ball sub-stepping, deflections
-│   ├── entities/                # Game domain entities
-│   │   ├── Ball.ts              # Ball state, speed, trail, and dynamic radius
-│   │   ├── Paddle.ts            # Paddle movement, glow, smoothing, and spark particles
-│   │   └── ParticleSystem.ts    # Particle bursts and expanding shockwave rings
-│   ├── i18n/                    # Localization subsystem
-│   │   ├── I18nManager.ts       # Language switcher and translation provider
-│   │   └── translations.ts      # EN and RU dictionaries
-│   ├── render/                  # Canvas 2D rendering subsystem
-│   │   ├── BackgroundRenderer.ts# Laser show visualizer & Memphis VHS graphics
-│   │   ├── CourtRenderer.ts     # Neon boundaries and dashed center line
-│   │   ├── EntityRenderer.ts    # Glowing paddles, plasma ball, and particles
-│   │   ├── HudRenderer.ts       # Neon scoreboard and "GET READY" indicator
-│   │   └── Renderer.ts          # Main rendering coordinator, DPR scaling, screen shake/flash
-│   ├── storage/                 # Data persistence
-│   │   └── SettingsStorage.ts   # LocalStorage service with schema validation & defaults
-│   ├── styles/                  # Styling
-│   │   └── main.css             # CRT overlay, glitch title, neon buttons & responsive layout
-│   └── types/                   # TypeScript interfaces & types
-│       ├── audio.types.ts
-│       ├── difficulty.types.ts
-│       ├── game.types.ts
-│       └── i18n.types.ts
+│   ├── app/                     # Composition root and main requestAnimationFrame loop
+│   ├── match/                   # Rules and simulation: no DOM, sound or canvas
+│   │   ├── config.ts            # Court, paddle and ball sizes, winning score
+│   │   ├── difficulty.ts        # Difficulty levels and their AI / ball settings
+│   │   ├── MatchFlow.ts         # Phases, serves, scoring, finale timing
+│   │   ├── Physics.ts           # Ball movement, collisions, bounce angles
+│   │   └── …                    # Ball, Paddle, AiController, heat
+│   ├── fx/                      # Presentation reacting to the match: shake, particles, drama, climax
+│   ├── render/                  # Canvas 2D rendering; backgrounds/ holds one class per background
+│   ├── audio/                   # Web Audio: music/ (sequencer, tracks) and sfx/
+│   ├── input/                   # Keyboard, mouse, touch and orientation
+│   ├── ui/                      # DOM menus
+│   ├── i18n/                    # EN and RU dictionaries
+│   ├── settings/                # User settings and their LocalStorage persistence
+│   ├── shared/                  # Domain-free helpers: math, color palette
+│   ├── debug/                   # FPS overlay (F3 or ?fps)
+│   └── styles/                  # CRT overlay, glitch title, neon buttons & responsive layout
 └── tests/                       # Unit tests (Vitest)
-    ├── ai.test.ts
-    ├── ball.test.ts
-    ├── i18n.test.ts
-    ├── math.test.ts
-    ├── paddle.test.ts
-    ├── physics.test.ts
-    └── storage.test.ts
 ```
+
+**Where constants live.** A tuning value sits at the top of the module that uses it, next to
+the code it tunes (exported only when a test needs it). Values read by several modules live in
+the owning folder's `config.ts`, grouped into objects such as `PADDLE.WIDTH` or `COURT.HEIGHT`.
+Only domain-free values (the palette, math) go to `shared/`.
 
 ---
 

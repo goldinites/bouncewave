@@ -1,4 +1,8 @@
-import { Harmony } from '@/types/audio.types';
+/** What the music is playing right now: bar root (MIDI) and chord intervals in semitones. */
+export interface Harmony {
+  root: number;
+  chord: readonly number[];
+}
 
 interface TimedHarmony extends Harmony {
   time: number;

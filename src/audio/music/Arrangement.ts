@@ -1,8 +1,7 @@
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { BASS_PATTERNS, CHORD_TYPES } from '@/constants/audio.constants';
-import { TrackConfig } from '@/types/audio.types';
-import { clamp } from '@/utils/math';
+import { TrackConfig, CHORD_TYPES, BASS_PATTERNS } from '@/audio/music/tracks';
+import { clamp } from '@/shared/math';
 
 /** Everything that decides what one 16th-note step plays. */
 export interface StepContext {

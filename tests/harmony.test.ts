@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
-import { CHORD_TYPES, MELODY_MAX_NOTE, MUSIC_TRACKS } from '@/constants/audio.constants';
-import { Harmony } from '@/types/audio.types';
+import { Harmony } from '@/audio/music/HarmonyTimeline';
+import { CHORD_TYPES, MUSIC_TRACKS } from '@/audio/music/tracks';
+import { getRallyNote, getWallNote, MELODY_MAX_NOTE } from '@/audio/sfx/harmony';
 
 const A_MINOR: Harmony = { root: 33, chord: CHORD_TYPES[0] };
 const pitchClass = (note: number) => ((note % 12) + 12) % 12;

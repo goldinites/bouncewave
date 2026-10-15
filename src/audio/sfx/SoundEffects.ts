@@ -1,12 +1,19 @@
-import {
-  SFX_ECHO_FEEDBACK,
-  SFX_ECHO_TIME,
-  SFX_ECHO_WET,
-  SFX_FREQUENCIES,
-} from '@/constants/audio.constants';
+import { Harmony } from '@/audio/music/HarmonyTimeline';
 import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
-import { Harmony } from '@/types/audio.types';
-import { midiToFrequency } from '@/utils/math';
+import { midiToFrequency } from '@/shared/math';
+
+const SFX_FREQUENCIES = {
+  SCORE: 300,
+  SETTINGS_CLICK: 660,
+  GAME_OVER_CHIME: [523, 659, 784, 1047],
+  VICTORY_CHORD: [261.63, 523.25, 659.25, 783.99, 1046.5], // C major, root doubled below
+  DEFEAT_LINE: [440, 349.23, 293.66, 220], // A4 F4 D4 A3, falling minor
+  FIREWORK_POP_MIN: 600,
+  FIREWORK_POP_MAX: 950,
+} as const;
+
+// Shared echo used by the victory sting
+const ECHO = { TIME: 0.28, FEEDBACK: 0.35, WET: 0.5 } as const;
 
 export class SoundEffects {
   private audioContextGetter: () => AudioContext | null;
@@ -216,10 +223,10 @@ export class SoundEffects {
     const tone = ac.createBiquadFilter();
     const wet = ac.createGain();
 
-    delay.delayTime.value = SFX_ECHO_TIME;
-    feedback.gain.value = SFX_ECHO_FEEDBACK;
+    delay.delayTime.value = ECHO.TIME;
+    feedback.gain.value = ECHO.FEEDBACK;
     tone.frequency.value = 3000;
-    wet.gain.value = SFX_ECHO_WET;
+    wet.gain.value = ECHO.WET;
 
     input.connect(delay);
     delay.connect(tone);

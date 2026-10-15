@@ -1,5 +1,32 @@
-import { Language, TranslationSchema } from '@/types/i18n.types';
-import { WINNING_SCORE } from '@/constants/game.constants';
+import { DifficultyLevel } from '@/match/difficulty';
+import { WINNING_SCORE } from '@/match/config';
+export type Language = 'en' | 'ru';
+
+export type DifficultyDescription = [name: string, description: string];
+
+export interface TranslationSchema {
+  play: string;
+  settings: string;
+  again: string;
+  resume: string;
+  menu: string;
+  back: string;
+  diff: string;
+  sound: string;
+  music: string;
+  on: string;
+  off: string;
+  lang: string;
+  lang_name: string;
+  pause: string;
+  win: string;
+  lose: string;
+  ready: string;
+  hintK: string;
+  hintT: string;
+  /** Name and description of every difficulty level, by level. */
+  d: Record<DifficultyLevel, DifficultyDescription>;
+}
 
 export const TRANSLATIONS: Record<Language, TranslationSchema> = {
   en: {
@@ -57,3 +84,15 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     ],
   },
 };
+
+/** Every language there is a dictionary for. */
+export const LANGUAGES = Object.keys(TRANSLATIONS) as Language[];
+
+export function isLanguage(value: unknown): value is Language {
+  return LANGUAGES.includes(value as Language);
+}
+
+/** The next language in the list, wrapping around. */
+export function nextLanguage(language: Language): Language {
+  return LANGUAGES[(LANGUAGES.indexOf(language) + 1) % LANGUAGES.length];
+}

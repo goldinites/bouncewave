@@ -1,22 +1,25 @@
-import {
-  BALL_INITIAL_SPEED,
-  SERVE_DELAY_DEMO,
-  SERVE_DELAY_GAME_OVER,
-  SERVE_DELAY_NORMAL,
-  SERVE_DELAY_START,
-  WINNING_SCORE,
-} from '@/constants/game.constants';
-import {
-  FINAL_SEQUENCE_LOSS_DURATION,
-  FINAL_SEQUENCE_SKIP_AFTER,
-  FINAL_SEQUENCE_WIN_DURATION,
-} from '@/constants/visual.constants';
 import { AiController } from '@/match/AiController';
+import { Ball } from '@/match/Ball';
+import { BALL, WINNING_SCORE } from '@/match/config';
+import { AiSkill, DEMO_AI_SKILL, DifficultyConfig } from '@/match/difficulty';
+import { GameState } from '@/match/GameState';
+import { Paddle } from '@/match/Paddle';
 import { Physics, PhysicsEvent } from '@/match/Physics';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { DifficultyConfig } from '@/types/difficulty.types';
-import { GameMode, GameState } from '@/types/game.types';
+
+// Seconds the ball waits at center before each kind of serve
+export const SERVE_DELAY = {
+  NORMAL: 1.2,
+  START: 1.5,
+  DEMO: 0.5,
+  GAME_OVER: 0.8,
+} as const;
+
+// End-of-match cutscene (seconds); the canvas stays live throughout
+export const FINALE = {
+  WIN_DURATION: 2.4,
+  LOSS_DURATION: 1.9,
+  SKIP_AFTER: 0.6, // tap/key can skip once this has passed
+} as const;
 
 /**
  * - `attract`: AI-vs-AI demo behind the menus
@@ -77,6 +80,7 @@ export class MatchFlow {
   private finaleElapsed = 0;
   private finaleDuration = 0;
 
+  private readonly ai = new AiController();
   private readonly paddles: [Paddle, Paddle];
   private readonly ball: Ball;
   private readonly input: PlayerInput;
@@ -111,8 +115,9 @@ export class MatchFlow {
     return this._time;
   }
 
-  public get gameMode(): GameMode {
-    return this._phase === 'attract' ? GameMode.DEMO : GameMode.PLAYER_VS_AI;
+  /** The AI-vs-AI demo behind the menus is running, not a match. */
+  public get isDemo(): boolean {
+    return this._phase === 'attract';
   }
 
   /** Coarse state for audio and rendering, which only care about menu / play / paused. */
@@ -134,14 +139,14 @@ export class MatchFlow {
 
   public startAttract(): void {
     this._phase = 'attract';
-    this.serve(1, SERVE_DELAY_DEMO);
+    this.serve(1, SERVE_DELAY.DEMO);
   }
 
   public startMatch(): void {
     this.emit({ type: 'matchStart' });
     this.resetScores();
     this._phase = 'serving';
-    this.serve(this.random() < 0.5 ? 1 : -1, SERVE_DELAY_START);
+    this.serve(this.random() < 0.5 ? 1 : -1, SERVE_DELAY.START);
   }
 
   public returnToMenu(): void {
@@ -166,7 +171,7 @@ export class MatchFlow {
 
   /** Ends the finale early, once its key moment has played. @returns whether it ended */
   public skipFinale(): boolean {
-    if (this._phase !== 'finale' || this.finaleElapsed < FINAL_SEQUENCE_SKIP_AFTER) return false;
+    if (this._phase !== 'finale' || this.finaleElapsed < FINALE.SKIP_AFTER) return false;
     this.finishFinale();
     return true;
   }
@@ -209,12 +214,14 @@ export class MatchFlow {
   private updatePaddles(difficulty: DifficultyConfig, dt: number): void {
     const [player, cpu] = this.paddles;
 
-    if (this.gameMode === GameMode.PLAYER_VS_AI) {
-      this.input.pollPlayerMovement(player, dt);
+    const skill = this.getAiSkill(difficulty);
+
+    if (this.isDemo) {
+      this.ai.update(player, this.ball, skill, dt);
     } else {
-      AiController.update(player, this.ball, this.gameMode, difficulty, dt);
+      this.input.pollPlayerMovement(player, dt);
     }
-    AiController.update(cpu, this.ball, this.gameMode, difficulty, dt);
+    this.ai.update(cpu, this.ball, skill, dt);
 
     this.paddles.forEach((p) => p.update(dt));
   }
@@ -227,7 +234,7 @@ export class MatchFlow {
       case 'paddleHit':
         this._rally++;
         // The other paddle now has to read the return
-        AiController.rollAimError(this.paddles[1 - event.paddleIndex], this.gameMode, difficulty);
+        this.ai.rollAimError(this.paddles[1 - event.paddleIndex], this.getAiSkill(difficulty));
         this.emit({ ...event, rally: this._rally });
         break;
       case 'score':
@@ -241,7 +248,7 @@ export class MatchFlow {
 
     if (this._phase === 'attract') {
       this.emit({ type: 'score', scoringPlayerIndex: scorer, y, isDemo: true });
-      this.serve(nextServe, SERVE_DELAY_DEMO);
+      this.serve(nextServe, SERVE_DELAY.DEMO);
       return;
     }
 
@@ -254,14 +261,14 @@ export class MatchFlow {
     }
 
     this._phase = 'serving';
-    this.serve(nextServe, SERVE_DELAY_NORMAL);
+    this.serve(nextServe, SERVE_DELAY.NORMAL);
   }
 
   private beginFinale(winner: 0 | 1, ballY: number): void {
     this._phase = 'finale';
     this.finaleWinner = winner;
     this.finaleElapsed = 0;
-    this.finaleDuration = winner === 0 ? FINAL_SEQUENCE_WIN_DURATION : FINAL_SEQUENCE_LOSS_DURATION;
+    this.finaleDuration = winner === 0 ? FINALE.WIN_DURATION : FINALE.LOSS_DURATION;
 
     this.emit({ type: 'finaleStart', winnerIndex: winner, ballY, scores: this.scores });
   }
@@ -271,18 +278,24 @@ export class MatchFlow {
     this._phase = 'attract';
 
     this.emit({ type: 'gameOver', winnerIndex: winner, scores: this.scores });
-    this.serve(winner === 0 ? 1 : -1, SERVE_DELAY_GAME_OVER);
+    this.serve(winner === 0 ? 1 : -1, SERVE_DELAY.GAME_OVER);
   }
 
   private serve(direction: number, delay: number): void {
-    this.ball.serve(direction, BALL_INITIAL_SPEED);
+    this.ball.serve(direction, BALL.INITIAL_SPEED);
     this._rally = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });
   }
 
+  /** The demo plays at its own level; in a match the CPU plays at the chosen difficulty. */
+  private getAiSkill(difficulty: DifficultyConfig): AiSkill {
+    return this.isDemo ? DEMO_AI_SKILL : difficulty;
+  }
+
   private resetScores(): void {
     this.paddles.forEach((p) => p.resetScore());
+    this.ai.reset();
   }
 
   private get scores(): [number, number] {
