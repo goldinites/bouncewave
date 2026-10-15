@@ -291,8 +291,11 @@ export class BackgroundRenderer {
     const remainingSeconds = seconds % 60;
     const timeString = `SP 0:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 
-    this.renderOsdText(ctx, '▶ PLAY', 26, 38, isRotated);
-    this.renderOsdText(ctx, timeString, 26, 58, isRotated);
+    const playTextX = isRotated ? 46 : 26;
+    const timeTextY = isRotated ? 38 : 58;
+
+    this.renderOsdText(ctx, '▶ PLAY', playTextX, 38, isRotated);
+    this.renderOsdText(ctx, timeString, 26, timeTextY, isRotated);
     ctx.restore();
   }
 
