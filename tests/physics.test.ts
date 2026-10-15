@@ -7,6 +7,8 @@ import {
   GAME_WIDTH,
   PADDLE_HEIGHT,
   PADDLE_OFFSET_X,
+  PADDLE_SPIN_DEADZONE,
+  PADDLE_SPIN_MAX_ANGLE,
   PADDLE_WIDTH,
   PERFECT_HIT_BOOST,
   PERFECT_HIT_BOOST_DURATION,
@@ -200,6 +202,42 @@ describe('Physics Engine', () => {
 
     const angleOf = (b: Ball) => Math.abs(Math.atan2(b.vy, b.vx));
     expect(angleOf(edge.ball)).toBeGreaterThan(angleOf(mid.ball) * 2);
+  });
+
+  it('ignores tiny paddle speeds and caps the spin nudge', () => {
+    expect(Physics.getSpinAngle(0)).toBe(0);
+    expect(Physics.getSpinAngle(PADDLE_SPIN_DEADZONE)).toBe(0);
+    expect(Physics.getSpinAngle(300)).toBeGreaterThan(0);
+    expect(Physics.getSpinAngle(-300)).toBeCloseTo(-Physics.getSpinAngle(300));
+    expect(Physics.getSpinAngle(100000)).toBeLessThanOrEqual(PADDLE_SPIN_MAX_ANGLE);
+  });
+
+  it('a paddle moving down sends a center hit downward', () => {
+    const ball = new Ball();
+    const p1 = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
+    const p2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
+    p1.y = 250;
+    p1.velocity = 500;
+
+    ball.x = p1.x + PADDLE_WIDTH + 2;
+    ball.y = 250;
+    ball.vx = -400;
+    ball.vy = 0;
+    ball.speed = 400;
+
+    Physics.updateBallMovement(
+      ball,
+      [p1, p2],
+      new ParticleSystem(),
+      DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
+      GameMode.PLAYER_VS_AI,
+      { current: 0 },
+      0.001,
+      getMockCallbacks().callbacks,
+    );
+
+    expect(ball.vx).toBeGreaterThan(0);
+    expect(ball.vy).toBeGreaterThan(0);
   });
 
   it('maps hit offset to a symmetric, monotonic bounce angle', () => {

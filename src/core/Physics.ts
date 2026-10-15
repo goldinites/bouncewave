@@ -9,6 +9,9 @@ import {
   PADDLE_BOUNCE_CURVE,
   PADDLE_HEIGHT,
   PADDLE_MAX_BOUNCE_ANGLE,
+  PADDLE_SPIN_DEADZONE,
+  PADDLE_SPIN_MAX_ANGLE,
+  PADDLE_SPIN_REFERENCE_SPEED,
   PADDLE_WIDTH,
   PERFECT_HIT_BOOST,
   PERFECT_HIT_BOOST_DURATION,
@@ -96,7 +99,11 @@ export class Physics {
         if (isCollidingX && isCollidingY) {
           const hitOffset = clamp((ball.y - paddle.y) / (PADDLE_HEIGHT / 2), -1, 1);
           const isPerfect = Math.abs(hitOffset) <= PERFECT_HIT_ZONE;
-          const bounceAngle = Physics.getBounceAngle(hitOffset);
+          const bounceAngle = clamp(
+            Physics.getBounceAngle(hitOffset) + Physics.getSpinAngle(paddle.velocity),
+            -PADDLE_MAX_BOUNCE_ANGLE,
+            PADDLE_MAX_BOUNCE_ANGLE,
+          );
           const direction = i === 0 ? 1 : -1;
 
           ball.speed = Math.min(
@@ -173,6 +180,19 @@ export class Physics {
     const offset = clamp(hitOffset, -1, 1);
     return (
       Math.sign(offset) * Math.pow(Math.abs(offset), PADDLE_BOUNCE_CURVE) * PADDLE_MAX_BOUNCE_ANGLE
+    );
+  }
+
+  /**
+   * Angle nudge from paddle motion at impact (positive velocity = down = steeper downward shot).
+   * Small speeds are ignored and large ones saturate, so jerky touch input stays harmless.
+   */
+  public static getSpinAngle(paddleVelocity: number): number {
+    const effective = Math.max(0, Math.abs(paddleVelocity) - PADDLE_SPIN_DEADZONE);
+    return (
+      Math.sign(paddleVelocity) *
+      Math.tanh(effective / PADDLE_SPIN_REFERENCE_SPEED) *
+      PADDLE_SPIN_MAX_ANGLE
     );
   }
 }

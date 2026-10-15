@@ -43,6 +43,29 @@ describe('Paddle', () => {
     expect(paddle.y).toBeLessThan(200);
   });
 
+  it('tracks smoothed velocity in the direction of motion', () => {
+    const paddle = new Paddle(0, 34, '#19f0ff');
+    const particles = new ParticleSystem();
+    paddle.targetY = 400;
+
+    for (let i = 0; i < 5; i++) paddle.update(0.016, particles, 0);
+    expect(paddle.velocity).toBeGreaterThan(0);
+
+    paddle.targetY = 100;
+    for (let i = 0; i < 30; i++) paddle.update(0.016, particles, 0);
+    expect(paddle.velocity).toBeLessThan(0);
+  });
+
+  it('damps a single-frame jump instead of passing it through', () => {
+    const paddle = new Paddle(0, 34, '#19f0ff');
+    const particles = new ParticleSystem();
+    paddle.targetY = paddle.y + 200; // a jerky touch jump
+
+    paddle.update(0.016, particles, 0);
+    const rawSpeed = (paddle.y - GAME_HEIGHT / 2) / 0.016;
+    expect(paddle.velocity).toBeLessThan(rawSpeed * 0.25);
+  });
+
   it('resets score and position', () => {
     const paddle = new Paddle(0, 34, '#19f0ff');
     paddle.score = 5;

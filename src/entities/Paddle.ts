@@ -5,6 +5,7 @@ import {
   PADDLE_HEIGHT,
   PADDLE_SMOOTH_FACTOR,
   PADDLE_TOP_MARGIN,
+  PADDLE_VELOCITY_SMOOTHING,
   PADDLE_WIDTH,
 } from '@/constants/game.constants';
 import { ParticleSystem } from '@/entities/ParticleSystem';
@@ -18,6 +19,8 @@ export class Paddle {
   public glow: number = 0;
   public readonly color: string;
   public errorOffset: number = 0;
+  /** Smoothed vertical speed in px/s (positive = moving down). */
+  public velocity: number = 0;
   public readonly index: number;
 
   constructor(index: number, x: number, color: string) {
@@ -33,6 +36,7 @@ export class Paddle {
     this.targetY = GAME_HEIGHT / 2;
     this.glow = 0;
     this.errorOffset = 0;
+    this.velocity = 0;
   }
 
   public resetScore(): void {
@@ -47,7 +51,15 @@ export class Paddle {
   }
 
   public update(dt: number, particleSystem: ParticleSystem, rally: number): void {
+    const previousY = this.y;
     this.y += (this.targetY - this.y) * Math.min(1, dt * PADDLE_SMOOTH_FACTOR);
+
+    // Low-pass the measured speed so jerky touch input doesn't produce spikes
+    if (dt > 0) {
+      const rawVelocity = (this.y - previousY) / dt;
+      this.velocity += (rawVelocity - this.velocity) * Math.min(1, dt * PADDLE_VELOCITY_SMOOTHING);
+    }
+
     this.glow = Math.max(0, this.glow - dt * PADDLE_GLOW_DECAY);
 
     this.spawnMotionSparks(dt, particleSystem, rally);

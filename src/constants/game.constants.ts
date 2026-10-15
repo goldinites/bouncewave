@@ -13,6 +13,11 @@ export const PADDLE_BOTTOM_MARGIN = 20;
 // Hit offset is normalized to [-1, 1] from paddle center to edge
 export const PADDLE_MAX_BOUNCE_ANGLE = 1.1; // radians, reached at the very edge
 export const PADDLE_BOUNCE_CURVE = 1.6; // >1 keeps mid hits flatter and sharpens edge hits
+// Paddle inertia: moving paddle nudges the outgoing angle, kept soft for jerky touch input
+export const PADDLE_VELOCITY_SMOOTHING = 12; // 1/s, ~80 ms averaging window
+export const PADDLE_SPIN_DEADZONE = 40; // px/s ignored as jitter
+export const PADDLE_SPIN_REFERENCE_SPEED = 600; // px/s where the nudge reaches ~76% of max
+export const PADDLE_SPIN_MAX_ANGLE = 0.2; // radians (~11°), saturates softly via tanh
 export const PERFECT_HIT_ZONE = 0.15; // central share of the half-height that counts as perfect
 export const PERFECT_HIT_BOOST = 0.25; // temporary extra speed share right after a perfect hit
 export const PERFECT_HIT_BOOST_DURATION = 0.8; // seconds for the boost to fade out
