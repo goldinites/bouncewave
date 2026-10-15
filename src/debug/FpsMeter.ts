@@ -4,6 +4,8 @@
  * - Lives in its own DOM element on top of the page (never drawn on the canvas).
  * - Hidden by default. Enable with `?fps` in the URL or toggle with F3.
  * - Costs almost nothing while hidden: tick() returns immediately.
+ * - Also shows the last error the game caught and survived (reportError), for devices
+ *   without a developer console such as iPhones.
  */
 
 const BUFFER_SIZE = 360; // enough for ~3 s at 120 Hz
@@ -18,6 +20,9 @@ export class FpsMeter {
   private count = 0;
   private lastTimestamp = 0;
   private lastRefresh = 0;
+  private statsText = 'FPS ...';
+  private errorCount = 0;
+  private lastError = '';
   private visible = false;
 
   constructor() {
@@ -30,7 +35,8 @@ export class FpsMeter {
       zIndex: '9999',
       padding: '4px 8px',
       font: '12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-      whiteSpace: 'pre',
+      whiteSpace: 'pre-wrap',
+      maxWidth: 'calc(100vw - 12px)',
       color: '#7cfc8a',
       background: 'rgba(0, 0, 0, 0.6)',
       borderRadius: '4px',
@@ -68,6 +74,14 @@ export class FpsMeter {
     }
   }
 
+  /** Logs an error the game caught and survived, and shows it in the overlay. */
+  public reportError(error: unknown): void {
+    console.error(error);
+    this.errorCount++;
+    this.lastError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    this.updateText();
+  }
+
   public dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     this.el.remove();
@@ -89,9 +103,10 @@ export class FpsMeter {
     const avgFps = 1000 / avgMs;
     const nowFps = 1000 / Math.max(lastDelta, 0.001);
 
-    this.el.textContent =
+    this.statsText =
       `FPS ${avgFps.toFixed(0).padStart(3)}  (now ${nowFps.toFixed(0)})\n` +
       `ms  ${avgMs.toFixed(1).padStart(5)}  (worst ${worst.toFixed(1)})`;
+    this.updateText();
     this.el.style.color = avgFps >= 55 ? '#7cfc8a' : avgFps >= 30 ? '#ffd84d' : '#ff5c5c';
   }
 
@@ -104,7 +119,14 @@ export class FpsMeter {
     this.count = 0;
     this.lastTimestamp = 0;
     this.lastRefresh = 0;
-    if (value) this.el.textContent = 'FPS ...';
+    this.statsText = 'FPS ...';
+    this.updateText();
+  }
+
+  private updateText(): void {
+    if (!this.visible) return;
+    const errors = this.errorCount ? `\nERR ×${this.errorCount}: ${this.lastError}` : '';
+    this.el.textContent = this.statsText + errors;
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
