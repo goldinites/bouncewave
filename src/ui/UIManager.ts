@@ -5,9 +5,14 @@ const CSS_CLASSES = {
   GAME_PAUSE_HIDDEN: 'game-pause--hidden',
 } as const;
 
+/** Button colors; all but the default cyan have a .game-button--<color> modifier in main.css. */
+export type ButtonColor = 'cyan' | 'yellow' | 'pink' | 'purple' | 'green';
+
 export interface MenuItem {
   label: string;
   action: () => void;
+  /** Cyan when left out. */
+  color?: ButtonColor;
   /** Makes the item a toggle, drawn filled while on; plain buttons leave it out. */
   isOn?: boolean;
 }
@@ -48,6 +53,10 @@ export class UIManager {
 
     items.forEach((item) => {
       const btn = document.createElement('button');
+      btn.className = 'game-button';
+      if (item.color && item.color !== 'cyan') {
+        btn.classList.add(`game-button--${item.color}`);
+      }
       btn.textContent = item.label;
       if (item.isOn !== undefined) {
         btn.setAttribute('aria-pressed', String(item.isOn));

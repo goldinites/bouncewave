@@ -153,8 +153,7 @@ body {
   margin-top: 6px;
 }
 
-.game-button,
-.game__buttons button {
+.game-button {
   --button-color: var(--cyan);
 
   padding: 0.85em 1.5em;
@@ -183,12 +182,21 @@ body {
     color 0.15s;
 }
 
-.game__buttons button:nth-child(2) {
+/* Color modifiers; they come after .game-button, so they win over its cyan */
+.game-button--yellow {
+  --button-color: var(--yellow);
+}
+
+.game-button--pink {
   --button-color: var(--pink);
 }
 
-.game__buttons button:nth-child(3) {
+.game-button--purple {
   --button-color: var(--purple);
+}
+
+.game-button--green {
+  --button-color: var(--green);
 }
 
 /* Toggles (music, sound) say whether they are on with aria-pressed; on means filled */

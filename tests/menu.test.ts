@@ -53,4 +53,25 @@ describe('settings menu', () => {
     expect(buttons()[1].getAttribute('aria-pressed')).toBe('true');
     expect(buttons()[1].textContent).toBe('MUSIC: ON');
   });
+
+  it('colors each button by what it does', () => {
+    const { menu, buttons } = setup();
+    const classes = () => buttons().map((b) => b.className);
+
+    menu.showSettingsMenu(() => {});
+    expect(classes()).toEqual([
+      'game-button game-button--yellow', // difficulty
+      'game-button game-button--pink', // music
+      'game-button game-button--purple', // sound
+      'game-button game-button--green', // language
+      'game-button', // back, default cyan
+    ]);
+
+    menu.showPauseMenu();
+    expect(classes()).toEqual([
+      'game-button',
+      'game-button game-button--pink',
+      'game-button game-button--purple',
+    ]);
+  });
 });

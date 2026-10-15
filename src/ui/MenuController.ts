@@ -2,7 +2,7 @@ import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
-import { UIManager } from '@/ui/UIManager';
+import { ButtonColor, UIManager } from '@/ui/UIManager';
 
 export interface GameMenuActions {
   onStartGame: () => void;
@@ -18,6 +18,7 @@ interface SettingsMenuEntry {
   clicks?: boolean;
   /** For on/off settings: shows the entry as a toggle, filled while on. */
   isOn?: (settings: UserSettings) => boolean;
+  color: ButtonColor;
 }
 
 const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 'on');
@@ -26,20 +27,27 @@ const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 
 const SETTINGS_MENU: SettingsMenuEntry[] = [
   {
     key: 'difficulty',
+    color: 'yellow',
     label: (s, i18n) => `${i18n.t('diff')}: ${i18n.getDifficultyInfo(s.difficulty)[0]}`,
   },
   {
     key: 'musicMuted',
+    color: 'pink',
     label: (s, i18n) => `${i18n.t('music')}: ${onOff(i18n, s.musicMuted)}`,
     isOn: (s) => !s.musicMuted,
   },
   {
     key: 'soundMuted',
+    color: 'purple',
     label: (s, i18n) => `${i18n.t('sound')}: ${onOff(i18n, s.soundMuted)}`,
     clicks: true,
     isOn: (s) => !s.soundMuted,
   },
-  { key: 'language', label: (_, i18n) => `${i18n.t('lang')}: ${i18n.t('lang_name')}` },
+  {
+    key: 'language',
+    color: 'green',
+    label: (_, i18n) => `${i18n.t('lang')}: ${i18n.t('lang_name')}`,
+  },
 ];
 
 export class MenuController {
@@ -74,6 +82,7 @@ export class MenuController {
         },
         {
           label: this.i18n.t('settings'),
+          color: 'pink',
           action: () => this.showSettingsMenu(() => this.showMainMenu()),
         },
       ],
@@ -92,10 +101,12 @@ export class MenuController {
         },
         {
           label: this.i18n.t('settings'),
+          color: 'pink',
           action: () => this.showSettingsMenu(() => this.showPauseMenu()),
         },
         {
           label: this.i18n.t('menu'),
+          color: 'purple',
           action: () => this.actions.onReturnToMainMenu(),
         },
       ],
@@ -118,10 +129,12 @@ export class MenuController {
         },
         {
           label: this.i18n.t('settings'),
+          color: 'pink',
           action: () => this.showSettingsMenu(() => this.showGameOverMenu(winnerIndex, scores)),
         },
         {
           label: this.i18n.t('menu'),
+          color: 'purple',
           action: () => this.actions.onReturnToMainMenu(),
         },
       ],
@@ -140,6 +153,7 @@ export class MenuController {
           label: entry.label(settings, this.i18n),
           action: () => this.changeSetting(entry, onBack),
           isOn: entry.isOn?.(settings),
+          color: entry.color,
         })),
         { label: this.i18n.t('back'), action: onBack },
       ],
