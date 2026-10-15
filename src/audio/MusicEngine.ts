@@ -1,6 +1,8 @@
 import {
   BASS_PATTERNS,
   CHORD_TYPES,
+  CLIMAX_INTENSITY_RAMP,
+  CLIMAX_LAYER_FADE,
   DRAMA_FILTER_MAX_FREQ,
   DRAMA_FILTER_MIN_FREQ,
   MUSIC_TRACKS,
@@ -34,6 +36,9 @@ export class MusicEngine {
 
   private intensity = 0.3;
   private dramaLevel = 0;
+  private isClimax = false;
+  private climaxMix = 0;
+  private isDropPending = false;
   private nextStepTime = 0;
   private currentStep = 0;
   private songTrackOffset = 0;
@@ -109,6 +114,17 @@ export class MusicEngine {
     const frequency =
       DRAMA_FILTER_MAX_FREQ * Math.pow(DRAMA_FILTER_MIN_FREQ / DRAMA_FILTER_MAX_FREQ, clamped);
     this.dramaFilterNode.frequency.setTargetAtTime(frequency, this.ac.currentTime, 0.03);
+  }
+
+  /** Rally climax: full intensity plus extra layers; switching on fires a one-shot drop. */
+  public setClimax(active: boolean): void {
+    if (active && !this.isClimax) {
+      this.isDropPending = true;
+    }
+    if (!active) {
+      this.isDropPending = false;
+    }
+    this.isClimax = active;
   }
 
   public newSong(): void {
@@ -312,6 +328,55 @@ export class MusicEngine {
         2500,
       );
     }
+
+    if (this.climaxMix > 0) {
+      this.playClimaxLayers(
+        time,
+        stepInBar,
+        stepDuration,
+        root,
+        triad,
+        track.arpeggioPattern,
+        this.climaxMix,
+      );
+    }
+  }
+
+  /** One-shot impact when the climax starts: crash, heavy kick and a long held bass note. */
+  private playDrop(time: number, root: number, stepDuration: number): void {
+    if (!this.busNode) return;
+    this.playNoise(time, 1.6, 0.22, 2500);
+    this.playKick(time, 1.0);
+    // Bass root register (not an octave lower) so it stays audible on phone speakers
+    this.playNote('sawtooth', root, time, stepDuration * 8, 0.22, this.busNode, 900);
+  }
+
+  /** Extra layers that only play during the climax, on top of the full-intensity mix. */
+  private playClimaxLayers(
+    time: number,
+    stepInBar: number,
+    stepDuration: number,
+    root: number,
+    triad: number[],
+    arpeggioPattern: number[],
+    mix: number,
+  ): void {
+    if (!this.auxNode) return;
+
+    // Crash on every bar
+    if (stepInBar === 0) {
+      this.playNoise(time, 0.9, 0.12 * mix, 4000);
+    }
+
+    // Open hats on the off-beats
+    if (stepInBar % 4 === 2) {
+      this.playNoise(time, 0.12, 0.07 * mix, 9000);
+    }
+
+    // Sparkle arpeggio an octave above the lead
+    const arpeggioIndex = arpeggioPattern[(stepInBar + 2) & 15];
+    const sparkleNote = root + 36 + triad[arpeggioIndex % 3] + (arpeggioIndex > 2 ? 12 : 0);
+    this.playNote('square', sparkleNote, time, stepDuration * 0.9, 0.025 * mix, this.auxNode, 6000);
   }
 
   private scheduleSteps(): void {
@@ -355,9 +420,27 @@ export class MusicEngine {
         }
       }
 
-      this.intensity += (targetIntensity - this.intensity) * 0.025;
+      if (this.isClimax && gameState === 'play') {
+        // Much faster than the usual slow build, but still a short ramp rather than a jump
+        this.intensity += (1 - this.intensity) * CLIMAX_INTENSITY_RAMP;
+      } else {
+        this.intensity += (targetIntensity - this.intensity) * 0.025;
+      }
+
+      // Climax-only layers fade in and out over about a bar instead of switching
+      const climaxTarget = this.isClimax ? 1 : 0;
+      this.climaxMix += (climaxTarget - this.climaxMix) * CLIMAX_LAYER_FADE;
+      if (this.climaxMix < 0.01) this.climaxMix = 0;
       const track = this.getCurrentTrack(this.currentStep);
       const stepDuration = 60 / (track.bpm + 8 * this.intensity) / 4;
+
+      if (this.isDropPending) {
+        this.isDropPending = false;
+        if (!isMuted) {
+          const bar = (this.currentStep >> 4) & 3;
+          this.playDrop(this.nextStepTime, track.rootNotes[bar], stepDuration);
+        }
+      }
 
       const filterFreq = gameState === 'paused' ? 450 : gameState === 'menu' ? 2800 : 16000;
       this.filterNode.frequency.setTargetAtTime(filterFreq, this.nextStepTime, 0.2);

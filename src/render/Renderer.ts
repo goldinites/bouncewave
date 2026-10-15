@@ -4,6 +4,10 @@ import {
   SCREEN_FLASH_DECAY,
   SCREEN_SHAKE_DECAY,
   VICTORY_DURATION,
+  CLIMAX_FLASH,
+  CLIMAX_LASER_SURGE,
+  CLIMAX_LASER_SURGE_DECAY,
+  CLIMAX_SHAKE,
   VIGNETTE_MAX_ALPHA,
   VIGNETTE_RGB,
 } from '@/constants/visual.constants';
@@ -32,6 +36,9 @@ export class Renderer {
   public screenFlash = 0;
   /** Edge darkening in [0, 1], driven by match-point drama. */
   public vignette = 0;
+  /** Rally climax intensity in [0, 1]: lasers stay lit and the ball burns hotter. */
+  public climax = 0;
+  private laserSurge = 0;
   private vignetteGradient: CanvasGradient;
 
   private menuDim = MENU_DIM_ALPHA;
@@ -117,8 +124,20 @@ export class Renderer {
     this.screenFlash = Math.max(this.screenFlash, amount);
   }
 
+  /** One-shot burst at the start of the climax; lasers swell above full and settle back. */
+  public triggerClimaxSurge(): void {
+    // Raises the laser target rather than the value, so the swell eases in
+    this.laserSurge = CLIMAX_LASER_SURGE;
+    this.background.triggerDrop();
+    this.addFlash(CLIMAX_FLASH);
+    this.addShake(CLIMAX_SHAKE);
+  }
+
   public update(dt: number, gameState: GameState, serveTime: number): void {
-    const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : 0.12;
+    this.laserSurge *= Math.exp(-dt * CLIMAX_LASER_SURGE_DECAY);
+
+    const playLaserIntensity = 0.12 + 0.88 * this.climax + this.laserSurge;
+    const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : playLaserIntensity;
 
     this.background.laserIntensity +=
       (targetLaserIntensity - this.background.laserIntensity) * Math.min(1, dt * 2.5);
@@ -156,6 +175,7 @@ export class Renderer {
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
 
     // Animated background
+    this.background.climax = this.climax;
     this.background.render(ctx, analyser, gameTime, this.screenShake, isRotated);
 
     ctx.save();
@@ -180,7 +200,7 @@ export class Renderer {
     paddles.forEach((paddle) => EntityRenderer.renderPaddle(ctx, paddle));
 
     // Ball
-    EntityRenderer.renderBall(ctx, ball, rally, gameTime, serveTime);
+    EntityRenderer.renderBall(ctx, ball, rally, gameTime, serveTime, this.climax);
 
     // Particles and shockwaves
     EntityRenderer.renderParticles(ctx, particleSystem.particles);

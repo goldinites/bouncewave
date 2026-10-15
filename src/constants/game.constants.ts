@@ -33,6 +33,9 @@ export const BALL_TRAIL_MAX_LENGTH = 9;
 export const BALL_OUT_OF_BOUNDS_OFFSET = 30;
 export const BALL_MAX_TRAIL_RALLY = 14;
 
+// Rally length at which "heat" maxes out and the climax (music drop, laser surge) kicks in
+export const CLIMAX_RALLY = BALL_MAX_TRAIL_RALLY;
+
 export const WINNING_SCORE = 3;
 
 export const SERVE_DELAY_NORMAL = 1.2;

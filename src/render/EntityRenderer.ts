@@ -1,4 +1,5 @@
 import { COLORS, PADDLE_HEIGHT, PADDLE_WIDTH, TWO_PI } from '@/constants/game.constants';
+import { CLIMAX_BALL_HUE } from '@/constants/visual.constants';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { Particle, ShockwaveRing } from '@/types/game.types';
@@ -30,17 +31,23 @@ export class EntityRenderer {
     rally: number,
     time: number,
     serveTime: number,
+    climax = 0,
   ): void {
     ctx.save();
 
     ctx.globalAlpha = serveTime > 0 ? 0.05 : 1;
 
     const rallyIntensity = Math.min(1, rally / 14);
-    const hue = 52 + rallyIntensity * 30;
+    // Climax pushes the plasma from yellow-green toward a white-hot orange
+    const rallyHue = 52 + rallyIntensity * 30;
+    const hue = rallyHue + (CLIMAX_BALL_HUE - rallyHue) * climax;
     const sat = 20 + rallyIntensity * 80;
     const glowSat = Math.min(100, sat + 35);
-    const lit = 88 - rallyIntensity * 18;
-    const flicker = 0.92 + Math.sin(time * 23) * 0.05 + Math.random() * 0.04;
+    const lit = 88 - rallyIntensity * 18 + climax * 8;
+    const flicker =
+      0.92 +
+      Math.sin(time * (23 + climax * 17)) * 0.05 * (1 + climax * 1.5) +
+      Math.random() * 0.04 * (1 + climax * 3);
 
     const currentRadius =
       serveTime > 0 ? ball.radius * (1 + 0.2 * Math.sin(time * 20)) : ball.radius;
@@ -58,7 +65,7 @@ export class EntityRenderer {
     });
 
     // Outer plasma corona
-    const coronaRadius = currentRadius * (2 + rallyIntensity * 1.8) * flicker;
+    const coronaRadius = currentRadius * (2 + rallyIntensity * 1.8 + climax * 1.6) * flicker;
     const coronaGradient = ctx.createRadialGradient(x, y, currentRadius * 0.6, x, y, coronaRadius);
     coronaGradient.addColorStop(0, `hsla(${hue}, ${glowSat}%, ${lit}%, 0.7)`);
     coronaGradient.addColorStop(0.35, `hsla(${hue + 10}, ${glowSat}%, ${lit - 12}%, 0.22)`);
@@ -73,7 +80,7 @@ export class EntityRenderer {
     ctx.globalCompositeOperation = 'source-over';
     ctx.save();
     ctx.shadowColor = `hsl(${hue}, ${glowSat}%, ${lit - 8}%)`;
-    ctx.shadowBlur = currentRadius * (1.4 + rallyIntensity * 1.6) * flicker;
+    ctx.shadowBlur = currentRadius * (1.4 + rallyIntensity * 1.6 + climax * 1.4) * flicker;
 
     const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, currentRadius);
     coreGradient.addColorStop(0, COLORS.WHITE);

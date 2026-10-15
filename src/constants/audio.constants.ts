@@ -55,4 +55,9 @@ export const SFX_FREQUENCIES = {
 export const DRAMA_FILTER_MIN_FREQ = 550;
 export const DRAMA_FILTER_MAX_FREQ = 20000;
 
+// Rally climax, per sequencer step (~0.13 s): intensity reaches full in ~6 steps,
+// extra layers fade in/out over roughly one bar
+export const CLIMAX_INTENSITY_RAMP = 0.3;
+export const CLIMAX_LAYER_FADE = 0.15;
+
 export const LOCAL_STORAGE_KEY = 'neonpong';

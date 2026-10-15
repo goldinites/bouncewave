@@ -32,6 +32,23 @@ export const DRAMA_LEVEL_SMOOTHING = 6; // 1/s
 export const VIGNETTE_RGB = '4, 0, 14';
 export const VIGNETTE_MAX_ALPHA = 0.6;
 
+// Rally climax (presentation only)
+export const CLIMAX_LEVEL_SMOOTHING = 2.2; // 1/s, ~1 s to build up and to cool down
+export const CLIMAX_FLASH = 0.45;
+export const CLIMAX_SHAKE = 6;
+export const CLIMAX_LASER_SURGE = 0.5; // extra laser intensity on the drop, fades out
+export const CLIMAX_LASER_SURGE_DECAY = 1.5; // 1/s
+export const CLIMAX_EMBER_RATE = 70; // embers per second shed by the burning ball
+export const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
+export const CLIMAX_EMBER_COLORS = ['#ffffff', '#ffe53b', '#ff9a3b', '#ff2bd6'];
+
+// Memphis background during the climax
+export const MEMPHIS_GRADIENT_COOL = ['#1a0b4d', '#4a0f6e', '#7a1a73'];
+export const MEMPHIS_GRADIENT_HOT = ['#3d0a45', '#8f1460', '#c2432f'];
+export const MEMPHIS_CLIMAX_SPEEDUP = 2; // shapes move/spin up to (1 + this)× faster
+export const MEMPHIS_DROP_PUSH = 60; // px the drop shockwave throws shapes outward
+export const MEMPHIS_DROP_PEAK_TIME = 0.18; // s until the push peaks, then it eases back
+
 export const VICTORY_DURATION = 900;
 export const LOSS_DURATION = 700;
 

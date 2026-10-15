@@ -13,6 +13,19 @@ export function lerp(start: number, end: number, t: number): number {
 }
 
 /**
+ * Blends two `#rrggbb` colors and returns an `rgb(...)` string.
+ */
+export function mixHexColors(from: string, to: string, t: number): string {
+  const amount = clamp(t, 0, 1);
+  const channel = (hex: string, offset: number) => parseInt(hex.slice(offset, offset + 2), 16);
+
+  const [r, g, b] = [1, 3, 5].map((offset) =>
+    Math.round(lerp(channel(from, offset), channel(to, offset), amount)),
+  );
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
  * Converts a MIDI note number to its frequency in Hertz (Hz).
  * A4 = MIDI note 69 = 440 Hz.
  */

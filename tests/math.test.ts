@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { clamp, lerp, midiToFrequency, randomInt, randomRange } from '@/utils/math';
+import { clamp, lerp, midiToFrequency, mixHexColors, randomInt, randomRange } from '@/utils/math';
 
 describe('Math utilities', () => {
+  describe('mixHexColors', () => {
+    it('returns the endpoints at t = 0 and t = 1', () => {
+      expect(mixHexColors('#000000', '#ffffff', 0)).toBe('rgb(0, 0, 0)');
+      expect(mixHexColors('#000000', '#ffffff', 1)).toBe('rgb(255, 255, 255)');
+    });
+
+    it('blends each channel and clamps t', () => {
+      expect(mixHexColors('#ff0000', '#0000ff', 0.5)).toBe('rgb(128, 0, 128)');
+      expect(mixHexColors('#ff0000', '#0000ff', 2)).toBe('rgb(0, 0, 255)');
+    });
+  });
+
   describe('clamp', () => {
     it('returns value when inside range', () => {
       expect(clamp(5, 0, 10)).toBe(5);

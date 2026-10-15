@@ -13,6 +13,8 @@ import {
   WINNING_SCORE,
 } from '@/constants/game.constants';
 import {
+  CLIMAX_EMBER_COLORS,
+  CLIMAX_EMBER_RATE,
   LOSS_DURATION,
   PARTICLE_SCORE_BURST_COUNT,
   PARTICLE_SCORE_BURST_SPEED,
@@ -35,6 +37,7 @@ import { UIManager } from '@/ui/UIManager';
 import { AiController } from '@/core/AiController';
 import { InputHandler } from '@/core/InputHandler';
 import { MatchPointDrama } from '@/core/MatchPointDrama';
+import { RallyClimax } from '@/core/RallyClimax';
 import { Physics } from '@/core/Physics';
 import { FpsMeter } from '@/debug/FpsMeter';
 
@@ -66,6 +69,7 @@ export class Game {
 
   private readonly fpsMeter = new FpsMeter();
   private readonly drama = new MatchPointDrama();
+  private readonly climax = new RallyClimax();
 
   constructor(canvas: HTMLCanvasElement) {
     this.settings = SettingsStorage.load();
@@ -194,6 +198,30 @@ export class Game {
     this.drama.reset();
     this.audio.music.setDramaLevel(0);
     this.renderer.vignette = 0;
+
+    this.climax.reset();
+    this.audio.music.setClimax(false);
+    this.renderer.climax = 0;
+  }
+
+  /** Burning-ball embers during the rally climax. */
+  private emitClimaxEmbers(dt: number): void {
+    const expected = CLIMAX_EMBER_RATE * this.climax.level * dt;
+    const count = Math.floor(expected + Math.random());
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.atan2(-this.ball.vy, -this.ball.vx) + (Math.random() - 0.5) * 1.6;
+      const speed = 40 + Math.random() * 110;
+      this.particleSystem.addParticle({
+        x: this.ball.x + (Math.random() - 0.5) * this.ball.radius,
+        y: this.ball.y + (Math.random() - 0.5) * this.ball.radius,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.6 + Math.random() * 0.3,
+        color: CLIMAX_EMBER_COLORS[Math.floor(Math.random() * CLIMAX_EMBER_COLORS.length)],
+        size: 1 + Math.random() * 2,
+      });
+    }
   }
 
   private handleScore(scoringPlayerIndex: number): void {
@@ -280,6 +308,12 @@ export class Game {
     this.audio.music.setDramaLevel(this.drama.level);
     this.renderer.vignette = this.drama.level;
 
+    if (this.climax.update(realDt, isMatchActive, this.rally, this.serveTime)) {
+      this.renderer.triggerClimaxSurge();
+    }
+    this.audio.music.setClimax(this.climax.isActive);
+    this.renderer.climax = this.climax.level;
+
     // Simulation runs on scaled time; screen effects below keep the wall clock
     const dt = realDt * this.drama.timeScale;
     this.gameTime += dt;
@@ -329,6 +363,10 @@ export class Game {
         );
 
         this.rally = scored ? 0 : rallyRef.current;
+
+        if (this.climax.level > 0.05) {
+          this.emitClimaxEmbers(dt);
+        }
       }
     }
 
