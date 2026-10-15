@@ -46,6 +46,8 @@ export class InputHandler {
       this.keys[e.code] = true;
 
       if (e.code === 'KeyP' || e.code === 'Escape') {
+        if (e.repeat) return;
+
         this.callbacks.onTogglePause();
       }
     });

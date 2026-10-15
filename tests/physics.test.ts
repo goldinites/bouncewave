@@ -5,6 +5,7 @@ import {
   COURT_TOP_WALL,
   GAME_HEIGHT,
   GAME_WIDTH,
+  PADDLE_HEIGHT,
   PADDLE_OFFSET_X,
   PADDLE_WIDTH,
 } from '@/constants/game.constants';
@@ -25,6 +26,7 @@ describe('Physics Engine', () => {
       onPaddleHit: vi.fn(),
       onScore: vi.fn(),
       onScreenShake: vi.fn(),
+      onScreenFlash: vi.fn(),
     };
     return { callbacks: spies, spies };
   };
@@ -117,7 +119,60 @@ describe('Physics Engine', () => {
     expect(ball.vx).toBeGreaterThan(0);
     expect(p1.glow).toBe(1.0);
     expect(rallyRef.current).toBe(1);
-    expect(spies.onPaddleHit).toHaveBeenCalledWith(0, 1);
+    expect(spies.onPaddleHit).toHaveBeenCalledWith(0, 1, true);
+  });
+
+  const hitLeftPaddleAt = (offsetY: number) => {
+    const ball = new Ball();
+    const p1 = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
+    const p2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
+
+    p1.y = 250;
+    p1.targetY = 250;
+
+    ball.x = p1.x + PADDLE_WIDTH + 2;
+    ball.y = 250 + offsetY;
+    ball.vx = -400;
+    ball.vy = 0;
+    ball.speed = 400;
+
+    const { callbacks, spies } = getMockCallbacks();
+    Physics.updateBallMovement(
+      ball,
+      [p1, p2],
+      new ParticleSystem(),
+      DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
+      GameMode.PLAYER_VS_AI,
+      { current: 0 },
+      0.001,
+      callbacks,
+    );
+    return { ball, spies };
+  };
+
+  it('rewards a center hit with extra speed and a flash', () => {
+    const perfect = hitLeftPaddleAt(0);
+    const offCenter = hitLeftPaddleAt(PADDLE_HEIGHT * 0.2);
+
+    expect(perfect.ball.speed).toBeGreaterThan(offCenter.ball.speed);
+    expect(perfect.spies.onScreenFlash).toHaveBeenCalled();
+    expect(offCenter.spies.onScreenFlash).not.toHaveBeenCalled();
+    expect(offCenter.spies.onPaddleHit).toHaveBeenCalledWith(0, 1, false);
+  });
+
+  it('sends edge hits out at a sharper angle than mid hits', () => {
+    const mid = hitLeftPaddleAt(PADDLE_HEIGHT * 0.25);
+    const edge = hitLeftPaddleAt(PADDLE_HEIGHT * 0.48);
+
+    const angleOf = (b: Ball) => Math.abs(Math.atan2(b.vy, b.vx));
+    expect(angleOf(edge.ball)).toBeGreaterThan(angleOf(mid.ball) * 2);
+  });
+
+  it('maps hit offset to a symmetric, monotonic bounce angle', () => {
+    expect(Physics.getBounceAngle(0)).toBe(0);
+    expect(Physics.getBounceAngle(-0.5)).toBeCloseTo(-Physics.getBounceAngle(0.5));
+    expect(Physics.getBounceAngle(1)).toBeGreaterThan(Physics.getBounceAngle(0.5));
+    expect(Physics.getBounceAngle(2)).toBe(Physics.getBounceAngle(1));
   });
 
   it('triggers score callback when ball exits playing field', () => {

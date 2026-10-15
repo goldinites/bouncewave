@@ -3,11 +3,12 @@ dist/
 dist-ssr/
 *.local
 .DS_Store
+.mcp.json
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/*
 *.suo
 *.ntvs*
 *.njsproj

@@ -299,12 +299,13 @@ export class Game {
           dt,
           {
             onWallBounce: () => this.audio.sfx.playWallBounce(),
-            onPaddleHit: (_idx, r) => this.audio.sfx.playPaddleHit(r),
+            onPaddleHit: (_idx, r, isPerfect) => this.audio.sfx.playPaddleHit(r, isPerfect),
             onScore: (winner) => {
               scored = true;
               this.handleScore(winner);
             },
             onScreenShake: (amount) => this.renderer.addShake(amount),
+            onScreenFlash: (amount) => this.renderer.addFlash(amount),
           },
         );
 

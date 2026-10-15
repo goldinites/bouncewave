@@ -56,8 +56,16 @@ export class SoundEffects {
     this.beep(SFX_FREQUENCIES.WALL_BOUNCE, 0.05, 'triangle', 0.07);
   }
 
-  public playPaddleHit(rally: number): void {
+  public playPaddleHit(rally: number, isPerfect = false): void {
     const freq = SFX_FREQUENCIES.PADDLE_HIT_BASE + rally * SFX_FREQUENCIES.PADDLE_HIT_STEP;
+
+    if (isPerfect) {
+      // Clean sine tone with a soft octave overtone instead of the square blip
+      this.beep(freq, 0.22, 'sine', 0.09);
+      this.beep(freq * 2, 0.16, 'sine', 0.03);
+      return;
+    }
+
     this.beep(freq, 0.09);
   }
 

@@ -1,14 +1,25 @@
 import {
+  BALL_INITIAL_SPEED,
   BALL_OUT_OF_BOUNDS_OFFSET,
+  COLORS,
   COURT_BOTTOM_WALL,
   COURT_TOP_WALL,
   GAME_HEIGHT,
   GAME_WIDTH,
+  PADDLE_BOUNCE_CURVE,
   PADDLE_HEIGHT,
+  PADDLE_MAX_BOUNCE_ANGLE,
   PADDLE_WIDTH,
+  PERFECT_HIT_SPEED_BONUS,
+  PERFECT_HIT_ZONE,
 } from '@/constants/game.constants';
 import {
   PARTICLE_HIT_BURST_COUNT_BASE,
+  PARTICLE_PERFECT_BURST_COUNT,
+  PARTICLE_PERFECT_BURST_SPEED,
+  PERFECT_SHOCKWAVE_EXPANSION_SPEED,
+  SCREEN_FLASH_PERFECT_HIT,
+  SCREEN_SHAKE_PERFECT_BONUS,
   SHOCKWAVE_EXPANSION_SPEED,
 } from '@/constants/visual.constants';
 import { Ball } from '@/entities/Ball';
@@ -20,9 +31,10 @@ import { clamp } from '@/utils/math';
 
 export interface PhysicsCallbacks {
   onWallBounce: () => void;
-  onPaddleHit: (paddleIndex: number, rally: number) => void;
+  onPaddleHit: (paddleIndex: number, rally: number, isPerfect: boolean) => void;
   onScore: (scoringPlayerIndex: number) => void;
   onScreenShake: (amount: number) => void;
+  onScreenFlash: (amount: number) => void;
 }
 
 export class Physics {
@@ -77,13 +89,14 @@ export class Physics {
         const isCollidingY = Math.abs(ball.y - paddle.y) <= PADDLE_HEIGHT / 2 + ball.radius * 0.8;
 
         if (isCollidingX && isCollidingY) {
-          const bounceAngle = clamp((ball.y - paddle.y) / (PADDLE_HEIGHT / 2), -1, 1);
+          const hitOffset = clamp((ball.y - paddle.y) / (PADDLE_HEIGHT / 2), -1, 1);
+          const isPerfect = Math.abs(hitOffset) <= PERFECT_HIT_ZONE;
+          const bounceAngle = Physics.getBounceAngle(hitOffset);
           const direction = i === 0 ? 1 : -1;
 
-          ball.speed = Math.min(
-            ball.speed * (1 + difficultyConfig.acceleration),
-            difficultyConfig.maxSpeed,
-          );
+          const acceleration =
+            difficultyConfig.acceleration + (isPerfect ? PERFECT_HIT_SPEED_BONUS : 0);
+          ball.speed = Math.min(ball.speed * (1 + acceleration), difficultyConfig.maxSpeed);
           ball.vx = direction * Math.cos(bounceAngle) * ball.speed;
           ball.vy = Math.sin(bounceAngle) * ball.speed;
           ball.x = i === 0 ? paddle.x + PADDLE_WIDTH + ball.radius : paddle.x - ball.radius;
@@ -91,19 +104,39 @@ export class Physics {
           paddle.glow = 1.0;
           rallyRef.current++;
 
-          const shakeMagnitude = 3 + (ball.speed - 340) / 90;
+          const shakeMagnitude =
+            3 +
+            (ball.speed - BALL_INITIAL_SPEED) / 90 +
+            (isPerfect ? SCREEN_SHAKE_PERFECT_BONUS : 0);
           callbacks.onScreenShake(shakeMagnitude);
 
           const burstCount = PARTICLE_HIT_BURST_COUNT_BASE + Math.min(rallyRef.current, 20);
           particleSystem.burst(ball.x, ball.y, paddle.color, burstCount);
           particleSystem.shockwave(ball.x, ball.y, paddle.color, SHOCKWAVE_EXPANSION_SPEED);
 
+          if (isPerfect) {
+            particleSystem.burst(
+              ball.x,
+              ball.y,
+              COLORS.WHITE,
+              PARTICLE_PERFECT_BURST_COUNT,
+              PARTICLE_PERFECT_BURST_SPEED,
+            );
+            particleSystem.shockwave(
+              ball.x,
+              ball.y,
+              COLORS.WHITE,
+              PERFECT_SHOCKWAVE_EXPANSION_SPEED,
+            );
+            callbacks.onScreenFlash(SCREEN_FLASH_PERFECT_HIT);
+          }
+
           // Update opponent's AI prediction error
           const opponent = paddles[1 - i];
           const maxError = gameMode === GameMode.DEMO ? 80 : difficultyConfig.error;
           opponent.errorOffset = (Math.random() - 0.5) * maxError;
 
-          callbacks.onPaddleHit(i, rallyRef.current);
+          callbacks.onPaddleHit(i, rallyRef.current, isPerfect);
           break;
         }
       }
@@ -118,5 +151,16 @@ export class Physics {
         return;
       }
     }
+  }
+
+  /**
+   * Maps a normalized hit offset ([-1, 1]) to an outgoing angle.
+   * The curve keeps center hits nearly straight and reserves steep angles for edge hits.
+   */
+  public static getBounceAngle(hitOffset: number): number {
+    const offset = clamp(hitOffset, -1, 1);
+    return (
+      Math.sign(offset) * Math.pow(Math.abs(offset), PADDLE_BOUNCE_CURVE) * PADDLE_MAX_BOUNCE_ANGLE
+    );
   }
 }
