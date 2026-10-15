@@ -84,3 +84,15 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     ],
   },
 };
+
+/** Every language there is a dictionary for. */
+export const LANGUAGES = Object.keys(TRANSLATIONS) as Language[];
+
+export function isLanguage(value: unknown): value is Language {
+  return LANGUAGES.includes(value as Language);
+}
+
+/** The next language in the list, wrapping around. */
+export function nextLanguage(language: Language): Language {
+  return LANGUAGES[(LANGUAGES.indexOf(language) + 1) % LANGUAGES.length];
+}
