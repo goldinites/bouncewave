@@ -67,6 +67,12 @@ export class UIManager {
     this.pauseButton.onclick = onClick;
   }
 
+  /** Detaches click handlers (menu buttons are rebuilt on every showMenu, so only these). */
+  public dispose(): void {
+    this.pauseButton.onclick = null;
+    this.buttonsContainer.textContent = '';
+  }
+
   public updateHint(): void {
     this.hintElement.innerHTML = this.i18n.t(this.isCoarsePointer ? 'hintT' : 'hintK');
   }

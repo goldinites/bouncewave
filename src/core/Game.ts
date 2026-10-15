@@ -83,6 +83,8 @@ export class Game {
   private rally = 0;
   private lastTimestamp = 0;
   private isRunning = false;
+  private animationFrameId: number | null = null;
+  private readonly listeners = new AbortController();
 
   private isFinalSequence = false;
   private finalWinnerIndex: number | null = null;
@@ -143,11 +145,16 @@ export class Game {
       this.togglePause();
     });
 
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.gameState === 'play') {
-        this.togglePause();
-      }
-    });
+    // Auto-pause when the tab is hidden (AudioEngine suspends the sound on its own)
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        if (document.hidden && this.gameState === 'play') {
+          this.togglePause();
+        }
+      },
+      { signal: this.listeners.signal },
+    );
   }
 
   public init(): void {
@@ -157,7 +164,7 @@ export class Game {
 
     this.isRunning = true;
     this.lastTimestamp = performance.now();
-    requestAnimationFrame((t) => this.gameLoop(t));
+    this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
   }
 
   public unlockAudio(): void {
@@ -532,13 +539,22 @@ export class Game {
     }
     this.renderer.render(frame);
 
-    requestAnimationFrame((t) => this.gameLoop(t));
+    this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
   }
 
+  /** Stops the loop and releases every listener, timer and audio resource. */
   public dispose(): void {
     this.isRunning = false;
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+
+    this.listeners.abort();
+    this.inputHandler.dispose();
+    this.uiManager.dispose();
     this.renderer.dispose();
-    this.audio.music.dispose();
+    this.audio.dispose();
     this.fpsMeter.dispose();
   }
 }

@@ -5,6 +5,7 @@ export class AudioEngine {
   private audioContext: AudioContext | null = null;
   public readonly sfx: SoundEffects;
   public readonly music: MusicEngine;
+  private readonly listeners = new AbortController();
 
   constructor(isSoundMutedGetter: () => boolean, musicStateProvider: MusicEngineStateProvider) {
     this.music = new MusicEngine(musicStateProvider);
@@ -16,14 +17,26 @@ export class AudioEngine {
       () => this.music.getHarmony(),
     );
 
-    document.addEventListener('visibilitychange', () => {
-      if (!this.audioContext) return;
-      if (document.hidden) {
-        this.audioContext.suspend();
-      } else {
-        this.audioContext.resume();
-      }
-    });
+    // Silence the whole audio graph while the tab is hidden (the game pauses itself separately)
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        if (!this.audioContext) return;
+        if (document.hidden) {
+          this.audioContext.suspend();
+        } else {
+          this.audioContext.resume();
+        }
+      },
+      { signal: this.listeners.signal },
+    );
+  }
+
+  public dispose(): void {
+    this.listeners.abort();
+    this.music.dispose();
+    void this.audioContext?.close();
+    this.audioContext = null;
   }
 
   public unlock(): void {

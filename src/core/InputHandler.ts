@@ -15,6 +15,8 @@ export class InputHandler {
   private isPortraitRotated = false;
   private callbacks: InputHandlerCallbacks;
   private mediaQuery: MediaQueryList;
+  /** Aborting it removes every listener this handler added. */
+  private readonly listeners = new AbortController();
 
   constructor(canvas: HTMLCanvasElement, callbacks: InputHandlerCallbacks) {
     this.canvas = canvas;
@@ -23,10 +25,6 @@ export class InputHandler {
     this.mediaQuery = window.matchMedia('(orientation:portrait) and (max-width:900px)');
     this.isPortraitRotated = this.mediaQuery.matches;
 
-    this.mediaQuery.addEventListener('change', (e) => {
-      this.isPortraitRotated = e.matches;
-    });
-
     this.bindEvents();
   }
 
@@ -34,39 +32,69 @@ export class InputHandler {
     return this.isPortraitRotated;
   }
 
+  public dispose(): void {
+    this.listeners.abort();
+  }
+
   private bindEvents(): void {
-    window.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      this.callbacks.onTogglePause();
-    });
+    const { signal } = this.listeners;
 
-    window.addEventListener('keydown', (e) => {
-      this.callbacks.onUnlockAudio();
-      if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+    this.mediaQuery.addEventListener(
+      'change',
+      (e) => {
+        this.isPortraitRotated = e.matches;
+      },
+      { signal },
+    );
+
+    window.addEventListener(
+      'contextmenu',
+      (e) => {
         e.preventDefault();
-      }
-      this.keys[e.code] = true;
-
-      if (!e.repeat) {
-        this.callbacks.onPress();
-      }
-
-      if (e.code === 'KeyP' || e.code === 'Escape') {
-        if (e.repeat) return;
-
         this.callbacks.onTogglePause();
-      }
-    });
+      },
+      { signal },
+    );
 
-    window.addEventListener('keyup', (e) => {
-      this.keys[e.code] = false;
-    });
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        this.callbacks.onUnlockAudio();
+        if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+          e.preventDefault();
+        }
+        this.keys[e.code] = true;
 
-    window.addEventListener('blur', () => {
-      for (const k in this.keys) {
-        this.keys[k] = false;
-      }
-    });
+        if (!e.repeat) {
+          this.callbacks.onPress();
+        }
+
+        if (e.code === 'KeyP' || e.code === 'Escape') {
+          if (e.repeat) return;
+
+          this.callbacks.onTogglePause();
+        }
+      },
+      { signal },
+    );
+
+    window.addEventListener(
+      'keyup',
+      (e) => {
+        this.keys[e.code] = false;
+      },
+      { signal },
+    );
+
+    window.addEventListener(
+      'blur',
+      () => {
+        for (const k in this.keys) {
+          this.keys[k] = false;
+        }
+      },
+      { signal },
+    );
 
     const handlePointer = (e: PointerEvent) => {
       this.callbacks.onUnlockAudio();
@@ -80,11 +108,15 @@ export class InputHandler {
       this.lastPointerY = normalizedY * GAME_HEIGHT;
     };
 
-    window.addEventListener('pointermove', handlePointer);
-    window.addEventListener('pointerdown', (e) => {
-      handlePointer(e);
-      this.callbacks.onPress();
-    });
+    window.addEventListener('pointermove', handlePointer, { signal });
+    window.addEventListener(
+      'pointerdown',
+      (e) => {
+        handlePointer(e);
+        this.callbacks.onPress();
+      },
+      { signal },
+    );
   }
 
   private lastPointerY: number | null = null;
