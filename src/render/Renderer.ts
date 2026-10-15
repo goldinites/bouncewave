@@ -28,6 +28,25 @@ const MENU_DIM_RGB = '8, 2, 26';
 const MENU_DIM_ALPHA = 0.6;
 const MENU_DIM_SPEED = 8;
 
+/** Everything the renderer needs to draw (and animate toward) one frame. */
+export interface RenderFrame {
+  gameState: GameState;
+  gameMode: GameMode;
+  paddles: [Paddle, Paddle];
+  ball: Ball;
+  particles: ParticleSystem;
+  analyser: AnalyserNode | null;
+  time: number;
+  serveTime: number;
+  rally: number;
+  readyText: string;
+  isRotated: boolean;
+  /** Edge darkening in [0, 1], driven by match-point drama. */
+  vignette: number;
+  /** Rally climax intensity in [0, 1]: lasers stay lit and the ball burns hotter. */
+  climax: number;
+}
+
 export class Renderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -35,12 +54,9 @@ export class Renderer {
   private resizeObserver: ResizeObserver;
 
   public readonly background = new BackgroundRenderer();
-  public screenShake = 0;
-  public screenFlash = 0;
-  /** Edge darkening in [0, 1], driven by match-point drama. */
-  public vignette = 0;
-  /** Rally climax intensity in [0, 1]: lasers stay lit and the ball burns hotter. */
-  public climax = 0;
+  private readonly hud = new HudRenderer();
+  private screenShake = 0;
+  private screenFlash = 0;
   private laserSurge = 0;
   private vignetteGradient: CanvasGradient;
 
@@ -158,7 +174,9 @@ export class Renderer {
     this.background.celebration = 0;
   }
 
-  public update(dt: number, gameState: GameState, serveTime: number): void {
+  /** Advances time-based effects (shake, flash, lasers). Not called while paused. */
+  public update(dt: number, frame: RenderFrame): void {
+    const { gameState, serveTime, climax } = frame;
     this.laserSurge *= Math.exp(-dt * CLIMAX_LASER_SURGE_DECAY);
     this.finalSignAge += dt;
 
@@ -167,7 +185,7 @@ export class Renderer {
 
     // During play the climax lights lasers only part-way so the court stays readable;
     // the victory celebration (no play happening) may go all the way
-    const climaxLasers = (CLIMAX_LASER_MAX - 0.12) * this.climax;
+    const climaxLasers = (CLIMAX_LASER_MAX - 0.12) * climax;
     const celebrationLasers = 0.88 * celebration;
     const playLaserIntensity = 0.12 + Math.max(climaxLasers, celebrationLasers) + this.laserSurge;
     const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : playLaserIntensity;
@@ -180,19 +198,9 @@ export class Renderer {
     this.screenFlash = Math.max(0, this.screenFlash - dt * SCREEN_FLASH_DECAY);
   }
 
-  public render(
-    gameState: GameState,
-    gameMode: GameMode,
-    paddles: [Paddle, Paddle],
-    ball: Ball,
-    particleSystem: ParticleSystem,
-    analyser: AnalyserNode | null,
-    gameTime: number,
-    serveTime: number,
-    rally: number,
-    readyText: string,
-    isRotated: boolean,
-  ): void {
+  public render(frame: RenderFrame): void {
+    const { gameState, gameMode, paddles, ball, particles, serveTime, isRotated } = frame;
+    const gameTime = frame.time;
     const ctx = this.ctx;
 
     // Independent clock for dimming, including while paused
@@ -208,8 +216,8 @@ export class Renderer {
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
 
     // Animated background
-    this.background.climax = this.climax;
-    this.background.render(ctx, analyser, gameTime, this.screenShake, isRotated);
+    this.background.climax = frame.climax;
+    this.background.render(ctx, frame.analyser, gameTime, this.screenShake, isRotated);
 
     ctx.save();
 
@@ -226,19 +234,19 @@ export class Renderer {
 
     // HUD (the final-score sign takes its place at the end of a match)
     if (gameMode === GameMode.PLAYER_VS_AI && !this.finalSign) {
-      HudRenderer.render(ctx, paddles, serveTime, readyText, gameTime, isRotated);
+      this.hud.render(ctx, paddles, serveTime, frame.readyText, gameTime, isRotated);
     }
 
     // Paddles
     paddles.forEach((paddle) => EntityRenderer.renderPaddle(ctx, paddle));
 
     // Ball
-    EntityRenderer.renderBall(ctx, ball, rally, gameTime, serveTime, this.climax);
+    EntityRenderer.renderBall(ctx, ball, frame.rally, gameTime, serveTime, frame.climax);
 
     // Particles and shockwaves
-    EntityRenderer.renderParticles(ctx, particleSystem.particles);
+    EntityRenderer.renderParticles(ctx, particles.particles);
 
-    EntityRenderer.renderShockwaves(ctx, particleSystem.rings);
+    EntityRenderer.renderShockwaves(ctx, particles.rings);
 
     if (this.finalSign) {
       FinalScoreRenderer.render(ctx, this.finalSign, this.finalSignAge, isRotated);
@@ -258,8 +266,8 @@ export class Renderer {
     }
 
     // Match-point vignette
-    if (this.vignette > 0.01) {
-      ctx.globalAlpha = this.vignette * VIGNETTE_MAX_ALPHA;
+    if (frame.vignette > 0.01) {
+      ctx.globalAlpha = frame.vignette * VIGNETTE_MAX_ALPHA;
       ctx.fillStyle = this.vignetteGradient;
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
       ctx.globalAlpha = 1;

@@ -2,11 +2,11 @@ import { COLORS, GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
 import { Paddle } from '@/entities/Paddle';
 
 export class HudRenderer {
-  private static displayedScores: [number, number] = [-1, -1];
-  private static scorePop: [number, number] = [0, 0];
-  private static lastAnimationTime = 0;
+  private displayedScores: [number, number] = [-1, -1];
+  private scorePop: [number, number] = [0, 0];
+  private lastAnimationTime = 0;
 
-  public static render(
+  public render(
     ctx: CanvasRenderingContext2D,
     paddles: [Paddle, Paddle],
     serveTime: number,
@@ -83,7 +83,7 @@ export class HudRenderer {
     ctx.restore();
   }
 
-  private static renderText(
+  private renderText(
     ctx: CanvasRenderingContext2D,
     text: string,
     x: number,

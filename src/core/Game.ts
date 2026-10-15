@@ -46,7 +46,7 @@ import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { ParticleSystem } from '@/entities/ParticleSystem';
 import { I18nManager } from '@/i18n/I18nManager';
-import { Renderer } from '@/render/Renderer';
+import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStorage } from '@/storage/SettingsStorage';
 import { UserSettings } from '@/types/audio.types';
 import { DifficultyConfig } from '@/types/difficulty.types';
@@ -221,11 +221,9 @@ export class Game {
   private resetDrama(): void {
     this.drama.reset();
     this.audio.music.setDramaLevel(0);
-    this.renderer.vignette = 0;
 
     this.climax.reset();
     this.audio.music.setClimaxLevel(0);
-    this.renderer.climax = 0;
   }
 
   /** Burning-ball embers during the rally climax. */
@@ -410,7 +408,6 @@ export class Game {
 
     // Paddles stay put but keep glowing and sparking
     this.paddles.forEach((p) => p.update(realDt, this.particleSystem, 0));
-    this.renderer.update(realDt, this.gameState, this.serveTime);
     this.particleSystem.update(realDt);
 
     if (this.finalElapsed >= this.finalDuration) {
@@ -447,7 +444,6 @@ export class Game {
     const isMatchActive = this.gameMode === GameMode.PLAYER_VS_AI && this.gameState === 'play';
     this.drama.update(realDt, isMatchActive, this.ball, this.paddles);
     this.audio.music.setDramaLevel(this.drama.level);
-    this.renderer.vignette = this.drama.level;
 
     // Slow build-up while the rally stays hot; the drop lands when it peaks
     if (this.climax.update(realDt, isMatchActive, this.rally, this.serveTime)) {
@@ -455,7 +451,6 @@ export class Game {
       this.audio.music.triggerDrop();
     }
     this.audio.music.setClimaxLevel(this.climax.level);
-    this.renderer.climax = this.climax.level;
 
     // Simulation runs on scaled time; screen effects below keep the wall clock
     const dt = realDt * this.drama.timeScale;
@@ -495,8 +490,25 @@ export class Game {
 
     const currentDiffConfig = DIFFICULTY_CONFIGS[this.settings.difficulty];
     this.ball.updateRadius(dt, this.rally, currentDiffConfig.maxSpeed);
-    this.renderer.update(realDt, this.gameState, this.serveTime);
     this.particleSystem.update(dt);
+  }
+
+  private buildRenderFrame(): RenderFrame {
+    return {
+      gameState: this.gameState,
+      gameMode: this.gameMode,
+      paddles: this.paddles,
+      ball: this.ball,
+      particles: this.particleSystem,
+      analyser: this.audio.music.getAnalyser(),
+      time: this.gameTime,
+      serveTime: this.serveTime,
+      rally: this.rally,
+      readyText: this.i18n.t('ready'),
+      isRotated: this.inputHandler.isRotated,
+      vignette: this.drama.level,
+      climax: this.climax.level,
+    };
   }
 
   private gameLoop(timestamp: number): void {
@@ -507,23 +519,18 @@ export class Game {
     const dt = Math.min(0.033, (timestamp - this.lastTimestamp) / 1000);
     this.lastTimestamp = timestamp;
 
-    if (this.gameState !== 'paused') {
+    const isPaused = this.gameState === 'paused';
+    if (!isPaused) {
       this.update(dt);
     }
 
-    this.renderer.render(
-      this.gameState,
-      this.gameMode,
-      this.paddles,
-      this.ball,
-      this.particleSystem,
-      this.audio.music.getAnalyser(),
-      this.gameTime,
-      this.serveTime,
-      this.rally,
-      this.i18n.t('ready'),
-      this.inputHandler.isRotated,
-    );
+    // Built after the update so effects see this frame's state; screen effects run on the
+    // wall clock and freeze with the game while paused
+    const frame = this.buildRenderFrame();
+    if (!isPaused) {
+      this.renderer.update(dt, frame);
+    }
+    this.renderer.render(frame);
 
     requestAnimationFrame((t) => this.gameLoop(t));
   }
