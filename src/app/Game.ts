@@ -197,7 +197,7 @@ export class Game {
     if (!isPaused) {
       this.renderer.update(realDt, frame);
     }
-    this.renderer.render(frame);
+    this.renderer.render(frame, realDt);
 
     this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
   }
@@ -217,7 +217,7 @@ export class Game {
   private buildRenderFrame(): RenderFrame {
     return {
       gameState: this.flow.gameState,
-      gameMode: this.flow.gameMode,
+      isDemo: this.flow.isDemo,
       paddles: this.paddles,
       ball: this.ball,
       particles: this.particles,

@@ -2,26 +2,22 @@ import { COURT } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { COLORS } from '@/shared/palette';
 
+const SCORE_POP_DURATION = 0.22; // s for a changed score to swell and settle
+
 export class HudRenderer {
   private displayedScores: [number, number] = [-1, -1];
   private scorePop: [number, number] = [0, 0];
-  private lastAnimationTime = 0;
 
+  /** @param dt wall-clock seconds since the last frame (the HUD keeps animating in pause) */
   public render(
     ctx: CanvasRenderingContext2D,
+    dt: number,
     paddles: [Paddle, Paddle],
     serveTime: number,
     readyText: string,
     time: number,
     isRotated: boolean,
   ): void {
-    const now = performance.now();
-
-    const dt =
-      this.lastAnimationTime === 0 ? 0 : Math.min((now - this.lastAnimationTime) / 1000, 0.05);
-
-    this.lastAnimationTime = now;
-
     const scores = [paddles[0].score, paddles[1].score] as const;
 
     scores.forEach((score, index) => {
@@ -32,7 +28,7 @@ export class HudRenderer {
         this.scorePop[index] = 1;
       }
 
-      this.scorePop[index] = Math.max(0, this.scorePop[index] - dt / 0.22);
+      this.scorePop[index] = Math.max(0, this.scorePop[index] - dt / SCORE_POP_DURATION);
     });
 
     ctx.save();

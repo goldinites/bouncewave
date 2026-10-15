@@ -1,8 +1,8 @@
 import { AiController } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
 import { BALL, WINNING_SCORE } from '@/match/config';
-import { DifficultyConfig } from '@/match/difficulty';
-import { GameState, GameMode } from '@/match/modes';
+import { AiSkill, DEMO_AI_SKILL, DifficultyConfig } from '@/match/difficulty';
+import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
 import { Physics, PhysicsEvent } from '@/match/Physics';
 
@@ -115,8 +115,9 @@ export class MatchFlow {
     return this._time;
   }
 
-  public get gameMode(): GameMode {
-    return this._phase === 'attract' ? GameMode.DEMO : GameMode.PLAYER_VS_AI;
+  /** The AI-vs-AI demo behind the menus is running, not a match. */
+  public get isDemo(): boolean {
+    return this._phase === 'attract';
   }
 
   /** Coarse state for audio and rendering, which only care about menu / play / paused. */
@@ -213,12 +214,14 @@ export class MatchFlow {
   private updatePaddles(difficulty: DifficultyConfig, dt: number): void {
     const [player, cpu] = this.paddles;
 
-    if (this.gameMode === GameMode.PLAYER_VS_AI) {
-      this.input.pollPlayerMovement(player, dt);
+    const skill = this.getAiSkill(difficulty);
+
+    if (this.isDemo) {
+      this.ai.update(player, this.ball, skill, dt);
     } else {
-      this.ai.update(player, this.ball, this.gameMode, difficulty, dt);
+      this.input.pollPlayerMovement(player, dt);
     }
-    this.ai.update(cpu, this.ball, this.gameMode, difficulty, dt);
+    this.ai.update(cpu, this.ball, skill, dt);
 
     this.paddles.forEach((p) => p.update(dt));
   }
@@ -231,7 +234,7 @@ export class MatchFlow {
       case 'paddleHit':
         this._rally++;
         // The other paddle now has to read the return
-        this.ai.rollAimError(this.paddles[1 - event.paddleIndex], this.gameMode, difficulty);
+        this.ai.rollAimError(this.paddles[1 - event.paddleIndex], this.getAiSkill(difficulty));
         this.emit({ ...event, rally: this._rally });
         break;
       case 'score':
@@ -283,6 +286,11 @@ export class MatchFlow {
     this._rally = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });
+  }
+
+  /** The demo plays at its own level; in a match the CPU plays at the chosen difficulty. */
+  private getAiSkill(difficulty: DifficultyConfig): AiSkill {
+    return this.isDemo ? DEMO_AI_SKILL : difficulty;
   }
 
   private resetScores(): void {

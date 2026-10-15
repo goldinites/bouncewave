@@ -1,7 +1,7 @@
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { Ball } from '@/match/Ball';
 import { COURT } from '@/match/config';
-import { GameState, GameMode } from '@/match/modes';
+import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import { CourtRenderer } from '@/render/CourtRenderer';
@@ -38,7 +38,8 @@ type StageClass = (typeof STAGE_CLASSES)[keyof typeof STAGE_CLASSES];
 /** Everything the renderer needs to draw (and animate toward) one frame. */
 export interface RenderFrame {
   gameState: GameState;
-  gameMode: GameMode;
+  /** The AI-vs-AI demo behind the menus (no HUD). */
+  isDemo: boolean;
   paddles: [Paddle, Paddle];
   ball: Ball;
   particles: ParticleSystem;
@@ -77,7 +78,6 @@ export class Renderer {
   private finalSignAge = 0;
 
   private menuDim: number = MENU_DIM.ALPHA;
-  private lastRenderTime = performance.now();
 
   private stage: HTMLElement | null = null;
   /** Bumped on every stage effect, so a finishing older one never clears a newer one. */
@@ -224,19 +224,18 @@ export class Renderer {
     this.screenFlash = Math.max(0, this.screenFlash - dt * FLASH_DECAY);
   }
 
-  public render(frame: RenderFrame): void {
-    const { gameState, gameMode, paddles, ball, particles, serveTime, isRotated } = frame;
+  /**
+   * Draws the frame. `realDt` is wall-clock time since the last frame, paused frames
+   * included, for the few things that keep moving behind the pause menu.
+   */
+  public render(frame: RenderFrame, realDt: number): void {
+    const { gameState, isDemo, paddles, ball, particles, serveTime, isRotated } = frame;
     const gameTime = frame.time;
     const ctx = this.ctx;
 
-    // Independent clock for dimming, including while paused
-    const now = performance.now();
-    const frameDt = Math.min(0.1, (now - this.lastRenderTime) / 1000);
-    this.lastRenderTime = now;
-
     const dimTarget = gameState === 'play' ? 0 : MENU_DIM.ALPHA;
 
-    this.menuDim += (dimTarget - this.menuDim) * Math.min(1, frameDt * MENU_DIM.SPEED);
+    this.menuDim += (dimTarget - this.menuDim) * Math.min(1, realDt * MENU_DIM.SPEED);
 
     // Reset transform for high-DPI displays
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
@@ -262,8 +261,8 @@ export class Renderer {
     CourtRenderer.render(ctx);
 
     // HUD (the final-score sign takes its place at the end of a match)
-    if (gameMode === GameMode.PLAYER_VS_AI && !this.finalSign) {
-      this.hud.render(ctx, paddles, serveTime, frame.readyText, gameTime, isRotated);
+    if (!isDemo && !this.finalSign) {
+      this.hud.render(ctx, realDt, paddles, serveTime, frame.readyText, gameTime, isRotated);
     }
 
     // Paddles

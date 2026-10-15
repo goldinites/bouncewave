@@ -3,7 +3,6 @@ import { Ball } from '@/match/Ball';
 import { COURT, PADDLE, BALL, WINNING_SCORE } from '@/match/config';
 import { DifficultyLevel, DIFFICULTY_CONFIGS } from '@/match/difficulty';
 import { FINALE, MatchEvent, MatchFlow, SERVE_DELAY } from '@/match/MatchFlow';
-import { GameMode } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
 
 const setup = () => {
@@ -49,7 +48,7 @@ describe('MatchFlow', () => {
     flow.startAttract();
 
     expect(flow.phase).toBe('attract');
-    expect(flow.gameMode).toBe(GameMode.DEMO);
+    expect(flow.isDemo).toBe(true);
     expect(flow.gameState).toBe('menu');
     expect(types()).toEqual(['serve']);
   });
@@ -59,6 +58,7 @@ describe('MatchFlow', () => {
     paddles[0].score = 4;
 
     flow.startMatch();
+    expect(flow.isDemo).toBe(false);
 
     expect(types()).toEqual(['matchStart', 'serve']);
     expect(paddles[0].score).toBe(0);

@@ -1,5 +1,5 @@
 import { getRallyHeat, getSpeedHeat } from '@/match/heat';
-import { GameState } from '@/match/modes';
+import { GameState } from '@/match/GameState';
 import { clamp } from '@/shared/math';
 
 // Per sequencer step (~0.13 s), how quickly intensity follows the rally climax

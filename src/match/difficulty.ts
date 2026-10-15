@@ -6,11 +6,20 @@ export enum DifficultyLevel {
 }
 
 export interface DifficultyConfig {
+  /** CPU paddle speed, px/s. */
   speed: number;
+  /** Spread of the CPU's aim error, px. */
   error: number;
+  /** Share the ball speeds up on each paddle hit. */
   acceleration: number;
   maxSpeed: number;
 }
+
+/** How well an AI paddle plays. */
+export type AiSkill = Pick<DifficultyConfig, 'speed' | 'error'>;
+
+/** Both paddles of the attract-mode demo behind the menu, whatever the difficulty. */
+export const DEMO_AI_SKILL: AiSkill = { speed: 400, error: 80 };
 
 export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
   [DifficultyLevel.EASY]: {

@@ -9,7 +9,7 @@ import {
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { CHORD_TYPES, MUSIC_TRACKS } from '@/audio/music/tracks';
-import { GameState } from '@/match/modes';
+import { GameState } from '@/match/GameState';
 import { clamp } from '@/shared/math';
 
 const HARMONY_HISTORY = 4; // scheduled bar changes kept to find what is audible now
