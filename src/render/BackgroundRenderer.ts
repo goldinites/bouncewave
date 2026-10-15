@@ -1,101 +1,38 @@
-import { COLORS, GAME_HEIGHT, GAME_WIDTH, TWO_PI } from '@/constants/game.constants';
-import {
-  CELEBRATION_HUE_SWING,
-  CLIMAX_SPECTRUM_DAMPING,
-  LASER_CONFIGURATIONS,
-  MEMPHIS_CLIMAX_SPEEDUP,
-  MEMPHIS_DROP_PEAK_TIME,
-  MEMPHIS_DROP_PUSH,
-  MEMPHIS_GRADIENT_COOL,
-  MEMPHIS_GRADIENT_HOT,
-  MEMPHIS_PULSE_ATTACK,
-  MEMPHIS_PULSE_RELEASE,
-  MEMPHIS_SHAPE_COUNT,
-} from '@/constants/visual.constants';
-import { MemphisShape, MemphisShapeKind } from '@/types/game.types';
-import { clamp, mixHexColors, randomRange } from '@/utils/math';
+import { GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
+import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
+import { Background } from '@/render/backgrounds/Background';
+import { LaserBackground } from '@/render/backgrounds/LaserBackground';
+import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
+import { clamp } from '@/utils/math';
 
+// Dark tint over the background so the court reads clearly on top of it
+const OVERLAY_TINT_RGB = '10, 2, 32';
+const OVERLAY_TINT_ALPHA = { laser: 0.15, memphis: 0.3 };
+
+/** Picks the active background, feeds it the music analysis and the game's mood. */
 export class BackgroundRenderer {
-  private frequencyData = new Uint8Array(128);
-  private timeDomainData = new Uint8Array(256);
-  private memphisShapes: MemphisShape[] = [];
+  private readonly spectrum = new AudioSpectrum();
+  private readonly laser = new LaserBackground();
+  private readonly memphis = new MemphisBackground();
+  private readonly backgrounds: Background[] = [this.laser, this.memphis];
+  private backgroundIndex = Math.floor(Math.random() * this.backgrounds.length);
+  private lastTime: number | null = null;
+
+  /** Overall laser brightness, eased by the renderer. */
   public laserIntensity = 1.0;
-  public backgroundIndex = 0;
   /** Rally climax intensity in [0, 1]. */
   public climax = 0;
   /** Victory celebration in [0, 1]: lasers sweep through hues, Memphis heats up. */
   public celebration = 0;
 
-  /** How hard Memphis dances: whichever of climax and celebration is stronger. */
-  private get heat(): number {
-    return Math.max(this.climax, this.celebration);
-  }
-
-  // Shapes run on their own clock so speeding them up never makes them jump
-  private shapeClock = 0;
-  private lastTime: number | null = null;
-  private dropAge = Infinity;
-  private shapePulse = 0;
-
-  constructor() {
-    this.backgroundIndex = Math.floor(Math.random() * 2);
-    this.initMemphisShapes();
-  }
-
+  /** Switches to the other background (on every return to the menu). */
   public nextBackground(): void {
-    this.backgroundIndex = (this.backgroundIndex + 1) % 2;
+    this.backgroundIndex = (this.backgroundIndex + 1) % this.backgrounds.length;
   }
 
-  /** Climax drop: Memphis shapes get thrown outward and ease back. */
+  /** Victory burst: Memphis shapes get thrown outward and ease back. */
   public triggerDrop(): void {
-    this.dropAge = 0;
-  }
-
-  /** Outward push in px: rises smoothly from 0, peaks at MEMPHIS_DROP_PEAK_TIME, then fades. */
-  private getDropPush(): number {
-    if (!Number.isFinite(this.dropAge)) return 0;
-    const t = this.dropAge / MEMPHIS_DROP_PEAK_TIME;
-    return MEMPHIS_DROP_PUSH * t * Math.exp(1 - t);
-  }
-
-  private initMemphisShapes(): void {
-    const colors = [COLORS.CYAN, COLORS.PINK, COLORS.YELLOW, COLORS.PURPLE];
-    this.memphisShapes = Array.from({ length: MEMPHIS_SHAPE_COUNT }, (_, i) => ({
-      kind: (i % 6) as MemphisShapeKind,
-      x: Math.random() * GAME_WIDTH,
-      y: Math.random() * GAME_HEIGHT,
-      size: randomRange(14, 38),
-      vx: (Math.random() - 0.5) * 16,
-      vy: randomRange(6, 16),
-      rotation: Math.random() * 6,
-      rotationSpeed: (Math.random() - 0.5) * 1.2,
-      color: colors[i % 4],
-    }));
-  }
-
-  private updateAudioData(analyser: AnalyserNode | null): void {
-    if (analyser) {
-      analyser.getByteFrequencyData(this.frequencyData);
-      analyser.getByteTimeDomainData(this.timeDomainData);
-    } else {
-      this.frequencyData.fill(0);
-      this.timeDomainData.fill(128);
-    }
-  }
-
-  private getAudioPulse(shake: number): number {
-    const bassAvg = (this.frequencyData[1] + this.frequencyData[2] + this.frequencyData[3]) / 765;
-    const pulseFromAudio = clamp((bassAvg - 0.35) * 2.2, 0, 1);
-    const pulseFromShake = clamp(shake / 12, 0, 1);
-    return Math.max(pulseFromAudio, pulseFromShake);
-  }
-
-  private getSpectrumLevel(index: number, total: number, time: number): number {
-    const bucket = 1 + Math.floor(Math.pow(index / total, 1.5) * 80);
-    const maxFreqVal = Math.max(this.frequencyData[bucket], this.frequencyData[bucket + 1]);
-    const normalized = (maxFreqVal / 255) * (0.9 + (index / total) * 0.9);
-    const syntheticLfo = 0.1 + 0.08 * Math.sin(time * 2.2 + index * 0.6);
-    return Math.min(1, Math.max(normalized, syntheticLfo));
+    this.memphis.triggerDrop();
   }
 
   public render(
@@ -105,295 +42,27 @@ export class BackgroundRenderer {
     shake: number,
     isRotated: boolean,
   ): void {
-    this.updateAudioData(analyser);
-    const pulse = this.getAudioPulse(shake);
+    this.spectrum.update(analyser);
+    const pulse = this.spectrum.getPulse(shake);
 
     const dt = this.lastTime === null ? 0 : clamp(time - this.lastTime, 0, 0.1);
     this.lastTime = time;
-    this.shapeClock += dt * (1 + MEMPHIS_CLIMAX_SPEEDUP * this.heat);
-    this.dropAge += dt;
+    this.memphis.advance(dt, pulse, Math.max(this.climax, this.celebration));
 
-    // Shapes swell with an envelope instead of the raw pulse, so a single loud hit
-    // (the climax drop's full-volume kick) can't make them jump in size in one frame
-    const rate = pulse > this.shapePulse ? MEMPHIS_PULSE_ATTACK : MEMPHIS_PULSE_RELEASE;
-    this.shapePulse += (pulse - this.shapePulse) * Math.min(1, dt * rate);
-
-    if (this.backgroundIndex === 0) {
-      this.renderLaserBackground(ctx, pulse, time);
-    } else {
-      this.renderMemphisBackground(ctx, this.shapePulse, time, isRotated);
-    }
-
-    // Semi-transparent dark overlay tint
-    ctx.fillStyle = `rgba(10, 2, 32, ${this.backgroundIndex ? 0.3 : 0.15})`;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-  }
-
-  private renderLaserBackground(ctx: CanvasRenderingContext2D, pulse: number, time: number): void {
-    const centerX = GAME_WIDTH / 2;
-    const centerY = GAME_HEIGHT * 0.45;
-
-    const bgGradient = ctx.createRadialGradient(
-      centerX,
-      centerY,
-      10,
-      centerX,
-      centerY,
-      GAME_WIDTH * 0.7,
-    );
-    bgGradient.addColorStop(0, '#2b0a5c');
-    bgGradient.addColorStop(1, '#05010d');
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    ctx.fillStyle = `rgba(90, 70, 255, ${pulse * 0.1 * this.laserIntensity})`;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineCap = 'round';
-
-    // Rotating laser beams
-    for (const [x, y, baseAngle, sweep, speed, phase, hue] of LASER_CONFIGURATIONS) {
-      const angle = baseAngle + Math.sin(time * speed + phase) * sweep;
-      // Victory sweeps each beam through the color wheel, out of phase with its neighbours
-      const celebrationSwing =
-        this.celebration * CELEBRATION_HUE_SWING * Math.sin(time * 3 + phase);
-      const beamHue = 225 + ((hue - 185) / 135) * 50 + celebrationSwing;
-
-      ctx.strokeStyle = `hsl(${beamHue}, 85%, 50%)`;
-      ctx.globalAlpha = (0.07 + pulse * 0.06) * this.laserIntensity;
-      ctx.lineWidth = 12 + pulse * 6;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.cos(angle) * 900, y + Math.sin(angle) * 900);
-      ctx.stroke();
-
-      ctx.globalAlpha = (0.3 + pulse * 0.3) * this.laserIntensity;
-      ctx.lineWidth = 1.4 + pulse;
-      ctx.stroke();
-    }
-
-    // Spectrum analyzer bars; the climax mix is louder, so calm them down to keep focus on play
-    const spectrumCalm = 1 - CLIMAX_SPECTRUM_DAMPING * this.climax;
-    const barCount = 32;
-    const barWidth = GAME_WIDTH / barCount;
-    const barHeights: number[] = [];
-    for (let i = 0; i < barCount; i++) {
-      barHeights.push(Math.round(this.getSpectrumLevel(i, barCount, time) * 14 * spectrumCalm));
-    }
-
-    // Bottom cyan bars
-    ctx.globalAlpha = 0.5 * spectrumCalm;
-    for (let j = 0; j < 14; j++) {
-      ctx.fillStyle = `hsl(${185 + j * 10}, 100%, ${55 + j}%)`;
-      for (let i = 0; i < barCount; i++) {
-        if (barHeights[i] > j) {
-          ctx.fillRect(i * barWidth + 2, GAME_HEIGHT - 24 - j * 8, barWidth - 4, 6);
-        }
-      }
-    }
-
-    // Top pink bars
-    ctx.globalAlpha = 0.25 * spectrumCalm;
-    for (let j = 0; j < 7; j++) {
-      ctx.fillStyle = `hsl(${320 - j * 8}, 100%, 60%)`;
-      for (let i = 0; i < barCount; i++) {
-        if (barHeights[barCount - 1 - i] > j * 2) {
-          ctx.fillRect(i * barWidth + 2, 22 + j * 8, barWidth - 4, 6);
-        }
-      }
-    }
-
-    // Center oscilloscope wave
-    ctx.globalAlpha = 0.06 + 0.24 * this.laserIntensity;
-    ctx.strokeStyle = COLORS.CYAN;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let i = 0; i <= 64; i++) {
-      const x = (i / 64) * GAME_WIDTH;
-      const waveOffset = ((this.timeDomainData[i * 4] - 128) / 128) * 70;
-      const y = GAME_HEIGHT / 2 + waveOffset + Math.sin(i * 0.35 + time * 3) * 5;
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    }
-    ctx.stroke();
-    ctx.restore();
-
-    // Radial vignette shadow
-    ctx.save();
-    ctx.translate(centerX, GAME_HEIGHT / 2);
-    ctx.scale((GAME_WIDTH * 0.5) / (GAME_HEIGHT * 0.4), 1);
-    const vignetteGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, GAME_HEIGHT * 0.4);
-    vignetteGrad.addColorStop(0, 'rgba(4, 1, 12, 0.92)');
-    vignetteGrad.addColorStop(0.55, 'rgba(4, 1, 12, 0.82)');
-    vignetteGrad.addColorStop(1, 'rgba(4, 1, 12, 0)');
-    ctx.fillStyle = vignetteGrad;
-    ctx.fillRect(-GAME_WIDTH, -GAME_HEIGHT, GAME_WIDTH * 2, GAME_HEIGHT * 2);
-    ctx.restore();
-  }
-
-  private renderMemphisBackground(
-    ctx: CanvasRenderingContext2D,
-    pulse: number,
-    time: number,
-    isRotated: boolean,
-  ): void {
-    // Gradient heats up toward pink/orange during the climax
-    const bgGradient = ctx.createLinearGradient(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    [0, 0.55, 1].forEach((stop, i) => {
-      bgGradient.addColorStop(
-        stop,
-        mixHexColors(MEMPHIS_GRADIENT_COOL[i], MEMPHIS_GRADIENT_HOT[i], this.heat),
-      );
+    const background = this.backgrounds[this.backgroundIndex];
+    background.render({
+      ctx,
+      spectrum: this.spectrum,
+      pulse,
+      time,
+      isRotated,
+      laserIntensity: this.laserIntensity,
+      climax: this.climax,
+      celebration: this.celebration,
     });
-    ctx.fillStyle = bgGradient;
+
+    const tint = background === this.laser ? OVERLAY_TINT_ALPHA.laser : OVERLAY_TINT_ALPHA.memphis;
+    ctx.fillStyle = `rgba(${OVERLAY_TINT_RGB}, ${tint})`;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Memphis grid dots
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    const offset = (time * 10) % 28;
-    for (let y = -28 + offset; y < GAME_HEIGHT; y += 28) {
-      for (let x = -28 + offset; x < GAME_WIDTH; x += 28) {
-        ctx.fillRect(x, y, 2, 2);
-      }
-    }
-
-    ctx.lineWidth = 3;
-    ctx.lineJoin = 'round';
-
-    // 80s geometric shapes (dance harder and glow brighter during the climax)
-    const clock = this.shapeClock;
-    const dropPush = this.getDropPush();
-    const pulseScale = 0.25 + 0.35 * this.heat;
-    const alphaBoost = 0.2 * this.heat;
-
-    for (const shape of this.memphisShapes) {
-      let x = (((shape.x + shape.vx * clock) % GAME_WIDTH) + GAME_WIDTH) % GAME_WIDTH;
-      let y = (((shape.y + shape.vy * clock) % GAME_HEIGHT) + GAME_HEIGHT) % GAME_HEIGHT;
-
-      if (dropPush > 0.5) {
-        const dx = x - GAME_WIDTH / 2;
-        const dy = y - GAME_HEIGHT / 2;
-        const distance = Math.hypot(dx, dy) || 1;
-        x += (dx / distance) * dropPush;
-        y += (dy / distance) * dropPush;
-      }
-
-      const s = shape.size * (1 + pulse * pulseScale);
-
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(shape.rotation + shape.rotationSpeed * clock);
-      ctx.strokeStyle = shape.color;
-      ctx.fillStyle = shape.color;
-      ctx.globalAlpha = Math.min(
-        1,
-        (shape.kind > 3 ? 0.35 + pulse * 0.2 : 0.55 + pulse * 0.3) + alphaBoost,
-      );
-
-      ctx.beginPath();
-      switch (shape.kind) {
-        case 0: // Triangle
-          ctx.moveTo(0, -s);
-          ctx.lineTo(s * 0.87, s * 0.5);
-          ctx.lineTo(-s * 0.87, s * 0.5);
-          ctx.closePath();
-          break;
-        case 1: // Circle
-          ctx.arc(0, 0, s * 0.8, 0, TWO_PI);
-          break;
-        case 2: // Zigzag line
-          for (let j = 0; j <= 6; j++) {
-            ctx.lineTo(-s + (j * s) / 3, (j % 2 ? -1 : 1) * s * 0.35);
-          }
-          break;
-        case 3: // Plus/Cross
-          ctx.moveTo(-s, 0);
-          ctx.lineTo(s, 0);
-          ctx.moveTo(0, -s);
-          ctx.lineTo(0, s);
-          break;
-        case 4: // Square
-          ctx.rect(-s * 0.7, -s * 0.7, s * 1.4, s * 1.4);
-          break;
-        default: // Semicircle
-          ctx.arc(0, 0, s * 0.8, 0, Math.PI);
-          ctx.closePath();
-      }
-
-      if (shape.kind > 3) {
-        ctx.fill();
-      } else {
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // VHS noise glitches & scan lines
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
-    for (let i = 0; i < 5; i++) {
-      ctx.fillRect(
-        Math.random() * GAME_WIDTH,
-        Math.random() * GAME_HEIGHT,
-        20 + Math.random() * 120,
-        1 + Math.random() * 1.5,
-      );
-    }
-
-    const scanBarY = ((time * 55) % (GAME_HEIGHT + 90)) - 45;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fillRect(0, scanBarY, GAME_WIDTH, 22);
-    ctx.fillStyle = 'rgba(255, 43, 214, 0.12)';
-    ctx.fillRect(0, scanBarY + 22, GAME_WIDTH, 2);
-    ctx.fillStyle = 'rgba(25, 240, 255, 0.12)';
-    ctx.fillRect(0, scanBarY - 2, GAME_WIDTH, 2);
-
-    // VHS OSD Text
-    ctx.save();
-    ctx.textAlign = 'left';
-    ctx.font = "700 16px 'Russo One', Orbitron, monospace";
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.shadowColor = COLORS.CYAN;
-    ctx.shadowBlur = 6;
-
-    const seconds = Math.floor(time);
-    const minutes = Math.floor(seconds / 60) % 60;
-    const remainingSeconds = seconds % 60;
-    const timeString = `SP 0:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-
-    const playTextX = isRotated ? 46 : 26;
-    const timeTextY = isRotated ? 38 : 58;
-
-    // VCR fast-forward during the climax
-    const isFastForward = this.climax > 0.5;
-    if (isFastForward) {
-      ctx.fillStyle = 'rgba(255, 229, 59, 0.9)';
-      ctx.shadowColor = COLORS.PINK;
-    }
-    this.renderOsdText(ctx, isFastForward ? '▶▶ FF' : '▶ PLAY', playTextX, 38, isRotated);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.shadowColor = COLORS.CYAN;
-    this.renderOsdText(ctx, timeString, 26, timeTextY, isRotated);
-    ctx.restore();
-  }
-
-  private renderOsdText(
-    ctx: CanvasRenderingContext2D,
-    text: string,
-    x: number,
-    y: number,
-    isRotated: boolean,
-  ): void {
-    ctx.save();
-    ctx.translate(x, y);
-    if (isRotated) {
-      ctx.rotate(Math.PI / 2);
-    }
-    ctx.fillText(text, 0, 0);
-    ctx.restore();
   }
 }
