@@ -153,8 +153,7 @@ body {
   margin-top: 6px;
 }
 
-.game-button,
-.game__buttons button {
+.game-button {
   --button-color: var(--cyan);
 
   padding: 0.85em 1.5em;
@@ -183,12 +182,28 @@ body {
     color 0.15s;
 }
 
-.game__buttons button:nth-child(2) {
-  --button-color: var(--pink);
+/* Color modifiers; they come after .game-button, so they win over its cyan */
+.game-button--yellow {
+  --button-color: var(--yellow);
 }
 
-.game__buttons button:nth-child(3) {
+.game-button--pink {
+  --button-color: var(--pink-soft);
+}
+
+.game-button--purple {
   --button-color: var(--purple);
+}
+
+.game-button--green {
+  --button-color: var(--green);
+}
+
+/* Toggles (music, sound) say whether they are on with aria-pressed; on means filled */
+.game__buttons button[aria-pressed='true'] {
+  background: var(--button-color);
+  color: #12002e;
+  text-shadow: none;
 }
 
 /* Hover only where there is a real pointer: on touch screens :hover sticks after a tap,
@@ -196,23 +211,36 @@ body {
 @media (hover: hover) {
   .game-button:hover,
   .game__buttons button:hover {
+    transform: translateY(-2px);
+    animation: glitch-button 1.5s;
+  }
+
+  /* Plain buttons fill on hover; toggles don't, or an off toggle would look on */
+  .game-button:hover,
+  .game__buttons button:not([aria-pressed]):hover {
     background: var(--button-color);
     color: #12002e;
     text-shadow: none;
-
-    transform: translateY(-2px);
-    animation: glitch-button 1.5s;
   }
 }
 
 .game-button:focus-visible,
 .game__buttons button:focus-visible {
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.game-button:focus-visible,
+.game__buttons button:not([aria-pressed]):focus-visible {
   background: var(--button-color);
   color: #12002e;
   text-shadow: none;
+}
 
-  transform: translateY(-2px);
-  outline: none;
+/* A focused toggle keeps showing its state, so focus is an outline instead of a fill */
+.game__buttons button[aria-pressed]:focus-visible {
+  outline: 2px solid var(--button-color);
+  outline-offset: 3px;
 }
 
 .game-hint {
