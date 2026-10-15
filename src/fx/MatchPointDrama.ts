@@ -4,7 +4,7 @@ import { Paddle } from '@/match/Paddle';
 import { clamp, lerp } from '@/shared/math';
 
 export const DRAMA = {
-  LEVEL: 0.5, // tension for the whole deciding rally: vignette, muffled music
+  LEVEL: 1, // tension for the whole deciding rally: vignette, muffled music
   LEVEL_SMOOTHING: 4, // 1/s
   // Heartbeat through the deciding rally, quickening the longer it lasts
   HEARTBEAT_FIRST: 0.4, // s from the start of the deciding point to the first beat
@@ -14,9 +14,9 @@ export const DRAMA = {
   BEAT_PULSE: 0.35, // extra vignette on each beat
   BEAT_PULSE_DECAY: 4, // 1/s
   // Once the deciding ball is past a paddle
-  SLOWMO_SCALE: 0.2, // simulation speed
-  SLOWMO_MAX_DURATION: 1.5, // s wall-clock; the point is normally scored well before
-  TIME_SCALE_SMOOTHING: 10, // 1/s
+  SLOWMO_SCALE: 0.1, // simulation speed
+  SLOWMO_MAX_DURATION: 2.5, // s wall-clock; the point is normally scored well before
+  TIME_SCALE_SMOOTHING: 6, // 1/s
   ZOOM: 0.2, // extra camera zoom on the ball at full slow motion
 } as const;
 
@@ -76,6 +76,8 @@ export class MatchPointDrama {
   /**
    * @param realDt   wall-clock frame time, so effects aren't slowed by their own time scale
    * @param isActive false outside of a real match (demo, menu)
+   * @param ball
+   * @param paddles
    * @returns true on the frames a heartbeat should sound
    */
   public update(realDt: number, isActive: boolean, ball: Ball, paddles: [Paddle, Paddle]): boolean {
