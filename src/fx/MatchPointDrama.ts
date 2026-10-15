@@ -4,7 +4,7 @@ import { Paddle } from '@/match/Paddle';
 import { clamp, lerp } from '@/shared/math';
 
 export const DRAMA = {
-  LEVEL: 1, // tension for the whole deciding rally: vignette, muffled music
+  LEVEL: 0.6, // tension for the whole deciding rally: vignette, muffled music
   LEVEL_SMOOTHING: 4, // 1/s
   // Heartbeat through the deciding rally, quickening the longer it lasts
   HEARTBEAT_FIRST: 0.4, // s from the start of the deciding point to the first beat
@@ -49,9 +49,12 @@ export class MatchPointDrama {
     return this._level;
   }
 
-  /** Edge darkening in [0, 1]: the tension plus the heartbeat's pulse. */
+  /**
+   * Edge darkening: the tension plus the heartbeat's pulse. Not capped at 1, so the pulse
+   * still shows when the tension is already at its maximum; the renderer limits the opacity.
+   */
   public get vignette(): number {
-    return Math.min(1, this._level + this.beatPulse);
+    return this._level + this.beatPulse;
   }
 
   /** Camera zoom on the ball (1 = none), following the slow motion in and out. */
