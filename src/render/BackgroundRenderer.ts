@@ -7,25 +7,30 @@ import { clamp } from '@/shared/math';
 
 // Dark tint over the background so the court reads clearly on top of it
 const OVERLAY_TINT_RGB = '10, 2, 32';
-const OVERLAY_TINT_ALPHA = { laser: 0.15, memphis: 0.3 };
+
+/** Every background the game rotates through; add new ones here. */
+const createBackgrounds = (): Background[] => [new LaserBackground(), new MemphisBackground()];
 
 /** Picks the active background, feeds it the music analysis and the game's mood. */
 export class BackgroundRenderer {
   private readonly spectrum = new AudioSpectrum();
-  private readonly laser = new LaserBackground();
-  private readonly memphis = new MemphisBackground();
-  private readonly backgrounds: Background[] = [this.laser, this.memphis];
-  private backgroundIndex = Math.floor(Math.random() * this.backgrounds.length);
+  private readonly backgrounds: Background[];
+  private backgroundIndex: number;
   private lastTime: number | null = null;
 
-  /** Switches to the other background (on every return to the menu). */
+  constructor(backgrounds: Background[] = createBackgrounds()) {
+    this.backgrounds = backgrounds;
+    this.backgroundIndex = Math.floor(Math.random() * backgrounds.length);
+  }
+
+  /** Switches to the next background (on every return to the menu). */
   public nextBackground(): void {
     this.backgroundIndex = (this.backgroundIndex + 1) % this.backgrounds.length;
   }
 
-  /** Victory burst: Memphis shapes get thrown outward and ease back. */
+  /** Victory burst, for every background that has one. */
   public triggerDrop(): void {
-    this.memphis.triggerDrop();
+    this.backgrounds.forEach((background) => background.triggerDrop?.());
   }
 
   public render(
@@ -41,13 +46,13 @@ export class BackgroundRenderer {
 
     const dt = this.lastTime === null ? 0 : clamp(time - this.lastTime, 0, 0.1);
     this.lastTime = time;
-    this.memphis.advance(dt, pulse, Math.max(mood.climax, mood.celebration));
+    const heat = Math.max(mood.climax, mood.celebration);
+    this.backgrounds.forEach((background) => background.advance?.(dt, pulse, heat));
 
     const background = this.backgrounds[this.backgroundIndex];
     background.render({ ...mood, ctx, spectrum: this.spectrum, pulse, time, isRotated });
 
-    const tint = background === this.laser ? OVERLAY_TINT_ALPHA.laser : OVERLAY_TINT_ALPHA.memphis;
-    ctx.fillStyle = `rgba(${OVERLAY_TINT_RGB}, ${tint})`;
+    ctx.fillStyle = `rgba(${OVERLAY_TINT_RGB}, ${background.overlayTint})`;
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
   }
 }
