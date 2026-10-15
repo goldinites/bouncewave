@@ -1,3 +1,4 @@
+import { DifficultyLevel } from '@/match/difficulty';
 import { WINNING_SCORE } from '@/match/config';
 export type Language = 'en' | 'ru';
 
@@ -23,7 +24,8 @@ export interface TranslationSchema {
   ready: string;
   hintK: string;
   hintT: string;
-  d: [DifficultyDescription, DifficultyDescription, DifficultyDescription, DifficultyDescription];
+  /** Name and description of every difficulty level, by level. */
+  d: Record<DifficultyLevel, DifficultyDescription>;
 }
 
 export const TRANSLATIONS: Record<Language, TranslationSchema> = {

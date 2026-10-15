@@ -1,5 +1,6 @@
 import { COURT } from '@/match/config';
 import { COLORS } from '@/shared/palette';
+const RAIL_THICKNESS = 4; // glowing strip along the inner edge of each wall
 const NET_LINE_WIDTH = 3;
 const NET_DASH_PATTERN = [12, 14];
 
@@ -17,9 +18,9 @@ export class CourtRenderer {
     ctx.shadowBlur = 14;
 
     // Top rail
-    ctx.fillRect(0, 10, COURT.WIDTH, 4);
+    ctx.fillRect(0, COURT.TOP_WALL - RAIL_THICKNESS, COURT.WIDTH, RAIL_THICKNESS);
     // Bottom rail
-    ctx.fillRect(0, COURT.HEIGHT - 14, COURT.WIDTH, 4);
+    ctx.fillRect(0, COURT.HEIGHT - COURT.BOTTOM_WALL, COURT.WIDTH, RAIL_THICKNESS);
 
     // Dashed center net line
     ctx.shadowBlur = 0;
@@ -28,8 +29,8 @@ export class CourtRenderer {
     ctx.lineWidth = NET_LINE_WIDTH;
 
     ctx.beginPath();
-    ctx.moveTo(COURT.WIDTH / 2, 18);
-    ctx.lineTo(COURT.WIDTH / 2, COURT.HEIGHT - 18);
+    ctx.moveTo(COURT.WIDTH / 2, COURT.TOP_WALL + RAIL_THICKNESS);
+    ctx.lineTo(COURT.WIDTH / 2, COURT.HEIGHT - COURT.BOTTOM_WALL - RAIL_THICKNESS);
     ctx.stroke();
 
     ctx.restore();

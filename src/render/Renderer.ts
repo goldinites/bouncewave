@@ -28,12 +28,12 @@ const LASERS = {
 const CLIMAX_FLASH = 0.2; // soft flash on the drop, no screen shake
 const CELEBRATION_DECAY = 0.45; // 1/s, linear
 
-// CSS effects on the stage at the end of a match; durations must match main.css (ms)
+// CSS effects on the stage at the end of a match; their animations live in main.css
 const STAGE_CLASSES = {
   CRT_GLITCH: 'crt-glitch-active',
   VICTORY_BURST: 'victory-burst-active',
 } as const;
-const STAGE_EFFECT_MS = { VICTORY: 900, LOSS: 700 } as const;
+type StageClass = (typeof STAGE_CLASSES)[keyof typeof STAGE_CLASSES];
 
 /** Everything the renderer needs to draw (and animate toward) one frame. */
 export interface RenderFrame {
@@ -80,7 +80,8 @@ export class Renderer {
   private lastRenderTime = performance.now();
 
   private stage: HTMLElement | null = null;
-  private finalEffectTimer: number | null = null;
+  /** Bumped on every stage effect, so a finishing older one never clears a newer one. */
+  private stageEffectId = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -120,35 +121,44 @@ export class Renderer {
     this.scale = this.canvas.width / COURT.WIDTH;
   }
 
-  private triggerFinalEffect(
-    className: 'crt-glitch-active' | 'victory-burst-active',
-    duration: number,
-  ): void {
-    if (!this.stage) return;
+  /**
+   * Plays a CSS effect on the stage. The class stays on until the animations it starts on the
+   * stage (pseudo-elements included) have finished, so their durations live only in the CSS.
+   * With reduced motion those animations are switched off and the class is removed at once.
+   */
+  private triggerStageEffect(className: StageClass): void {
+    const stage = this.stage;
+    if (!stage) return;
 
-    if (this.finalEffectTimer !== null) {
-      window.clearTimeout(this.finalEffectTimer);
-      this.finalEffectTimer = null;
-    }
+    const id = ++this.stageEffectId;
+    stage.classList.remove(STAGE_CLASSES.CRT_GLITCH, STAGE_CLASSES.VICTORY_BURST);
+    // Reflow so re-adding the same class restarts its animations
+    void stage.offsetWidth;
+    stage.classList.add(className);
 
-    this.stage.classList.remove(STAGE_CLASSES.CRT_GLITCH, STAGE_CLASSES.VICTORY_BURST);
+    const animations = (stage.getAnimations?.({ subtree: true }) ?? []).filter(
+      (animation) =>
+        animation.effect instanceof KeyframeEffect &&
+        animation.effect.target === stage &&
+        Number.isFinite(animation.effect.getComputedTiming().endTime),
+    );
 
-    void this.stage.offsetWidth;
-
-    this.stage.classList.add(className);
-
-    this.finalEffectTimer = window.setTimeout(() => {
-      this.stage?.classList.remove(className);
-      this.finalEffectTimer = null;
-    }, duration);
+    Promise.all(animations.map((animation) => animation.finished)).then(
+      () => {
+        if (id === this.stageEffectId) stage.classList.remove(className);
+      },
+      () => {
+        // Cancelled because a newer effect replaced the class
+      },
+    );
   }
 
-  public triggerCrtGlitch(duration: number = STAGE_EFFECT_MS.LOSS): void {
-    this.triggerFinalEffect(STAGE_CLASSES.CRT_GLITCH, duration);
+  public triggerCrtGlitch(): void {
+    this.triggerStageEffect(STAGE_CLASSES.CRT_GLITCH);
   }
 
-  public triggerVictoryEffect(duration: number = STAGE_EFFECT_MS.VICTORY): void {
-    this.triggerFinalEffect(STAGE_CLASSES.VICTORY_BURST, duration);
+  public triggerVictoryEffect(): void {
+    this.triggerStageEffect(STAGE_CLASSES.VICTORY_BURST);
   }
 
   public addShake(amount: number): void {
@@ -303,11 +313,7 @@ export class Renderer {
   public dispose(): void {
     this.resizeObserver.disconnect();
 
-    if (this.finalEffectTimer !== null) {
-      window.clearTimeout(this.finalEffectTimer);
-      this.finalEffectTimer = null;
-    }
-
+    this.stageEffectId++;
     this.stage?.classList.remove(STAGE_CLASSES.CRT_GLITCH, STAGE_CLASSES.VICTORY_BURST);
   }
 }

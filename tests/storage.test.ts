@@ -80,4 +80,9 @@ describe('SettingsStorage', () => {
     const loaded = SettingsStorage.load();
     expect(loaded.difficulty).toBe(DifficultyLevel.NORMAL);
   });
+
+  it('rejects a stored difficulty that is in range but not a level', () => {
+    mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ d: 1.5 }));
+    expect(SettingsStorage.load().difficulty).toBe(DifficultyLevel.NORMAL);
+  });
 });

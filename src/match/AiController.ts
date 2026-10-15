@@ -1,5 +1,5 @@
 import { Ball } from '@/match/Ball';
-import { COURT, PADDLE } from '@/match/config';
+import { COURT } from '@/match/config';
 import { DifficultyConfig } from '@/match/difficulty';
 import { GameMode } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
@@ -34,13 +34,9 @@ export class AiController {
     const maxMovePerFrame =
       (gameMode === GameMode.DEMO ? DEMO_AI.SPEED : difficultyConfig.speed) * dt;
 
-    if (Math.abs(deltaY) > AIM_DEADZONE) {
-      paddle.targetY += clamp(deltaY, -maxMovePerFrame, maxMovePerFrame);
-    }
-
-    const minY = PADDLE.TOP_MARGIN + PADDLE.HEIGHT / 2;
-    const maxY = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - PADDLE.HEIGHT / 2;
-    paddle.targetY = clamp(paddle.targetY, minY, maxY);
+    const move =
+      Math.abs(deltaY) > AIM_DEADZONE ? clamp(deltaY, -maxMovePerFrame, maxMovePerFrame) : 0;
+    paddle.setTargetY(paddle.targetY + move);
   }
 
   /**

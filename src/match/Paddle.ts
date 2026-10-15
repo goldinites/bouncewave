@@ -3,6 +3,9 @@ import { clamp } from '@/shared/math';
 
 const PADDLE_SMOOTH_FACTOR = 22;
 const PADDLE_VELOCITY_SMOOTHING = 12; // 1/s, ~80 ms averaging window
+// Range of the paddle center, so the whole paddle stays clear of the walls
+const MIN_Y = PADDLE.TOP_MARGIN + PADDLE.HEIGHT / 2;
+const MAX_Y = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - PADDLE.HEIGHT / 2;
 
 export class Paddle {
   public x: number;
@@ -33,10 +36,9 @@ export class Paddle {
     this.resetPosition();
   }
 
+  /** Aims the paddle at `y`, kept within the court. */
   public setTargetY(y: number): void {
-    const minY = PADDLE.TOP_MARGIN + PADDLE.HEIGHT / 2;
-    const maxY = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - PADDLE.HEIGHT / 2;
-    this.targetY = clamp(y, minY, maxY);
+    this.targetY = clamp(y, MIN_Y, MAX_Y);
   }
 
   /** Moves toward the target and tracks its speed. */

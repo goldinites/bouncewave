@@ -38,3 +38,18 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     maxSpeed: 1000,
   },
 };
+
+/** Every level, easiest first. */
+export const DIFFICULTY_LEVELS: readonly DifficultyLevel[] = Object.values(DifficultyLevel).filter(
+  (value): value is DifficultyLevel => typeof value === 'number',
+);
+
+export function isDifficultyLevel(value: unknown): value is DifficultyLevel {
+  return DIFFICULTY_LEVELS.includes(value as DifficultyLevel);
+}
+
+/** The next level up, wrapping around from the hardest back to the easiest. */
+export function nextDifficulty(level: DifficultyLevel): DifficultyLevel {
+  const index = DIFFICULTY_LEVELS.indexOf(level);
+  return DIFFICULTY_LEVELS[(index + 1) % DIFFICULTY_LEVELS.length];
+}

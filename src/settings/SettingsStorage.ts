@@ -1,5 +1,5 @@
 import { Language } from '@/i18n/translations';
-import { DifficultyLevel } from '@/match/difficulty';
+import { DifficultyLevel, isDifficultyLevel } from '@/match/difficulty';
 export const LOCAL_STORAGE_KEY = 'neonpong';
 
 export interface UserSettings {
@@ -47,10 +47,7 @@ export class SettingsStorage {
       }
 
       const parsed: StoredData = JSON.parse(raw);
-      const difficulty =
-        parsed.d !== undefined && parsed.d >= 0 && parsed.d <= 3
-          ? (parsed.d as DifficultyLevel)
-          : this.DEFAULT_SETTINGS.difficulty;
+      const difficulty = isDifficultyLevel(parsed.d) ? parsed.d : this.DEFAULT_SETTINGS.difficulty;
 
       const language: Language = parsed.l === 'ru' ? 'ru' : 'en';
 

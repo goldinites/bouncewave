@@ -1,6 +1,6 @@
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
-import { DifficultyLevel } from '@/match/difficulty';
+import { nextDifficulty } from '@/match/difficulty';
 import { SettingsStorage, UserSettings } from '@/settings/SettingsStorage';
 import { UIManager } from '@/ui/UIManager';
 
@@ -113,7 +113,7 @@ export class MenuController {
         {
           label: difficultyLabel,
           action: () => {
-            this.settings.difficulty = ((this.settings.difficulty + 1) % 4) as DifficultyLevel;
+            this.settings.difficulty = nextDifficulty(this.settings.difficulty);
             SettingsStorage.save(this.settings);
             this.showSettingsMenu(onBack);
           },
