@@ -4,6 +4,7 @@ import {
   PADDLE_HEIGHT,
   PADDLE_TOP_MARGIN,
 } from '@/constants/game.constants';
+import { DEMO_AI_ERROR } from '@/constants/difficulty.constants';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { DifficultyConfig } from '@/types/difficulty.types';
@@ -35,5 +36,18 @@ export class AiController {
     const minY = PADDLE_TOP_MARGIN + PADDLE_HEIGHT / 2;
     const maxY = GAME_HEIGHT - PADDLE_BOTTOM_MARGIN - PADDLE_HEIGHT / 2;
     paddle.targetY = clamp(paddle.targetY, minY, maxY);
+  }
+
+  /**
+   * Picks a fresh aim error for a paddle that is about to receive the ball, so the AI
+   * misjudges each return a little differently. Call it when the opponent hits the ball.
+   */
+  public static rollAimError(
+    paddle: Paddle,
+    gameMode: GameMode,
+    difficultyConfig: DifficultyConfig,
+  ): void {
+    const maxError = gameMode === GameMode.DEMO ? DEMO_AI_ERROR : difficultyConfig.error;
+    paddle.errorOffset = (Math.random() - 0.5) * maxError;
   }
 }

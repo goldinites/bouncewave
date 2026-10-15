@@ -23,12 +23,23 @@ import {
   FIREWORK_SHAKE,
   FIREWORK_SPEED,
   LOSS_DURATION,
+  PARTICLE_HIT_BURST_COUNT_BASE,
+  PARTICLE_HIT_BURST_RALLY_CAP,
+  PARTICLE_PERFECT_BURST_COUNT,
+  PARTICLE_PERFECT_BURST_SPEED,
   PARTICLE_SCORE_BURST_COUNT,
   PARTICLE_SCORE_BURST_SPEED,
+  PERFECT_SHOCKWAVE_EXPANSION_SPEED,
   SCORE_SHOCKWAVE_EXPANSION_SPEED,
+  SCREEN_FLASH_PERFECT_HIT,
   SCREEN_FLASH_SCORE,
   SCREEN_FLASH_START,
+  SCREEN_SHAKE_PADDLE_HIT_BASE,
+  SCREEN_SHAKE_PADDLE_HIT_SPEED_DIVISOR,
+  SCREEN_SHAKE_PERFECT_BONUS,
   SCREEN_SHAKE_SCORE,
+  SCREEN_SHAKE_WALL_BOUNCE,
+  SHOCKWAVE_EXPANSION_SPEED,
   VICTORY_DURATION,
 } from '@/constants/visual.constants';
 import { Ball } from '@/entities/Ball';
@@ -38,6 +49,7 @@ import { I18nManager } from '@/i18n/I18nManager';
 import { Renderer } from '@/render/Renderer';
 import { SettingsStorage } from '@/storage/SettingsStorage';
 import { UserSettings } from '@/types/audio.types';
+import { DifficultyConfig } from '@/types/difficulty.types';
 import { GameMode, GameState } from '@/types/game.types';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
@@ -45,7 +57,7 @@ import { AiController } from '@/core/AiController';
 import { InputHandler } from '@/core/InputHandler';
 import { MatchPointDrama } from '@/core/MatchPointDrama';
 import { RallyClimax } from '@/core/RallyClimax';
-import { Physics } from '@/core/Physics';
+import { Physics, PhysicsEvent } from '@/core/Physics';
 import { VictoryFireworks } from '@/core/VictoryFireworks';
 import { FpsMeter } from '@/debug/FpsMeter';
 
@@ -236,6 +248,59 @@ export class Game {
     }
   }
 
+  private handlePhysicsEvent(event: PhysicsEvent, diffConfig: DifficultyConfig): void {
+    switch (event.type) {
+      case 'wallBounce':
+        this.renderer.addShake(SCREEN_SHAKE_WALL_BOUNCE);
+        this.audio.sfx.playWallBounce();
+        break;
+      case 'paddleHit':
+        this.handlePaddleHit(event, diffConfig);
+        break;
+      case 'score':
+        // A score resets the rally via serve()
+        this.handleScore(event.scoringPlayerIndex);
+        break;
+    }
+  }
+
+  private handlePaddleHit(
+    hit: Extract<PhysicsEvent, { type: 'paddleHit' }>,
+    diffConfig: DifficultyConfig,
+  ): void {
+    const paddle = this.paddles[hit.paddleIndex];
+    paddle.glow = 1.0;
+    this.rally++;
+
+    this.renderer.addShake(
+      SCREEN_SHAKE_PADDLE_HIT_BASE +
+        (hit.speed - BALL_INITIAL_SPEED) / SCREEN_SHAKE_PADDLE_HIT_SPEED_DIVISOR +
+        (hit.isPerfect ? SCREEN_SHAKE_PERFECT_BONUS : 0),
+    );
+
+    const burstCount =
+      PARTICLE_HIT_BURST_COUNT_BASE + Math.min(this.rally, PARTICLE_HIT_BURST_RALLY_CAP);
+    this.particleSystem.burst(hit.x, hit.y, paddle.color, burstCount);
+    this.particleSystem.shockwave(hit.x, hit.y, paddle.color, SHOCKWAVE_EXPANSION_SPEED);
+
+    if (hit.isPerfect) {
+      this.particleSystem.burst(
+        hit.x,
+        hit.y,
+        COLORS.WHITE,
+        PARTICLE_PERFECT_BURST_COUNT,
+        PARTICLE_PERFECT_BURST_SPEED,
+      );
+      this.particleSystem.shockwave(hit.x, hit.y, COLORS.WHITE, PERFECT_SHOCKWAVE_EXPANSION_SPEED);
+      this.renderer.addFlash(SCREEN_FLASH_PERFECT_HIT);
+    }
+
+    // The other paddle now has to read the return
+    AiController.rollAimError(this.paddles[1 - hit.paddleIndex], this.gameMode, diffConfig);
+
+    this.audio.sfx.playPaddleHit(this.rally, hit.isPerfect, hit.paddleIndex);
+  }
+
   private handleScore(scoringPlayerIndex: number): void {
     const burstX = scoringPlayerIndex === 0 ? GAME_WIDTH - 6 : 6;
     const scoringPaddle = this.paddles[scoringPlayerIndex];
@@ -417,30 +482,10 @@ export class Game {
         this.serveTime -= dt;
       } else {
         this.ball.updateTrail();
-        const rallyRef = { current: this.rally };
-        let scored = false;
 
-        Physics.updateBallMovement(
-          this.ball,
-          this.paddles,
-          this.particleSystem,
-          diffConfig,
-          this.gameMode,
-          rallyRef,
-          dt,
-          {
-            onWallBounce: () => this.audio.sfx.playWallBounce(),
-            onPaddleHit: (idx, r, isPerfect) => this.audio.sfx.playPaddleHit(r, isPerfect, idx),
-            onScore: (winner) => {
-              scored = true;
-              this.handleScore(winner);
-            },
-            onScreenShake: (amount) => this.renderer.addShake(amount),
-            onScreenFlash: (amount) => this.renderer.addFlash(amount),
-          },
-        );
-
-        this.rally = scored ? 0 : rallyRef.current;
+        for (const event of Physics.step(this.ball, this.paddles, diffConfig, dt)) {
+          this.handlePhysicsEvent(event, diffConfig);
+        }
 
         if (this.climax.level > 0.05) {
           this.emitClimaxEmbers(dt);

@@ -1,7 +1,5 @@
 import {
-  BALL_INITIAL_SPEED,
   BALL_OUT_OF_BOUNDS_OFFSET,
-  COLORS,
   COURT_BOTTOM_WALL,
   COURT_TOP_WALL,
   GAME_HEIGHT,
@@ -17,42 +15,42 @@ import {
   PERFECT_HIT_BOOST_DURATION,
   PERFECT_HIT_ZONE,
 } from '@/constants/game.constants';
-import {
-  PARTICLE_HIT_BURST_COUNT_BASE,
-  PARTICLE_PERFECT_BURST_COUNT,
-  PARTICLE_PERFECT_BURST_SPEED,
-  PERFECT_SHOCKWAVE_EXPANSION_SPEED,
-  SCREEN_FLASH_PERFECT_HIT,
-  SCREEN_SHAKE_PERFECT_BONUS,
-  SHOCKWAVE_EXPANSION_SPEED,
-} from '@/constants/visual.constants';
-import { DEMO_AI_ERROR } from '@/constants/difficulty.constants';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
-import { ParticleSystem } from '@/entities/ParticleSystem';
 import { DifficultyConfig } from '@/types/difficulty.types';
-import { GameMode } from '@/types/game.types';
 import { clamp } from '@/utils/math';
 
-export interface PhysicsCallbacks {
-  onWallBounce: () => void;
-  onPaddleHit: (paddleIndex: number, rally: number, isPerfect: boolean) => void;
-  onScore: (scoringPlayerIndex: number) => void;
-  onScreenShake: (amount: number) => void;
-  onScreenFlash: (amount: number) => void;
-}
+/** Something that happened to the ball during a physics step, in the order it happened. */
+export type PhysicsEvent =
+  | { type: 'wallBounce'; x: number; y: number }
+  | {
+      type: 'paddleHit';
+      paddleIndex: 0 | 1;
+      isPerfect: boolean;
+      x: number;
+      y: number;
+      /** Ball speed right after the hit (acceleration applied). */
+      speed: number;
+    }
+  | { type: 'score'; scoringPlayerIndex: 0 | 1; y: number };
 
+/**
+ * Ball movement and collisions only. It changes the ball, and nothing else: effects, sound,
+ * rally counting and AI reactions belong to whoever handles the returned events.
+ */
 export class Physics {
-  public static updateBallMovement(
+  /**
+   * Advances the ball by `dt` with sub-stepping so fast balls never tunnel through paddles.
+   * Stops early on a score; the ball is then out of bounds until the next serve.
+   */
+  public static step(
     ball: Ball,
     paddles: [Paddle, Paddle],
-    particleSystem: ParticleSystem,
     difficultyConfig: DifficultyConfig,
-    gameMode: GameMode,
-    rallyRef: { current: number },
     dt: number,
-    callbacks: PhysicsCallbacks,
-  ): void {
+  ): PhysicsEvent[] {
+    const events: PhysicsEvent[] = [];
+
     // Boost scales movement only; base speed (and acceleration progression) stays intact
     const speedMultiplier = ball.speedMultiplier;
     ball.updateBoost(dt);
@@ -71,20 +69,18 @@ export class Physics {
       if (ball.y < topBoundary) {
         ball.y = topBoundary;
         ball.vy = Math.abs(ball.vy);
-        callbacks.onScreenShake(2);
-        callbacks.onWallBounce();
+        events.push({ type: 'wallBounce', x: ball.x, y: ball.y });
       }
 
       // Bottom wall collision
       if (ball.y > bottomBoundary) {
         ball.y = bottomBoundary;
         ball.vy = -Math.abs(ball.vy);
-        callbacks.onScreenShake(2);
-        callbacks.onWallBounce();
+        events.push({ type: 'wallBounce', x: ball.x, y: ball.y });
       }
 
       // Paddle collisions
-      for (let i = 0; i < 2; i++) {
+      for (const i of [0, 1] as const) {
         const paddle = paddles[i];
         const isCollidingX =
           i === 0
@@ -121,56 +117,30 @@ export class Physics {
           ball.vy = Math.sin(bounceAngle) * ball.speed;
           ball.x = i === 0 ? paddle.x + PADDLE_WIDTH + ball.radius : paddle.x - ball.radius;
 
-          paddle.glow = 1.0;
-          rallyRef.current++;
-
-          const shakeMagnitude =
-            3 +
-            (ball.speed - BALL_INITIAL_SPEED) / 90 +
-            (isPerfect ? SCREEN_SHAKE_PERFECT_BONUS : 0);
-          callbacks.onScreenShake(shakeMagnitude);
-
-          const burstCount = PARTICLE_HIT_BURST_COUNT_BASE + Math.min(rallyRef.current, 20);
-          particleSystem.burst(ball.x, ball.y, paddle.color, burstCount);
-          particleSystem.shockwave(ball.x, ball.y, paddle.color, SHOCKWAVE_EXPANSION_SPEED);
-
-          if (isPerfect) {
-            particleSystem.burst(
-              ball.x,
-              ball.y,
-              COLORS.WHITE,
-              PARTICLE_PERFECT_BURST_COUNT,
-              PARTICLE_PERFECT_BURST_SPEED,
-            );
-            particleSystem.shockwave(
-              ball.x,
-              ball.y,
-              COLORS.WHITE,
-              PERFECT_SHOCKWAVE_EXPANSION_SPEED,
-            );
-            callbacks.onScreenFlash(SCREEN_FLASH_PERFECT_HIT);
-          }
-
-          // Update opponent's AI prediction error
-          const opponent = paddles[1 - i];
-          const maxError = gameMode === GameMode.DEMO ? DEMO_AI_ERROR : difficultyConfig.error;
-          opponent.errorOffset = (Math.random() - 0.5) * maxError;
-
-          callbacks.onPaddleHit(i, rallyRef.current, isPerfect);
+          events.push({
+            type: 'paddleHit',
+            paddleIndex: i,
+            isPerfect,
+            x: ball.x,
+            y: ball.y,
+            speed: ball.speed,
+          });
           break;
         }
       }
 
       // Out of bounds / score check
       if (ball.x < -BALL_OUT_OF_BOUNDS_OFFSET) {
-        callbacks.onScore(1); // Player 2 scores
-        return;
+        events.push({ type: 'score', scoringPlayerIndex: 1, y: ball.y });
+        return events;
       }
       if (ball.x > GAME_WIDTH + BALL_OUT_OF_BOUNDS_OFFSET) {
-        callbacks.onScore(0); // Player 1 scores
-        return;
+        events.push({ type: 'score', scoringPlayerIndex: 0, y: ball.y });
+        return events;
       }
     }
+
+    return events;
   }
 
   /**

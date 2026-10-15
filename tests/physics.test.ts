@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { DIFFICULTY_CONFIGS } from '@/constants/difficulty.constants';
 import {
   COURT_BOTTOM_WALL,
@@ -13,148 +13,85 @@ import {
   PERFECT_HIT_BOOST,
   PERFECT_HIT_BOOST_DURATION,
 } from '@/constants/game.constants';
-import { Physics, PhysicsCallbacks } from '@/core/Physics';
+import { Physics, PhysicsEvent } from '@/core/Physics';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
-import { ParticleSystem } from '@/entities/ParticleSystem';
 import { DifficultyLevel } from '@/types/difficulty.types';
-import { GameMode } from '@/types/game.types';
 
-describe('Physics Engine', () => {
-  const getMockCallbacks = (): {
-    callbacks: PhysicsCallbacks;
-    spies: Record<keyof PhysicsCallbacks, ReturnType<typeof vi.fn>>;
-  } => {
-    const spies = {
-      onWallBounce: vi.fn(),
-      onPaddleHit: vi.fn(),
-      onScore: vi.fn(),
-      onScreenShake: vi.fn(),
-      onScreenFlash: vi.fn(),
-    };
-    return { callbacks: spies, spies };
-  };
+const NORMAL = DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL];
 
-  it('handles top wall bounce and inverts vy', () => {
+const makePaddles = (): [Paddle, Paddle] => [
+  new Paddle(0, PADDLE_OFFSET_X, '#19f0ff'),
+  new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6'),
+];
+
+const ofType = <T extends PhysicsEvent['type']>(events: PhysicsEvent[], type: T) =>
+  events.filter((e): e is Extract<PhysicsEvent, { type: T }> => e.type === type);
+
+/** Ball heading into the left paddle (centered at y = 250), `offsetY` from its center. */
+const hitLeftPaddleAt = (offsetY: number, paddleVelocity = 0) => {
+  const ball = new Ball();
+  const paddles = makePaddles();
+  const [left] = paddles;
+
+  left.y = 250;
+  left.targetY = 250;
+  left.velocity = paddleVelocity;
+
+  ball.x = left.x + PADDLE_WIDTH + 2;
+  ball.y = 250 + offsetY;
+  ball.vx = -400;
+  ball.vy = 0;
+  ball.speed = 400;
+
+  const events = Physics.step(ball, paddles, NORMAL, 0.001);
+  return { ball, paddles, events };
+};
+
+describe('Physics.step', () => {
+  it('bounces off the top wall and reports it', () => {
     const ball = new Ball();
     ball.x = 400;
     ball.y = COURT_TOP_WALL + 5;
     ball.vy = -300;
     ball.vx = 200;
 
-    const p1 = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
-    const p2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
-    const particles = new ParticleSystem();
-    const rallyRef = { current: 0 };
-    const { callbacks, spies } = getMockCallbacks();
-
-    Physics.updateBallMovement(
-      ball,
-      [p1, p2],
-      particles,
-      DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
-      GameMode.PLAYER_VS_AI,
-      rallyRef,
-      0.016,
-      callbacks,
-    );
+    const events = Physics.step(ball, makePaddles(), NORMAL, 0.016);
 
     expect(ball.vy).toBeGreaterThan(0);
-    expect(spies.onWallBounce).toHaveBeenCalled();
+    expect(ofType(events, 'wallBounce')).toHaveLength(1);
   });
 
-  it('handles bottom wall bounce and inverts vy', () => {
+  it('bounces off the bottom wall and reports it', () => {
     const ball = new Ball();
     ball.x = 400;
     ball.y = GAME_HEIGHT - COURT_BOTTOM_WALL - 5;
     ball.vy = 300;
     ball.vx = 200;
 
-    const p1 = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
-    const p2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
-    const particles = new ParticleSystem();
-    const rallyRef = { current: 0 };
-    const { callbacks, spies } = getMockCallbacks();
-
-    Physics.updateBallMovement(
-      ball,
-      [p1, p2],
-      particles,
-      DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
-      GameMode.PLAYER_VS_AI,
-      rallyRef,
-      0.016,
-      callbacks,
-    );
+    const events = Physics.step(ball, makePaddles(), NORMAL, 0.016);
 
     expect(ball.vy).toBeLessThan(0);
-    expect(spies.onWallBounce).toHaveBeenCalled();
+    expect(ofType(events, 'wallBounce')).toHaveLength(1);
   });
 
-  it('handles left paddle collision and accelerates ball', () => {
-    const ball = new Ball();
-    const p1 = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
-    const p2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
-
-    p1.y = 250;
-    p1.targetY = 250;
-
-    ball.x = p1.x + PADDLE_WIDTH + 2;
-    ball.y = 250;
-    ball.vx = -400;
-    ball.vy = 0;
-    ball.speed = 400;
-
-    const particles = new ParticleSystem();
-    const rallyRef = { current: 0 };
-    const { callbacks, spies } = getMockCallbacks();
-
-    Physics.updateBallMovement(
-      ball,
-      [p1, p2],
-      particles,
-      DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
-      GameMode.PLAYER_VS_AI,
-      rallyRef,
-      0.016,
-      callbacks,
-    );
+  it('returns a ball off the left paddle, accelerates it and reports the hit', () => {
+    const { ball, events } = hitLeftPaddleAt(0);
+    const [hit] = ofType(events, 'paddleHit');
 
     expect(ball.vx).toBeGreaterThan(0);
-    expect(p1.glow).toBe(1.0);
-    expect(rallyRef.current).toBe(1);
-    expect(spies.onPaddleHit).toHaveBeenCalledWith(0, 1, true);
+    expect(ball.speed).toBeGreaterThan(400);
+    expect(hit).toMatchObject({ paddleIndex: 0, isPerfect: true, speed: ball.speed });
   });
 
-  const hitLeftPaddleAt = (offsetY: number) => {
-    const ball = new Ball();
-    const p1 = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
-    const p2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
+  it('only moves the ball: paddles, glow and AI aim are left to the caller', () => {
+    const { paddles } = hitLeftPaddleAt(0);
 
-    p1.y = 250;
-    p1.targetY = 250;
+    expect(paddles[0].glow).toBe(0);
+    expect(paddles[1].errorOffset).toBe(0);
+  });
 
-    ball.x = p1.x + PADDLE_WIDTH + 2;
-    ball.y = 250 + offsetY;
-    ball.vx = -400;
-    ball.vy = 0;
-    ball.speed = 400;
-
-    const { callbacks, spies } = getMockCallbacks();
-    Physics.updateBallMovement(
-      ball,
-      [p1, p2],
-      new ParticleSystem(),
-      DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
-      GameMode.PLAYER_VS_AI,
-      { current: 0 },
-      0.001,
-      callbacks,
-    );
-    return { ball, spies };
-  };
-
-  it('rewards a center hit with a temporary boost and a flash', () => {
+  it('rewards a center hit with a temporary boost and marks it perfect', () => {
     const perfect = hitLeftPaddleAt(0);
     const offCenter = hitLeftPaddleAt(PADDLE_HEIGHT * 0.2);
 
@@ -162,9 +99,7 @@ describe('Physics Engine', () => {
     expect(perfect.ball.speed).toBe(offCenter.ball.speed);
     expect(perfect.ball.speedMultiplier).toBeCloseTo(1 + PERFECT_HIT_BOOST);
     expect(offCenter.ball.speedMultiplier).toBe(1);
-    expect(perfect.spies.onScreenFlash).toHaveBeenCalled();
-    expect(offCenter.spies.onScreenFlash).not.toHaveBeenCalled();
-    expect(offCenter.spies.onPaddleHit).toHaveBeenCalledWith(0, 1, false);
+    expect(ofType(offCenter.events, 'paddleHit')[0].isPerfect).toBe(false);
   });
 
   it('moves a boosted ball further per frame', () => {
@@ -177,19 +112,7 @@ describe('Physics Engine', () => {
       ball.speed = 400;
       if (boosted) ball.applyBoost(PERFECT_HIT_BOOST, PERFECT_HIT_BOOST_DURATION);
 
-      Physics.updateBallMovement(
-        ball,
-        [
-          new Paddle(0, PADDLE_OFFSET_X, '#19f0ff'),
-          new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6'),
-        ],
-        new ParticleSystem(),
-        DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
-        GameMode.PLAYER_VS_AI,
-        { current: 0 },
-        0.016,
-        getMockCallbacks().callbacks,
-      );
+      Physics.step(ball, makePaddles(), NORMAL, 0.016);
       return ball.x - 400;
     };
 
@@ -204,42 +127,26 @@ describe('Physics Engine', () => {
     expect(angleOf(edge.ball)).toBeGreaterThan(angleOf(mid.ball) * 2);
   });
 
-  it('ignores tiny paddle speeds and caps the spin nudge', () => {
-    expect(Physics.getSpinAngle(0)).toBe(0);
-    expect(Physics.getSpinAngle(PADDLE_SPIN_DEADZONE)).toBe(0);
-    expect(Physics.getSpinAngle(300)).toBeGreaterThan(0);
-    expect(Physics.getSpinAngle(-300)).toBeCloseTo(-Physics.getSpinAngle(300));
-    expect(Physics.getSpinAngle(100000)).toBeLessThanOrEqual(PADDLE_SPIN_MAX_ANGLE);
-  });
-
   it('a paddle moving down sends a center hit downward', () => {
-    const ball = new Ball();
-    const p1 = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
-    const p2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
-    p1.y = 250;
-    p1.velocity = 500;
-
-    ball.x = p1.x + PADDLE_WIDTH + 2;
-    ball.y = 250;
-    ball.vx = -400;
-    ball.vy = 0;
-    ball.speed = 400;
-
-    Physics.updateBallMovement(
-      ball,
-      [p1, p2],
-      new ParticleSystem(),
-      DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
-      GameMode.PLAYER_VS_AI,
-      { current: 0 },
-      0.001,
-      getMockCallbacks().callbacks,
-    );
+    const { ball } = hitLeftPaddleAt(0, 500);
 
     expect(ball.vx).toBeGreaterThan(0);
     expect(ball.vy).toBeGreaterThan(0);
   });
 
+  it('reports a score and stops once the ball leaves the field', () => {
+    const ball = new Ball();
+    ball.x = -35;
+    ball.vx = -500;
+
+    const events = Physics.step(ball, makePaddles(), NORMAL, 0.016);
+
+    expect(events.at(-1)).toMatchObject({ type: 'score', scoringPlayerIndex: 1 });
+    expect(ofType(events, 'score')).toHaveLength(1);
+  });
+});
+
+describe('Physics angles', () => {
   it('maps hit offset to a symmetric, monotonic bounce angle', () => {
     expect(Physics.getBounceAngle(0)).toBe(0);
     expect(Physics.getBounceAngle(-0.5)).toBeCloseTo(-Physics.getBounceAngle(0.5));
@@ -247,28 +154,11 @@ describe('Physics Engine', () => {
     expect(Physics.getBounceAngle(2)).toBe(Physics.getBounceAngle(1));
   });
 
-  it('triggers score callback when ball exits playing field', () => {
-    const ball = new Ball();
-    ball.x = -35;
-    ball.vx = -500;
-
-    const p1 = new Paddle(0, PADDLE_OFFSET_X, '#19f0ff');
-    const p2 = new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6');
-    const particles = new ParticleSystem();
-    const rallyRef = { current: 0 };
-    const { callbacks, spies } = getMockCallbacks();
-
-    Physics.updateBallMovement(
-      ball,
-      [p1, p2],
-      particles,
-      DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
-      GameMode.PLAYER_VS_AI,
-      rallyRef,
-      0.016,
-      callbacks,
-    );
-
-    expect(spies.onScore).toHaveBeenCalledWith(1); // Player 2 scores
+  it('ignores tiny paddle speeds and caps the spin nudge', () => {
+    expect(Physics.getSpinAngle(0)).toBe(0);
+    expect(Physics.getSpinAngle(PADDLE_SPIN_DEADZONE)).toBe(0);
+    expect(Physics.getSpinAngle(300)).toBeGreaterThan(0);
+    expect(Physics.getSpinAngle(-300)).toBeCloseTo(-Physics.getSpinAngle(300));
+    expect(Physics.getSpinAngle(100000)).toBeLessThanOrEqual(PADDLE_SPIN_MAX_ANGLE);
   });
 });
