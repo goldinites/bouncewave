@@ -166,7 +166,10 @@ body {
 
   cursor: pointer;
 
-  filter: drop-shadow(0 0 6px var(--button-color));
+  /* Glow via shadows, not filter: drop-shadow — inside the rotated portrait UI, iOS Safari
+     draws a filtered button's layer as a dark box around the whole button column */
+  box-shadow: 0 0 6px var(--button-color);
+  text-shadow: 0 0 6px var(--button-color);
 
   transition:
     transform 0.15s,
@@ -182,17 +185,25 @@ body {
   --button-color: var(--purple);
 }
 
-.game-button:hover,
-.game__buttons button:hover {
-  animation: glitch-button 1.5s;
+/* Hover only where there is a real pointer: on touch screens :hover sticks after a tap,
+   and the glitch animation's filter brings the iOS dark box back */
+@media (hover: hover) {
+  .game-button:hover,
+  .game__buttons button:hover {
+    background: var(--button-color);
+    color: #12002e;
+    text-shadow: none;
+
+    transform: translateY(-2px);
+    animation: glitch-button 1.5s;
+  }
 }
 
-.game-button:hover,
 .game-button:focus-visible,
-.game__buttons button:hover,
 .game__buttons button:focus-visible {
   background: var(--button-color);
   color: #12002e;
+  text-shadow: none;
 
   transform: translateY(-2px);
   outline: none;
