@@ -10,30 +10,6 @@ export interface Point {
   y: number;
 }
 
-export interface Velocity {
-  vx: number;
-  vy: number;
-}
-
-export interface PaddleState {
-  x: number;
-  y: number;
-  targetY: number;
-  score: number;
-  glow: number;
-  color: string;
-  errorOffset: number;
-}
-
-export interface BallState {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  speed: number;
-  trail: Point[];
-}
-
 export interface Particle {
   x: number;
   y: number;

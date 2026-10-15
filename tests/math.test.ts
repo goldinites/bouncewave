@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clamp, lerp, midiToFrequency, mixHexColors, randomInt, randomRange } from '@/utils/math';
+import { clamp, lerp, midiToFrequency, mixHexColors, randomRange } from '@/utils/math';
 
 describe('Math utilities', () => {
   describe('mixHexColors', () => {
@@ -50,21 +50,12 @@ describe('Math utilities', () => {
     });
   });
 
-  describe('randomRange & randomInt', () => {
-    it('randomRange produces value within [min, max)', () => {
+  describe('randomRange', () => {
+    it('produces value within [min, max)', () => {
       for (let i = 0; i < 50; i++) {
         const val = randomRange(5, 10);
         expect(val).toBeGreaterThanOrEqual(5);
         expect(val).toBeLessThan(10);
-      }
-    });
-
-    it('randomInt produces integers within [min, max]', () => {
-      for (let i = 0; i < 50; i++) {
-        const val = randomInt(2, 6);
-        expect(Number.isInteger(val)).toBe(true);
-        expect(val).toBeGreaterThanOrEqual(2);
-        expect(val).toBeLessThanOrEqual(6);
       }
     });
   });

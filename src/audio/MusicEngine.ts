@@ -218,10 +218,6 @@ export class MusicEngine {
     return this.analyserNode;
   }
 
-  public getIntensity(): number {
-    return this.intensity;
-  }
-
   /**
    * The chord that is sounding right now. Steps are scheduled ~150 ms ahead, so this
    * picks the latest bar change whose start time has actually been reached.

@@ -15,10 +15,6 @@ export class ParticleSystem {
     this.particles.push(p);
   }
 
-  public addRing(ring: ShockwaveRing): void {
-    this.rings.push(ring);
-  }
-
   public burst(x: number, y: number, color: string, count: number, baseSpeed = 260): void {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * TWO_PI;
@@ -72,10 +68,5 @@ export class ParticleSystem {
         this.rings.splice(i, 1);
       }
     }
-  }
-
-  public clear(): void {
-    this.particles = [];
-    this.rings = [];
   }
 }

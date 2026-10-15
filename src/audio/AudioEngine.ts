@@ -46,8 +46,4 @@ export class AudioEngine {
       this.music.init(this.audioContext);
     }
   }
-
-  public getContext(): AudioContext | null {
-    return this.audioContext;
-  }
 }

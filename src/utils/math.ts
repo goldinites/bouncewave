@@ -39,10 +39,3 @@ export function midiToFrequency(midiNote: number): number {
 export function randomRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
-
-/**
- * Returns a random integer in the range [min, max].
- */
-export function randomInt(min: number, max: number): number {
-  return Math.floor(randomRange(min, max + 1));
-}

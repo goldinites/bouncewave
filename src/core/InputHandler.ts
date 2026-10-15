@@ -101,8 +101,4 @@ export class InputHandler {
       playerPaddle.setTargetY(this.lastPointerY);
     }
   }
-
-  public clearPointer(): void {
-    this.lastPointerY = null;
-  }
 }
