@@ -1,5 +1,6 @@
 import { COLORS, PADDLE_HEIGHT, PADDLE_WIDTH, TWO_PI } from '@/constants/game.constants';
 import { CLIMAX_BALL_HUE } from '@/constants/visual.constants';
+import { getRallyHeat } from '@/core/heat';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { Particle, ShockwaveRing } from '@/types/game.types';
@@ -37,7 +38,7 @@ export class EntityRenderer {
 
     ctx.globalAlpha = serveTime > 0 ? 0.05 : 1;
 
-    const rallyIntensity = Math.min(1, rally / 14);
+    const rallyIntensity = getRallyHeat(rally);
     // Climax pushes the plasma from yellow-green toward a white-hot orange
     const rallyHue = 52 + rallyIntensity * 30;
     const hue = rallyHue + (CLIMAX_BALL_HUE - rallyHue) * climax;

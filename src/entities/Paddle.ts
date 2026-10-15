@@ -8,6 +8,7 @@ import {
   PADDLE_VELOCITY_SMOOTHING,
   PADDLE_WIDTH,
 } from '@/constants/game.constants';
+import { PARTICLE_SPARK_SPEED_MAX, PARTICLE_SPARK_SPEED_MIN } from '@/constants/visual.constants';
 import { ParticleSystem } from '@/entities/ParticleSystem';
 import { clamp, randomRange } from '@/utils/math';
 
@@ -74,7 +75,7 @@ export class Paddle {
       const sparkX = this.index === 0 ? this.x + PADDLE_WIDTH : this.x;
       const sparkY = this.y + (Math.random() - 0.5) * PADDLE_HEIGHT;
       const direction = this.index === 0 ? 1 : -1;
-      const vx = direction * (30 + Math.random() * 70);
+      const vx = direction * randomRange(PARTICLE_SPARK_SPEED_MIN, PARTICLE_SPARK_SPEED_MAX);
       const vy = (Math.random() - 0.5) * 50;
       const size = randomRange(1, 2.8);
 

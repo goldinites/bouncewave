@@ -31,10 +31,11 @@ export const BALL_INITIAL_RADIUS = 8;
 export const BALL_INITIAL_SPEED = 340;
 export const BALL_TRAIL_MAX_LENGTH = 9;
 export const BALL_OUT_OF_BOUNDS_OFFSET = 30;
-export const BALL_MAX_TRAIL_RALLY = 14;
+// Rally length at which "heat" maxes out: ball glow and size, music intensity
+export const RALLY_HEAT_MAX = 14;
 
-// Rally length at which "heat" maxes out and the climax (music drop, laser surge) kicks in
-export const CLIMAX_RALLY = BALL_MAX_TRAIL_RALLY;
+// Rally length at which the climax (music build-up and drop, laser swell) kicks in
+export const CLIMAX_RALLY = RALLY_HEAT_MAX;
 
 export const WINNING_SCORE = 10;
 

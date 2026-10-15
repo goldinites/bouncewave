@@ -1,5 +1,8 @@
 import { DifficultyConfig, DifficultyLevel } from '@/types/difficulty.types';
 
+// Aim error of both AI paddles in the attract-mode demo behind the menu
+export const DEMO_AI_ERROR = 80;
+
 export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
   [DifficultyLevel.EASY]: {
     speed: 340,

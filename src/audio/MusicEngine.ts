@@ -9,6 +9,7 @@ import {
   MUSIC_TRACKS,
   TAPE_STOP_DURATION,
 } from '@/constants/audio.constants';
+import { getRallyHeat, getSpeedHeat } from '@/core/heat';
 import { Harmony } from '@/types/audio.types';
 import { DifficultyConfig } from '@/types/difficulty.types';
 import { GameState } from '@/types/game.types';
@@ -510,8 +511,8 @@ export class MusicEngine {
         if (serveTime > 0) {
           targetIntensity = 0.25;
         } else {
-          const speedFactor = clamp((ballSpeed - 340) / (diffConfig.maxSpeed - 340), 0, 1) * 0.7;
-          const rallyFactor = (Math.min(rally, 14) / 14) * 0.3;
+          const speedFactor = getSpeedHeat(ballSpeed, diffConfig.maxSpeed) * 0.7;
+          const rallyFactor = getRallyHeat(rally) * 0.3;
           const matchPointBonus = Math.max(scores[0], scores[1]) >= 6 ? 0.1 : 0;
           targetIntensity = 0.25 + 0.65 * clamp(speedFactor + rallyFactor, 0, 1) + matchPointBonus;
         }

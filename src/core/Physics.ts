@@ -26,6 +26,7 @@ import {
   SCREEN_SHAKE_PERFECT_BONUS,
   SHOCKWAVE_EXPANSION_SPEED,
 } from '@/constants/visual.constants';
+import { DEMO_AI_ERROR } from '@/constants/difficulty.constants';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { ParticleSystem } from '@/entities/ParticleSystem';
@@ -152,7 +153,7 @@ export class Physics {
 
           // Update opponent's AI prediction error
           const opponent = paddles[1 - i];
-          const maxError = gameMode === GameMode.DEMO ? 80 : difficultyConfig.error;
+          const maxError = gameMode === GameMode.DEMO ? DEMO_AI_ERROR : difficultyConfig.error;
           opponent.errorOffset = (Math.random() - 0.5) * maxError;
 
           callbacks.onPaddleHit(i, rallyRef.current, isPerfect);

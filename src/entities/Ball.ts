@@ -5,8 +5,8 @@ import {
   GAME_HEIGHT,
   GAME_WIDTH,
 } from '@/constants/game.constants';
+import { getRallyHeat, getSpeedHeat } from '@/core/heat';
 import { Point } from '@/types/game.types';
-import { clamp } from '@/utils/math';
 
 export class Ball {
   public x: number = GAME_WIDTH / 2;
@@ -62,9 +62,8 @@ export class Ball {
   }
 
   public updateRadius(dt: number, rally: number, maxDifficultySpeed: number): void {
-    const rallyFactor = 0.12 * Math.min(1, rally / 14);
-    const speedRatio = clamp((this.speed - 340) / (maxDifficultySpeed - 340), 0, 1);
-    const speedFactor = 0.13 * speedRatio;
+    const rallyFactor = 0.12 * getRallyHeat(rally);
+    const speedFactor = 0.13 * getSpeedHeat(this.speed, maxDifficultySpeed);
     const targetRadius = BALL_INITIAL_RADIUS * (1 + rallyFactor + speedFactor);
 
     this.radius += (targetRadius - this.radius) * Math.min(1, dt * 6);
