@@ -10,6 +10,12 @@ export interface TrackConfig {
   arpeggioWave: OscillatorType;
 }
 
+/** What the music is playing right now: bar root (MIDI) and chord intervals in semitones. */
+export interface Harmony {
+  root: number;
+  chord: readonly number[];
+}
+
 export interface UserSettings {
   difficulty: DifficultyLevel;
   soundMuted: boolean;

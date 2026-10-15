@@ -7,12 +7,14 @@ export class AudioEngine {
   public readonly music: MusicEngine;
 
   constructor(isSoundMutedGetter: () => boolean, musicStateProvider: MusicEngineStateProvider) {
+    this.music = new MusicEngine(musicStateProvider);
     this.sfx = new SoundEffects(
       () => this.audioContext,
       isSoundMutedGetter,
       () => (musicStateProvider.getGameState() === 'play' ? 1 : 0),
+      // Hits are tuned to whatever chord the music is playing right now
+      () => this.music.getHarmony(),
     );
-    this.music = new MusicEngine(musicStateProvider);
 
     document.addEventListener('visibilitychange', () => {
       if (!this.audioContext) return;

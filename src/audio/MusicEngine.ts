@@ -5,10 +5,12 @@ import {
   CLIMAX_LAYER_FADE,
   DRAMA_FILTER_MAX_FREQ,
   DRAMA_FILTER_MIN_FREQ,
+  HARMONY_HISTORY,
   MUSIC_DUCK_LEVEL,
   MUSIC_TRACKS,
   TAPE_STOP_DURATION,
 } from '@/constants/audio.constants';
+import { Harmony } from '@/types/audio.types';
 import { DifficultyConfig } from '@/types/difficulty.types';
 import { GameState } from '@/types/game.types';
 import { clamp, midiToFrequency } from '@/utils/math';
@@ -40,6 +42,7 @@ export class MusicEngine {
 
   private intensity = 0.3;
   private isTapeStopped = false;
+  private harmonyTimeline: (Harmony & { time: number })[] = [];
   private dramaLevel = 0;
   private isClimax = false;
   private climaxMix = 0;
@@ -214,6 +217,22 @@ export class MusicEngine {
 
   public getIntensity(): number {
     return this.intensity;
+  }
+
+  /**
+   * The chord that is sounding right now. Steps are scheduled ~150 ms ahead, so this
+   * picks the latest bar change whose start time has actually been reached.
+   * Null before the music has started.
+   */
+  public getHarmony(): Harmony | null {
+    if (!this.ac || this.harmonyTimeline.length === 0) return null;
+
+    const now = this.ac.currentTime;
+    let current = this.harmonyTimeline[0];
+    for (const entry of this.harmonyTimeline) {
+      if (entry.time <= now) current = entry;
+    }
+    return { root: current.root, chord: current.chord };
   }
 
   private getCurrentTrack(step: number) {
@@ -512,6 +531,19 @@ export class MusicEngine {
       if (this.climaxMix < 0.01) this.climaxMix = 0;
       const track = this.getCurrentTrack(this.currentStep);
       const stepDuration = 60 / (track.bpm + 8 * this.intensity) / 4;
+
+      // Remember chord changes (even while muted) so hits can be tuned to the audible bar
+      if ((this.currentStep & 15) === 0 || this.harmonyTimeline.length === 0) {
+        const bar = (this.currentStep >> 4) & 3;
+        this.harmonyTimeline.push({
+          time: this.nextStepTime,
+          root: track.rootNotes[bar],
+          chord: CHORD_TYPES[track.chordTypes[bar]],
+        });
+        if (this.harmonyTimeline.length > HARMONY_HISTORY) {
+          this.harmonyTimeline.shift();
+        }
+      }
 
       if (this.isDropPending) {
         this.isDropPending = false;

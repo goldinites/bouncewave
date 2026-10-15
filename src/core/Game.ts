@@ -428,7 +428,7 @@ export class Game {
           dt,
           {
             onWallBounce: () => this.audio.sfx.playWallBounce(),
-            onPaddleHit: (_idx, r, isPerfect) => this.audio.sfx.playPaddleHit(r, isPerfect),
+            onPaddleHit: (idx, r, isPerfect) => this.audio.sfx.playPaddleHit(r, isPerfect, idx),
             onScore: (winner) => {
               scored = true;
               this.handleScore(winner);

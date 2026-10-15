@@ -43,9 +43,6 @@ export const MUSIC_TRACKS: TrackConfig[] = [
 ];
 
 export const SFX_FREQUENCIES = {
-  WALL_BOUNCE: 220,
-  PADDLE_HIT_BASE: 440,
-  PADDLE_HIT_STEP: 18,
   SCORE: 300,
   SETTINGS_CLICK: 660,
   GAME_OVER_CHIME: [523, 659, 784, 1047],
@@ -54,6 +51,15 @@ export const SFX_FREQUENCIES = {
   FIREWORK_POP_MIN: 600,
   FIREWORK_POP_MAX: 950,
 } as const;
+
+// Musical hits: paddle and wall sounds are drawn from the chord the music is playing
+// (bar roots sit around MIDI 29–40, so offsets lift them into melody / mid registers)
+export const DEFAULT_HARMONY = { root: 33, chord: CHORD_TYPES[0] }; // A minor, before music starts
+export const MELODY_OCTAVE_OFFSET = 24;
+export const MELODY_OCTAVES = 2; // the rally melody climbs this many octaves, then stays on top
+export const MELODY_MAX_NOTE = 84; // C6; higher notes fold down an octave
+export const WALL_NOTE_OCTAVE_OFFSET = 12;
+export const HARMONY_HISTORY = 4; // scheduled bar changes kept to find what is audible now
 
 // Shared SFX echo used by the victory sting
 export const SFX_ECHO_TIME = 0.28;

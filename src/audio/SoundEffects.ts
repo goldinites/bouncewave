@@ -4,12 +4,16 @@ import {
   SFX_ECHO_WET,
   SFX_FREQUENCIES,
 } from '@/constants/audio.constants';
+import { getRallyNote, getWallNote } from '@/audio/harmony';
+import { Harmony } from '@/types/audio.types';
 import { GameMode } from '@/types/game.types';
+import { midiToFrequency } from '@/utils/math';
 
 export class SoundEffects {
   private audioContextGetter: () => AudioContext | null;
   private isMutedGetter: () => boolean;
   private gameModeGetter: () => GameMode;
+  private harmonyGetter: () => Harmony | null;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -17,10 +21,12 @@ export class SoundEffects {
     getAudioContext: () => AudioContext | null,
     getIsMuted: () => boolean,
     getGameMode: () => GameMode,
+    getHarmony: () => Harmony | null = () => null,
   ) {
     this.audioContextGetter = getAudioContext;
     this.isMutedGetter = getIsMuted;
     this.gameModeGetter = getGameMode;
+    this.harmonyGetter = getHarmony;
   }
 
   public beep(
@@ -60,11 +66,16 @@ export class SoundEffects {
   }
 
   public playWallBounce(): void {
-    this.beep(SFX_FREQUENCIES.WALL_BOUNCE, 0.05, 'triangle', 0.07);
+    const freq = midiToFrequency(getWallNote(this.harmonyGetter()));
+    this.beep(freq, 0.06, 'triangle', 0.07);
   }
 
-  public playPaddleHit(rally: number, isPerfect = false): void {
-    const freq = SFX_FREQUENCIES.PADDLE_HIT_BASE + rally * SFX_FREQUENCIES.PADDLE_HIT_STEP;
+  /**
+   * Each hit plays the next tone of the chord the music is on, so a rally climbs as a melody.
+   * The player and the CPU get different timbres, like a call and response.
+   */
+  public playPaddleHit(rally: number, isPerfect = false, paddleIndex = 0): void {
+    const freq = midiToFrequency(getRallyNote(this.harmonyGetter(), rally));
 
     if (isPerfect) {
       // Clean sine tone with a soft octave overtone instead of the square blip
@@ -73,7 +84,11 @@ export class SoundEffects {
       return;
     }
 
-    this.beep(freq, 0.09);
+    if (paddleIndex === 0) {
+      this.beep(freq, 0.12, 'square', 0.05);
+    } else {
+      this.beep(freq, 0.14, 'triangle', 0.08);
+    }
   }
 
   public playScore(): void {
