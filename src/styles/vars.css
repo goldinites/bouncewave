@@ -12,6 +12,16 @@
   --black: #000000;
   --overlay: rgba(8, 2, 26, 0.6);
 
+  /* Neon glow around menu text */
+  --text-glow-blur: 6px;
+
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Cyrillic has no Orbitron glyphs and falls back to Russo One, whose heavy strokes leave little
+   room inside the letters: a wide glow fills them in, so it gets a tight one. The language
+   comes from <html lang>, which I18nManager keeps up to date; add other Cyrillic languages here */
+:root:lang(ru) {
+  --text-glow-blur: 2px;
 }
