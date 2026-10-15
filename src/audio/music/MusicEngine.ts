@@ -5,6 +5,7 @@ import {
   getTargetIntensity,
   INITIAL_MUSIC_STATE,
   MusicState,
+  followClimax,
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
@@ -42,6 +43,9 @@ export class MusicEngine {
   private intensity = 0.3;
   /** Current tempo, gliding toward the target; null until the first step sets it. */
   private bpm: number | null = null;
+  /** The game's climax build-up, as last pushed in. */
+  private gameClimaxLevel = 0;
+  /** The music's own climax level: follows the game's, but dies away more slowly. */
   private climaxLevel = 0;
   private isDropPending = false;
   private isTapeStopped = false;
@@ -77,13 +81,21 @@ export class MusicEngine {
 
   /**
    * Rally climax build-up in [0, 1], already eased by the game: extra layers fade in with it
-   * and intensity rises toward full. The game moves it slowly, so this is the riser.
+   * and intensity rises toward full. The game moves it slowly, so this is the riser. When it
+   * falls, the music lets the climax die away more slowly than the screen (followClimax).
    */
   public setClimaxLevel(level: number): void {
-    this.climaxLevel = clamp(level, 0, 1);
-    if (this.climaxLevel === 0) {
+    this.gameClimaxLevel = clamp(level, 0, 1);
+    if (this.gameClimaxLevel === 0) {
       this.isDropPending = false;
     }
+  }
+
+  /** Cuts the climax at once, with no fade (new match, back to the menu, end of a match). */
+  public resetClimax(): void {
+    this.gameClimaxLevel = 0;
+    this.climaxLevel = 0;
+    this.isDropPending = false;
   }
 
   /** The build-up has peaked: hit the drop on the next step. */
@@ -192,6 +204,7 @@ export class MusicEngine {
         });
       }
 
+      this.climaxLevel = followClimax(this.climaxLevel, this.gameClimaxLevel, stepDuration);
       this.nextStepTime += stepDuration;
       this.currentStep++;
     }

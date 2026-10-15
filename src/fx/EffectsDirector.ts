@@ -292,7 +292,7 @@ export class EffectsDirector {
     this.audio.music.setDramaLevel(0);
 
     this.climax.reset();
-    this.audio.music.setClimaxLevel(0);
+    this.audio.music.resetClimax();
   }
 
   /** Burning-ball embers during the rally climax. */

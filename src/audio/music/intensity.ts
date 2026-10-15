@@ -4,6 +4,9 @@ import { clamp } from '@/shared/math';
 
 // Per sequencer step (~0.13 s), how quickly intensity follows the rally climax
 const CLIMAX_INTENSITY_FOLLOW = 0.1;
+// The music lets a rally climax die away more slowly than the screen does: once the game's
+// climax drops, the climax layers and the intensity they lend fade over this many seconds
+export const MUSIC_CLIMAX_RELEASE = 8;
 
 /** What the music needs to know about the game, pushed in once per frame. */
 export interface MusicState {
@@ -56,6 +59,14 @@ export function getTargetIntensity(state: MusicState, current: number): number {
       return RALLY_BASE_INTENSITY + RALLY_INTENSITY_RANGE * clamp(heat, 0, 1) + lateMatch;
     }
   }
+}
+
+/**
+ * The music's own climax level: rises with the game's at once (the build-up and the drop stay
+ * in sync with the screen), but falls no faster than MUSIC_CLIMAX_RELEASE allows.
+ */
+export function followClimax(musicLevel: number, gameLevel: number, dt: number): number {
+  return Math.max(gameLevel, musicLevel - dt / MUSIC_CLIMAX_RELEASE);
 }
 
 /**
