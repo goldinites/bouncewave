@@ -34,6 +34,7 @@ import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
 import { AiController } from '@/core/AiController';
 import { InputHandler } from '@/core/InputHandler';
+import { MatchPointDrama } from '@/core/MatchPointDrama';
 import { Physics } from '@/core/Physics';
 import { FpsMeter } from '@/debug/FpsMeter';
 
@@ -64,6 +65,7 @@ export class Game {
   private finalSequenceTimer: number | null = null;
 
   private readonly fpsMeter = new FpsMeter();
+  private readonly drama = new MatchPointDrama();
 
   constructor(canvas: HTMLCanvasElement) {
     this.settings = SettingsStorage.load();
@@ -138,6 +140,7 @@ export class Game {
     this.renderer.addFlash(SCREEN_FLASH_START);
 
     this.gameMode = mode;
+    this.resetDrama();
     this.paddles[0].resetScore();
     this.paddles[1].resetScore();
 
@@ -151,6 +154,7 @@ export class Game {
     this.audio.music.newSong();
     this.renderer.background.nextBackground();
     this.gameMode = GameMode.DEMO;
+    this.resetDrama();
     this.paddles[0].resetScore();
     this.paddles[1].resetScore();
 
@@ -183,6 +187,13 @@ export class Game {
     this.ball.serve(direction, BALL_INITIAL_SPEED);
     this.rally = 0;
     this.serveTime = delay;
+    this.drama.onServe();
+  }
+
+  private resetDrama(): void {
+    this.drama.reset();
+    this.audio.music.setDramaLevel(0);
+    this.renderer.vignette = 0;
   }
 
   private handleScore(scoringPlayerIndex: number): void {
@@ -224,6 +235,7 @@ export class Game {
 
   private handleGameOver(winnerIndex: number): void {
     this.gameMode = GameMode.DEMO;
+    this.resetDrama();
     this.gameState = 'menu';
     this.uiManager.setPauseButtonVisibility(false);
     this.serve(winnerIndex === 0 ? 1 : -1, SERVE_DELAY_GAME_OVER);
@@ -262,7 +274,14 @@ export class Game {
     );
   }
 
-  private update(dt: number): void {
+  private update(realDt: number): void {
+    const isMatchActive = this.gameMode === GameMode.PLAYER_VS_AI && this.gameState === 'play';
+    this.drama.update(realDt, isMatchActive, this.ball, this.paddles);
+    this.audio.music.setDramaLevel(this.drama.level);
+    this.renderer.vignette = this.drama.level;
+
+    // Simulation runs on scaled time; screen effects below keep the wall clock
+    const dt = realDt * this.drama.timeScale;
     this.gameTime += dt;
 
     if (this.gameState === 'menu' || this.gameState === 'play') {
@@ -315,7 +334,7 @@ export class Game {
 
     const currentDiffConfig = DIFFICULTY_CONFIGS[this.settings.difficulty];
     this.ball.updateRadius(dt, this.rally, currentDiffConfig.maxSpeed);
-    this.renderer.update(dt, this.gameState, this.serveTime);
+    this.renderer.update(realDt, this.gameState, this.serveTime);
     this.particleSystem.update(dt);
   }
 

@@ -4,6 +4,8 @@ import {
   SCREEN_FLASH_DECAY,
   SCREEN_SHAKE_DECAY,
   VICTORY_DURATION,
+  VIGNETTE_MAX_ALPHA,
+  VIGNETTE_RGB,
 } from '@/constants/visual.constants';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
@@ -28,6 +30,9 @@ export class Renderer {
   public readonly background = new BackgroundRenderer();
   public screenShake = 0;
   public screenFlash = 0;
+  /** Edge darkening in [0, 1], driven by match-point drama. */
+  public vignette = 0;
+  private vignetteGradient: CanvasGradient;
 
   private menuDim = MENU_DIM_ALPHA;
   private lastRenderTime = performance.now();
@@ -45,6 +50,18 @@ export class Renderer {
     }
 
     this.ctx = context;
+
+    // Built once in game coordinates; strength is applied via globalAlpha
+    this.vignetteGradient = context.createRadialGradient(
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_HEIGHT * 0.35,
+      GAME_WIDTH / 2,
+      GAME_HEIGHT / 2,
+      GAME_WIDTH * 0.62,
+    );
+    this.vignetteGradient.addColorStop(0, `rgba(${VIGNETTE_RGB}, 0)`);
+    this.vignetteGradient.addColorStop(1, `rgba(${VIGNETTE_RGB}, 1)`);
 
     this.resizeObserver = new ResizeObserver(() => this.fitToDisplay());
     this.resizeObserver.observe(this.canvas);
@@ -181,6 +198,14 @@ export class Renderer {
     if (this.menuDim > 0.003) {
       ctx.fillStyle = `rgba(${MENU_DIM_RGB}, ${this.menuDim})`;
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    }
+
+    // Match-point vignette
+    if (this.vignette > 0.01) {
+      ctx.globalAlpha = this.vignette * VIGNETTE_MAX_ALPHA;
+      ctx.fillStyle = this.vignetteGradient;
+      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+      ctx.globalAlpha = 1;
     }
 
     // Screen flash

@@ -1,4 +1,10 @@
-import { BASS_PATTERNS, CHORD_TYPES, MUSIC_TRACKS } from '@/constants/audio.constants';
+import {
+  BASS_PATTERNS,
+  CHORD_TYPES,
+  DRAMA_FILTER_MAX_FREQ,
+  DRAMA_FILTER_MIN_FREQ,
+  MUSIC_TRACKS,
+} from '@/constants/audio.constants';
 import { DifficultyConfig } from '@/types/difficulty.types';
 import { GameState } from '@/types/game.types';
 import { clamp, midiToFrequency } from '@/utils/math';
@@ -24,8 +30,10 @@ export class MusicEngine {
   private filterNode: BiquadFilterNode | null = null;
   private masterGainNode: GainNode | null = null;
   private analyserNode: AnalyserNode | null = null;
+  private dramaFilterNode: BiquadFilterNode | null = null;
 
   private intensity = 0.3;
+  private dramaLevel = 0;
   private nextStepTime = 0;
   private currentStep = 0;
   private songTrackOffset = 0;
@@ -64,8 +72,12 @@ export class MusicEngine {
     // Audio graph wiring:
     // aux -> bus & delay
     // delay -> feedback -> delay -> bus
-    // bus -> filter -> compressor -> masterGain -> destination
-    // compressor -> analyser
+    // bus -> filter -> compressor -> dramaFilter -> masterGain -> destination
+    // dramaFilter -> analyser
+    // (dramaFilter is separate so match-point muffling never fights the scheduler's filter)
+    this.dramaFilterNode = this.ac.createBiquadFilter();
+    this.dramaFilterNode.frequency.value = DRAMA_FILTER_MAX_FREQ;
+
     this.auxNode.connect(this.busNode);
     this.auxNode.connect(this.delayNode);
     this.delayNode.connect(feedbackGain);
@@ -73,17 +85,30 @@ export class MusicEngine {
     this.delayNode.connect(this.busNode);
     this.busNode.connect(this.filterNode);
     this.filterNode.connect(compressor);
-    compressor.connect(this.masterGainNode);
+    compressor.connect(this.dramaFilterNode);
+    this.dramaFilterNode.connect(this.masterGainNode);
 
     this.analyserNode = this.ac.createAnalyser();
     this.analyserNode.fftSize = 256;
     this.analyserNode.smoothingTimeConstant = 0.75;
-    compressor.connect(this.analyserNode);
+    this.dramaFilterNode.connect(this.analyserNode);
 
     this.masterGainNode.connect(this.ac.destination);
 
     this.nextStepTime = this.ac.currentTime + 0.1;
     this.schedulerIntervalId = window.setInterval(() => this.scheduleSteps(), 25);
+  }
+
+  /** Muffle the music with a low-pass, level in [0, 1] (0 = fully open). */
+  public setDramaLevel(level: number): void {
+    const clamped = clamp(level, 0, 1);
+    if (!this.ac || !this.dramaFilterNode || Math.abs(clamped - this.dramaLevel) < 0.01) return;
+
+    this.dramaLevel = clamped;
+    // Interpolate in log space so the sweep sounds even
+    const frequency =
+      DRAMA_FILTER_MAX_FREQ * Math.pow(DRAMA_FILTER_MIN_FREQ / DRAMA_FILTER_MAX_FREQ, clamped);
+    this.dramaFilterNode.frequency.setTargetAtTime(frequency, this.ac.currentTime, 0.03);
   }
 
   public newSong(): void {

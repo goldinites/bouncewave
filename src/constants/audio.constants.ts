@@ -51,4 +51,8 @@ export const SFX_FREQUENCIES = {
   GAME_OVER_CHIME: [523, 659, 784, 1047],
 } as const;
 
+// Low-pass cutoff of the music bus at full match-point drama (fully open at level 0)
+export const DRAMA_FILTER_MIN_FREQ = 550;
+export const DRAMA_FILTER_MAX_FREQ = 20000;
+
 export const LOCAL_STORAGE_KEY = 'neonpong';

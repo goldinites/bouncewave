@@ -23,6 +23,15 @@ export const SCREEN_FLASH_SCORE = 0.8;
 export const SCREEN_FLASH_START = 1.0;
 export const SCREEN_FLASH_PERFECT_HIT = 0.6;
 
+// Match point tension (presentation only)
+export const DRAMA_MATCH_POINT_LEVEL = 0.35; // subtle tension for the whole match-point rally
+export const DRAMA_SLOWMO_SCALE = 0.3; // simulation speed once the deciding ball is past the paddle
+export const DRAMA_SLOWMO_DURATION = 0.45; // seconds, wall-clock
+export const DRAMA_TIME_SCALE_SMOOTHING = 14; // 1/s, quick ease in and out of slow motion
+export const DRAMA_LEVEL_SMOOTHING = 6; // 1/s
+export const VIGNETTE_RGB = '4, 0, 14';
+export const VIGNETTE_MAX_ALPHA = 0.6;
+
 export const VICTORY_DURATION = 900;
 export const LOSS_DURATION = 700;
 
