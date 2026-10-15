@@ -16,6 +16,8 @@ interface SettingsMenuEntry {
   label: (settings: UserSettings, i18n: I18nManager) => string;
   /** Play the menu click after the change, e.g. to let the player hear sound is back on. */
   clicks?: boolean;
+  /** For on/off settings: shows the entry as a toggle, filled while on. */
+  isOn?: (settings: UserSettings) => boolean;
 }
 
 const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 'on');
@@ -26,11 +28,16 @@ const SETTINGS_MENU: SettingsMenuEntry[] = [
     key: 'difficulty',
     label: (s, i18n) => `${i18n.t('diff')}: ${i18n.getDifficultyInfo(s.difficulty)[0]}`,
   },
-  { key: 'musicMuted', label: (s, i18n) => `${i18n.t('music')}: ${onOff(i18n, s.musicMuted)}` },
+  {
+    key: 'musicMuted',
+    label: (s, i18n) => `${i18n.t('music')}: ${onOff(i18n, s.musicMuted)}`,
+    isOn: (s) => !s.musicMuted,
+  },
   {
     key: 'soundMuted',
     label: (s, i18n) => `${i18n.t('sound')}: ${onOff(i18n, s.soundMuted)}`,
     clicks: true,
+    isOn: (s) => !s.soundMuted,
   },
   { key: 'language', label: (_, i18n) => `${i18n.t('lang')}: ${i18n.t('lang_name')}` },
 ];
@@ -132,6 +139,7 @@ export class MenuController {
         ...SETTINGS_MENU.map((entry) => ({
           label: entry.label(settings, this.i18n),
           action: () => this.changeSetting(entry, onBack),
+          isOn: entry.isOn?.(settings),
         })),
         { label: this.i18n.t('back'), action: onBack },
       ],

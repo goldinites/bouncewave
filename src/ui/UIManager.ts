@@ -8,6 +8,8 @@ const CSS_CLASSES = {
 export interface MenuItem {
   label: string;
   action: () => void;
+  /** Makes the item a toggle, drawn filled while on; plain buttons leave it out. */
+  isOn?: boolean;
 }
 
 export class UIManager {
@@ -47,6 +49,9 @@ export class UIManager {
     items.forEach((item) => {
       const btn = document.createElement('button');
       btn.textContent = item.label;
+      if (item.isOn !== undefined) {
+        btn.setAttribute('aria-pressed', String(item.isOn));
+      }
       btn.onclick = () => {
         if (onAnyClick) onAnyClick();
         item.action();
