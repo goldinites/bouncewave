@@ -8,10 +8,11 @@ import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
+import { clamp } from '@/shared/math';
 
 // Lightweight scene dimming for menu and pause overlays
 const MENU_DIM = { RGB: '8, 2, 26', ALPHA: 0.6, SPEED: 8 } as const;
-// Match-point vignette
+// Deciding-point vignette
 const VIGNETTE = { RGB: '4, 0, 14', MAX_ALPHA: 0.6 } as const;
 // Screen shake fades exponentially, flash linearly (1/s)
 const SHAKE_DECAY = 9;
@@ -49,8 +50,10 @@ export interface RenderFrame {
   rally: number;
   readyText: string;
   isRotated: boolean;
-  /** Edge darkening in [0, 1], driven by match-point drama. */
+  /** Edge darkening in [0, 1], driven by the deciding-point drama. */
   vignette: number;
+  /** Camera zoom centered on the ball (1 = none). */
+  zoom: number;
   /** Rally climax intensity in [0, 1]: lasers stay lit and the ball burns hotter. */
   climax: number;
   /** Hit glow of each paddle in [0, 1]. */
@@ -240,6 +243,10 @@ export class Renderer {
     // Reset transform for high-DPI displays
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
 
+    // Camera: everything up to the screen overlays zooms in on the ball
+    ctx.save();
+    this.applyZoom(frame.zoom, ball.x, ball.y);
+
     // Animated background
     this.background.render(ctx, frame.analyser, gameTime, this.screenShake, isRotated, {
       laserIntensity: this.laserIntensity,
@@ -281,6 +288,7 @@ export class Renderer {
     }
 
     ctx.restore();
+    ctx.restore();
 
     // Reset alpha and blend mode
     ctx.globalAlpha = 1;
@@ -293,7 +301,7 @@ export class Renderer {
       ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
     }
 
-    // Match-point vignette
+    // Deciding-point vignette
     if (frame.vignette > 0.01) {
       ctx.globalAlpha = frame.vignette * VIGNETTE.MAX_ALPHA;
       ctx.fillStyle = this.vignetteGradient;
@@ -307,6 +315,20 @@ export class Renderer {
 
       ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
     }
+  }
+
+  /**
+   * Scales the scene around a focus point. The focus is kept on the court, so the zoomed scene
+   * always covers the whole canvas even when the ball is already past the goal line.
+   */
+  private applyZoom(zoom: number, focusX: number, focusY: number): void {
+    if (zoom <= 1.001) return;
+
+    const x = clamp(focusX, 0, COURT.WIDTH);
+    const y = clamp(focusY, 0, COURT.HEIGHT);
+    this.ctx.translate(x, y);
+    this.ctx.scale(zoom, zoom);
+    this.ctx.translate(-x, -y);
   }
 
   public dispose(): void {

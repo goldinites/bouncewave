@@ -12,6 +12,12 @@ const SFX_FREQUENCIES = {
   FIREWORK_POP_MAX: 950,
 } as const;
 
+// Heartbeat on the deciding point: "lub", then a softer "dub"
+const HEARTBEAT = [
+  { delay: 0, volume: 0.16 },
+  { delay: 0.17, volume: 0.11 },
+];
+
 // Shared echo used by the victory sting
 const ECHO = { TIME: 0.28, FEEDBACK: 0.35, WET: 0.5 } as const;
 
@@ -173,6 +179,26 @@ export class SoundEffects {
   public playFireworkPop(): void {
     const { FIREWORK_POP_MIN: min, FIREWORK_POP_MAX: max } = SFX_FREQUENCIES;
     this.beep(min + Math.random() * (max - min), 0.07, 'triangle', 0.045, 0.45, true);
+  }
+
+  /**
+   * One heartbeat for the deciding point: a low "lub-dub" of falling sine thumps. A quiet
+   * overtone an octave up keeps it audible on phone speakers that can't play the low end.
+   */
+  public playHeartbeat(): void {
+    const ac = this.getUnmutedContext();
+    if (!ac || !this.isGameplayAudibleGetter()) return;
+
+    try {
+      const now = ac.currentTime;
+      HEARTBEAT.forEach(({ delay, volume }) => {
+        const start = now + delay;
+        this.tone(ac, 110, start, 0.18, 'sine', volume, 0.005, null, 0.5);
+        this.tone(ac, 220, start, 0.08, 'triangle', volume * 0.25, 0.005, null, 0.5);
+      });
+    } catch {
+      // Audio playback fails silently if browser policy blocks it
+    }
   }
 
   private getUnmutedContext(): AudioContext | null {

@@ -22,6 +22,8 @@ export interface TranslationSchema {
   win: string;
   lose: string;
   ready: string;
+  /** Shown instead of `ready` before the point that decides the match. */
+  decider: string;
   hintK: string;
   hintT: string;
   /** Name and description of every difficulty level, by level. */
@@ -47,6 +49,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     win: 'YOU WIN',
     lose: 'GAME OVER',
     ready: 'GET READY',
+    decider: 'MATCH POINT',
     hintK: `Paddle: W / S or ↑ / ↓ · mouse or touch works too<br>Esc / P — pause · first to ${WINNING_SCORE} points`,
     hintT: `Drag your finger to move the paddle<br>First to ${WINNING_SCORE} points`,
     d: [
@@ -74,6 +77,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     win: 'ПОБЕДА',
     lose: 'ИГРА ОКОНЧЕНА',
     ready: 'ГОТОВЬСЬ',
+    decider: 'РЕШАЮЩЕЕ ОЧКО',
     hintK: `Ракетка: W / S или ↑ / ↓ · мышь или касание тоже работают<br>Esc / P — пауза · играем до ${WINNING_SCORE} очков`,
     hintT: `Двигайте ракетку пальцем<br>Играем до ${WINNING_SCORE} очков`,
     d: [

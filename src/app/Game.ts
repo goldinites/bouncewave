@@ -225,9 +225,10 @@ export class Game {
       time: this.flow.time,
       serveTime: this.flow.serveTime,
       rally: this.flow.rally,
-      readyText: this.i18n.t('ready'),
+      readyText: this.i18n.t(this.effects.isDecidingPoint ? 'decider' : 'ready'),
       isRotated: this.inputHandler.isRotated,
-      vignette: this.effects.tension,
+      vignette: this.effects.vignette,
+      zoom: this.effects.cameraZoom,
       climax: this.effects.climaxLevel,
       paddleGlow: this.effects.paddleGlow,
     };
