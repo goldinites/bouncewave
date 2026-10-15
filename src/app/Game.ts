@@ -1,18 +1,18 @@
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
-import { DIFFICULTY_CONFIGS } from '@/constants/difficulty.constants';
-import { COLORS, GAME_WIDTH, PADDLE_OFFSET_X, PADDLE_WIDTH } from '@/constants/game.constants';
-import { EffectsDirector } from '@/fx/EffectsDirector';
-import { InputHandler } from '@/input/InputHandler';
-import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { FpsMeter } from '@/debug/FpsMeter';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { ParticleSystem } from '@/entities/ParticleSystem';
+import { EffectsDirector } from '@/fx/EffectsDirector';
+import { ParticleSystem } from '@/fx/ParticleSystem';
 import { I18nManager } from '@/i18n/I18nManager';
+import { InputHandler } from '@/input/InputHandler';
+import { Ball } from '@/match/Ball';
+import { COURT, PADDLE } from '@/match/config';
+import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { Paddle } from '@/match/Paddle';
 import { Renderer, RenderFrame } from '@/render/Renderer';
-import { SettingsStorage } from '@/storage/SettingsStorage';
-import { UserSettings } from '@/types/audio.types';
+import { SettingsStorage, UserSettings } from '@/settings/SettingsStorage';
+import { COLORS } from '@/shared/palette';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
 
@@ -49,8 +49,8 @@ export class Game {
     this.i18n = new I18nManager(this.settings.language);
 
     this.paddles = [
-      new Paddle(0, PADDLE_OFFSET_X, COLORS.CYAN),
-      new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, COLORS.PINK),
+      new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN),
+      new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, COLORS.PINK),
     ];
 
     this.audio = new AudioEngine(

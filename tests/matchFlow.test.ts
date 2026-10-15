@@ -1,28 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTY_CONFIGS } from '@/constants/difficulty.constants';
-import {
-  BALL_OUT_OF_BOUNDS_OFFSET,
-  GAME_WIDTH,
-  PADDLE_OFFSET_X,
-  PADDLE_WIDTH,
-  SERVE_DELAY_START,
-  WINNING_SCORE,
-} from '@/constants/game.constants';
-import {
-  FINAL_SEQUENCE_LOSS_DURATION,
-  FINAL_SEQUENCE_SKIP_AFTER,
-  FINAL_SEQUENCE_WIN_DURATION,
-} from '@/constants/visual.constants';
-import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { DifficultyLevel } from '@/types/difficulty.types';
-import { GameMode } from '@/types/game.types';
+import { Ball } from '@/match/Ball';
+import { COURT, PADDLE, BALL, WINNING_SCORE } from '@/match/config';
+import { DifficultyLevel, DIFFICULTY_CONFIGS } from '@/match/difficulty';
+import { FINALE, MatchEvent, MatchFlow, SERVE_DELAY } from '@/match/MatchFlow';
+import { GameMode } from '@/match/modes';
+import { Paddle } from '@/match/Paddle';
 
 const setup = () => {
   const paddles: [Paddle, Paddle] = [
-    new Paddle(0, PADDLE_OFFSET_X, '#19f0ff'),
-    new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6'),
+    new Paddle(0, PADDLE.OFFSET_X, '#19f0ff'),
+    new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, '#ff2bd6'),
   ];
   const ball = new Ball();
   const events: MatchEvent[] = [];
@@ -48,7 +35,7 @@ const setup = () => {
   const scoreFor = (scorer: 0 | 1) => {
     finishServe();
     ball.x =
-      scorer === 0 ? GAME_WIDTH + BALL_OUT_OF_BOUNDS_OFFSET + 1 : -BALL_OUT_OF_BOUNDS_OFFSET - 1;
+      scorer === 0 ? COURT.WIDTH + BALL.OUT_OF_BOUNDS_OFFSET + 1 : -BALL.OUT_OF_BOUNDS_OFFSET - 1;
     ball.vx = scorer === 0 ? 10 : -10;
     flow.update(0.001);
   };
@@ -76,7 +63,7 @@ describe('MatchFlow', () => {
     expect(types()).toEqual(['matchStart', 'serve']);
     expect(paddles[0].score).toBe(0);
     expect(flow.phase).toBe('serving');
-    expect(flow.serveTime).toBeCloseTo(SERVE_DELAY_START);
+    expect(flow.serveTime).toBeCloseTo(SERVE_DELAY.START);
     expect(flow.isBallLive).toBe(false);
 
     finishServe();
@@ -136,7 +123,7 @@ describe('MatchFlow', () => {
 
     const [left] = paddles;
     left.y = left.targetY = ball.y;
-    ball.x = left.x + PADDLE_WIDTH + 2;
+    ball.x = left.x + PADDLE.WIDTH + 2;
     ball.vx = -400;
     ball.vy = 0;
     flow.update(0.001);
@@ -163,7 +150,7 @@ describe('MatchFlow', () => {
     expect(flow.gameState).toBe('play');
 
     clear();
-    for (let t = 0; t < FINAL_SEQUENCE_WIN_DURATION + 0.1; t += 0.05) flow.update(0.05);
+    for (let t = 0; t < FINALE.WIN_DURATION + 0.1; t += 0.05) flow.update(0.05);
 
     expect(events[0]).toMatchObject({ type: 'gameOver', winnerIndex: 0 });
     expect(flow.phase).toBe('attract');
@@ -179,7 +166,7 @@ describe('MatchFlow', () => {
 
     expect(flow.skipFinale()).toBe(false);
 
-    flow.update(FINAL_SEQUENCE_SKIP_AFTER);
+    flow.update(FINALE.SKIP_AFTER);
     expect(flow.skipFinale()).toBe(true);
     expect(types()).toEqual(['gameOver', 'serve']);
     expect(flow.phase).toBe('attract');
@@ -192,7 +179,7 @@ describe('MatchFlow', () => {
     scoreFor(1);
     clear();
 
-    flow.update(FINAL_SEQUENCE_LOSS_DURATION - 0.05);
+    flow.update(FINALE.LOSS_DURATION - 0.05);
     expect(flow.phase).toBe('finale');
 
     flow.update(0.1);

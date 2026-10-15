@@ -1,10 +1,10 @@
-import {
-  DRAMA_FILTER_MAX_FREQ,
-  DRAMA_FILTER_MIN_FREQ,
-  MUSIC_DUCK_LEVEL,
-  MUSIC_MASTER_LEVEL,
-} from '@/constants/audio.constants';
-import { clamp } from '@/utils/math';
+import { clamp } from '@/shared/math';
+
+const MUSIC_MASTER_LEVEL = 0.3; // overall music volume when not muted
+const MUSIC_DUCK_LEVEL = 0.25; // music level under the victory sting
+// Low-pass cutoff of the music bus at full match-point drama (fully open at level 0)
+const DRAMA_FILTER_MIN_FREQ = 550;
+const DRAMA_FILTER_MAX_FREQ = 20000;
 
 const ECHO_FEEDBACK = 0.4;
 const ANALYSER_FFT_SIZE = 256;

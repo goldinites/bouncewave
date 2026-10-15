@@ -1,11 +1,12 @@
-import {
-  DEFAULT_HARMONY,
-  MELODY_MAX_NOTE,
-  MELODY_OCTAVE_OFFSET,
-  MELODY_OCTAVES,
-  WALL_NOTE_OCTAVE_OFFSET,
-} from '@/constants/audio.constants';
-import { Harmony } from '@/types/audio.types';
+import { Harmony } from '@/audio/music/HarmonyTimeline';
+import { CHORD_TYPES } from '@/audio/music/tracks';
+// Paddle and wall sounds are drawn from the chord the music is playing
+// (bar roots sit around MIDI 29–40, so offsets lift them into melody / mid registers)
+const DEFAULT_HARMONY: Harmony = { root: 33, chord: CHORD_TYPES[0] }; // A minor, before music starts
+const MELODY_OCTAVE_OFFSET = 24;
+const MELODY_OCTAVES = 2; // the rally melody climbs this many octaves, then stays on top
+export const MELODY_MAX_NOTE = 84; // C6; higher notes fold down an octave
+const WALL_NOTE_OCTAVE_OFFSET = 12;
 
 /**
  * Note for the n-th hit of a rally: walks up the current chord's tones

@@ -1,5 +1,5 @@
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { midiToFrequency } from '@/utils/math';
+import { midiToFrequency } from '@/shared/math';
 
 const PAD_DETUNE_CENTS = [-9, 9];
 

@@ -1,51 +1,64 @@
 import { AudioEngine } from '@/audio/AudioEngine';
-import { BALL_INITIAL_SPEED, COLORS, GAME_WIDTH } from '@/constants/game.constants';
-import {
-  CLIMAX_EMBER_COLORS,
-  CLIMAX_EMBER_RATE,
-  FIREWORK_FLASH,
-  FIREWORK_PARTICLES,
-  FIREWORK_SHAKE,
-  FIREWORK_SPEED,
-  LOSS_DURATION,
-  PARTICLE_HIT_BURST_COUNT_BASE,
-  PARTICLE_HIT_BURST_RALLY_CAP,
-  PARTICLE_PERFECT_BURST_COUNT,
-  PARTICLE_PERFECT_BURST_SPEED,
-  PARTICLE_SCORE_BURST_COUNT,
-  PARTICLE_SCORE_BURST_SPEED,
-  PERFECT_SHOCKWAVE_EXPANSION_SPEED,
-  SCORE_SHOCKWAVE_EXPANSION_SPEED,
-  SCREEN_FLASH_PERFECT_HIT,
-  SCREEN_FLASH_SCORE,
-  SCREEN_FLASH_START,
-  SCREEN_SHAKE_PADDLE_HIT_BASE,
-  SCREEN_SHAKE_PADDLE_HIT_SPEED_DIVISOR,
-  SCREEN_SHAKE_PERFECT_BONUS,
-  SCREEN_SHAKE_SCORE,
-  SCREEN_SHAKE_WALL_BOUNCE,
-  SHOCKWAVE_EXPANSION_SPEED,
-  VICTORY_DURATION,
-} from '@/constants/visual.constants';
-import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { MatchPointDrama } from '@/fx/MatchPointDrama';
+import { ParticleSystem } from '@/fx/ParticleSystem';
 import { RallyClimax } from '@/fx/RallyClimax';
 import { VictoryFireworks } from '@/fx/VictoryFireworks';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { ParticleSystem } from '@/entities/ParticleSystem';
+import { Ball } from '@/match/Ball';
+import { COURT, BALL } from '@/match/config';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { Paddle } from '@/match/Paddle';
 import { Renderer } from '@/render/Renderer';
+import { COLORS } from '@/shared/palette';
 
-// Screen punch when the match is decided
-const FINALE_WIN_FLASH = 0.9;
-const FINALE_WIN_SHAKE = 12;
-const FINALE_LOSS_SHAKE = 18;
-// Score bursts go off just inside the goal line
-const SCORE_BURST_INSET = 6;
-// Burning-ball embers during the climax
-const EMBER_SPREAD = 1.6; // radians around the direction opposite to the ball's flight
-const EMBER_SPEED_MIN = 40;
-const EMBER_SPEED_RANGE = 110;
+// Screen shake per event (px); a paddle hit shakes
+// base + (ball speed − serve speed) / divisor, plus a bonus when perfect
+const SHAKE = {
+  WALL_BOUNCE: 2,
+  PADDLE_HIT_BASE: 3,
+  PADDLE_HIT_SPEED_DIVISOR: 90,
+  PERFECT_BONUS: 3,
+  SCORE: 14,
+  FIREWORK: 4,
+  FINALE_WIN: 12,
+  FINALE_LOSS: 18,
+} as const;
+
+// Screen flash per event
+const FLASH = {
+  START: 1.0,
+  PERFECT_HIT: 0.6,
+  SCORE: 0.8,
+  FIREWORK: 0.25,
+  FINALE_WIN: 0.9,
+} as const;
+
+// Particle bursts: how many and how fast
+const BURST = {
+  HIT_COUNT: 18,
+  HIT_RALLY_CAP: 20, // each rally hit adds a particle, up to this many
+  PERFECT_COUNT: 16,
+  PERFECT_SPEED: 380,
+  SCORE_COUNT: 46,
+  SCORE_SPEED: 460,
+  SCORE_INSET: 6, // score bursts go off just inside the goal line
+  FIREWORK_COUNT: 40,
+  FIREWORK_SPEED: 340,
+} as const;
+
+// Shockwave ring expansion speeds; a plain hit uses the ParticleSystem default
+const SHOCKWAVE_SPEED = {
+  PERFECT: 520,
+  SCORE: 620,
+} as const;
+
+// Burning-ball embers during the rally climax
+const EMBERS = {
+  RATE: 70, // per second at full climax
+  COLORS: ['#ffffff', '#ffe53b', '#ff9a3b', '#ff2bd6'],
+  SPREAD: 1.6, // radians around the direction opposite to the ball's flight
+  SPEED_MIN: 40,
+  SPEED_RANGE: 110,
+} as const;
 
 export interface EffectsDirectorDeps {
   renderer: Renderer;
@@ -122,10 +135,10 @@ export class EffectsDirector {
     }
 
     for (const shot of this.fireworks?.update(dt) ?? []) {
-      this.particles.burst(shot.x, shot.y, shot.color, FIREWORK_PARTICLES, FIREWORK_SPEED);
-      this.particles.shockwave(shot.x, shot.y, shot.color, SCORE_SHOCKWAVE_EXPANSION_SPEED);
-      this.renderer.addFlash(FIREWORK_FLASH);
-      this.renderer.addShake(FIREWORK_SHAKE);
+      this.particles.burst(shot.x, shot.y, shot.color, BURST.FIREWORK_COUNT, BURST.FIREWORK_SPEED);
+      this.particles.shockwave(shot.x, shot.y, shot.color, SHOCKWAVE_SPEED.SCORE);
+      this.renderer.addFlash(FLASH.FIREWORK);
+      this.renderer.addShake(SHAKE.FIREWORK);
       this.audio.sfx.playFireworkPop();
     }
 
@@ -135,7 +148,7 @@ export class EffectsDirector {
   public handle(event: MatchEvent): void {
     switch (event.type) {
       case 'matchStart':
-        this.renderer.addFlash(SCREEN_FLASH_START);
+        this.renderer.addFlash(FLASH.START);
         this.resetTension();
         break;
 
@@ -150,7 +163,7 @@ export class EffectsDirector {
         break;
 
       case 'wallBounce':
-        this.renderer.addShake(SCREEN_SHAKE_WALL_BOUNCE);
+        this.renderer.addShake(SHAKE.WALL_BOUNCE);
         this.audio.sfx.playWallBounce();
         break;
 
@@ -180,26 +193,19 @@ export class EffectsDirector {
     paddle.glow = 1.0;
 
     this.renderer.addShake(
-      SCREEN_SHAKE_PADDLE_HIT_BASE +
-        (hit.speed - BALL_INITIAL_SPEED) / SCREEN_SHAKE_PADDLE_HIT_SPEED_DIVISOR +
-        (hit.isPerfect ? SCREEN_SHAKE_PERFECT_BONUS : 0),
+      SHAKE.PADDLE_HIT_BASE +
+        (hit.speed - BALL.INITIAL_SPEED) / SHAKE.PADDLE_HIT_SPEED_DIVISOR +
+        (hit.isPerfect ? SHAKE.PERFECT_BONUS : 0),
     );
 
-    const burstCount =
-      PARTICLE_HIT_BURST_COUNT_BASE + Math.min(hit.rally, PARTICLE_HIT_BURST_RALLY_CAP);
+    const burstCount = BURST.HIT_COUNT + Math.min(hit.rally, BURST.HIT_RALLY_CAP);
     this.particles.burst(hit.x, hit.y, paddle.color, burstCount);
-    this.particles.shockwave(hit.x, hit.y, paddle.color, SHOCKWAVE_EXPANSION_SPEED);
+    this.particles.shockwave(hit.x, hit.y, paddle.color);
 
     if (hit.isPerfect) {
-      this.particles.burst(
-        hit.x,
-        hit.y,
-        COLORS.WHITE,
-        PARTICLE_PERFECT_BURST_COUNT,
-        PARTICLE_PERFECT_BURST_SPEED,
-      );
-      this.particles.shockwave(hit.x, hit.y, COLORS.WHITE, PERFECT_SHOCKWAVE_EXPANSION_SPEED);
-      this.renderer.addFlash(SCREEN_FLASH_PERFECT_HIT);
+      this.particles.burst(hit.x, hit.y, COLORS.WHITE, BURST.PERFECT_COUNT, BURST.PERFECT_SPEED);
+      this.particles.shockwave(hit.x, hit.y, COLORS.WHITE, SHOCKWAVE_SPEED.PERFECT);
+      this.renderer.addFlash(FLASH.PERFECT_HIT);
     }
 
     this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, hit.paddleIndex);
@@ -207,19 +213,13 @@ export class EffectsDirector {
 
   private onScore(score: Extract<MatchEvent, { type: 'score' }>): void {
     const burstX =
-      score.scoringPlayerIndex === 0 ? GAME_WIDTH - SCORE_BURST_INSET : SCORE_BURST_INSET;
+      score.scoringPlayerIndex === 0 ? COURT.WIDTH - BURST.SCORE_INSET : BURST.SCORE_INSET;
     const color = this.paddles[score.scoringPlayerIndex].color;
 
-    this.particles.burst(
-      burstX,
-      score.y,
-      color,
-      PARTICLE_SCORE_BURST_COUNT,
-      PARTICLE_SCORE_BURST_SPEED,
-    );
-    this.particles.shockwave(burstX, score.y, color, SCORE_SHOCKWAVE_EXPANSION_SPEED);
-    this.renderer.addShake(SCREEN_SHAKE_SCORE);
-    this.renderer.addFlash(SCREEN_FLASH_SCORE);
+    this.particles.burst(burstX, score.y, color, BURST.SCORE_COUNT, BURST.SCORE_SPEED);
+    this.particles.shockwave(burstX, score.y, color, SHOCKWAVE_SPEED.SCORE);
+    this.renderer.addShake(SHAKE.SCORE);
+    this.renderer.addFlash(FLASH.SCORE);
 
     if (!score.isDemo) {
       this.audio.sfx.playScore();
@@ -235,10 +235,10 @@ export class EffectsDirector {
     const playerWon = finale.winnerIndex === 0;
 
     if (playerWon) {
-      this.renderer.triggerVictoryEffect(VICTORY_DURATION);
+      this.renderer.triggerVictoryEffect();
       this.renderer.celebrate();
-      this.renderer.addFlash(FINALE_WIN_FLASH);
-      this.renderer.addShake(FINALE_WIN_SHAKE);
+      this.renderer.addFlash(FLASH.FINALE_WIN);
+      this.renderer.addShake(SHAKE.FINALE_WIN);
 
       // The winning ball went into the right-hand goal
       this.fireworks = new VictoryFireworks(1, finale.ballY, [
@@ -250,8 +250,8 @@ export class EffectsDirector {
       this.audio.sfx.playVictory();
       this.audio.music.duck();
     } else {
-      this.renderer.triggerCrtGlitch(LOSS_DURATION);
-      this.renderer.addShake(FINALE_LOSS_SHAKE);
+      this.renderer.triggerCrtGlitch();
+      this.renderer.addShake(SHAKE.FINALE_LOSS);
 
       this.audio.sfx.playDefeat();
       this.audio.music.tapeStop();
@@ -276,20 +276,20 @@ export class EffectsDirector {
 
   /** Burning-ball embers during the rally climax. */
   private emitClimaxEmbers(dt: number): void {
-    const expected = CLIMAX_EMBER_RATE * this.climax.level * dt;
+    const expected = EMBERS.RATE * this.climax.level * dt;
     const count = Math.floor(expected + Math.random());
     const ball = this.ball;
 
     for (let i = 0; i < count; i++) {
-      const angle = Math.atan2(-ball.vy, -ball.vx) + (Math.random() - 0.5) * EMBER_SPREAD;
-      const speed = EMBER_SPEED_MIN + Math.random() * EMBER_SPEED_RANGE;
+      const angle = Math.atan2(-ball.vy, -ball.vx) + (Math.random() - 0.5) * EMBERS.SPREAD;
+      const speed = EMBERS.SPEED_MIN + Math.random() * EMBERS.SPEED_RANGE;
       this.particles.addParticle({
         x: ball.x + (Math.random() - 0.5) * ball.radius,
         y: ball.y + (Math.random() - 0.5) * ball.radius,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 0.6 + Math.random() * 0.3,
-        color: CLIMAX_EMBER_COLORS[Math.floor(Math.random() * CLIMAX_EMBER_COLORS.length)],
+        color: EMBERS.COLORS[Math.floor(Math.random() * EMBERS.COLORS.length)],
         size: 1 + Math.random() * 2,
       });
     }

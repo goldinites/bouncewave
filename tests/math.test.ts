@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clamp, lerp, midiToFrequency, mixHexColors, randomRange } from '@/utils/math';
+import { clamp, lerp, midiToFrequency, mixHexColors, randomRange } from '@/shared/math';
 
 describe('Math utilities', () => {
   describe('mixHexColors', () => {

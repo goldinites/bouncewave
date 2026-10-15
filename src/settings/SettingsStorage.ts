@@ -1,7 +1,13 @@
-import { LOCAL_STORAGE_KEY } from '@/constants/audio.constants';
-import { UserSettings } from '@/types/audio.types';
-import { DifficultyLevel } from '@/types/difficulty.types';
-import { Language } from '@/types/i18n.types';
+import { Language } from '@/i18n/translations';
+import { DifficultyLevel } from '@/match/difficulty';
+export const LOCAL_STORAGE_KEY = 'neonpong';
+
+export interface UserSettings {
+  difficulty: DifficultyLevel;
+  soundMuted: boolean;
+  musicMuted: boolean;
+  language: Language;
+}
 
 interface StoredData {
   d?: number;

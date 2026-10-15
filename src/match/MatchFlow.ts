@@ -1,22 +1,25 @@
-import {
-  BALL_INITIAL_SPEED,
-  SERVE_DELAY_DEMO,
-  SERVE_DELAY_GAME_OVER,
-  SERVE_DELAY_NORMAL,
-  SERVE_DELAY_START,
-  WINNING_SCORE,
-} from '@/constants/game.constants';
-import {
-  FINAL_SEQUENCE_LOSS_DURATION,
-  FINAL_SEQUENCE_SKIP_AFTER,
-  FINAL_SEQUENCE_WIN_DURATION,
-} from '@/constants/visual.constants';
 import { AiController } from '@/match/AiController';
+import { Ball } from '@/match/Ball';
+import { BALL, WINNING_SCORE } from '@/match/config';
+import { DifficultyConfig } from '@/match/difficulty';
+import { GameState, GameMode } from '@/match/modes';
+import { Paddle } from '@/match/Paddle';
 import { Physics, PhysicsEvent } from '@/match/Physics';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { DifficultyConfig } from '@/types/difficulty.types';
-import { GameMode, GameState } from '@/types/game.types';
+
+// Seconds the ball waits at center before each kind of serve
+export const SERVE_DELAY = {
+  NORMAL: 1.2,
+  START: 1.5,
+  DEMO: 0.5,
+  GAME_OVER: 0.8,
+} as const;
+
+// End-of-match cutscene (seconds); the canvas stays live throughout
+export const FINALE = {
+  WIN_DURATION: 2.4,
+  LOSS_DURATION: 1.9,
+  SKIP_AFTER: 0.6, // tap/key can skip once this has passed
+} as const;
 
 /**
  * - `attract`: AI-vs-AI demo behind the menus
@@ -134,14 +137,14 @@ export class MatchFlow {
 
   public startAttract(): void {
     this._phase = 'attract';
-    this.serve(1, SERVE_DELAY_DEMO);
+    this.serve(1, SERVE_DELAY.DEMO);
   }
 
   public startMatch(): void {
     this.emit({ type: 'matchStart' });
     this.resetScores();
     this._phase = 'serving';
-    this.serve(this.random() < 0.5 ? 1 : -1, SERVE_DELAY_START);
+    this.serve(this.random() < 0.5 ? 1 : -1, SERVE_DELAY.START);
   }
 
   public returnToMenu(): void {
@@ -166,7 +169,7 @@ export class MatchFlow {
 
   /** Ends the finale early, once its key moment has played. @returns whether it ended */
   public skipFinale(): boolean {
-    if (this._phase !== 'finale' || this.finaleElapsed < FINAL_SEQUENCE_SKIP_AFTER) return false;
+    if (this._phase !== 'finale' || this.finaleElapsed < FINALE.SKIP_AFTER) return false;
     this.finishFinale();
     return true;
   }
@@ -241,7 +244,7 @@ export class MatchFlow {
 
     if (this._phase === 'attract') {
       this.emit({ type: 'score', scoringPlayerIndex: scorer, y, isDemo: true });
-      this.serve(nextServe, SERVE_DELAY_DEMO);
+      this.serve(nextServe, SERVE_DELAY.DEMO);
       return;
     }
 
@@ -254,14 +257,14 @@ export class MatchFlow {
     }
 
     this._phase = 'serving';
-    this.serve(nextServe, SERVE_DELAY_NORMAL);
+    this.serve(nextServe, SERVE_DELAY.NORMAL);
   }
 
   private beginFinale(winner: 0 | 1, ballY: number): void {
     this._phase = 'finale';
     this.finaleWinner = winner;
     this.finaleElapsed = 0;
-    this.finaleDuration = winner === 0 ? FINAL_SEQUENCE_WIN_DURATION : FINAL_SEQUENCE_LOSS_DURATION;
+    this.finaleDuration = winner === 0 ? FINALE.WIN_DURATION : FINALE.LOSS_DURATION;
 
     this.emit({ type: 'finaleStart', winnerIndex: winner, ballY, scores: this.scores });
   }
@@ -271,11 +274,11 @@ export class MatchFlow {
     this._phase = 'attract';
 
     this.emit({ type: 'gameOver', winnerIndex: winner, scores: this.scores });
-    this.serve(winner === 0 ? 1 : -1, SERVE_DELAY_GAME_OVER);
+    this.serve(winner === 0 ? 1 : -1, SERVE_DELAY.GAME_OVER);
   }
 
   private serve(direction: number, delay: number): void {
-    this.ball.serve(direction, BALL_INITIAL_SPEED);
+    this.ball.serve(direction, BALL.INITIAL_SPEED);
     this._rally = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });

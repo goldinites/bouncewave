@@ -1,3 +1,5 @@
+export const TWO_PI = Math.PI * 2;
+
 /**
  * Clamps a number between a minimum and a maximum value.
  */

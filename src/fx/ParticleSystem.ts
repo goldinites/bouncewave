@@ -1,11 +1,27 @@
-import {
-  PARTICLE_LIFE_DECAY,
-  PARTICLE_VELOCITY_DAMPING,
-  SHOCKWAVE_EXPANSION_SPEED,
-} from '@/constants/visual.constants';
-import { Particle, ShockwaveRing } from '@/types/game.types';
-import { TWO_PI } from '@/constants/game.constants';
-import { randomRange } from '@/utils/math';
+import { randomRange, TWO_PI } from '@/shared/math';
+
+export interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  color: string;
+  size: number;
+}
+
+export interface ShockwaveRing {
+  x: number;
+  y: number;
+  radius: number;
+  life: number;
+  color: string;
+  velocity: number;
+}
+
+const PARTICLE_LIFE_DECAY = 1.8;
+const PARTICLE_VELOCITY_DAMPING = 0.98;
+const SHOCKWAVE_EXPANSION_SPEED = 260;
 
 export class ParticleSystem {
   public particles: Particle[] = [];

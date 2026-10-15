@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { GAME_WIDTH } from '@/constants/game.constants';
-import {
-  FINAL_SIGN_DELAY,
-  FINAL_SIGN_IGNITE,
-  FIREWORK_INTERVAL,
-  FIREWORK_SHOTS,
-} from '@/constants/visual.constants';
-import { VictoryFireworks } from '@/fx/VictoryFireworks';
-import { FinalScoreRenderer } from '@/render/FinalScoreRenderer';
+import { FIREWORK, VictoryFireworks } from '@/fx/VictoryFireworks';
+import { COURT } from '@/match/config';
+import { FINAL_SIGN, FinalScoreRenderer } from '@/render/FinalScoreRenderer';
 
 const COLORS = ['#19f0ff', '#ffffff', '#ffe53b'];
 
@@ -17,7 +11,7 @@ describe('VictoryFireworks', () => {
     const [first] = fireworks.update(0);
 
     expect(first.y).toBe(200);
-    expect(first.x).toBeGreaterThan(GAME_WIDTH * 0.9);
+    expect(first.x).toBeGreaterThan(COURT.WIDTH * 0.9);
     expect(first.color).toBe(COLORS[0]);
   });
 
@@ -25,12 +19,12 @@ describe('VictoryFireworks', () => {
     const fireworks = new VictoryFireworks(1, 200, COLORS, () => 0.5);
     const shots = [];
 
-    for (let t = 0; t <= FIREWORK_INTERVAL * FIREWORK_SHOTS; t += 0.01) {
+    for (let t = 0; t <= FIREWORK.INTERVAL * FIREWORK.SHOTS; t += 0.01) {
       shots.push(...fireworks.update(0.01));
     }
 
-    expect(shots).toHaveLength(FIREWORK_SHOTS);
-    expect(shots[shots.length - 1].x).toBeCloseTo(GAME_WIDTH / 2);
+    expect(shots).toHaveLength(FIREWORK.SHOTS);
+    expect(shots[shots.length - 1].x).toBeCloseTo(COURT.WIDTH / 2);
     expect(fireworks.isDone).toBe(true);
   });
 
@@ -38,7 +32,7 @@ describe('VictoryFireworks', () => {
     const fireworks = new VictoryFireworks(-1, 200, COLORS, () => 0.5);
     const [first] = fireworks.update(0);
 
-    expect(first.x).toBeLessThan(GAME_WIDTH * 0.1);
+    expect(first.x).toBeLessThan(COURT.WIDTH * 0.1);
   });
 
   it('never fires a shot twice', () => {
@@ -54,12 +48,12 @@ describe('VictoryFireworks', () => {
 describe('FinalScoreRenderer.getBrightness', () => {
   it('stays dark until the ignition delay', () => {
     expect(FinalScoreRenderer.getBrightness(0, true)).toBe(0);
-    expect(FinalScoreRenderer.getBrightness(FINAL_SIGN_DELAY * 0.9, true)).toBe(0);
+    expect(FinalScoreRenderer.getBrightness(FINAL_SIGN.DELAY * 0.9, true)).toBe(0);
   });
 
   it('flickers while igniting: both lit and dark moments', () => {
     const samples = Array.from({ length: 50 }, (_, i) =>
-      FinalScoreRenderer.getBrightness(FINAL_SIGN_DELAY + (i / 50) * FINAL_SIGN_IGNITE, true),
+      FinalScoreRenderer.getBrightness(FINAL_SIGN.DELAY + (i / 50) * FINAL_SIGN.IGNITE, true),
     );
 
     expect(samples.some((b) => b === 0)).toBe(true);

@@ -1,13 +1,14 @@
-import { PADDLE_WIDTH, WINNING_SCORE } from '@/constants/game.constants';
-import {
-  DRAMA_LEVEL_SMOOTHING,
-  DRAMA_MATCH_POINT_LEVEL,
-  DRAMA_SLOWMO_DURATION,
-  DRAMA_SLOWMO_SCALE,
-  DRAMA_TIME_SCALE_SMOOTHING,
-} from '@/constants/visual.constants';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
+import { Ball } from '@/match/Ball';
+import { PADDLE, WINNING_SCORE } from '@/match/config';
+import { Paddle } from '@/match/Paddle';
+
+export const DRAMA = {
+  MATCH_POINT_LEVEL: 0.35, // subtle tension for the whole match-point rally
+  SLOWMO_SCALE: 0.3, // simulation speed once the deciding ball is past the paddle
+  SLOWMO_DURATION: 0.45, // seconds, wall-clock
+  TIME_SCALE_SMOOTHING: 14, // 1/s, quick ease in and out of slow motion
+  LEVEL_SMOOTHING: 6, // 1/s
+} as const;
 
 /**
  * Presentation-only tension on match point.
@@ -44,7 +45,7 @@ export class MatchPointDrama {
       return ball.x + ball.radius < left.x;
     }
     if (left.score === WINNING_SCORE - 1 && ball.vx > 0) {
-      return ball.x - ball.radius > right.x + PADDLE_WIDTH;
+      return ball.x - ball.radius > right.x + PADDLE.WIDTH;
     }
     return false;
   }
@@ -60,18 +61,18 @@ export class MatchPointDrama {
 
     if (isMatchPoint && !this.hasTriggered && MatchPointDrama.isDecidingBallPast(ball, paddles)) {
       this.hasTriggered = true;
-      this.slowMoTimeLeft = DRAMA_SLOWMO_DURATION;
+      this.slowMoTimeLeft = DRAMA.SLOWMO_DURATION;
     }
 
     this.slowMoTimeLeft = Math.max(0, this.slowMoTimeLeft - realDt);
     const isSlowMo = this.slowMoTimeLeft > 0;
 
-    const targetScale = isSlowMo ? DRAMA_SLOWMO_SCALE : 1;
+    const targetScale = isSlowMo ? DRAMA.SLOWMO_SCALE : 1;
     this._timeScale +=
-      (targetScale - this._timeScale) * Math.min(1, realDt * DRAMA_TIME_SCALE_SMOOTHING);
+      (targetScale - this._timeScale) * Math.min(1, realDt * DRAMA.TIME_SCALE_SMOOTHING);
 
-    const targetLevel = isSlowMo ? 1 : isMatchPoint ? DRAMA_MATCH_POINT_LEVEL : 0;
-    this._level += (targetLevel - this._level) * Math.min(1, realDt * DRAMA_LEVEL_SMOOTHING);
+    const targetLevel = isSlowMo ? 1 : isMatchPoint ? DRAMA.MATCH_POINT_LEVEL : 0;
+    this._level += (targetLevel - this._level) * Math.min(1, realDt * DRAMA.LEVEL_SMOOTHING);
   }
 
   /** Call on every serve so the next deciding ball can trigger again. */

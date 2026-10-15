@@ -1,8 +1,7 @@
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
-import { SettingsStorage } from '@/storage/SettingsStorage';
-import { UserSettings } from '@/types/audio.types';
-import { DifficultyLevel } from '@/types/difficulty.types';
+import { DifficultyLevel } from '@/match/difficulty';
+import { SettingsStorage, UserSettings } from '@/settings/SettingsStorage';
 import { UIManager } from '@/ui/UIManager';
 
 export interface GameMenuActions {

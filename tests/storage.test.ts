@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { LOCAL_STORAGE_KEY } from '@/constants/audio.constants';
-import { SettingsStorage } from '@/storage/SettingsStorage';
-import { DifficultyLevel } from '@/types/difficulty.types';
+import { DifficultyLevel } from '@/match/difficulty';
+import { LOCAL_STORAGE_KEY, SettingsStorage } from '@/settings/SettingsStorage';
 
 class MemoryStorage implements Storage {
   private store: Record<string, string> = {};

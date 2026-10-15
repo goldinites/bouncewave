@@ -1,9 +1,9 @@
-import { GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
-import {
-  FINAL_SIGN_DELAY,
-  FINAL_SIGN_IGNITE,
-  FINAL_SIGN_UNLIT_ALPHA,
-} from '@/constants/visual.constants';
+import { COURT } from '@/match/config';
+export const FINAL_SIGN = {
+  DELAY: 0.3, // s before the tubes start to ignite
+  IGNITE: 0.55, // s of ignition flicker before it burns steadily
+  UNLIT_ALPHA: 0.1, // dark tubes stay faintly visible
+} as const;
 
 export interface FinalScoreSign {
   scores: [number, number];
@@ -12,7 +12,7 @@ export interface FinalScoreSign {
   isWin: boolean;
 }
 
-// Ignition flicker as [start, end, brightness] in fractions of FINAL_SIGN_IGNITE;
+// Ignition flicker as [start, end, brightness] in fractions of FINAL_SIGN.IGNITE;
 // gaps between segments are dark, the last segment ramps up to full
 const IGNITION_PATTERN: [number, number, number][] = [
   [0.0, 0.09, 1],
@@ -25,11 +25,11 @@ const IGNITION_PATTERN: [number, number, number][] = [
 export class FinalScoreRenderer {
   /** Tube brightness in [0, 1] for a sign that appeared `age` seconds ago. */
   public static getBrightness(age: number, isWin: boolean): number {
-    const t = age - FINAL_SIGN_DELAY;
+    const t = age - FINAL_SIGN.DELAY;
     if (t < 0) return 0;
 
-    if (t < FINAL_SIGN_IGNITE) {
-      const p = t / FINAL_SIGN_IGNITE;
+    if (t < FINAL_SIGN.IGNITE) {
+      const p = t / FINAL_SIGN.IGNITE;
       for (const [start, end, level] of IGNITION_PATTERN) {
         if (p >= start && p < end) {
           return level < 0 ? (p - start) / (end - start) : level;
@@ -56,7 +56,7 @@ export class FinalScoreRenderer {
     const scoreText = `${sign.scores[0]} : ${sign.scores[1]}`;
 
     ctx.save();
-    ctx.translate(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    ctx.translate(COURT.WIDTH / 2, COURT.HEIGHT / 2);
     if (isRotated) {
       ctx.rotate(Math.PI / 2);
     }
@@ -96,7 +96,7 @@ export class FinalScoreRenderer {
 
     // Unlit glass is always faintly visible
     ctx.shadowBlur = 0;
-    ctx.globalAlpha = FINAL_SIGN_UNLIT_ALPHA;
+    ctx.globalAlpha = FINAL_SIGN.UNLIT_ALPHA;
     ctx.fillStyle = color;
     ctx.fillText(text, 0, y);
 

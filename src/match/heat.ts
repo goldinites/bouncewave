@@ -1,5 +1,8 @@
-import { BALL_INITIAL_SPEED, RALLY_HEAT_MAX } from '@/constants/game.constants';
-import { clamp } from '@/utils/math';
+import { BALL } from '@/match/config';
+import { clamp } from '@/shared/math';
+
+// Rally length at which "heat" maxes out: ball glow and size, music intensity
+export const RALLY_HEAT_MAX = 14;
 
 /**
  * Shared "heat" measures that the ball glow, ball size and music intensity all react to.
@@ -13,5 +16,5 @@ export function getRallyHeat(rally: number): number {
 
 /** How fast the ball is, from serve speed (0) to the difficulty's top speed (1). */
 export function getSpeedHeat(speed: number, maxSpeed: number): number {
-  return clamp((speed - BALL_INITIAL_SPEED) / (maxSpeed - BALL_INITIAL_SPEED), 0, 1);
+  return clamp((speed - BALL.INITIAL_SPEED) / (maxSpeed - BALL.INITIAL_SPEED), 0, 1);
 }

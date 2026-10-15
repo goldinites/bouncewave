@@ -1,9 +1,9 @@
-import { GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
+import { COURT } from '@/match/config';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { Background } from '@/render/backgrounds/Background';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
-import { clamp } from '@/utils/math';
+import { clamp } from '@/shared/math';
 
 // Dark tint over the background so the court reads clearly on top of it
 const OVERLAY_TINT_RGB = '10, 2, 32';
@@ -63,6 +63,6 @@ export class BackgroundRenderer {
 
     const tint = background === this.laser ? OVERLAY_TINT_ALPHA.laser : OVERLAY_TINT_ALPHA.memphis;
     ctx.fillStyle = `rgba(${OVERLAY_TINT_RGB}, ${tint})`;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
   }
 }

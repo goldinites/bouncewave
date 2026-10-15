@@ -1,21 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import {
-  BALL_INITIAL_RADIUS,
-  BALL_INITIAL_SPEED,
-  BALL_TRAIL_MAX_LENGTH,
-  GAME_HEIGHT,
-  GAME_WIDTH,
-} from '@/constants/game.constants';
-import { Ball } from '@/entities/Ball';
+import { Ball } from '@/match/Ball';
+import { COURT, BALL } from '@/match/config';
 
 describe('Ball', () => {
   it('serves ball towards direction with initial speed', () => {
     const ball = new Ball();
     ball.serve(1);
 
-    expect(ball.x).toBe(GAME_WIDTH / 2);
-    expect(ball.y).toBe(GAME_HEIGHT / 2);
-    expect(ball.speed).toBe(BALL_INITIAL_SPEED);
+    expect(ball.x).toBe(COURT.WIDTH / 2);
+    expect(ball.y).toBe(COURT.HEIGHT / 2);
+    expect(ball.speed).toBe(BALL.INITIAL_SPEED);
     expect(ball.vx).toBeGreaterThan(0);
     expect(ball.trail).toEqual([]);
   });
@@ -35,7 +29,7 @@ describe('Ball', () => {
       ball.updateTrail();
     }
 
-    expect(ball.trail.length).toBe(BALL_TRAIL_MAX_LENGTH);
+    expect(ball.trail.length).toBe(BALL.TRAIL_MAX_LENGTH);
     expect(ball.trail[ball.trail.length - 1]).toEqual({ x: 190, y: 95 });
   });
 
@@ -66,6 +60,6 @@ describe('Ball', () => {
     ball.updateRadius(0.1, 14, 920);
 
     expect(ball.radius).toBeGreaterThan(initialRadius);
-    expect(ball.radius).toBeGreaterThan(BALL_INITIAL_RADIUS);
+    expect(ball.radius).toBeGreaterThan(BALL.INITIAL_RADIUS);
   });
 });

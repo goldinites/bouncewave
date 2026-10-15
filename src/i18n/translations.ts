@@ -1,5 +1,30 @@
-import { Language, TranslationSchema } from '@/types/i18n.types';
-import { WINNING_SCORE } from '@/constants/game.constants';
+import { WINNING_SCORE } from '@/match/config';
+export type Language = 'en' | 'ru';
+
+export type DifficultyDescription = [name: string, description: string];
+
+export interface TranslationSchema {
+  play: string;
+  settings: string;
+  again: string;
+  resume: string;
+  menu: string;
+  back: string;
+  diff: string;
+  sound: string;
+  music: string;
+  on: string;
+  off: string;
+  lang: string;
+  lang_name: string;
+  pause: string;
+  win: string;
+  lose: string;
+  ready: string;
+  hintK: string;
+  hintT: string;
+  d: [DifficultyDescription, DifficultyDescription, DifficultyDescription, DifficultyDescription];
+}
 
 export const TRANSLATIONS: Record<Language, TranslationSchema> = {
   en: {

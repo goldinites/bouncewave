@@ -1,4 +1,4 @@
-import { clamp } from '@/utils/math';
+import { clamp } from '@/shared/math';
 
 const FREQUENCY_BINS = 128;
 const WAVEFORM_SAMPLES = 256;

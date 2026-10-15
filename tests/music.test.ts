@@ -6,7 +6,7 @@ import {
   MusicState,
   stepIntensity,
 } from '@/audio/music/intensity';
-import { RALLY_HEAT_MAX } from '@/constants/game.constants';
+import { RALLY_HEAT_MAX } from '@/match/heat';
 
 const playing = (overrides: Partial<MusicState> = {}): MusicState => ({
   ...INITIAL_MUSIC_STATE,

@@ -1,16 +1,12 @@
-import {
-  GAME_HEIGHT,
-  PADDLE_BOTTOM_MARGIN,
-  PADDLE_GLOW_DECAY,
-  PADDLE_HEIGHT,
-  PADDLE_SMOOTH_FACTOR,
-  PADDLE_TOP_MARGIN,
-  PADDLE_VELOCITY_SMOOTHING,
-  PADDLE_WIDTH,
-} from '@/constants/game.constants';
-import { PARTICLE_SPARK_SPEED_MAX, PARTICLE_SPARK_SPEED_MIN } from '@/constants/visual.constants';
-import { ParticleSystem } from '@/entities/ParticleSystem';
-import { clamp, randomRange } from '@/utils/math';
+import { ParticleSystem } from '@/fx/ParticleSystem';
+import { COURT, PADDLE } from '@/match/config';
+import { clamp, randomRange } from '@/shared/math';
+
+const PADDLE_SMOOTH_FACTOR = 22;
+const PADDLE_VELOCITY_SMOOTHING = 12; // 1/s, ~80 ms averaging window
+const PADDLE_GLOW_DECAY = 4;
+const PARTICLE_SPARK_SPEED_MIN = 30;
+const PARTICLE_SPARK_SPEED_MAX = 100;
 
 export class Paddle {
   public x: number;
@@ -27,14 +23,14 @@ export class Paddle {
   constructor(index: number, x: number, color: string) {
     this.index = index;
     this.x = x;
-    this.y = GAME_HEIGHT / 2;
-    this.targetY = GAME_HEIGHT / 2;
+    this.y = COURT.HEIGHT / 2;
+    this.targetY = COURT.HEIGHT / 2;
     this.color = color;
   }
 
   public resetPosition(): void {
-    this.y = GAME_HEIGHT / 2;
-    this.targetY = GAME_HEIGHT / 2;
+    this.y = COURT.HEIGHT / 2;
+    this.targetY = COURT.HEIGHT / 2;
     this.glow = 0;
     this.errorOffset = 0;
     this.velocity = 0;
@@ -46,8 +42,8 @@ export class Paddle {
   }
 
   public setTargetY(y: number): void {
-    const minY = PADDLE_TOP_MARGIN + PADDLE_HEIGHT / 2;
-    const maxY = GAME_HEIGHT - PADDLE_BOTTOM_MARGIN - PADDLE_HEIGHT / 2;
+    const minY = PADDLE.TOP_MARGIN + PADDLE.HEIGHT / 2;
+    const maxY = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - PADDLE.HEIGHT / 2;
     this.targetY = clamp(y, minY, maxY);
   }
 
@@ -72,8 +68,8 @@ export class Paddle {
     const sparkChance = dt * (6 + Math.min(rally, 20) * 1.2) * movementMultiplier;
 
     if (Math.random() < sparkChance) {
-      const sparkX = this.index === 0 ? this.x + PADDLE_WIDTH : this.x;
-      const sparkY = this.y + (Math.random() - 0.5) * PADDLE_HEIGHT;
+      const sparkX = this.index === 0 ? this.x + PADDLE.WIDTH : this.x;
+      const sparkY = this.y + (Math.random() - 0.5) * PADDLE.HEIGHT;
       const direction = this.index === 0 ? 1 : -1;
       const vx = direction * randomRange(PARTICLE_SPARK_SPEED_MIN, PARTICLE_SPARK_SPEED_MAX);
       const vy = (Math.random() - 0.5) * 50;

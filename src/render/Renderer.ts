@@ -1,22 +1,8 @@
-import { CSS_CLASSES, GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
-import {
-  CELEBRATION_DECAY,
-  CELEBRATION_LASER_SURGE,
-  LOSS_DURATION,
-  SCREEN_FLASH_DECAY,
-  SCREEN_SHAKE_DECAY,
-  VICTORY_DURATION,
-  CLIMAX_FLASH,
-  CLIMAX_LASER_SURGE,
-  CLIMAX_LASER_MAX,
-  CLIMAX_LASER_SURGE_DECAY,
-  VIGNETTE_MAX_ALPHA,
-  VIGNETTE_RGB,
-} from '@/constants/visual.constants';
-import { Ball } from '@/entities/Ball';
-import { Paddle } from '@/entities/Paddle';
-import { ParticleSystem } from '@/entities/ParticleSystem';
-import { GameMode, GameState } from '@/types/game.types';
+import { ParticleSystem } from '@/fx/ParticleSystem';
+import { Ball } from '@/match/Ball';
+import { COURT } from '@/match/config';
+import { GameState, GameMode } from '@/match/modes';
+import { Paddle } from '@/match/Paddle';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
@@ -24,9 +10,30 @@ import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer'
 import { HudRenderer } from '@/render/HudRenderer';
 
 // Lightweight scene dimming for menu and pause overlays
-const MENU_DIM_RGB = '8, 2, 26';
-const MENU_DIM_ALPHA = 0.6;
-const MENU_DIM_SPEED = 8;
+const MENU_DIM = { RGB: '8, 2, 26', ALPHA: 0.6, SPEED: 8 } as const;
+// Match-point vignette
+const VIGNETTE = { RGB: '4, 0, 14', MAX_ALPHA: 0.6 } as const;
+// Screen shake fades exponentially, flash linearly (1/s)
+const SHAKE_DECAY = 9;
+const FLASH_DECAY = 3;
+
+// Laser background during play: at full climax lasers only rise to CLIMAX_MAX so the court
+// stays readable; surges add on top and fade out
+const LASERS = {
+  CLIMAX_MAX: 0.6,
+  CLIMAX_SURGE: 0.2, // on the climax drop
+  CELEBRATION_SURGE: 1.0,
+  SURGE_DECAY: 1.5, // 1/s
+} as const;
+const CLIMAX_FLASH = 0.2; // soft flash on the drop, no screen shake
+const CELEBRATION_DECAY = 0.45; // 1/s, linear
+
+// CSS effects on the stage at the end of a match; durations must match main.css (ms)
+const STAGE_CLASSES = {
+  CRT_GLITCH: 'crt-glitch-active',
+  VICTORY_BURST: 'victory-burst-active',
+} as const;
+const STAGE_EFFECT_MS = { VICTORY: 900, LOSS: 700 } as const;
 
 /** Everything the renderer needs to draw (and animate toward) one frame. */
 export interface RenderFrame {
@@ -63,7 +70,7 @@ export class Renderer {
   private finalSign: FinalScoreSign | null = null;
   private finalSignAge = 0;
 
-  private menuDim = MENU_DIM_ALPHA;
+  private menuDim: number = MENU_DIM.ALPHA;
   private lastRenderTime = performance.now();
 
   private stage: HTMLElement | null = null;
@@ -82,15 +89,15 @@ export class Renderer {
 
     // Built once in game coordinates; strength is applied via globalAlpha
     this.vignetteGradient = context.createRadialGradient(
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      GAME_HEIGHT * 0.35,
-      GAME_WIDTH / 2,
-      GAME_HEIGHT / 2,
-      GAME_WIDTH * 0.62,
+      COURT.WIDTH / 2,
+      COURT.HEIGHT / 2,
+      COURT.HEIGHT * 0.35,
+      COURT.WIDTH / 2,
+      COURT.HEIGHT / 2,
+      COURT.WIDTH * 0.62,
     );
-    this.vignetteGradient.addColorStop(0, `rgba(${VIGNETTE_RGB}, 0)`);
-    this.vignetteGradient.addColorStop(1, `rgba(${VIGNETTE_RGB}, 1)`);
+    this.vignetteGradient.addColorStop(0, `rgba(${VIGNETTE.RGB}, 0)`);
+    this.vignetteGradient.addColorStop(1, `rgba(${VIGNETTE.RGB}, 1)`);
 
     this.resizeObserver = new ResizeObserver(() => this.fitToDisplay());
     this.resizeObserver.observe(this.canvas);
@@ -104,7 +111,7 @@ export class Renderer {
     this.canvas.width = this.canvas.clientWidth * dpr;
     this.canvas.height = this.canvas.clientHeight * dpr;
 
-    this.scale = this.canvas.width / GAME_WIDTH;
+    this.scale = this.canvas.width / COURT.WIDTH;
   }
 
   private triggerFinalEffect(
@@ -118,7 +125,7 @@ export class Renderer {
       this.finalEffectTimer = null;
     }
 
-    this.stage.classList.remove(CSS_CLASSES.CRT_GLITCH_ACTIVE, CSS_CLASSES.VICTORY_BURST_ACTIVE);
+    this.stage.classList.remove(STAGE_CLASSES.CRT_GLITCH, STAGE_CLASSES.VICTORY_BURST);
 
     void this.stage.offsetWidth;
 
@@ -130,12 +137,12 @@ export class Renderer {
     }, duration);
   }
 
-  public triggerCrtGlitch(duration = LOSS_DURATION): void {
-    this.triggerFinalEffect(CSS_CLASSES.CRT_GLITCH_ACTIVE, duration);
+  public triggerCrtGlitch(duration: number = STAGE_EFFECT_MS.LOSS): void {
+    this.triggerFinalEffect(STAGE_CLASSES.CRT_GLITCH, duration);
   }
 
-  public triggerVictoryEffect(duration = VICTORY_DURATION): void {
-    this.triggerFinalEffect(CSS_CLASSES.VICTORY_BURST_ACTIVE, duration);
+  public triggerVictoryEffect(duration: number = STAGE_EFFECT_MS.VICTORY): void {
+    this.triggerFinalEffect(STAGE_CLASSES.VICTORY_BURST, duration);
   }
 
   public addShake(amount: number): void {
@@ -153,13 +160,13 @@ export class Renderer {
    */
   public triggerClimaxSurge(): void {
     // Raises the laser target rather than the value, so the swell eases in
-    this.laserSurge = CLIMAX_LASER_SURGE;
+    this.laserSurge = LASERS.CLIMAX_SURGE;
     this.addFlash(CLIMAX_FLASH);
   }
 
   /** Victory: lasers flare and sweep through hues, Memphis shapes burst outward and heat up. */
   public celebrate(): void {
-    this.laserSurge = CELEBRATION_LASER_SURGE;
+    this.laserSurge = LASERS.CELEBRATION_SURGE;
     this.background.celebration = 1;
     this.background.triggerDrop();
   }
@@ -177,7 +184,7 @@ export class Renderer {
   /** Advances time-based effects (shake, flash, lasers). Not called while paused. */
   public update(dt: number, frame: RenderFrame): void {
     const { gameState, serveTime, climax } = frame;
-    this.laserSurge *= Math.exp(-dt * CLIMAX_LASER_SURGE_DECAY);
+    this.laserSurge *= Math.exp(-dt * LASERS.SURGE_DECAY);
     this.finalSignAge += dt;
 
     const celebration = this.background.celebration;
@@ -185,7 +192,7 @@ export class Renderer {
 
     // During play the climax lights lasers only part-way so the court stays readable;
     // the victory celebration (no play happening) may go all the way
-    const climaxLasers = (CLIMAX_LASER_MAX - 0.12) * climax;
+    const climaxLasers = (LASERS.CLIMAX_MAX - 0.12) * climax;
     const celebrationLasers = 0.88 * celebration;
     const playLaserIntensity = 0.12 + Math.max(climaxLasers, celebrationLasers) + this.laserSurge;
     const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : playLaserIntensity;
@@ -193,9 +200,9 @@ export class Renderer {
     this.background.laserIntensity +=
       (targetLaserIntensity - this.background.laserIntensity) * Math.min(1, dt * 2.5);
 
-    this.screenShake *= Math.exp(-dt * SCREEN_SHAKE_DECAY);
+    this.screenShake *= Math.exp(-dt * SHAKE_DECAY);
 
-    this.screenFlash = Math.max(0, this.screenFlash - dt * SCREEN_FLASH_DECAY);
+    this.screenFlash = Math.max(0, this.screenFlash - dt * FLASH_DECAY);
   }
 
   public render(frame: RenderFrame): void {
@@ -208,9 +215,9 @@ export class Renderer {
     const frameDt = Math.min(0.1, (now - this.lastRenderTime) / 1000);
     this.lastRenderTime = now;
 
-    const dimTarget = gameState === 'play' ? 0 : MENU_DIM_ALPHA;
+    const dimTarget = gameState === 'play' ? 0 : MENU_DIM.ALPHA;
 
-    this.menuDim += (dimTarget - this.menuDim) * Math.min(1, frameDt * MENU_DIM_SPEED);
+    this.menuDim += (dimTarget - this.menuDim) * Math.min(1, frameDt * MENU_DIM.SPEED);
 
     // Reset transform for high-DPI displays
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
@@ -261,15 +268,15 @@ export class Renderer {
     // Lightweight menu / pause overlay
     // No canvas filters, extra buffers, or blur passes
     if (this.menuDim > 0.003) {
-      ctx.fillStyle = `rgba(${MENU_DIM_RGB}, ${this.menuDim})`;
-      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+      ctx.fillStyle = `rgba(${MENU_DIM.RGB}, ${this.menuDim})`;
+      ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
     }
 
     // Match-point vignette
     if (frame.vignette > 0.01) {
-      ctx.globalAlpha = frame.vignette * VIGNETTE_MAX_ALPHA;
+      ctx.globalAlpha = frame.vignette * VIGNETTE.MAX_ALPHA;
       ctx.fillStyle = this.vignetteGradient;
-      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+      ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
       ctx.globalAlpha = 1;
     }
 
@@ -277,7 +284,7 @@ export class Renderer {
     if (this.screenFlash > 0) {
       ctx.fillStyle = `rgba(255, 255, 255, ${this.screenFlash * 0.25})`;
 
-      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+      ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
     }
   }
 
@@ -289,6 +296,6 @@ export class Renderer {
       this.finalEffectTimer = null;
     }
 
-    this.stage?.classList.remove(CSS_CLASSES.CRT_GLITCH_ACTIVE, CSS_CLASSES.VICTORY_BURST_ACTIVE);
+    this.stage?.classList.remove(STAGE_CLASSES.CRT_GLITCH, STAGE_CLASSES.VICTORY_BURST);
   }
 }

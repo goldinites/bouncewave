@@ -1,7 +1,16 @@
-import { DifficultyConfig, DifficultyLevel } from '@/types/difficulty.types';
+export enum DifficultyLevel {
+  EASY = 0,
+  NORMAL = 1,
+  HARD = 2,
+  INSANE = 3,
+}
 
-// Aim error of both AI paddles in the attract-mode demo behind the menu
-export const DEMO_AI_ERROR = 80;
+export interface DifficultyConfig {
+  speed: number;
+  error: number;
+  acceleration: number;
+  maxSpeed: number;
+}
 
 export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
   [DifficultyLevel.EASY]: {

@@ -1,17 +1,33 @@
-import { COLORS, GAME_HEIGHT, GAME_WIDTH, TWO_PI } from '@/constants/game.constants';
-import {
-  MEMPHIS_CLIMAX_SPEEDUP,
-  MEMPHIS_DROP_PEAK_TIME,
-  MEMPHIS_DROP_PUSH,
-  MEMPHIS_GRADIENT_COOL,
-  MEMPHIS_GRADIENT_HOT,
-  MEMPHIS_PULSE_ATTACK,
-  MEMPHIS_PULSE_RELEASE,
-  MEMPHIS_SHAPE_COUNT,
-} from '@/constants/visual.constants';
+import { COURT } from '@/match/config';
 import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
-import { MemphisShape, MemphisShapeKind } from '@/types/game.types';
-import { mixHexColors, randomRange } from '@/utils/math';
+import { mixHexColors, randomRange, TWO_PI } from '@/shared/math';
+import { COLORS } from '@/shared/palette';
+
+type MemphisShapeKind = 0 | 1 | 2 | 3 | 4 | 5;
+
+interface MemphisShape {
+  kind: MemphisShapeKind;
+  x: number;
+  y: number;
+  size: number;
+  vx: number;
+  vy: number;
+  rotation: number;
+  rotationSpeed: number;
+  color: string;
+}
+
+const SHAPE_COUNT = 24;
+// Background gradient, cool at rest and hot at full climax or celebration
+const GRADIENT_COOL = ['#1a0b4d', '#4a0f6e', '#7a1a73'];
+const GRADIENT_HOT = ['#3d0a45', '#8f1460', '#c2432f'];
+const CLIMAX_SPEEDUP = 2; // shapes move/spin up to (1 + this)× faster
+const DROP_PUSH = 60; // px the drop shockwave throws shapes outward
+const DROP_PEAK_TIME = 0.18; // s until the push peaks, then it eases back
+// Envelope on the bass pulse that sizes the shapes (1/s): beats still pump,
+// but a sudden loud hit swells over ~0.15 s instead of snapping
+const PULSE_ATTACK = 12;
+const PULSE_RELEASE = 6;
 
 const SHAPE_COLORS = [COLORS.CYAN, COLORS.PINK, COLORS.YELLOW, COLORS.PURPLE];
 const DOT_SPACING = 28;
@@ -28,10 +44,10 @@ export class MemphisBackground implements Background {
   private heat = 0;
 
   constructor() {
-    this.shapes = Array.from({ length: MEMPHIS_SHAPE_COUNT }, (_, i) => ({
+    this.shapes = Array.from({ length: SHAPE_COUNT }, (_, i) => ({
       kind: (i % 6) as MemphisShapeKind,
-      x: Math.random() * GAME_WIDTH,
-      y: Math.random() * GAME_HEIGHT,
+      x: Math.random() * COURT.WIDTH,
+      y: Math.random() * COURT.HEIGHT,
       size: randomRange(14, 38),
       vx: (Math.random() - 0.5) * 16,
       vy: randomRange(6, 16),
@@ -53,12 +69,12 @@ export class MemphisBackground implements Background {
    */
   public advance(dt: number, pulse: number, heat: number): void {
     this.heat = heat;
-    this.shapeClock += dt * (1 + MEMPHIS_CLIMAX_SPEEDUP * heat);
+    this.shapeClock += dt * (1 + CLIMAX_SPEEDUP * heat);
     this.dropAge += dt;
 
     // Shapes swell with an envelope instead of the raw pulse, so a single loud hit
     // (the climax drop's full-volume kick) can't make them jump in size in one frame
-    const rate = pulse > this.shapePulse ? MEMPHIS_PULSE_ATTACK : MEMPHIS_PULSE_RELEASE;
+    const rate = pulse > this.shapePulse ? PULSE_ATTACK : PULSE_RELEASE;
     this.shapePulse += (pulse - this.shapePulse) * Math.min(1, dt * rate);
   }
 
@@ -66,21 +82,18 @@ export class MemphisBackground implements Background {
     const { ctx, time } = frame;
 
     // Gradient heats up toward pink/orange during the climax
-    const bgGradient = ctx.createLinearGradient(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    const bgGradient = ctx.createLinearGradient(0, 0, COURT.WIDTH, COURT.HEIGHT);
     [0, 0.55, 1].forEach((stop, i) => {
-      bgGradient.addColorStop(
-        stop,
-        mixHexColors(MEMPHIS_GRADIENT_COOL[i], MEMPHIS_GRADIENT_HOT[i], this.heat),
-      );
+      bgGradient.addColorStop(stop, mixHexColors(GRADIENT_COOL[i], GRADIENT_HOT[i], this.heat));
     });
     ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
     // Drifting grid dots
     ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
     const offset = (time * 10) % DOT_SPACING;
-    for (let y = -DOT_SPACING + offset; y < GAME_HEIGHT; y += DOT_SPACING) {
-      for (let x = -DOT_SPACING + offset; x < GAME_WIDTH; x += DOT_SPACING) {
+    for (let y = -DOT_SPACING + offset; y < COURT.HEIGHT; y += DOT_SPACING) {
+      for (let x = -DOT_SPACING + offset; x < COURT.WIDTH; x += DOT_SPACING) {
         ctx.fillRect(x, y, 2, 2);
       }
     }
@@ -90,11 +103,11 @@ export class MemphisBackground implements Background {
     this.renderOsd(frame);
   }
 
-  /** Outward push in px: rises smoothly from 0, peaks at MEMPHIS_DROP_PEAK_TIME, then fades. */
+  /** Outward push in px: rises smoothly from 0, peaks at DROP_PEAK_TIME, then fades. */
   private getDropPush(): number {
     if (!Number.isFinite(this.dropAge)) return 0;
-    const t = this.dropAge / MEMPHIS_DROP_PEAK_TIME;
-    return MEMPHIS_DROP_PUSH * t * Math.exp(1 - t);
+    const t = this.dropAge / DROP_PEAK_TIME;
+    return DROP_PUSH * t * Math.exp(1 - t);
   }
 
   /** Geometric shapes; they dance harder and glow brighter as the heat rises. */
@@ -109,12 +122,12 @@ export class MemphisBackground implements Background {
     ctx.lineJoin = 'round';
 
     for (const shape of this.shapes) {
-      let x = (((shape.x + shape.vx * clock) % GAME_WIDTH) + GAME_WIDTH) % GAME_WIDTH;
-      let y = (((shape.y + shape.vy * clock) % GAME_HEIGHT) + GAME_HEIGHT) % GAME_HEIGHT;
+      let x = (((shape.x + shape.vx * clock) % COURT.WIDTH) + COURT.WIDTH) % COURT.WIDTH;
+      let y = (((shape.y + shape.vy * clock) % COURT.HEIGHT) + COURT.HEIGHT) % COURT.HEIGHT;
 
       if (dropPush > 0.5) {
-        const dx = x - GAME_WIDTH / 2;
-        const dy = y - GAME_HEIGHT / 2;
+        const dx = x - COURT.WIDTH / 2;
+        const dy = y - COURT.HEIGHT / 2;
         const distance = Math.hypot(dx, dy) || 1;
         x += (dx / distance) * dropPush;
         y += (dy / distance) * dropPush;
@@ -180,20 +193,20 @@ export class MemphisBackground implements Background {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
     for (let i = 0; i < VHS_NOISE_STREAKS; i++) {
       ctx.fillRect(
-        Math.random() * GAME_WIDTH,
-        Math.random() * GAME_HEIGHT,
+        Math.random() * COURT.WIDTH,
+        Math.random() * COURT.HEIGHT,
         20 + Math.random() * 120,
         1 + Math.random() * 1.5,
       );
     }
 
-    const scanBarY = ((time * 55) % (GAME_HEIGHT + 90)) - 45;
+    const scanBarY = ((time * 55) % (COURT.HEIGHT + 90)) - 45;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fillRect(0, scanBarY, GAME_WIDTH, 22);
+    ctx.fillRect(0, scanBarY, COURT.WIDTH, 22);
     ctx.fillStyle = 'rgba(255, 43, 214, 0.12)';
-    ctx.fillRect(0, scanBarY + 22, GAME_WIDTH, 2);
+    ctx.fillRect(0, scanBarY + 22, COURT.WIDTH, 2);
     ctx.fillStyle = 'rgba(25, 240, 255, 0.12)';
-    ctx.fillRect(0, scanBarY - 2, GAME_WIDTH, 2);
+    ctx.fillRect(0, scanBarY - 2, COURT.WIDTH, 2);
   }
 
   /** VCR on-screen display: play state and tape counter. */

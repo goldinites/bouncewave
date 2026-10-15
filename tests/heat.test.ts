@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BALL_INITIAL_SPEED, RALLY_HEAT_MAX } from '@/constants/game.constants';
-import { getRallyHeat, getSpeedHeat } from '@/entities/heat';
+import { BALL } from '@/match/config';
+import { getRallyHeat, getSpeedHeat, RALLY_HEAT_MAX } from '@/match/heat';
 
 describe('heat', () => {
   it('rally heat grows linearly and caps at full', () => {
@@ -11,10 +11,10 @@ describe('heat', () => {
   });
 
   it('speed heat runs from serve speed to the top speed', () => {
-    const max = BALL_INITIAL_SPEED + 400;
+    const max = BALL.INITIAL_SPEED + 400;
 
-    expect(getSpeedHeat(BALL_INITIAL_SPEED, max)).toBe(0);
-    expect(getSpeedHeat(BALL_INITIAL_SPEED + 200, max)).toBeCloseTo(0.5);
+    expect(getSpeedHeat(BALL.INITIAL_SPEED, max)).toBe(0);
+    expect(getSpeedHeat(BALL.INITIAL_SPEED + 200, max)).toBeCloseTo(0.5);
     expect(getSpeedHeat(max * 2, max)).toBe(1);
     expect(getSpeedHeat(0, max)).toBe(0);
   });

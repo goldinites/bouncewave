@@ -1,6 +1,10 @@
-import { DifficultyLevel } from '@/types/difficulty.types';
-import { DifficultyDescription, Language, TranslationSchema } from '@/types/i18n.types';
-import { TRANSLATIONS } from '@/i18n/translations';
+import {
+  DifficultyDescription,
+  Language,
+  TRANSLATIONS,
+  TranslationSchema,
+} from '@/i18n/translations';
+import { DifficultyLevel } from '@/match/difficulty';
 
 export class I18nManager {
   private currentLanguage: Language;

@@ -1,7 +1,9 @@
-import { CLIMAX_INTENSITY_FOLLOW } from '@/constants/audio.constants';
-import { getRallyHeat, getSpeedHeat } from '@/entities/heat';
-import { GameState } from '@/types/game.types';
-import { clamp } from '@/utils/math';
+import { getRallyHeat, getSpeedHeat } from '@/match/heat';
+import { GameState } from '@/match/modes';
+import { clamp } from '@/shared/math';
+
+// Per sequencer step (~0.13 s), how quickly intensity follows the rally climax
+const CLIMAX_INTENSITY_FOLLOW = 0.1;
 
 /** What the music needs to know about the game, pushed in once per frame. */
 export interface MusicState {

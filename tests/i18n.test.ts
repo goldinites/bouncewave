@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { I18nManager } from '@/i18n/I18nManager';
-import { DifficultyLevel } from '@/types/difficulty.types';
+import { DifficultyLevel } from '@/match/difficulty';
 
 describe('I18nManager', () => {
   it('initializes with default language', () => {
