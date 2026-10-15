@@ -17,11 +17,37 @@ export class Ball {
   public radius: number = BALL_INITIAL_RADIUS;
   public trail: Point[] = [];
 
+  // Temporary speed surge (e.g. after a perfect hit); fades out linearly
+  private boostAmount = 0;
+  private boostDuration = 0;
+  private boostTimeLeft = 0;
+
+  /** Multiplier applied to movement on top of the base speed. */
+  public get speedMultiplier(): number {
+    if (this.boostTimeLeft <= 0) return 1;
+    return 1 + this.boostAmount * (this.boostTimeLeft / this.boostDuration);
+  }
+
+  public applyBoost(amount: number, duration: number): void {
+    this.boostAmount = amount;
+    this.boostDuration = duration;
+    this.boostTimeLeft = duration;
+  }
+
+  public clearBoost(): void {
+    this.boostTimeLeft = 0;
+  }
+
+  public updateBoost(dt: number): void {
+    this.boostTimeLeft = Math.max(0, this.boostTimeLeft - dt);
+  }
+
   public serve(direction: number, initialSpeed = BALL_INITIAL_SPEED): void {
     this.x = GAME_WIDTH / 2;
     this.y = GAME_HEIGHT / 2;
     this.speed = initialSpeed;
     this.trail = [];
+    this.clearBoost();
 
     const angle = (Math.random() - 0.5) * 0.8;
     this.vx = direction * Math.cos(angle) * this.speed;

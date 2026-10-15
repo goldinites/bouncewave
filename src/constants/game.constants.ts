@@ -14,7 +14,8 @@ export const PADDLE_BOTTOM_MARGIN = 20;
 export const PADDLE_MAX_BOUNCE_ANGLE = 1.1; // radians, reached at the very edge
 export const PADDLE_BOUNCE_CURVE = 1.6; // >1 keeps mid hits flatter and sharpens edge hits
 export const PERFECT_HIT_ZONE = 0.15; // central share of the half-height that counts as perfect
-export const PERFECT_HIT_SPEED_BONUS = 0.04; // added on top of difficulty acceleration
+export const PERFECT_HIT_BOOST = 0.25; // temporary extra speed share right after a perfect hit
+export const PERFECT_HIT_BOOST_DURATION = 0.8; // seconds for the boost to fade out
 
 export const COURT_TOP_WALL = 14;
 export const COURT_BOTTOM_WALL = 14;

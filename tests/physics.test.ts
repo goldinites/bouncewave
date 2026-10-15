@@ -8,6 +8,8 @@ import {
   PADDLE_HEIGHT,
   PADDLE_OFFSET_X,
   PADDLE_WIDTH,
+  PERFECT_HIT_BOOST,
+  PERFECT_HIT_BOOST_DURATION,
 } from '@/constants/game.constants';
 import { Physics, PhysicsCallbacks } from '@/core/Physics';
 import { Ball } from '@/entities/Ball';
@@ -150,14 +152,46 @@ describe('Physics Engine', () => {
     return { ball, spies };
   };
 
-  it('rewards a center hit with extra speed and a flash', () => {
+  it('rewards a center hit with a temporary boost and a flash', () => {
     const perfect = hitLeftPaddleAt(0);
     const offCenter = hitLeftPaddleAt(PADDLE_HEIGHT * 0.2);
 
-    expect(perfect.ball.speed).toBeGreaterThan(offCenter.ball.speed);
+    // Base speed progression is identical; only the temporary boost differs
+    expect(perfect.ball.speed).toBe(offCenter.ball.speed);
+    expect(perfect.ball.speedMultiplier).toBeCloseTo(1 + PERFECT_HIT_BOOST);
+    expect(offCenter.ball.speedMultiplier).toBe(1);
     expect(perfect.spies.onScreenFlash).toHaveBeenCalled();
     expect(offCenter.spies.onScreenFlash).not.toHaveBeenCalled();
     expect(offCenter.spies.onPaddleHit).toHaveBeenCalledWith(0, 1, false);
+  });
+
+  it('moves a boosted ball further per frame', () => {
+    const run = (boosted: boolean) => {
+      const ball = new Ball();
+      ball.x = 400;
+      ball.y = 250;
+      ball.vx = 400;
+      ball.vy = 0;
+      ball.speed = 400;
+      if (boosted) ball.applyBoost(PERFECT_HIT_BOOST, PERFECT_HIT_BOOST_DURATION);
+
+      Physics.updateBallMovement(
+        ball,
+        [
+          new Paddle(0, PADDLE_OFFSET_X, '#19f0ff'),
+          new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, '#ff2bd6'),
+        ],
+        new ParticleSystem(),
+        DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
+        GameMode.PLAYER_VS_AI,
+        { current: 0 },
+        0.016,
+        getMockCallbacks().callbacks,
+      );
+      return ball.x - 400;
+    };
+
+    expect(run(true)).toBeCloseTo(run(false) * (1 + PERFECT_HIT_BOOST));
   });
 
   it('sends edge hits out at a sharper angle than mid hits', () => {

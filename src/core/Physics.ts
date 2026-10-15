@@ -10,7 +10,8 @@ import {
   PADDLE_HEIGHT,
   PADDLE_MAX_BOUNCE_ANGLE,
   PADDLE_WIDTH,
-  PERFECT_HIT_SPEED_BONUS,
+  PERFECT_HIT_BOOST,
+  PERFECT_HIT_BOOST_DURATION,
   PERFECT_HIT_ZONE,
 } from '@/constants/game.constants';
 import {
@@ -48,8 +49,12 @@ export class Physics {
     dt: number,
     callbacks: PhysicsCallbacks,
   ): void {
-    const subSteps = Math.ceil((ball.speed * dt) / 10);
-    const subDt = dt / subSteps;
+    // Boost scales movement only; base speed (and acceleration progression) stays intact
+    const speedMultiplier = ball.speedMultiplier;
+    ball.updateBoost(dt);
+
+    const subSteps = Math.ceil((ball.speed * speedMultiplier * dt) / 10);
+    const subDt = (dt / subSteps) * speedMultiplier;
 
     for (let step = 0; step < subSteps; step++) {
       ball.x += ball.vx * subDt;
@@ -94,9 +99,16 @@ export class Physics {
           const bounceAngle = Physics.getBounceAngle(hitOffset);
           const direction = i === 0 ? 1 : -1;
 
-          const acceleration =
-            difficultyConfig.acceleration + (isPerfect ? PERFECT_HIT_SPEED_BONUS : 0);
-          ball.speed = Math.min(ball.speed * (1 + acceleration), difficultyConfig.maxSpeed);
+          ball.speed = Math.min(
+            ball.speed * (1 + difficultyConfig.acceleration),
+            difficultyConfig.maxSpeed,
+          );
+
+          if (isPerfect) {
+            ball.applyBoost(PERFECT_HIT_BOOST, PERFECT_HIT_BOOST_DURATION);
+          } else {
+            ball.clearBoost();
+          }
           ball.vx = direction * Math.cos(bounceAngle) * ball.speed;
           ball.vy = Math.sin(bounceAngle) * ball.speed;
           ball.x = i === 0 ? paddle.x + PADDLE_WIDTH + ball.radius : paddle.x - ball.radius;

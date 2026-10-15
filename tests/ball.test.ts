@@ -39,6 +39,25 @@ describe('Ball', () => {
     expect(ball.trail[ball.trail.length - 1]).toEqual({ x: 190, y: 95 });
   });
 
+  it('fades a temporary boost out over its duration', () => {
+    const ball = new Ball();
+    ball.applyBoost(0.2, 1);
+
+    expect(ball.speedMultiplier).toBeCloseTo(1.2);
+    ball.updateBoost(0.5);
+    expect(ball.speedMultiplier).toBeCloseTo(1.1);
+    ball.updateBoost(0.6);
+    expect(ball.speedMultiplier).toBe(1);
+  });
+
+  it('clears the boost on serve', () => {
+    const ball = new Ball();
+    ball.applyBoost(0.2, 1);
+    ball.serve(1);
+
+    expect(ball.speedMultiplier).toBe(1);
+  });
+
   it('updates dynamic radius on high rally and speed', () => {
     const ball = new Ball();
     ball.speed = 800;
