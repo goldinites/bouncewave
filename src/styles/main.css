@@ -40,8 +40,14 @@ body {
   position: relative;
   isolation: isolate;
 
+  /* dvh is the visible height: in Safari, vh ignores the toolbars and the stage overflows.
+     The vh line is a fallback for browsers without dvh. */
   width: min(96vw, calc(80vh * 1.45));
+  width: min(96vw, calc(80dvh * 1.45));
   aspect-ratio: 8 / 5;
+  /* Never squeezed by the flex body: the canvas draws the court scaled to the stage's width,
+     so a stage shorter than 8:5 cuts off the bottom of the court */
+  flex-shrink: 0;
 
   overflow: hidden;
   border: var(--border-width) solid transparent;
@@ -315,6 +321,7 @@ body {
 
   .game__stage {
     width: min(96vw, calc(92vh * 1.6));
+    width: min(96vw, calc(92dvh * 1.6));
   }
 
   .game__buttons {
@@ -329,6 +336,7 @@ body {
 @media (orientation: portrait) and (max-width: 900px) {
   :root {
     --game-width: min(96vw, 50vh);
+    --game-width: min(96vw, 50dvh);
   }
 
   .game {
