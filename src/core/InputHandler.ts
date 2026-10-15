@@ -5,6 +5,8 @@ import { clamp } from '@/utils/math';
 export interface InputHandlerCallbacks {
   onUnlockAudio: () => void;
   onTogglePause: () => void;
+  /** A fresh key press or tap (not a held-key repeat), e.g. to skip a cutscene. */
+  onPress: () => void;
 }
 
 export class InputHandler {
@@ -45,6 +47,10 @@ export class InputHandler {
       }
       this.keys[e.code] = true;
 
+      if (!e.repeat) {
+        this.callbacks.onPress();
+      }
+
       if (e.code === 'KeyP' || e.code === 'Escape') {
         if (e.repeat) return;
 
@@ -75,7 +81,10 @@ export class InputHandler {
     };
 
     window.addEventListener('pointermove', handlePointer);
-    window.addEventListener('pointerdown', handlePointer);
+    window.addEventListener('pointerdown', (e) => {
+      handlePointer(e);
+      this.callbacks.onPress();
+    });
   }
 
   private lastPointerY: number | null = null;

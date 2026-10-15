@@ -1,5 +1,6 @@
 import { COLORS, GAME_HEIGHT, GAME_WIDTH, TWO_PI } from '@/constants/game.constants';
 import {
+  CELEBRATION_HUE_SWING,
   LASER_CONFIGURATIONS,
   MEMPHIS_CLIMAX_SPEEDUP,
   MEMPHIS_DROP_PEAK_TIME,
@@ -19,6 +20,13 @@ export class BackgroundRenderer {
   public backgroundIndex = 0;
   /** Rally climax intensity in [0, 1]. */
   public climax = 0;
+  /** Victory celebration in [0, 1]: lasers sweep through hues, Memphis heats up. */
+  public celebration = 0;
+
+  /** How hard Memphis dances: whichever of climax and celebration is stronger. */
+  private get heat(): number {
+    return Math.max(this.climax, this.celebration);
+  }
 
   // Shapes run on their own clock so speeding them up never makes them jump
   private shapeClock = 0;
@@ -98,7 +106,7 @@ export class BackgroundRenderer {
 
     const dt = this.lastTime === null ? 0 : clamp(time - this.lastTime, 0, 0.1);
     this.lastTime = time;
-    this.shapeClock += dt * (1 + MEMPHIS_CLIMAX_SPEEDUP * this.climax);
+    this.shapeClock += dt * (1 + MEMPHIS_CLIMAX_SPEEDUP * this.heat);
     this.dropAge += dt;
 
     if (this.backgroundIndex === 0) {
@@ -139,7 +147,10 @@ export class BackgroundRenderer {
     // Rotating laser beams
     for (const [x, y, baseAngle, sweep, speed, phase, hue] of LASER_CONFIGURATIONS) {
       const angle = baseAngle + Math.sin(time * speed + phase) * sweep;
-      const beamHue = 225 + ((hue - 185) / 135) * 50;
+      // Victory sweeps each beam through the color wheel, out of phase with its neighbours
+      const celebrationSwing =
+        this.celebration * CELEBRATION_HUE_SWING * Math.sin(time * 3 + phase);
+      const beamHue = 225 + ((hue - 185) / 135) * 50 + celebrationSwing;
 
       ctx.strokeStyle = `hsl(${beamHue}, 85%, 50%)`;
       ctx.globalAlpha = (0.07 + pulse * 0.06) * this.laserIntensity;
@@ -226,7 +237,7 @@ export class BackgroundRenderer {
     [0, 0.55, 1].forEach((stop, i) => {
       bgGradient.addColorStop(
         stop,
-        mixHexColors(MEMPHIS_GRADIENT_COOL[i], MEMPHIS_GRADIENT_HOT[i], this.climax),
+        mixHexColors(MEMPHIS_GRADIENT_COOL[i], MEMPHIS_GRADIENT_HOT[i], this.heat),
       );
     });
     ctx.fillStyle = bgGradient;
@@ -247,8 +258,8 @@ export class BackgroundRenderer {
     // 80s geometric shapes (dance harder and glow brighter during the climax)
     const clock = this.shapeClock;
     const dropPush = this.getDropPush();
-    const pulseScale = 0.25 + 0.35 * this.climax;
-    const alphaBoost = 0.2 * this.climax;
+    const pulseScale = 0.25 + 0.35 * this.heat;
+    const alphaBoost = 0.2 * this.heat;
 
     for (const shape of this.memphisShapes) {
       let x = (((shape.x + shape.vx * clock) % GAME_WIDTH) + GAME_WIDTH) % GAME_WIDTH;

@@ -1,10 +1,17 @@
-import { SFX_FREQUENCIES } from '@/constants/audio.constants';
+import {
+  SFX_ECHO_FEEDBACK,
+  SFX_ECHO_TIME,
+  SFX_ECHO_WET,
+  SFX_FREQUENCIES,
+} from '@/constants/audio.constants';
 import { GameMode } from '@/types/game.types';
 
 export class SoundEffects {
   private audioContextGetter: () => AudioContext | null;
   private isMutedGetter: () => boolean;
   private gameModeGetter: () => GameMode;
+  private echoInput: AudioNode | null = null;
+  private echoContext: AudioContext | null = null;
 
   constructor(
     getAudioContext: () => AudioContext | null,
@@ -73,12 +80,139 @@ export class SoundEffects {
     this.beep(SFX_FREQUENCIES.SCORE, 0.35, 'sawtooth', 0.07, 0.3);
   }
 
-  public playGameOver(): void {
-    SFX_FREQUENCIES.GAME_OVER_CHIME.forEach((freq, index) => {
-      setTimeout(() => {
-        this.beep(freq, 0.18, 'square', 0.06, 0, true);
-      }, index * 110);
-    });
+  /** Victory sting: rising chime into a sustained major chord with an echo tail. */
+  public playVictory(): void {
+    const ac = this.getUnmutedContext();
+    if (!ac) return;
+
+    try {
+      const now = ac.currentTime;
+      const echo = this.getEchoInput(ac);
+
+      SFX_FREQUENCIES.GAME_OVER_CHIME.forEach((freq, index) => {
+        this.tone(ac, freq, now + index * 0.07, 0.18, 'square', 0.05, 0.005, echo);
+      });
+
+      const chordStart = now + 0.3;
+      SFX_FREQUENCIES.VICTORY_CHORD.forEach((freq, index) => {
+        const isRoot = index === 0;
+        this.tone(
+          ac,
+          freq,
+          chordStart,
+          1.9,
+          isRoot ? 'sine' : 'triangle',
+          isRoot ? 0.08 : 0.05,
+          0.02,
+          echo,
+        );
+        if (!isRoot) {
+          // Slightly detuned saw layer for a synth-brass shimmer
+          this.tone(ac, freq * 1.004, chordStart, 1.6, 'sawtooth', 0.012, 0.04, echo);
+        }
+      });
+    } catch {
+      // Audio playback fails silently if browser policy blocks it
+    }
+  }
+
+  /** Defeat: a falling minor line whose last note droops like a dying tape. */
+  public playDefeat(): void {
+    const ac = this.getUnmutedContext();
+    if (!ac) return;
+
+    try {
+      const now = ac.currentTime;
+      const line = SFX_FREQUENCIES.DEFEAT_LINE;
+
+      line.forEach((freq, index) => {
+        const isLast = index === line.length - 1;
+        const start = now + index * 0.17;
+        this.tone(
+          ac,
+          freq,
+          start,
+          isLast ? 0.9 : 0.26,
+          'sawtooth',
+          0.05,
+          0.01,
+          null,
+          isLast ? 0.55 : 0.97,
+        );
+      });
+    } catch {
+      // Audio playback fails silently if browser policy blocks it
+    }
+  }
+
+  public playFireworkPop(): void {
+    const { FIREWORK_POP_MIN: min, FIREWORK_POP_MAX: max } = SFX_FREQUENCIES;
+    this.beep(min + Math.random() * (max - min), 0.07, 'triangle', 0.045, 0.45, true);
+  }
+
+  private getUnmutedContext(): AudioContext | null {
+    const ac = this.audioContextGetter();
+    return ac && !this.isMutedGetter() ? ac : null;
+  }
+
+  /** A single enveloped note; `slide` < 1 bends the pitch down over its length. */
+  private tone(
+    ac: AudioContext,
+    frequency: number,
+    start: number,
+    duration: number,
+    type: OscillatorType,
+    volume: number,
+    attack: number,
+    echo: AudioNode | null,
+    slide = 1,
+  ): void {
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, start);
+    if (slide !== 1) {
+      osc.frequency.exponentialRampToValueAtTime(frequency * slide, start + duration);
+    }
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    if (echo) gain.connect(echo);
+
+    osc.start(start);
+    osc.stop(start + duration + 0.05);
+  }
+
+  /** Lazily built feedback echo shared by stings, so they ring out instead of cutting off. */
+  private getEchoInput(ac: AudioContext): AudioNode {
+    if (this.echoInput && this.echoContext === ac) return this.echoInput;
+
+    const input = ac.createGain();
+    const delay = ac.createDelay(1);
+    const feedback = ac.createGain();
+    const tone = ac.createBiquadFilter();
+    const wet = ac.createGain();
+
+    delay.delayTime.value = SFX_ECHO_TIME;
+    feedback.gain.value = SFX_ECHO_FEEDBACK;
+    tone.frequency.value = 3000;
+    wet.gain.value = SFX_ECHO_WET;
+
+    input.connect(delay);
+    delay.connect(tone);
+    tone.connect(feedback);
+    feedback.connect(delay);
+    tone.connect(wet);
+    wet.connect(ac.destination);
+
+    this.echoInput = input;
+    this.echoContext = ac;
+    return input;
   }
 
   public playSettingsClick(): void {

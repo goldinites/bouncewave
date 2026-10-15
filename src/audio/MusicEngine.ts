@@ -5,7 +5,9 @@ import {
   CLIMAX_LAYER_FADE,
   DRAMA_FILTER_MAX_FREQ,
   DRAMA_FILTER_MIN_FREQ,
+  MUSIC_DUCK_LEVEL,
   MUSIC_TRACKS,
+  TAPE_STOP_DURATION,
 } from '@/constants/audio.constants';
 import { DifficultyConfig } from '@/types/difficulty.types';
 import { GameState } from '@/types/game.types';
@@ -33,8 +35,11 @@ export class MusicEngine {
   private masterGainNode: GainNode | null = null;
   private analyserNode: AnalyserNode | null = null;
   private dramaFilterNode: BiquadFilterNode | null = null;
+  private tapeDelayNode: DelayNode | null = null;
+  private duckGainNode: GainNode | null = null;
 
   private intensity = 0.3;
+  private isTapeStopped = false;
   private dramaLevel = 0;
   private isClimax = false;
   private climaxMix = 0;
@@ -77,11 +82,16 @@ export class MusicEngine {
     // Audio graph wiring:
     // aux -> bus & delay
     // delay -> feedback -> delay -> bus
-    // bus -> filter -> compressor -> dramaFilter -> masterGain -> destination
-    // dramaFilter -> analyser
-    // (dramaFilter is separate so match-point muffling never fights the scheduler's filter)
+    // bus -> filter -> compressor -> dramaFilter -> tapeDelay -> duckGain -> masterGain -> destination
+    // duckGain -> analyser
+    // (dramaFilter is separate so match-point muffling never fights the scheduler's filter;
+    //  tapeDelay sits at 0 ms until a tape stop sweeps it to bend the pitch down;
+    //  duckGain dips the music under end-of-match stings, independent of the mute gain)
     this.dramaFilterNode = this.ac.createBiquadFilter();
     this.dramaFilterNode.frequency.value = DRAMA_FILTER_MAX_FREQ;
+    this.tapeDelayNode = this.ac.createDelay(1);
+    this.tapeDelayNode.delayTime.value = 0;
+    this.duckGainNode = this.ac.createGain();
 
     this.auxNode.connect(this.busNode);
     this.auxNode.connect(this.delayNode);
@@ -91,12 +101,14 @@ export class MusicEngine {
     this.busNode.connect(this.filterNode);
     this.filterNode.connect(compressor);
     compressor.connect(this.dramaFilterNode);
-    this.dramaFilterNode.connect(this.masterGainNode);
+    this.dramaFilterNode.connect(this.tapeDelayNode);
+    this.tapeDelayNode.connect(this.duckGainNode);
+    this.duckGainNode.connect(this.masterGainNode);
 
     this.analyserNode = this.ac.createAnalyser();
     this.analyserNode.fftSize = 256;
     this.analyserNode.smoothingTimeConstant = 0.75;
-    this.dramaFilterNode.connect(this.analyserNode);
+    this.duckGainNode.connect(this.analyserNode);
 
     this.masterGainNode.connect(this.ac.destination);
 
@@ -125,6 +137,71 @@ export class MusicEngine {
       this.isDropPending = false;
     }
     this.isClimax = active;
+  }
+
+  /** Dip the music so the victory sting sits on top; stays down until `recover`. */
+  public duck(): void {
+    if (!this.ac || !this.duckGainNode) return;
+    const gain = this.duckGainNode.gain;
+    const now = this.ac.currentTime;
+
+    gain.cancelScheduledValues(now);
+    gain.setValueAtTime(gain.value, now);
+    gain.linearRampToValueAtTime(MUSIC_DUCK_LEVEL, now + 0.08);
+  }
+
+  /**
+   * Tape stop for a defeat: the delay time sweeps up quadratically, which bends the pitch
+   * from normal down to zero (Doppler), while the level fades out. The sequencer halts
+   * until `recover`.
+   */
+  public tapeStop(duration = TAPE_STOP_DURATION): void {
+    if (!this.ac || !this.tapeDelayNode || !this.duckGainNode) return;
+    const now = this.ac.currentTime;
+
+    // d(t) = (T/2)·(t/T)² → pitch factor 1 − d'(t) falls linearly from 1 to 0
+    const steps = 32;
+    const delayCurve = new Float32Array(steps);
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      delayCurve[i] = (duration / 2) * t * t;
+    }
+
+    try {
+      const delay = this.tapeDelayNode.delayTime;
+      delay.cancelScheduledValues(now);
+      delay.setValueCurveAtTime(delayCurve, now, duration);
+
+      const gain = this.duckGainNode.gain;
+      gain.cancelScheduledValues(now);
+      gain.setValueCurveAtTime(
+        new Float32Array([gain.value, gain.value, 0.7, 0.3, 0]),
+        now,
+        duration,
+      );
+
+      this.isTapeStopped = true;
+    } catch {
+      // Overlapping automation is rejected by some browsers; skip the effect rather than break audio
+    }
+  }
+
+  /** Undo `duck` / `tapeStop` and resume the sequencer. */
+  public recover(): void {
+    if (!this.ac || !this.tapeDelayNode || !this.duckGainNode) return;
+    const now = this.ac.currentTime;
+
+    const delay = this.tapeDelayNode.delayTime;
+    delay.cancelScheduledValues(now);
+    delay.setValueAtTime(0, now);
+
+    // After a tape stop the level is at 0, so the delay jump above is inaudible
+    const gain = this.duckGainNode.gain;
+    gain.cancelScheduledValues(now);
+    gain.setValueAtTime(gain.value, now);
+    gain.linearRampToValueAtTime(1, now + 0.6);
+
+    this.isTapeStopped = false;
   }
 
   public newSong(): void {
@@ -385,8 +462,10 @@ export class MusicEngine {
       this.ac.state !== 'running' ||
       !this.filterNode ||
       !this.masterGainNode ||
-      !this.delayNode
+      !this.delayNode ||
+      this.isTapeStopped
     ) {
+      // During a tape stop no new notes are scheduled; the clock catches up on recover
       return;
     }
 

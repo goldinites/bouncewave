@@ -15,6 +15,13 @@ import {
 import {
   CLIMAX_EMBER_COLORS,
   CLIMAX_EMBER_RATE,
+  FINAL_SEQUENCE_LOSS_DURATION,
+  FINAL_SEQUENCE_SKIP_AFTER,
+  FINAL_SEQUENCE_WIN_DURATION,
+  FIREWORK_FLASH,
+  FIREWORK_PARTICLES,
+  FIREWORK_SHAKE,
+  FIREWORK_SPEED,
   LOSS_DURATION,
   PARTICLE_SCORE_BURST_COUNT,
   PARTICLE_SCORE_BURST_SPEED,
@@ -39,6 +46,7 @@ import { InputHandler } from '@/core/InputHandler';
 import { MatchPointDrama } from '@/core/MatchPointDrama';
 import { RallyClimax } from '@/core/RallyClimax';
 import { Physics } from '@/core/Physics';
+import { VictoryFireworks } from '@/core/VictoryFireworks';
 import { FpsMeter } from '@/debug/FpsMeter';
 
 export class Game {
@@ -65,7 +73,10 @@ export class Game {
   private isRunning = false;
 
   private isFinalSequence = false;
-  private finalSequenceTimer: number | null = null;
+  private finalWinnerIndex: number | null = null;
+  private finalElapsed = 0;
+  private finalDuration = 0;
+  private fireworks: VictoryFireworks | null = null;
 
   private readonly fpsMeter = new FpsMeter();
   private readonly drama = new MatchPointDrama();
@@ -91,6 +102,7 @@ export class Game {
     this.inputHandler = new InputHandler(canvas, {
       onUnlockAudio: () => this.unlockAudio(),
       onTogglePause: () => this.togglePause(),
+      onPress: () => this.skipFinalSequence(),
     });
 
     this.particleSystem = new ParticleSystem();
@@ -273,36 +285,100 @@ export class Game {
     ]);
   }
 
+  /**
+   * End-of-match cutscene. Play is frozen (paddles, ball, rules) but the canvas stays live:
+   * particles, flashes, background and the neon score sign keep animating until the menu.
+   */
   private beginFinalSequence(winnerIndex: number): void {
     if (this.isFinalSequence) return;
 
     this.isFinalSequence = true;
+    this.finalWinnerIndex = winnerIndex;
+    this.finalElapsed = 0;
+    this.resetDrama();
 
     const playerWon = winnerIndex === 0;
+    this.finalDuration = playerWon ? FINAL_SEQUENCE_WIN_DURATION : FINAL_SEQUENCE_LOSS_DURATION;
 
     if (playerWon) {
       this.renderer.triggerVictoryEffect(VICTORY_DURATION);
-
+      this.renderer.celebrate();
       this.renderer.addFlash(0.9);
       this.renderer.addShake(12);
+
+      // The winning ball went into the right-hand goal
+      this.fireworks = new VictoryFireworks(1, this.ball.y, [
+        this.paddles[0].color,
+        COLORS.WHITE,
+        COLORS.YELLOW,
+      ]);
+
+      this.audio.sfx.playVictory();
+      this.audio.music.duck();
     } else {
       this.renderer.triggerCrtGlitch(LOSS_DURATION);
       this.renderer.addShake(18);
+
+      this.audio.sfx.playDefeat();
+      this.audio.music.tapeStop();
     }
 
-    this.audio.sfx.playGameOver();
+    this.renderer.showFinalScore({
+      scores: [this.paddles[0].score, this.paddles[1].score],
+      label: this.i18n.t(playerWon ? 'win' : 'lose'),
+      color: this.paddles[winnerIndex].color,
+      isWin: playerWon,
+    });
+  }
 
-    this.finalSequenceTimer = window.setTimeout(
-      () => {
-        this.finalSequenceTimer = null;
-        this.isFinalSequence = false;
-        this.handleGameOver(winnerIndex);
-      },
-      playerWon ? VICTORY_DURATION : LOSS_DURATION,
-    );
+  private updateFinalSequence(realDt: number): void {
+    this.finalElapsed += realDt;
+    this.gameTime += realDt;
+
+    for (const shot of this.fireworks?.update(realDt) ?? []) {
+      this.particleSystem.burst(shot.x, shot.y, shot.color, FIREWORK_PARTICLES, FIREWORK_SPEED);
+      this.particleSystem.shockwave(shot.x, shot.y, shot.color, SCORE_SHOCKWAVE_EXPANSION_SPEED);
+      this.renderer.addFlash(FIREWORK_FLASH);
+      this.renderer.addShake(FIREWORK_SHAKE);
+      this.audio.sfx.playFireworkPop();
+    }
+
+    // Paddles stay put but keep glowing and sparking
+    this.paddles.forEach((p) => p.update(realDt, this.particleSystem, 0));
+    this.renderer.update(realDt, this.gameState, this.serveTime);
+    this.particleSystem.update(realDt);
+
+    if (this.finalElapsed >= this.finalDuration) {
+      this.finishFinalSequence();
+    }
+  }
+
+  /** Tap or key press skips the rest of the cutscene once the key moment has played. */
+  private skipFinalSequence(): void {
+    if (this.isFinalSequence && this.finalElapsed >= FINAL_SEQUENCE_SKIP_AFTER) {
+      this.finishFinalSequence();
+    }
+  }
+
+  private finishFinalSequence(): void {
+    if (!this.isFinalSequence || this.finalWinnerIndex === null) return;
+
+    const winnerIndex = this.finalWinnerIndex;
+    this.isFinalSequence = false;
+    this.finalWinnerIndex = null;
+    this.fireworks = null;
+
+    this.renderer.hideFinalScore();
+    this.audio.music.recover();
+    this.handleGameOver(winnerIndex);
   }
 
   private update(realDt: number): void {
+    if (this.isFinalSequence) {
+      this.updateFinalSequence(realDt);
+      return;
+    }
+
     const isMatchActive = this.gameMode === GameMode.PLAYER_VS_AI && this.gameState === 'play';
     this.drama.update(realDt, isMatchActive, this.ball, this.paddles);
     this.audio.music.setDramaLevel(this.drama.level);
@@ -384,25 +460,23 @@ export class Game {
     const dt = Math.min(0.033, (timestamp - this.lastTimestamp) / 1000);
     this.lastTimestamp = timestamp;
 
-    if (!this.isFinalSequence) {
-      if (this.gameState !== 'paused') {
-        this.update(dt);
-      }
-
-      this.renderer.render(
-        this.gameState,
-        this.gameMode,
-        this.paddles,
-        this.ball,
-        this.particleSystem,
-        this.audio.music.getAnalyser(),
-        this.gameTime,
-        this.serveTime,
-        this.rally,
-        this.i18n.t('ready'),
-        this.inputHandler.isRotated,
-      );
+    if (this.gameState !== 'paused') {
+      this.update(dt);
     }
+
+    this.renderer.render(
+      this.gameState,
+      this.gameMode,
+      this.paddles,
+      this.ball,
+      this.particleSystem,
+      this.audio.music.getAnalyser(),
+      this.gameTime,
+      this.serveTime,
+      this.rally,
+      this.i18n.t('ready'),
+      this.inputHandler.isRotated,
+    );
 
     requestAnimationFrame((t) => this.gameLoop(t));
   }
@@ -412,10 +486,5 @@ export class Game {
     this.renderer.dispose();
     this.audio.music.dispose();
     this.fpsMeter.dispose();
-
-    if (this.finalSequenceTimer !== null) {
-      window.clearTimeout(this.finalSequenceTimer);
-      this.finalSequenceTimer = null;
-    }
   }
 }

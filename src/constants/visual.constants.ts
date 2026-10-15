@@ -49,8 +49,32 @@ export const MEMPHIS_CLIMAX_SPEEDUP = 2; // shapes move/spin up to (1 + this)× 
 export const MEMPHIS_DROP_PUSH = 60; // px the drop shockwave throws shapes outward
 export const MEMPHIS_DROP_PEAK_TIME = 0.18; // s until the push peaks, then it eases back
 
+// Durations of the CSS stage effects (ms)
 export const VICTORY_DURATION = 900;
 export const LOSS_DURATION = 700;
+
+// Final sequence after the match point (seconds); the canvas stays live throughout
+export const FINAL_SEQUENCE_WIN_DURATION = 2.4;
+export const FINAL_SEQUENCE_LOSS_DURATION = 1.9;
+export const FINAL_SEQUENCE_SKIP_AFTER = 0.6; // tap/key can skip once this has passed
+
+// Victory fireworks, launched from the goal and walking toward center court
+export const FIREWORK_SHOTS = 6;
+export const FIREWORK_INTERVAL = 0.22;
+export const FIREWORK_PARTICLES = 40;
+export const FIREWORK_SPEED = 340;
+export const FIREWORK_FLASH = 0.25;
+export const FIREWORK_SHAKE = 4;
+
+// Celebration on the backgrounds: lasers sweep through hues, Memphis heats up
+export const CELEBRATION_DECAY = 0.45; // 1/s, linear
+export const CELEBRATION_HUE_SWING = 180; // degrees
+export const CELEBRATION_LASER_SURGE = 1.0;
+
+// Neon final-score sign
+export const FINAL_SIGN_DELAY = 0.3; // s before the tubes start to ignite
+export const FINAL_SIGN_IGNITE = 0.55; // s of ignition flicker before it burns steadily
+export const FINAL_SIGN_UNLIT_ALPHA = 0.1; // dark tubes stay faintly visible
 
 export const MEMPHIS_SHAPE_COUNT = 24;
 

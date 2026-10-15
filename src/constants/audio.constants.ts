@@ -49,7 +49,20 @@ export const SFX_FREQUENCIES = {
   SCORE: 300,
   SETTINGS_CLICK: 660,
   GAME_OVER_CHIME: [523, 659, 784, 1047],
+  VICTORY_CHORD: [261.63, 523.25, 659.25, 783.99, 1046.5], // C major, root doubled below
+  DEFEAT_LINE: [440, 349.23, 293.66, 220], // A4 F4 D4 A3, falling minor
+  FIREWORK_POP_MIN: 600,
+  FIREWORK_POP_MAX: 950,
 } as const;
+
+// Shared SFX echo used by the victory sting
+export const SFX_ECHO_TIME = 0.28;
+export const SFX_ECHO_FEEDBACK = 0.35;
+export const SFX_ECHO_WET = 0.5;
+
+// Music reactions to the end of a match
+export const MUSIC_DUCK_LEVEL = 0.25; // music level under the victory sting
+export const TAPE_STOP_DURATION = 1.1; // s for the music to grind to a halt on defeat
 
 // Low-pass cutoff of the music bus at full match-point drama (fully open at level 0)
 export const DRAMA_FILTER_MIN_FREQ = 550;

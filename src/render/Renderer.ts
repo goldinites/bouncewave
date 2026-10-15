@@ -1,5 +1,7 @@
 import { CSS_CLASSES, GAME_HEIGHT, GAME_WIDTH } from '@/constants/game.constants';
 import {
+  CELEBRATION_DECAY,
+  CELEBRATION_LASER_SURGE,
   LOSS_DURATION,
   SCREEN_FLASH_DECAY,
   SCREEN_SHAKE_DECAY,
@@ -18,6 +20,7 @@ import { GameMode, GameState } from '@/types/game.types';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
+import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
 
 // Lightweight scene dimming for menu and pause overlays
@@ -40,6 +43,9 @@ export class Renderer {
   public climax = 0;
   private laserSurge = 0;
   private vignetteGradient: CanvasGradient;
+
+  private finalSign: FinalScoreSign | null = null;
+  private finalSignAge = 0;
 
   private menuDim = MENU_DIM_ALPHA;
   private lastRenderTime = performance.now();
@@ -133,10 +139,31 @@ export class Renderer {
     this.addShake(CLIMAX_SHAKE);
   }
 
+  /** Victory: lasers flare and sweep through hues, Memphis shapes burst outward and heat up. */
+  public celebrate(): void {
+    this.laserSurge = CELEBRATION_LASER_SURGE;
+    this.background.celebration = 1;
+    this.background.triggerDrop();
+  }
+
+  public showFinalScore(sign: FinalScoreSign): void {
+    this.finalSign = sign;
+    this.finalSignAge = 0;
+  }
+
+  public hideFinalScore(): void {
+    this.finalSign = null;
+    this.background.celebration = 0;
+  }
+
   public update(dt: number, gameState: GameState, serveTime: number): void {
     this.laserSurge *= Math.exp(-dt * CLIMAX_LASER_SURGE_DECAY);
+    this.finalSignAge += dt;
 
-    const playLaserIntensity = 0.12 + 0.88 * this.climax + this.laserSurge;
+    const celebration = this.background.celebration;
+    this.background.celebration = Math.max(0, celebration - dt * CELEBRATION_DECAY);
+
+    const playLaserIntensity = 0.12 + 0.88 * Math.max(this.climax, celebration) + this.laserSurge;
     const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : playLaserIntensity;
 
     this.background.laserIntensity +=
@@ -191,8 +218,8 @@ export class Renderer {
     // Court boundaries
     CourtRenderer.render(ctx);
 
-    // HUD
-    if (gameMode > 0) {
+    // HUD (the final-score sign takes its place at the end of a match)
+    if (gameMode > 0 && !this.finalSign) {
       HudRenderer.render(ctx, paddles, serveTime, readyText, gameTime, isRotated);
     }
 
@@ -206,6 +233,10 @@ export class Renderer {
     EntityRenderer.renderParticles(ctx, particleSystem.particles);
 
     EntityRenderer.renderShockwaves(ctx, particleSystem.rings);
+
+    if (this.finalSign) {
+      FinalScoreRenderer.render(ctx, this.finalSign, this.finalSignAge, isRotated);
+    }
 
     ctx.restore();
 
