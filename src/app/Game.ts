@@ -1,4 +1,5 @@
 import { AudioEngine } from '@/audio/AudioEngine';
+import { MusicState } from '@/audio/music/intensity';
 import { DIFFICULTY_CONFIGS } from '@/constants/difficulty.constants';
 import { COLORS, GAME_WIDTH, PADDLE_OFFSET_X, PADDLE_WIDTH } from '@/constants/game.constants';
 import { EffectsDirector } from '@/fx/EffectsDirector';
@@ -52,15 +53,10 @@ export class Game {
       new Paddle(1, GAME_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, COLORS.PINK),
     ];
 
-    this.audio = new AudioEngine(() => this.settings.soundMuted, {
-      getGameState: () => this.flow.gameState,
-      getServeTime: () => this.flow.serveTime,
-      getBallSpeed: () => this.ball.speed,
-      getRally: () => this.flow.rally,
-      getScores: () => [this.paddles[0].score, this.paddles[1].score],
-      getDifficultyConfig: () => DIFFICULTY_CONFIGS[this.settings.difficulty],
-      getIsMusicMuted: () => this.settings.musicMuted,
-    });
+    this.audio = new AudioEngine(
+      () => this.settings.soundMuted,
+      () => this.flow.gameState === 'play',
+    );
 
     this.renderer = new Renderer(canvas);
     this.uiManager = new UIManager(this.i18n);
@@ -188,6 +184,9 @@ export class Game {
       this.effects.afterSimulation(dt, this.flow);
     }
 
+    // Music reads this on its own scheduler tick, paused frames included (it muffles in pause)
+    this.audio.music.setState(this.buildMusicState());
+
     const frame = this.buildRenderFrame();
     if (!isPaused) {
       this.renderer.update(realDt, frame);
@@ -195,6 +194,18 @@ export class Game {
     this.renderer.render(frame);
 
     this.animationFrameId = requestAnimationFrame((t) => this.gameLoop(t));
+  }
+
+  private buildMusicState(): MusicState {
+    return {
+      gameState: this.flow.gameState,
+      serveTime: this.flow.serveTime,
+      ballSpeed: this.ball.speed,
+      maxBallSpeed: DIFFICULTY_CONFIGS[this.settings.difficulty].maxSpeed,
+      rally: this.flow.rally,
+      scores: [this.paddles[0].score, this.paddles[1].score],
+      isMuted: this.settings.musicMuted,
+    };
   }
 
   private buildRenderFrame(): RenderFrame {

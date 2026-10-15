@@ -4,7 +4,7 @@ import {
   SFX_ECHO_WET,
   SFX_FREQUENCIES,
 } from '@/constants/audio.constants';
-import { getRallyNote, getWallNote } from '@/audio/harmony';
+import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
 import { Harmony } from '@/types/audio.types';
 import { midiToFrequency } from '@/utils/math';
 

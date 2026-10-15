@@ -67,6 +67,7 @@ export const SFX_ECHO_FEEDBACK = 0.35;
 export const SFX_ECHO_WET = 0.5;
 
 // Music reactions to the end of a match
+export const MUSIC_MASTER_LEVEL = 0.3; // overall music volume when not muted
 export const MUSIC_DUCK_LEVEL = 0.25; // music level under the victory sting
 export const TAPE_STOP_DURATION = 1.1; // s for the music to grind to a halt on defeat
 

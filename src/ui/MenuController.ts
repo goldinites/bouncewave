@@ -1,4 +1,4 @@
-import { SoundEffects } from '@/audio/SoundEffects';
+import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { SettingsStorage } from '@/storage/SettingsStorage';
 import { UserSettings } from '@/types/audio.types';

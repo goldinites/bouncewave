@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getRallyNote, getWallNote } from '@/audio/harmony';
+import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
 import { CHORD_TYPES, MELODY_MAX_NOTE, MUSIC_TRACKS } from '@/constants/audio.constants';
 import { Harmony } from '@/types/audio.types';
 

@@ -1,0 +1,175 @@
+import {
+  DRAMA_FILTER_MAX_FREQ,
+  DRAMA_FILTER_MIN_FREQ,
+  MUSIC_DUCK_LEVEL,
+  MUSIC_MASTER_LEVEL,
+} from '@/constants/audio.constants';
+import { clamp } from '@/utils/math';
+
+const ECHO_FEEDBACK = 0.4;
+const ANALYSER_FFT_SIZE = 256;
+const ANALYSER_SMOOTHING = 0.75;
+
+/**
+ * The music's audio graph and the effects applied to the whole mix.
+ *
+ * ```
+ * aux ─┬─────────────────────────┐
+ *      └─ echo ⇄ feedback ─ echo ─┤
+ *                                 bus → toneFilter → compressor → dramaFilter
+ *   → tapeDelay → duckGain ─┬─ master → destination
+ *                           └─ analyser
+ * ```
+ * - toneFilter follows the game state (muffled in menus and pause), set per step
+ * - dramaFilter muffles on match point; separate so it never fights the tone filter
+ * - tapeDelay sits at 0 ms until a tape stop sweeps it to bend the pitch down
+ * - duckGain dips the music under end-of-match stings, independent of the mute gain
+ */
+export class MusicGraph {
+  public readonly context: AudioContext;
+  /** Dry instruments: drums, bass, pads. */
+  public readonly bus: GainNode;
+  /** Instruments that also feed the echo: leads and arpeggios. */
+  public readonly aux: GainNode;
+  public readonly noiseBuffer: AudioBuffer;
+  public readonly analyser: AnalyserNode;
+
+  private readonly echo: DelayNode;
+  private readonly toneFilter: BiquadFilterNode;
+  private readonly dramaFilter: BiquadFilterNode;
+  private readonly tapeDelay: DelayNode;
+  private readonly duckGain: GainNode;
+  private readonly master: GainNode;
+  private dramaLevel = 0;
+
+  constructor(context: AudioContext) {
+    this.context = context;
+    const ac = context;
+
+    // One second of white noise for percussion (snare, hi-hat, crash)
+    this.noiseBuffer = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    const channelData = this.noiseBuffer.getChannelData(0);
+    for (let i = 0; i < channelData.length; i++) {
+      channelData[i] = Math.random() * 2 - 1;
+    }
+
+    this.bus = ac.createGain();
+    this.aux = ac.createGain();
+    this.echo = ac.createDelay(1);
+    this.toneFilter = ac.createBiquadFilter();
+    this.dramaFilter = ac.createBiquadFilter();
+    this.tapeDelay = ac.createDelay(1);
+    this.duckGain = ac.createGain();
+    this.master = ac.createGain();
+    this.analyser = ac.createAnalyser();
+
+    const feedback = ac.createGain();
+    const compressor = ac.createDynamicsCompressor();
+
+    feedback.gain.value = ECHO_FEEDBACK;
+    this.toneFilter.frequency.value = 2800;
+    this.dramaFilter.frequency.value = DRAMA_FILTER_MAX_FREQ;
+    this.tapeDelay.delayTime.value = 0;
+    this.master.gain.value = 0;
+    this.analyser.fftSize = ANALYSER_FFT_SIZE;
+    this.analyser.smoothingTimeConstant = ANALYSER_SMOOTHING;
+
+    this.aux.connect(this.bus);
+    this.aux.connect(this.echo);
+    this.echo.connect(feedback);
+    feedback.connect(this.echo);
+    this.echo.connect(this.bus);
+    this.bus.connect(this.toneFilter);
+    this.toneFilter.connect(compressor);
+    compressor.connect(this.dramaFilter);
+    this.dramaFilter.connect(this.tapeDelay);
+    this.tapeDelay.connect(this.duckGain);
+    this.duckGain.connect(this.master);
+    this.duckGain.connect(this.analyser);
+    this.master.connect(ac.destination);
+  }
+
+  private get now(): number {
+    return this.context.currentTime;
+  }
+
+  public setMuted(isMuted: boolean): void {
+    this.master.gain.setTargetAtTime(isMuted ? 0 : MUSIC_MASTER_LEVEL, this.now, 0.05);
+  }
+
+  /** Overall brightness of the mix, scheduled to change at `time`. */
+  public setToneFilter(frequency: number, time: number): void {
+    this.toneFilter.frequency.setTargetAtTime(frequency, time, 0.2);
+  }
+
+  /** Echo time for leads, kept in sync with the tempo. */
+  public setEchoTime(seconds: number, time: number): void {
+    this.echo.delayTime.setTargetAtTime(seconds, time, 0.1);
+  }
+
+  /** Muffle the music with a low-pass, level in [0, 1] (0 = fully open). */
+  public setDramaLevel(level: number): void {
+    const clamped = clamp(level, 0, 1);
+    if (Math.abs(clamped - this.dramaLevel) < 0.01) return;
+
+    this.dramaLevel = clamped;
+    // Interpolate in log space so the sweep sounds even
+    const frequency =
+      DRAMA_FILTER_MAX_FREQ * Math.pow(DRAMA_FILTER_MIN_FREQ / DRAMA_FILTER_MAX_FREQ, clamped);
+    this.dramaFilter.frequency.setTargetAtTime(frequency, this.now, 0.03);
+  }
+
+  /** Dip the music so the victory sting sits on top; stays down until `recover`. */
+  public duck(): void {
+    const gain = this.duckGain.gain;
+    gain.cancelScheduledValues(this.now);
+    gain.setValueAtTime(gain.value, this.now);
+    gain.linearRampToValueAtTime(MUSIC_DUCK_LEVEL, this.now + 0.08);
+  }
+
+  /**
+   * Tape stop: the delay time sweeps up quadratically, which bends the pitch from normal
+   * down to zero (Doppler), while the level fades out.
+   * @returns false if the browser rejected the automation (the effect is then skipped)
+   */
+  public tapeStop(duration: number): boolean {
+    // d(t) = (T/2)·(t/T)² → pitch factor 1 − d'(t) falls linearly from 1 to 0
+    const steps = 32;
+    const delayCurve = new Float32Array(steps);
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      delayCurve[i] = (duration / 2) * t * t;
+    }
+
+    try {
+      const delay = this.tapeDelay.delayTime;
+      delay.cancelScheduledValues(this.now);
+      delay.setValueCurveAtTime(delayCurve, this.now, duration);
+
+      const gain = this.duckGain.gain;
+      gain.cancelScheduledValues(this.now);
+      gain.setValueCurveAtTime(
+        new Float32Array([gain.value, gain.value, 0.7, 0.3, 0]),
+        this.now,
+        duration,
+      );
+      return true;
+    } catch {
+      // Overlapping automation is rejected by some browsers; skip the effect rather than break audio
+      return false;
+    }
+  }
+
+  /** Undo `duck` / `tapeStop`. */
+  public recover(): void {
+    const delay = this.tapeDelay.delayTime;
+    delay.cancelScheduledValues(this.now);
+    delay.setValueAtTime(0, this.now);
+
+    // After a tape stop the level is at 0, so the delay jump above is inaudible
+    const gain = this.duckGain.gain;
+    gain.cancelScheduledValues(this.now);
+    gain.setValueAtTime(gain.value, this.now);
+    gain.linearRampToValueAtTime(1, this.now + 0.6);
+  }
+}
