@@ -1,5 +1,6 @@
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MatchPointDrama } from '@/fx/MatchPointDrama';
+import { PaddleEffects } from '@/fx/PaddleEffects';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { RallyClimax } from '@/fx/RallyClimax';
 import { VictoryFireworks } from '@/fx/VictoryFireworks';
@@ -70,13 +71,14 @@ export interface EffectsDirectorDeps {
 }
 
 /**
- * Everything the player sees and hears in response to the match: hit sounds and sparks,
+ * Everything the player sees and hears in response to the match: hit sounds, sparks and glow,
  * screen shake, match-point tension, the rally climax and the end-of-match finale.
  * It reacts to MatchFlow events and never changes the rules or the outcome.
  */
 export class EffectsDirector {
   private readonly drama = new MatchPointDrama();
   private readonly climax = new RallyClimax();
+  private readonly paddleFx = new PaddleEffects();
   private fireworks: VictoryFireworks | null = null;
 
   private readonly renderer: Renderer;
@@ -110,6 +112,11 @@ export class EffectsDirector {
     return this.climax.level;
   }
 
+  /** Hit glow of each paddle in [0, 1]. */
+  public get paddleGlow(): readonly [number, number] {
+    return this.paddleFx.glow;
+  }
+
   /** Runs on the wall clock before the simulation step, which may be slowed by it. */
   public beforeSimulation(realDt: number, flow: MatchFlow): void {
     if (flow.phase === 'finale') return;
@@ -128,7 +135,7 @@ export class EffectsDirector {
   /** Continuous effects after the simulation step, on the same (possibly slowed) clock. */
   public afterSimulation(dt: number, flow: MatchFlow): void {
     const sparkRally = flow.phase === 'finale' ? 0 : flow.rally;
-    this.paddles.forEach((p) => p.emitSparks(dt, this.particles, sparkRally));
+    this.paddleFx.update(dt, this.paddles, this.particles, sparkRally);
 
     if (flow.isBallLive && this.climax.level > 0.05) {
       this.emitClimaxEmbers(dt);
@@ -149,12 +156,14 @@ export class EffectsDirector {
     switch (event.type) {
       case 'matchStart':
         this.renderer.addFlash(FLASH.START);
+        this.paddleFx.reset();
         this.resetTension();
         break;
 
       case 'returnToMenu':
         this.audio.music.newSong();
-        this.renderer.background.nextBackground();
+        this.renderer.nextBackground();
+        this.paddleFx.reset();
         this.resetTension();
         break;
 
@@ -190,7 +199,7 @@ export class EffectsDirector {
 
   private onPaddleHit(hit: Extract<MatchEvent, { type: 'paddleHit' }>): void {
     const paddle = this.paddles[hit.paddleIndex];
-    paddle.glow = 1.0;
+    this.paddleFx.onHit(hit.paddleIndex);
 
     this.renderer.addShake(
       SHAKE.PADDLE_HIT_BASE +

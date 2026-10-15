@@ -71,11 +71,11 @@ describe('Physics.step', () => {
     expect(hit).toMatchObject({ paddleIndex: 0, isPerfect: true, speed: ball.speed });
   });
 
-  it('only moves the ball: paddles, glow and AI aim are left to the caller', () => {
+  it('only moves the ball: the paddles are left as they were', () => {
     const { paddles } = hitLeftPaddleAt(0);
 
-    expect(paddles[0].glow).toBe(0);
-    expect(paddles[1].errorOffset).toBe(0);
+    expect(paddles[0]).toMatchObject({ y: 250, targetY: 250, velocity: 0, score: 0 });
+    expect(paddles[1]).toEqual(makePaddles()[1]);
   });
 
   it('rewards a center hit with a temporary boost and marks it perfect', () => {

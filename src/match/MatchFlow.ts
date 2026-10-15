@@ -80,6 +80,7 @@ export class MatchFlow {
   private finaleElapsed = 0;
   private finaleDuration = 0;
 
+  private readonly ai = new AiController();
   private readonly paddles: [Paddle, Paddle];
   private readonly ball: Ball;
   private readonly input: PlayerInput;
@@ -215,9 +216,9 @@ export class MatchFlow {
     if (this.gameMode === GameMode.PLAYER_VS_AI) {
       this.input.pollPlayerMovement(player, dt);
     } else {
-      AiController.update(player, this.ball, this.gameMode, difficulty, dt);
+      this.ai.update(player, this.ball, this.gameMode, difficulty, dt);
     }
-    AiController.update(cpu, this.ball, this.gameMode, difficulty, dt);
+    this.ai.update(cpu, this.ball, this.gameMode, difficulty, dt);
 
     this.paddles.forEach((p) => p.update(dt));
   }
@@ -230,7 +231,7 @@ export class MatchFlow {
       case 'paddleHit':
         this._rally++;
         // The other paddle now has to read the return
-        AiController.rollAimError(this.paddles[1 - event.paddleIndex], this.gameMode, difficulty);
+        this.ai.rollAimError(this.paddles[1 - event.paddleIndex], this.gameMode, difficulty);
         this.emit({ ...event, rally: this._rally });
         break;
       case 'score':
@@ -286,6 +287,7 @@ export class MatchFlow {
 
   private resetScores(): void {
     this.paddles.forEach((p) => p.resetScore());
+    this.ai.reset();
   }
 
   private get scores(): [number, number] {

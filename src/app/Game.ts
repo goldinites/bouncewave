@@ -223,6 +223,7 @@ export class Game {
       isRotated: this.inputHandler.isRotated,
       vignette: this.effects.tension,
       climax: this.effects.climaxLevel,
+      paddleGlow: this.effects.paddleGlow,
     };
   }
 

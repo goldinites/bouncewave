@@ -15,7 +15,7 @@ describe('AiController', () => {
     ball.y = 400;
     ball.vx = 300; // moving towards paddle 1 (rightwards)
 
-    AiController.update(
+    new AiController().update(
       paddle,
       ball,
       GameMode.PLAYER_VS_AI,
@@ -34,7 +34,7 @@ describe('AiController', () => {
     ball.y = 400;
     ball.vx = -300; // moving away from paddle 1
 
-    AiController.update(
+    new AiController().update(
       paddle,
       ball,
       GameMode.PLAYER_VS_AI,
@@ -50,13 +50,24 @@ describe('AiController', () => {
   it('rolls an aim error within the difficulty, or the wider demo error', () => {
     const paddle = new Paddle(1, 800 - PADDLE.OFFSET_X - PADDLE.WIDTH, '#ff2bd6');
     const hard = DIFFICULTY_CONFIGS[DifficultyLevel.HARD];
+    const ai = new AiController();
 
     for (let i = 0; i < 50; i++) {
-      AiController.rollAimError(paddle, GameMode.PLAYER_VS_AI, hard);
-      expect(Math.abs(paddle.errorOffset)).toBeLessThanOrEqual(hard.error / 2);
+      ai.rollAimError(paddle, GameMode.PLAYER_VS_AI, hard);
+      expect(Math.abs(ai.getAimError(paddle))).toBeLessThanOrEqual(hard.error / 2);
 
-      AiController.rollAimError(paddle, GameMode.DEMO, hard);
-      expect(Math.abs(paddle.errorOffset)).toBeLessThanOrEqual(DEMO_AI.ERROR / 2);
+      ai.rollAimError(paddle, GameMode.DEMO, hard);
+      expect(Math.abs(ai.getAimError(paddle))).toBeLessThanOrEqual(DEMO_AI.ERROR / 2);
     }
+  });
+
+  it('forgets the aim errors on reset', () => {
+    const paddle = new Paddle(1, 800 - PADDLE.OFFSET_X - PADDLE.WIDTH, '#ff2bd6');
+    const ai = new AiController();
+
+    ai.rollAimError(paddle, GameMode.DEMO, DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL]);
+    ai.reset();
+
+    expect(ai.getAimError(paddle)).toBe(0);
   });
 });

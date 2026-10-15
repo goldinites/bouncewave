@@ -1,6 +1,6 @@
 import { COURT } from '@/match/config';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
-import { Background } from '@/render/backgrounds/Background';
+import { Background, BackgroundMood } from '@/render/backgrounds/Background';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
 import { clamp } from '@/shared/math';
@@ -18,13 +18,6 @@ export class BackgroundRenderer {
   private backgroundIndex = Math.floor(Math.random() * this.backgrounds.length);
   private lastTime: number | null = null;
 
-  /** Overall laser brightness, eased by the renderer. */
-  public laserIntensity = 1.0;
-  /** Rally climax intensity in [0, 1]. */
-  public climax = 0;
-  /** Victory celebration in [0, 1]: lasers sweep through hues, Memphis heats up. */
-  public celebration = 0;
-
   /** Switches to the other background (on every return to the menu). */
   public nextBackground(): void {
     this.backgroundIndex = (this.backgroundIndex + 1) % this.backgrounds.length;
@@ -41,25 +34,17 @@ export class BackgroundRenderer {
     time: number,
     shake: number,
     isRotated: boolean,
+    mood: BackgroundMood,
   ): void {
     this.spectrum.update(analyser);
     const pulse = this.spectrum.getPulse(shake);
 
     const dt = this.lastTime === null ? 0 : clamp(time - this.lastTime, 0, 0.1);
     this.lastTime = time;
-    this.memphis.advance(dt, pulse, Math.max(this.climax, this.celebration));
+    this.memphis.advance(dt, pulse, Math.max(mood.climax, mood.celebration));
 
     const background = this.backgrounds[this.backgroundIndex];
-    background.render({
-      ctx,
-      spectrum: this.spectrum,
-      pulse,
-      time,
-      isRotated,
-      laserIntensity: this.laserIntensity,
-      climax: this.climax,
-      celebration: this.celebration,
-    });
+    background.render({ ...mood, ctx, spectrum: this.spectrum, pulse, time, isRotated });
 
     const tint = background === this.laser ? OVERLAY_TINT_ALPHA.laser : OVERLAY_TINT_ALPHA.memphis;
     ctx.fillStyle = `rgba(${OVERLAY_TINT_RGB}, ${tint})`;

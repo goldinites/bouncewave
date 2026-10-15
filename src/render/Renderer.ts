@@ -52,6 +52,8 @@ export interface RenderFrame {
   vignette: number;
   /** Rally climax intensity in [0, 1]: lasers stay lit and the ball burns hotter. */
   climax: number;
+  /** Hit glow of each paddle in [0, 1]. */
+  paddleGlow: readonly [number, number];
 }
 
 export class Renderer {
@@ -60,11 +62,15 @@ export class Renderer {
   private scale = 1;
   private resizeObserver: ResizeObserver;
 
-  public readonly background = new BackgroundRenderer();
+  private readonly background = new BackgroundRenderer();
   private readonly hud = new HudRenderer();
   private screenShake = 0;
   private screenFlash = 0;
   private laserSurge = 0;
+  /** Laser brightness, eased toward a target that depends on what is happening. */
+  private laserIntensity = 1.0;
+  /** Victory celebration in [0, 1]: lasers sweep through hues, Memphis heats up. */
+  private celebration = 0;
   private vignetteGradient: CanvasGradient;
 
   private finalSign: FinalScoreSign | null = null;
@@ -167,8 +173,13 @@ export class Renderer {
   /** Victory: lasers flare and sweep through hues, Memphis shapes burst outward and heat up. */
   public celebrate(): void {
     this.laserSurge = LASERS.CELEBRATION_SURGE;
-    this.background.celebration = 1;
+    this.celebration = 1;
     this.background.triggerDrop();
+  }
+
+  /** Switches to the other background (on every return to the menu). */
+  public nextBackground(): void {
+    this.background.nextBackground();
   }
 
   public showFinalScore(sign: FinalScoreSign): void {
@@ -178,7 +189,7 @@ export class Renderer {
 
   public hideFinalScore(): void {
     this.finalSign = null;
-    this.background.celebration = 0;
+    this.celebration = 0;
   }
 
   /** Advances time-based effects (shake, flash, lasers). Not called while paused. */
@@ -187,18 +198,16 @@ export class Renderer {
     this.laserSurge *= Math.exp(-dt * LASERS.SURGE_DECAY);
     this.finalSignAge += dt;
 
-    const celebration = this.background.celebration;
-    this.background.celebration = Math.max(0, celebration - dt * CELEBRATION_DECAY);
+    this.celebration = Math.max(0, this.celebration - dt * CELEBRATION_DECAY);
 
     // During play the climax lights lasers only part-way so the court stays readable;
     // the victory celebration (no play happening) may go all the way
     const climaxLasers = (LASERS.CLIMAX_MAX - 0.12) * climax;
-    const celebrationLasers = 0.88 * celebration;
+    const celebrationLasers = 0.88 * this.celebration;
     const playLaserIntensity = 0.12 + Math.max(climaxLasers, celebrationLasers) + this.laserSurge;
     const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : playLaserIntensity;
 
-    this.background.laserIntensity +=
-      (targetLaserIntensity - this.background.laserIntensity) * Math.min(1, dt * 2.5);
+    this.laserIntensity += (targetLaserIntensity - this.laserIntensity) * Math.min(1, dt * 2.5);
 
     this.screenShake *= Math.exp(-dt * SHAKE_DECAY);
 
@@ -223,8 +232,11 @@ export class Renderer {
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
 
     // Animated background
-    this.background.climax = frame.climax;
-    this.background.render(ctx, frame.analyser, gameTime, this.screenShake, isRotated);
+    this.background.render(ctx, frame.analyser, gameTime, this.screenShake, isRotated, {
+      laserIntensity: this.laserIntensity,
+      climax: frame.climax,
+      celebration: this.celebration,
+    });
 
     ctx.save();
 
@@ -245,7 +257,7 @@ export class Renderer {
     }
 
     // Paddles
-    paddles.forEach((paddle) => EntityRenderer.renderPaddle(ctx, paddle));
+    paddles.forEach((paddle, i) => EntityRenderer.renderPaddle(ctx, paddle, frame.paddleGlow[i]));
 
     // Ball
     EntityRenderer.renderBall(ctx, ball, frame.rally, gameTime, serveTime, frame.climax);
