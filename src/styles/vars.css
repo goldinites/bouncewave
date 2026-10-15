@@ -4,9 +4,11 @@
 
   --cyan: #19f0ff;
   --pink: #ff2bd6;
+  /* Same hue at 80% saturation: a filled pink button at full neon was too loud */
+  --pink-soft: #eb47cd;
   --purple: #b79bff;
   --yellow: #ffe53b;
-  --green: #00ff00;
+  --green: #39ff88;
   --bg: #0b0320;
   --text: #f4e9ff;
   --white: #ffffff;

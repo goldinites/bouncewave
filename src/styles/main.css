@@ -188,7 +188,7 @@ body {
 }
 
 .game-button--pink {
-  --button-color: var(--pink);
+  --button-color: var(--pink-soft);
 }
 
 .game-button--purple {
