@@ -72,7 +72,7 @@ export interface EffectsDirectorDeps {
 
 /**
  * Everything the player sees and hears in response to the match: hit sounds, sparks and glow,
- * screen shake, match-point tension, the rally climax and the end-of-match finale.
+ * screen shake, deciding-point drama, the rally climax and the end-of-match finale.
  * It reacts to MatchFlow events and never changes the rules or the outcome.
  */
 export class EffectsDirector {
@@ -102,9 +102,19 @@ export class EffectsDirector {
     return this.drama.timeScale;
   }
 
-  /** Match-point tension in [0, 1] (vignette). */
-  public get tension(): number {
-    return this.drama.level;
+  /** Edge darkening in [0, 1] from the deciding-point drama. */
+  public get vignette(): number {
+    return this.drama.vignette;
+  }
+
+  /** Camera zoom on the ball (1 = none) while the deciding ball slows down. */
+  public get cameraZoom(): number {
+    return this.drama.zoom;
+  }
+
+  /** Both sides are one point from winning. */
+  public get isDecidingPoint(): boolean {
+    return MatchPointDrama.isDecidingPoint(this.paddles);
   }
 
   /** Rally climax build-up in [0, 1]. */
@@ -121,7 +131,9 @@ export class EffectsDirector {
   public beforeSimulation(realDt: number, flow: MatchFlow): void {
     if (flow.phase === 'finale') return;
 
-    this.drama.update(realDt, flow.isMatchActive, this.ball, this.paddles);
+    if (this.drama.update(realDt, flow.isMatchActive, this.ball, this.paddles)) {
+      this.audio.sfx.playHeartbeat();
+    }
     this.audio.music.setDramaLevel(this.drama.level);
 
     // Slow build-up while the rally stays hot; the drop lands when it peaks
@@ -274,7 +286,7 @@ export class EffectsDirector {
     });
   }
 
-  /** Drops match-point tension and the rally climax at once, sound included. */
+  /** Drops the deciding-point drama and the rally climax at once, sound included. */
   private resetTension(): void {
     this.drama.reset();
     this.audio.music.setDramaLevel(0);
