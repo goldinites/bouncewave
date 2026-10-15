@@ -233,7 +233,8 @@ export class SoundEffects {
     return input;
   }
 
+  /** UI feedback: settings are only reachable from menus, so it must bypass the gameplay gate. */
   public playSettingsClick(): void {
-    this.beep(SFX_FREQUENCIES.SETTINGS_CLICK, 0.08);
+    this.beep(SFX_FREQUENCIES.SETTINGS_CLICK, 0.08, 'square', 0.06, 0, true);
   }
 }
