@@ -28,4 +28,18 @@ describe('HudRenderer', () => {
     expect(draw(0.11)).toBeCloseTo(1.5); // halfway through the pop: largest
     expect(draw(0.11)).toBeCloseTo(1); // settled
   });
+
+  it('draws Cyrillic in the real weight of Russo One with a tight glow, so it stays sharp', () => {
+    const drawReady = (text: string) => {
+      const { ctx } = fakeContext();
+      new HudRenderer().render(ctx, 0, paddles(), 1, text, 0, false);
+      return { font: ctx.font, glow: ctx.shadowBlur };
+    };
+
+    expect(drawReady('GET READY')).toEqual({
+      font: "700 22px Orbitron, 'Russo One', sans-serif",
+      glow: 6,
+    });
+    expect(drawReady('ГОТОВЬСЬ')).toEqual({ font: "400 22px 'Russo One', sans-serif", glow: 2 });
+  });
 });

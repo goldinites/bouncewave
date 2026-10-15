@@ -4,6 +4,14 @@ import { COLORS } from '@/shared/palette';
 
 const SCORE_POP_DURATION = 0.22; // s for a changed score to swell and settle
 
+// Cyrillic has no Orbitron glyphs and falls back to Russo One, which comes in one weight only:
+// asked for bold, the browser thickens it and the glow then blurs it, so it is drawn as it is
+const CYRILLIC = /[\u0400-\u04ff]/;
+const READY_STYLE = {
+  latin: { font: "700 22px Orbitron, 'Russo One', sans-serif", glow: 6 },
+  cyrillic: { font: "400 22px 'Russo One', sans-serif", glow: 2 },
+} as const;
+
 export class HudRenderer {
   private displayedScores: [number, number] = [-1, -1];
   private scorePop: [number, number] = [0, 0];
@@ -68,10 +76,11 @@ export class HudRenderer {
 
     // "GET READY" indicator
     if (serveTime > 0) {
-      ctx.font = "700 22px Orbitron, 'Russo One', sans-serif";
+      const style = CYRILLIC.test(readyText) ? READY_STYLE.cyrillic : READY_STYLE.latin;
+      ctx.font = style.font;
       ctx.fillStyle = COLORS.WHITE;
       ctx.shadowColor = COLORS.WHITE;
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = style.glow;
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
 
       this.renderText(ctx, readyText, COURT.WIDTH / 2, COURT.HEIGHT / 2 + 8, isRotated);

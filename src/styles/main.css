@@ -22,6 +22,8 @@ body {
 
   color: var(--text);
   font-family: 'Orbitron', 'Russo One', system-ui, sans-serif;
+  /* Russo One (Cyrillic) comes in one weight only; a faux bold of it smears the letters */
+  font-synthesis: none;
 
   touch-action: none;
   overscroll-behavior: none;
@@ -137,7 +139,7 @@ body {
   color: var(--cyan);
   font-size: clamp(10px, 1.9vw, 15px);
   letter-spacing: 0.14em;
-  text-shadow: 0 0 8px var(--cyan);
+  text-shadow: 0 0 calc(var(--text-glow-blur) + 2px) var(--cyan);
 }
 
 .game__subtitle:empty {
@@ -174,7 +176,7 @@ body {
   /* Glow via shadows, not filter: drop-shadow — inside the rotated portrait UI, iOS Safari
      draws a filtered button's layer as a dark box around the whole button column */
   box-shadow: 0 0 6px var(--button-color);
-  text-shadow: 0 0 6px var(--button-color);
+  text-shadow: 0 0 var(--text-glow-blur) var(--button-color);
 
   transition:
     transform 0.15s,
