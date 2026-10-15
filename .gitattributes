@@ -1,0 +1,9 @@
+# Normalize line endings to LF everywhere (matches .prettierrc endOfLine: lf),
+# regardless of the local core.autocrlf setting
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

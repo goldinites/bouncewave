@@ -291,7 +291,6 @@ body {
   animation: catastrophic-scan 700ms steps(1, end) both;
 }
 
-
 @media (pointer: coarse) {
   .game-pause {
     display: block;
@@ -345,8 +344,8 @@ body {
 
   .game__stage::after {
     background:
-            repeating-linear-gradient(to right, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px 4px),
-            radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55));
+      repeating-linear-gradient(to right, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px 4px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55));
   }
 
   .game__ui {
