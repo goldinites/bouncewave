@@ -49,9 +49,12 @@ export class MatchPointDrama {
     return this._level;
   }
 
-  /** Edge darkening in [0, 1]: the tension plus the heartbeat's pulse. */
+  /**
+   * Edge darkening: the tension plus the heartbeat's pulse. Not capped at 1, so the pulse
+   * still shows when the tension is already at its maximum; the renderer limits the opacity.
+   */
   public get vignette(): number {
-    return Math.min(1, this._level + this.beatPulse);
+    return this._level + this.beatPulse;
   }
 
   /** Camera zoom on the ball (1 = none), following the slow motion in and out. */

@@ -50,7 +50,7 @@ export interface RenderFrame {
   rally: number;
   readyText: string;
   isRotated: boolean;
-  /** Edge darkening in [0, 1], driven by the deciding-point drama. */
+  /** Edge darkening from the deciding-point drama: 0 = none, may go above 1 on a heartbeat. */
   vignette: number;
   /** Camera zoom centered on the ball (1 = none). */
   zoom: number;
@@ -303,7 +303,8 @@ export class Renderer {
 
     // Deciding-point vignette
     if (frame.vignette > 0.01) {
-      ctx.globalAlpha = frame.vignette * VIGNETTE.MAX_ALPHA;
+      // Canvas ignores a globalAlpha above 1 instead of clamping it
+      ctx.globalAlpha = Math.min(1, frame.vignette * VIGNETTE.MAX_ALPHA);
       ctx.fillStyle = this.vignetteGradient;
       ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
       ctx.globalAlpha = 1;
