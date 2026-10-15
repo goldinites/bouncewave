@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { HarmonyTimeline } from '@/audio/music/HarmonyTimeline';
 import {
+  followClimax,
   getTargetIntensity,
   INITIAL_MUSIC_STATE,
+  MUSIC_CLIMAX_RELEASE,
   MusicState,
   stepIntensity,
 } from '@/audio/music/intensity';
@@ -57,6 +59,28 @@ describe('music intensity', () => {
 
   it('ignores the climax outside of play', () => {
     expect(stepIntensity(0.3, 0.5, 1, 'menu')).toBe(stepIntensity(0.3, 0.5, 0, 'menu'));
+  });
+});
+
+describe('music climax release', () => {
+  /** Runs the release for `seconds` of music while the game's level stays put. */
+  const release = (from: number, gameLevel: number, seconds: number) => {
+    let level = from;
+    for (let t = 0; t < seconds; t += 0.125) level = followClimax(level, gameLevel, 0.125);
+    return level;
+  };
+
+  it('rises with the game at once, so the build-up and the drop stay in sync', () => {
+    expect(followClimax(0.2, 0.9, 0.125)).toBe(0.9);
+  });
+
+  it('dies away over the release time once the game has dropped its climax', () => {
+    expect(release(1, 0, MUSIC_CLIMAX_RELEASE / 2)).toBeCloseTo(0.5, 1);
+    expect(release(1, 0, MUSIC_CLIMAX_RELEASE + 0.5)).toBe(0);
+  });
+
+  it('never falls below the game, which may still be cooling down', () => {
+    expect(release(1, 0.7, MUSIC_CLIMAX_RELEASE)).toBe(0.7);
   });
 });
 

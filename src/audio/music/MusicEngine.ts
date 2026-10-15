@@ -5,9 +5,11 @@ import {
   getTargetIntensity,
   INITIAL_MUSIC_STATE,
   MusicState,
+  followClimax,
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
+import { getTargetBpm, glideTempo } from '@/audio/music/tempo';
 import { CHORD_TYPES, MUSIC_TRACKS } from '@/audio/music/tracks';
 import { GameState } from '@/match/GameState';
 import { clamp } from '@/shared/math';
@@ -24,7 +26,6 @@ const RESYNC_THRESHOLD = 0.1;
 const RESYNC_DELAY = 0.05;
 
 const STEPS_PER_SONG = 256;
-const TEMPO_INTENSITY_BPM = 8; // full intensity plays this many BPM faster
 const ECHO_STEPS = 3; // lead echo time, in steps
 const TONE_FILTER: Record<GameState, number> = { paused: 450, menu: 2800, play: 16000 };
 
@@ -40,6 +41,11 @@ export class MusicEngine {
 
   private state: MusicState = INITIAL_MUSIC_STATE;
   private intensity = 0.3;
+  /** Current tempo, gliding toward the target; null until the first step sets it. */
+  private bpm: number | null = null;
+  /** The game's climax build-up, as last pushed in. */
+  private gameClimaxLevel = 0;
+  /** The music's own climax level: follows the game's, but dies away more slowly. */
   private climaxLevel = 0;
   private isDropPending = false;
   private isTapeStopped = false;
@@ -75,13 +81,21 @@ export class MusicEngine {
 
   /**
    * Rally climax build-up in [0, 1], already eased by the game: extra layers fade in with it
-   * and intensity rises toward full. The game moves it slowly, so this is the riser.
+   * and intensity rises toward full. The game moves it slowly, so this is the riser. When it
+   * falls, the music lets the climax die away more slowly than the screen (followClimax).
    */
   public setClimaxLevel(level: number): void {
-    this.climaxLevel = clamp(level, 0, 1);
-    if (this.climaxLevel === 0) {
+    this.gameClimaxLevel = clamp(level, 0, 1);
+    if (this.gameClimaxLevel === 0) {
       this.isDropPending = false;
     }
+  }
+
+  /** Cuts the climax at once, with no fade (new match, back to the menu, end of a match). */
+  public resetClimax(): void {
+    this.gameClimaxLevel = 0;
+    this.climaxLevel = 0;
+    this.isDropPending = false;
   }
 
   /** The build-up has peaked: hit the drop on the next step. */
@@ -155,7 +169,10 @@ export class MusicEngine {
       const step = this.currentStep;
       const time = this.nextStepTime;
       const track = this.getTrack(step);
-      const stepDuration = 60 / (track.bpm + TEMPO_INTENSITY_BPM * this.intensity) / 4;
+      const targetBpm = getTargetBpm(track.bpm, this.intensity);
+      const bpm = this.bpm ?? targetBpm;
+      const stepDuration = 60 / bpm / 4;
+      this.bpm = glideTempo(bpm, targetBpm, stepDuration);
       const bar = (step >> 4) & 3;
 
       // Remember chord changes (even while muted) so hits can be tuned to the audible bar
@@ -187,6 +204,7 @@ export class MusicEngine {
         });
       }
 
+      this.climaxLevel = followClimax(this.climaxLevel, this.gameClimaxLevel, stepDuration);
       this.nextStepTime += stepDuration;
       this.currentStep++;
     }
