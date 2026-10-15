@@ -33,6 +33,11 @@ export class InputHandler {
   }
 
   private bindEvents(): void {
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      this.callbacks.onTogglePause();
+    });
+
     window.addEventListener('keydown', (e) => {
       this.callbacks.onUnlockAudio();
       if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
