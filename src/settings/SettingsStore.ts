@@ -1,4 +1,5 @@
-import { SettingsStorage, UserSettings } from '@/settings/SettingsStorage';
+import { SettingsStorage } from '@/settings/SettingsStorage';
+import { SETTINGS, UserSettings } from '@/settings/UserSettings';
 
 /** Where settings are kept between visits. */
 export interface SettingsPersistence {
@@ -30,6 +31,12 @@ export class SettingsStore {
     this.settings = { ...this.settings, ...patch };
     this.persistence.save(this.settings);
     this.listeners.forEach((listener) => listener(this.settings));
+  }
+
+  /** Switches a setting to its next value, as picking it in the menu does. */
+  public cycle<K extends keyof UserSettings>(key: K): void {
+    const next = SETTINGS[key].next(this.settings[key]);
+    this.update({ [key]: next } as Pick<UserSettings, K>);
   }
 
   /** @returns a function that unsubscribes */

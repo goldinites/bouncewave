@@ -35,6 +35,8 @@ const WAVE_POINTS = 64;
 
 /** Laser light show: sweeping beams, a spectrum analyzer and an oscilloscope line. */
 export class LaserBackground implements Background {
+  public readonly overlayTint = 0.15;
+
   public render(frame: BackgroundFrame): void {
     const { ctx, pulse, laserIntensity } = frame;
     const centerX = COURT.WIDTH / 2;

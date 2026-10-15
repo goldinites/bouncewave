@@ -57,6 +57,18 @@ the code it tunes (exported only when a test needs it). Values read by several m
 the owning folder's `config.ts`, grouped into objects such as `PADDLE.WIDTH` or `COURT.HEIGHT`.
 Only domain-free values (the palette, math) go to `shared/`.
 
+**Adding content.**
+
+| To add        | Do this                                                                                                                                                           |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A background  | Implement `Background` in `render/backgrounds/` and list it in `createBackgrounds` (`BackgroundRenderer.ts`)                                                      |
+| A setting     | Add a field to `UserSettings` and an entry to `SETTINGS` (`settings/UserSettings.ts`); list it in `SETTINGS_MENU` (`ui/MenuController.ts`) to show it in the menu |
+| A music track | Add a `TrackConfig` to `MUSIC_TRACKS` (`audio/music/tracks.ts`)                                                                                                   |
+| A difficulty  | Add it to `DifficultyLevel` and `DIFFICULTY_CONFIGS` (`match/difficulty.ts`) and describe it in every dictionary                                                  |
+| A language    | Add it to `Language` and a dictionary to `TRANSLATIONS` (`i18n/translations.ts`)                                                                                  |
+
+The compiler points out anything missing, such as a translation for a new difficulty.
+
 ---
 
 ## 💻 Available Scripts

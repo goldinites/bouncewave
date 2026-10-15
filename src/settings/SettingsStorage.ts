@@ -1,29 +1,9 @@
-import { isLanguage, Language } from '@/i18n/translations';
-import { DifficultyLevel, isDifficultyLevel } from '@/match/difficulty';
+import { getDefaultSettings, SETTING_KEYS, SETTINGS, UserSettings } from '@/settings/UserSettings';
+
 export const LOCAL_STORAGE_KEY = 'neonpong';
 
-export interface UserSettings {
-  difficulty: DifficultyLevel;
-  soundMuted: boolean;
-  musicMuted: boolean;
-  language: Language;
-}
-
-interface StoredData {
-  d?: number;
-  m?: boolean;
-  u?: boolean;
-  l?: string;
-}
-
+/** Saves settings to LocalStorage under the short keys from SETTINGS. */
 export class SettingsStorage {
-  private static readonly DEFAULT_SETTINGS: UserSettings = {
-    difficulty: DifficultyLevel.NORMAL,
-    soundMuted: false,
-    musicMuted: false,
-    language: 'en',
-  };
-
   private static getStorage(): Storage | null {
     if (typeof window !== 'undefined' && window.localStorage) {
       return window.localStorage;
@@ -34,31 +14,26 @@ export class SettingsStorage {
     return null;
   }
 
+  /** Saved settings; each missing or invalid one falls back to its default on its own. */
   public static load(): UserSettings {
+    const settings = getDefaultSettings();
+
     try {
-      const storage = this.getStorage();
-      if (!storage) {
-        return { ...this.DEFAULT_SETTINGS };
+      const raw = this.getStorage()?.getItem(LOCAL_STORAGE_KEY);
+      if (!raw) return settings;
+
+      const stored: unknown = JSON.parse(raw);
+      if (typeof stored !== 'object' || stored === null) return settings;
+
+      for (const key of SETTING_KEYS) {
+        const value = (stored as Record<string, unknown>)[SETTINGS[key].storageKey];
+        if (SETTINGS[key].isValid(value)) {
+          (settings as unknown as Record<string, unknown>)[key] = value;
+        }
       }
-
-      const raw = storage.getItem(LOCAL_STORAGE_KEY);
-      if (!raw) {
-        return { ...this.DEFAULT_SETTINGS };
-      }
-
-      const parsed: StoredData = JSON.parse(raw);
-      const difficulty = isDifficultyLevel(parsed.d) ? parsed.d : this.DEFAULT_SETTINGS.difficulty;
-
-      const language = isLanguage(parsed.l) ? parsed.l : this.DEFAULT_SETTINGS.language;
-
-      return {
-        difficulty,
-        soundMuted: Boolean(parsed.m),
-        musicMuted: Boolean(parsed.u),
-        language,
-      };
+      return settings;
     } catch {
-      return { ...this.DEFAULT_SETTINGS };
+      return getDefaultSettings();
     }
   }
 
@@ -67,12 +42,9 @@ export class SettingsStorage {
       const storage = this.getStorage();
       if (!storage) return;
 
-      const payload: StoredData = {
-        d: settings.difficulty,
-        m: settings.soundMuted,
-        u: settings.musicMuted,
-        l: settings.language,
-      };
+      const payload = Object.fromEntries(
+        SETTING_KEYS.map((key) => [SETTINGS[key].storageKey, settings[key]]),
+      );
       storage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // Ignore write errors (e.g., storage quota exceeded or disabled cookies)

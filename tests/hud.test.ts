@@ -1,15 +1,8 @@
-import { describe, expect, it, Mock, vi } from 'vitest';
+import { describe, expect, it, Mock } from 'vitest';
 import { PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { HudRenderer } from '@/render/HudRenderer';
-
-/** Canvas context stand-in: every method is a spy, every property can be set. */
-const fakeContext = (): Record<string, Mock> => {
-  const target: Record<string | symbol, unknown> = {};
-  return new Proxy(target, {
-    get: (t, key) => (key in t ? t[key] : (t[key] = vi.fn())),
-  }) as unknown as Record<string, Mock>;
-};
+import { fakeContext } from './helpers/fakeContext';
 
 const paddles = (): [Paddle, Paddle] => [
   new Paddle(0, PADDLE.OFFSET_X, '#19f0ff'),
@@ -24,9 +17,9 @@ describe('HudRenderer', () => {
     const hud = new HudRenderer();
     const players = paddles();
     const draw = (dt: number) => {
-      const ctx = fakeContext();
-      hud.render(ctx as unknown as CanvasRenderingContext2D, dt, players, 0, 'GET READY', 0, false);
-      return leftScoreScale(ctx);
+      const { ctx, spies } = fakeContext();
+      hud.render(ctx, dt, players, 0, 'GET READY', 0, false);
+      return leftScoreScale(spies);
     };
 
     expect(draw(0)).toBe(1);
