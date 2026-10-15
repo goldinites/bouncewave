@@ -43,7 +43,7 @@ export const COLORS = {
 
 export const CSS_CLASSES = {
   GAME_UI_HIDDEN: 'game__ui--hidden',
-  GAME_PAUSE_HIDDEN: 'game__pause--hidden',
+  GAME_PAUSE_HIDDEN: 'game-pause--hidden',
   CRT_GLITCH_ACTIVE: 'crt-glitch-active',
   VICTORY_BURST_ACTIVE: 'victory-burst-active',
 } as const;

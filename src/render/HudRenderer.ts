@@ -77,7 +77,7 @@ export class HudRenderer {
       ctx.shadowBlur = 6;
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
 
-      this.renderText(ctx, readyText, GAME_WIDTH / 2, GAME_HEIGHT / 2, isRotated);
+      this.renderText(ctx, readyText, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 8, isRotated);
     }
 
     ctx.restore();
