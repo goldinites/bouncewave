@@ -10,7 +10,7 @@ import {
   DRAMA_SLOWMO_DURATION,
   DRAMA_SLOWMO_SCALE,
 } from '@/constants/visual.constants';
-import { MatchPointDrama } from '@/core/MatchPointDrama';
+import { MatchPointDrama } from '@/fx/MatchPointDrama';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 

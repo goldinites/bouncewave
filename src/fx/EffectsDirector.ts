@@ -27,10 +27,10 @@ import {
   SHOCKWAVE_EXPANSION_SPEED,
   VICTORY_DURATION,
 } from '@/constants/visual.constants';
-import { MatchEvent, MatchFlow } from '@/core/MatchFlow';
-import { MatchPointDrama } from '@/core/MatchPointDrama';
-import { RallyClimax } from '@/core/RallyClimax';
-import { VictoryFireworks } from '@/core/VictoryFireworks';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { MatchPointDrama } from '@/fx/MatchPointDrama';
+import { RallyClimax } from '@/fx/RallyClimax';
+import { VictoryFireworks } from '@/fx/VictoryFireworks';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { ParticleSystem } from '@/entities/ParticleSystem';

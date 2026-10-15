@@ -6,7 +6,7 @@ import {
   FIREWORK_INTERVAL,
   FIREWORK_SHOTS,
 } from '@/constants/visual.constants';
-import { VictoryFireworks } from '@/core/VictoryFireworks';
+import { VictoryFireworks } from '@/fx/VictoryFireworks';
 import { FinalScoreRenderer } from '@/render/FinalScoreRenderer';
 
 const COLORS = ['#19f0ff', '#ffffff', '#ffe53b'];

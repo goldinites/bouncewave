@@ -1,5 +1,5 @@
 import '@/styles/main.css';
-import { Game } from '@/core/Game';
+import { Game } from '@/app/Game';
 
 document.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;

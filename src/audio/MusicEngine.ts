@@ -9,7 +9,7 @@ import {
   MUSIC_TRACKS,
   TAPE_STOP_DURATION,
 } from '@/constants/audio.constants';
-import { getRallyHeat, getSpeedHeat } from '@/core/heat';
+import { getRallyHeat, getSpeedHeat } from '@/entities/heat';
 import { Harmony } from '@/types/audio.types';
 import { DifficultyConfig } from '@/types/difficulty.types';
 import { GameState } from '@/types/game.types';

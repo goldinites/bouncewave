@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { InputHandler } from '@/core/InputHandler';
+import { InputHandler } from '@/input/InputHandler';
 
 const makeHandler = () => {
   const callbacks = { onUnlockAudio: vi.fn(), onTogglePause: vi.fn(), onPress: vi.fn() };

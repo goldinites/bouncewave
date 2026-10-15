@@ -13,7 +13,7 @@ import {
   FINAL_SEQUENCE_SKIP_AFTER,
   FINAL_SEQUENCE_WIN_DURATION,
 } from '@/constants/visual.constants';
-import { MatchEvent, MatchFlow } from '@/core/MatchFlow';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { DifficultyLevel } from '@/types/difficulty.types';

@@ -1,6 +1,6 @@
 import { COLORS, PADDLE_HEIGHT, PADDLE_WIDTH, TWO_PI } from '@/constants/game.constants';
 import { CLIMAX_BALL_HUE } from '@/constants/visual.constants';
-import { getRallyHeat } from '@/core/heat';
+import { getRallyHeat } from '@/entities/heat';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { Particle, ShockwaveRing } from '@/types/game.types';

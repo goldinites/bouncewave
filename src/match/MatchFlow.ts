@@ -11,8 +11,8 @@ import {
   FINAL_SEQUENCE_SKIP_AFTER,
   FINAL_SEQUENCE_WIN_DURATION,
 } from '@/constants/visual.constants';
-import { AiController } from '@/core/AiController';
-import { Physics, PhysicsEvent } from '@/core/Physics';
+import { AiController } from '@/match/AiController';
+import { Physics, PhysicsEvent } from '@/match/Physics';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { DifficultyConfig } from '@/types/difficulty.types';

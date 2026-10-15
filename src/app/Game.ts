@@ -1,9 +1,9 @@
 import { AudioEngine } from '@/audio/AudioEngine';
 import { DIFFICULTY_CONFIGS } from '@/constants/difficulty.constants';
 import { COLORS, GAME_WIDTH, PADDLE_OFFSET_X, PADDLE_WIDTH } from '@/constants/game.constants';
-import { EffectsDirector } from '@/core/EffectsDirector';
-import { InputHandler } from '@/core/InputHandler';
-import { MatchEvent, MatchFlow } from '@/core/MatchFlow';
+import { EffectsDirector } from '@/fx/EffectsDirector';
+import { InputHandler } from '@/input/InputHandler';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { FpsMeter } from '@/debug/FpsMeter';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';

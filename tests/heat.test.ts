@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALL_INITIAL_SPEED, RALLY_HEAT_MAX } from '@/constants/game.constants';
-import { getRallyHeat, getSpeedHeat } from '@/core/heat';
+import { getRallyHeat, getSpeedHeat } from '@/entities/heat';
 
 describe('heat', () => {
   it('rally heat grows linearly and caps at full', () => {

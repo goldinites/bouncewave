@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEMO_AI_ERROR, DIFFICULTY_CONFIGS } from '@/constants/difficulty.constants';
 import { GAME_HEIGHT, PADDLE_OFFSET_X, PADDLE_WIDTH } from '@/constants/game.constants';
-import { AiController } from '@/core/AiController';
+import { AiController } from '@/match/AiController';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { DifficultyLevel } from '@/types/difficulty.types';

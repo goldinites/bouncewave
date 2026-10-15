@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CLIMAX_RALLY } from '@/constants/game.constants';
 import { CLIMAX_FALL_TIME, CLIMAX_RISE_TIME } from '@/constants/visual.constants';
-import { RallyClimax } from '@/core/RallyClimax';
+import { RallyClimax } from '@/fx/RallyClimax';
 
 const STEP = 0.016;
 

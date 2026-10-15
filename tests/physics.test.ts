@@ -13,7 +13,7 @@ import {
   PERFECT_HIT_BOOST,
   PERFECT_HIT_BOOST_DURATION,
 } from '@/constants/game.constants';
-import { Physics, PhysicsEvent } from '@/core/Physics';
+import { Physics, PhysicsEvent } from '@/match/Physics';
 import { Ball } from '@/entities/Ball';
 import { Paddle } from '@/entities/Paddle';
 import { DifficultyLevel } from '@/types/difficulty.types';

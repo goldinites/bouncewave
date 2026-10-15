@@ -5,7 +5,7 @@ import {
   GAME_HEIGHT,
   GAME_WIDTH,
 } from '@/constants/game.constants';
-import { getRallyHeat, getSpeedHeat } from '@/core/heat';
+import { getRallyHeat, getSpeedHeat } from '@/entities/heat';
 import { Point } from '@/types/game.types';
 
 export class Ball {
