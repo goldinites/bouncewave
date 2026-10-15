@@ -51,7 +51,8 @@ export class Paddle {
     this.targetY = clamp(y, minY, maxY);
   }
 
-  public update(dt: number, particleSystem: ParticleSystem, rally: number): void {
+  /** Moves toward the target, tracks speed and fades the hit glow. No visual side effects. */
+  public update(dt: number): void {
     const previousY = this.y;
     this.y += (this.targetY - this.y) * Math.min(1, dt * PADDLE_SMOOTH_FACTOR);
 
@@ -62,11 +63,10 @@ export class Paddle {
     }
 
     this.glow = Math.max(0, this.glow - dt * PADDLE_GLOW_DECAY);
-
-    this.spawnMotionSparks(dt, particleSystem, rally);
   }
 
-  private spawnMotionSparks(dt: number, particleSystem: ParticleSystem, rally: number): void {
+  /** Occasionally sheds a spark; more often while moving fast or deep into a rally. */
+  public emitSparks(dt: number, particleSystem: ParticleSystem, rally: number): void {
     const isMovingFast = Math.abs(this.targetY - this.y) > 8;
     const movementMultiplier = isMovingFast ? 2 : 1;
     const sparkChance = dt * (6 + Math.min(rally, 20) * 1.2) * movementMultiplier;

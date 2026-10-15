@@ -414,7 +414,10 @@ export class Game {
     }
 
     // Paddles stay put but keep glowing and sparking
-    this.paddles.forEach((p) => p.update(realDt, this.particleSystem, 0));
+    this.paddles.forEach((p) => {
+      p.update(realDt);
+      p.emitSparks(realDt, this.particleSystem, 0);
+    });
     this.particleSystem.update(realDt);
 
     if (this.finalElapsed >= this.finalDuration) {
@@ -477,7 +480,10 @@ export class Game {
       AiController.update(this.paddles[1], this.ball, this.gameMode, diffConfig, dt);
 
       // Smooth paddle positions and emit sparks
-      this.paddles.forEach((p) => p.update(dt, this.particleSystem, this.rally));
+      this.paddles.forEach((p) => {
+        p.update(dt);
+        p.emitSparks(dt, this.particleSystem, this.rally);
+      });
 
       // Ball movement
       if (this.serveTime > 0) {
