@@ -4,7 +4,7 @@ import { Paddle } from '@/match/Paddle';
 import { clamp, lerp } from '@/shared/math';
 
 export const DRAMA = {
-  LEVEL: 1, // tension for the whole deciding rally: vignette, muffled music
+  LEVEL: 0.6, // tension for the whole deciding rally: vignette, muffled music
   LEVEL_SMOOTHING: 4, // 1/s
   // Heartbeat through the deciding rally, quickening the longer it lasts
   HEARTBEAT_FIRST: 0.4, // s from the start of the deciding point to the first beat
