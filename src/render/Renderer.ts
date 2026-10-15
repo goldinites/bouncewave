@@ -225,7 +225,7 @@ export class Renderer {
     CourtRenderer.render(ctx);
 
     // HUD (the final-score sign takes its place at the end of a match)
-    if (gameMode > 0 && !this.finalSign) {
+    if (gameMode === GameMode.PLAYER_VS_AI && !this.finalSign) {
       HudRenderer.render(ctx, paddles, serveTime, readyText, gameTime, isRotated);
     }
 

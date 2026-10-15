@@ -11,7 +11,7 @@ export class AudioEngine {
     this.sfx = new SoundEffects(
       () => this.audioContext,
       isSoundMutedGetter,
-      () => (musicStateProvider.getGameState() === 'play' ? 1 : 0),
+      () => musicStateProvider.getGameState() === 'play',
       // Hits are tuned to whatever chord the music is playing right now
       () => this.music.getHarmony(),
     );

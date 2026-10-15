@@ -6,30 +6,33 @@ import {
 } from '@/constants/audio.constants';
 import { getRallyNote, getWallNote } from '@/audio/harmony';
 import { Harmony } from '@/types/audio.types';
-import { GameMode } from '@/types/game.types';
 import { midiToFrequency } from '@/utils/math';
 
 export class SoundEffects {
   private audioContextGetter: () => AudioContext | null;
   private isMutedGetter: () => boolean;
-  private gameModeGetter: () => GameMode;
+  private isGameplayAudibleGetter: () => boolean;
   private harmonyGetter: () => Harmony | null;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
+  /**
+   * @param getIsGameplayAudible whether gameplay sounds should play right now (false behind
+   *   menus and in the attract-mode demo); `force` beeps ignore it
+   */
   constructor(
     getAudioContext: () => AudioContext | null,
     getIsMuted: () => boolean,
-    getGameMode: () => GameMode,
+    getIsGameplayAudible: () => boolean,
     getHarmony: () => Harmony | null = () => null,
   ) {
     this.audioContextGetter = getAudioContext;
     this.isMutedGetter = getIsMuted;
-    this.gameModeGetter = getGameMode;
+    this.isGameplayAudibleGetter = getIsGameplayAudible;
     this.harmonyGetter = getHarmony;
   }
 
-  public beep(
+  private beep(
     frequency: number,
     duration = 0.08,
     type: OscillatorType = 'square',
@@ -38,7 +41,7 @@ export class SoundEffects {
     force = false,
   ): void {
     const ac = this.audioContextGetter();
-    if (!ac || this.isMutedGetter() || (this.gameModeGetter() === GameMode.DEMO && !force)) {
+    if (!ac || this.isMutedGetter() || (!this.isGameplayAudibleGetter() && !force)) {
       return;
     }
 
