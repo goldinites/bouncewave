@@ -81,6 +81,31 @@ describe('SettingsStorage', () => {
     expect(loaded.difficulty).toBe(DifficultyLevel.NORMAL);
   });
 
+  it('keeps the saved format, so settings from older versions still load', () => {
+    SettingsStorage.save({
+      difficulty: DifficultyLevel.HARD,
+      soundMuted: true,
+      musicMuted: false,
+      language: 'ru',
+    });
+    expect(JSON.parse(mockStorage.getItem(LOCAL_STORAGE_KEY)!)).toEqual({
+      d: 2,
+      m: true,
+      u: false,
+      l: 'ru',
+    });
+  });
+
+  it('falls back per setting: one bad value does not reset the others', () => {
+    mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ d: 'x', m: true, l: 'ru' }));
+    expect(SettingsStorage.load()).toEqual({
+      difficulty: DifficultyLevel.NORMAL,
+      soundMuted: true,
+      musicMuted: false,
+      language: 'ru',
+    });
+  });
+
   it('rejects a stored difficulty that is in range but not a level', () => {
     mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ d: 1.5 }));
     expect(SettingsStorage.load().difficulty).toBe(DifficultyLevel.NORMAL);

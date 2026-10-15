@@ -1,9 +1,7 @@
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
-import { nextDifficulty } from '@/match/difficulty';
-import { nextLanguage } from '@/i18n/translations';
-import { UserSettings } from '@/settings/SettingsStorage';
 import { SettingsStore } from '@/settings/SettingsStore';
+import { UserSettings } from '@/settings/UserSettings';
 import { UIManager } from '@/ui/UIManager';
 
 export interface GameMenuActions {
@@ -12,6 +10,30 @@ export interface GameMenuActions {
   onReturnToMainMenu: () => void;
   onUnlockAudio: () => void;
 }
+
+interface SettingsMenuEntry {
+  key: keyof UserSettings;
+  label: (settings: UserSettings, i18n: I18nManager) => string;
+  /** Play the menu click after the change, e.g. to let the player hear sound is back on. */
+  clicks?: boolean;
+}
+
+const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 'on');
+
+/** The settings menu, top to bottom; picking an entry switches its setting to the next value. */
+const SETTINGS_MENU: SettingsMenuEntry[] = [
+  {
+    key: 'difficulty',
+    label: (s, i18n) => `${i18n.t('diff')}: ${i18n.getDifficultyInfo(s.difficulty)[0]}`,
+  },
+  { key: 'musicMuted', label: (s, i18n) => `${i18n.t('music')}: ${onOff(i18n, s.musicMuted)}` },
+  {
+    key: 'soundMuted',
+    label: (s, i18n) => `${i18n.t('sound')}: ${onOff(i18n, s.soundMuted)}`,
+    clicks: true,
+  },
+  { key: 'language', label: (_, i18n) => `${i18n.t('lang')}: ${i18n.t('lang_name')}` },
+];
 
 export class MenuController {
   private uiManager: UIManager;
@@ -102,50 +124,28 @@ export class MenuController {
 
   public showSettingsMenu(onBack: () => void): void {
     const settings = this.settings.current;
-    const currentDiffInfo = this.i18n.getDifficultyInfo(settings.difficulty);
-
-    const difficultyLabel = `${this.i18n.t('diff')}: ${currentDiffInfo[0]}`;
-    const musicLabel = `${this.i18n.t('music')}: ${this.i18n.t(settings.musicMuted ? 'off' : 'on')}`;
-    const soundLabel = `${this.i18n.t('sound')}: ${this.i18n.t(settings.soundMuted ? 'off' : 'on')}`;
-    const languageLabel = `${this.i18n.t('lang')}: ${this.i18n.t('lang_name')}`;
 
     this.uiManager.showMenu(
       this.i18n.t('settings'),
-      currentDiffInfo[1],
+      this.i18n.getDifficultyInfo(settings.difficulty)[1],
       [
-        {
-          label: difficultyLabel,
-          action: () =>
-            this.changeSetting({ difficulty: nextDifficulty(settings.difficulty) }, onBack),
-        },
-        {
-          label: musicLabel,
-          action: () => this.changeSetting({ musicMuted: !settings.musicMuted }, onBack),
-        },
-        {
-          label: soundLabel,
-          action: () => {
-            this.changeSetting({ soundMuted: !settings.soundMuted }, onBack);
-            // Only audible when sound was just switched on
-            this.sfx.playSettingsClick();
-          },
-        },
-        {
-          label: languageLabel,
-          action: () => this.changeSetting({ language: nextLanguage(settings.language) }, onBack),
-        },
-        {
-          label: this.i18n.t('back'),
-          action: onBack,
-        },
+        ...SETTINGS_MENU.map((entry) => ({
+          label: entry.label(settings, this.i18n),
+          action: () => this.changeSetting(entry, onBack),
+        })),
+        { label: this.i18n.t('back'), action: onBack },
       ],
       this.actions.onUnlockAudio,
     );
   }
 
-  /** Applies one change and redraws the settings menu to show it. */
-  private changeSetting(patch: Partial<UserSettings>, onBack: () => void): void {
-    this.settings.update(patch);
+  /** Switches one setting and redraws the settings menu to show it. */
+  private changeSetting(entry: SettingsMenuEntry, onBack: () => void): void {
+    this.settings.cycle(entry.key);
+    if (entry.clicks) {
+      // Only audible when sound is on
+      this.sfx.playSettingsClick();
+    }
     this.showSettingsMenu(onBack);
   }
 }

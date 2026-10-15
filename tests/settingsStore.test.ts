@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DifficultyLevel } from '@/match/difficulty';
-import { UserSettings } from '@/settings/SettingsStorage';
+import { UserSettings } from '@/settings/UserSettings';
 import { SettingsPersistence, SettingsStore } from '@/settings/SettingsStore';
 
 const memory = (initial: UserSettings) => {
@@ -47,5 +47,17 @@ describe('SettingsStore', () => {
     store.update({ soundMuted: true });
 
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('cycles a setting to its next value and saves it', () => {
+    const { persistence, saved } = memory(DEFAULTS);
+    const store = new SettingsStore(persistence);
+
+    store.cycle('difficulty');
+    store.cycle('soundMuted');
+
+    expect(store.current.difficulty).toBe(DifficultyLevel.HARD);
+    expect(store.current.soundMuted).toBe(true);
+    expect(saved).toHaveLength(2);
   });
 });
