@@ -33,11 +33,15 @@ export const VIGNETTE_RGB = '4, 0, 14';
 export const VIGNETTE_MAX_ALPHA = 0.6;
 
 // Rally climax (presentation only)
-export const CLIMAX_LEVEL_SMOOTHING = 2.2; // 1/s, ~1 s to build up and to cool down
-export const CLIMAX_FLASH = 0.45;
-export const CLIMAX_SHAKE = 6;
-export const CLIMAX_LASER_SURGE = 0.5; // extra laser intensity on the drop, fades out
+export const CLIMAX_RISE_TIME = 6; // s of slow build-up before the drop
+export const CLIMAX_FALL_TIME = 3; // s to cool down after the point ends
+export const CLIMAX_FLASH = 0.2; // soft flash on the drop, no screen shake
+export const CLIMAX_LASER_SURGE = 0.2; // extra laser intensity on the drop, fades out
 export const CLIMAX_LASER_SURGE_DECAY = 1.5; // 1/s
+// Laser background during play: lasers only rise to this share at full climax (was 1.0),
+// and the spectrum bars are calmed so the court stays readable
+export const CLIMAX_LASER_MAX = 0.6;
+export const CLIMAX_SPECTRUM_DAMPING = 0.3; // bars lose up to this share of alpha and height
 export const CLIMAX_EMBER_RATE = 70; // embers per second shed by the burning ball
 export const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
 export const CLIMAX_EMBER_COLORS = ['#ffffff', '#ffe53b', '#ff9a3b', '#ff2bd6'];

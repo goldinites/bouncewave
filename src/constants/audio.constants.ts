@@ -74,9 +74,8 @@ export const TAPE_STOP_DURATION = 1.1; // s for the music to grind to a halt on 
 export const DRAMA_FILTER_MIN_FREQ = 550;
 export const DRAMA_FILTER_MAX_FREQ = 20000;
 
-// Rally climax, per sequencer step (~0.13 s): intensity reaches full in ~6 steps,
-// extra layers fade in/out over roughly one bar
-export const CLIMAX_INTENSITY_RAMP = 0.3;
-export const CLIMAX_LAYER_FADE = 0.15;
+// Rally climax: extra layers and intensity follow the slow build-up level from the game;
+// per sequencer step (~0.13 s), how quickly intensity tracks it
+export const CLIMAX_INTENSITY_FOLLOW = 0.1;
 
 export const LOCAL_STORAGE_KEY = 'neonpong';

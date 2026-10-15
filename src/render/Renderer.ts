@@ -8,8 +8,8 @@ import {
   VICTORY_DURATION,
   CLIMAX_FLASH,
   CLIMAX_LASER_SURGE,
+  CLIMAX_LASER_MAX,
   CLIMAX_LASER_SURGE_DECAY,
-  CLIMAX_SHAKE,
   VIGNETTE_MAX_ALPHA,
   VIGNETTE_RGB,
 } from '@/constants/visual.constants';
@@ -130,13 +130,12 @@ export class Renderer {
     this.screenFlash = Math.max(this.screenFlash, amount);
   }
 
-  /** One-shot burst at the start of the climax; lasers swell above full and settle back. */
+  /** Soft accent when the climax peaks: a gentle laser swell and flash, no screen shake. */
   public triggerClimaxSurge(): void {
     // Raises the laser target rather than the value, so the swell eases in
     this.laserSurge = CLIMAX_LASER_SURGE;
     this.background.triggerDrop();
     this.addFlash(CLIMAX_FLASH);
-    this.addShake(CLIMAX_SHAKE);
   }
 
   /** Victory: lasers flare and sweep through hues, Memphis shapes burst outward and heat up. */
@@ -163,7 +162,11 @@ export class Renderer {
     const celebration = this.background.celebration;
     this.background.celebration = Math.max(0, celebration - dt * CELEBRATION_DECAY);
 
-    const playLaserIntensity = 0.12 + 0.88 * Math.max(this.climax, celebration) + this.laserSurge;
+    // During play the climax lights lasers only part-way so the court stays readable;
+    // the victory celebration (no play happening) may go all the way
+    const climaxLasers = (CLIMAX_LASER_MAX - 0.12) * this.climax;
+    const celebrationLasers = 0.88 * celebration;
+    const playLaserIntensity = 0.12 + Math.max(climaxLasers, celebrationLasers) + this.laserSurge;
     const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : playLaserIntensity;
 
     this.background.laserIntensity +=

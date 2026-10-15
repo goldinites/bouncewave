@@ -1,6 +1,7 @@
 import { COLORS, GAME_HEIGHT, GAME_WIDTH, TWO_PI } from '@/constants/game.constants';
 import {
   CELEBRATION_HUE_SWING,
+  CLIMAX_SPECTRUM_DAMPING,
   LASER_CONFIGURATIONS,
   MEMPHIS_CLIMAX_SPEEDUP,
   MEMPHIS_DROP_PEAK_TIME,
@@ -165,16 +166,17 @@ export class BackgroundRenderer {
       ctx.stroke();
     }
 
-    // Spectrum analyzer bars
+    // Spectrum analyzer bars; the climax mix is louder, so calm them down to keep focus on play
+    const spectrumCalm = 1 - CLIMAX_SPECTRUM_DAMPING * this.climax;
     const barCount = 32;
     const barWidth = GAME_WIDTH / barCount;
     const barHeights: number[] = [];
     for (let i = 0; i < barCount; i++) {
-      barHeights.push(Math.round(this.getSpectrumLevel(i, barCount, time) * 14));
+      barHeights.push(Math.round(this.getSpectrumLevel(i, barCount, time) * 14 * spectrumCalm));
     }
 
     // Bottom cyan bars
-    ctx.globalAlpha = 0.5;
+    ctx.globalAlpha = 0.5 * spectrumCalm;
     for (let j = 0; j < 14; j++) {
       ctx.fillStyle = `hsl(${185 + j * 10}, 100%, ${55 + j}%)`;
       for (let i = 0; i < barCount; i++) {
@@ -185,7 +187,7 @@ export class BackgroundRenderer {
     }
 
     // Top pink bars
-    ctx.globalAlpha = 0.25;
+    ctx.globalAlpha = 0.25 * spectrumCalm;
     for (let j = 0; j < 7; j++) {
       ctx.fillStyle = `hsl(${320 - j * 8}, 100%, 60%)`;
       for (let i = 0; i < barCount; i++) {

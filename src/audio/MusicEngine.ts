@@ -1,8 +1,7 @@
 import {
   BASS_PATTERNS,
   CHORD_TYPES,
-  CLIMAX_INTENSITY_RAMP,
-  CLIMAX_LAYER_FADE,
+  CLIMAX_INTENSITY_FOLLOW,
   DRAMA_FILTER_MAX_FREQ,
   DRAMA_FILTER_MIN_FREQ,
   HARMONY_HISTORY,
@@ -44,8 +43,7 @@ export class MusicEngine {
   private isTapeStopped = false;
   private harmonyTimeline: (Harmony & { time: number })[] = [];
   private dramaLevel = 0;
-  private isClimax = false;
-  private climaxMix = 0;
+  private climaxLevel = 0;
   private isDropPending = false;
   private nextStepTime = 0;
   private currentStep = 0;
@@ -131,15 +129,20 @@ export class MusicEngine {
     this.dramaFilterNode.frequency.setTargetAtTime(frequency, this.ac.currentTime, 0.03);
   }
 
-  /** Rally climax: full intensity plus extra layers; switching on fires a one-shot drop. */
-  public setClimax(active: boolean): void {
-    if (active && !this.isClimax) {
-      this.isDropPending = true;
-    }
-    if (!active) {
+  /**
+   * Rally climax build-up in [0, 1], already eased by the game: extra layers fade in with it
+   * and intensity rises toward full. The game moves it slowly, so this is the riser.
+   */
+  public setClimaxLevel(level: number): void {
+    this.climaxLevel = clamp(level, 0, 1);
+    if (this.climaxLevel === 0) {
       this.isDropPending = false;
     }
-    this.isClimax = active;
+  }
+
+  /** The build-up has peaked: hit the drop on the next step. */
+  public triggerDrop(): void {
+    this.isDropPending = true;
   }
 
   /** Dip the music so the victory sting sits on top; stays down until `recover`. */
@@ -425,7 +428,7 @@ export class MusicEngine {
       );
     }
 
-    if (this.climaxMix > 0) {
+    if (this.climaxLevel > 0.01) {
       this.playClimaxLayers(
         time,
         stepInBar,
@@ -433,12 +436,12 @@ export class MusicEngine {
         root,
         triad,
         track.arpeggioPattern,
-        this.climaxMix,
+        this.climaxLevel,
       );
     }
   }
 
-  /** One-shot impact when the climax starts: crash, heavy kick and a long held bass note. */
+  /** One-shot impact when the build-up peaks: crash, heavy kick and a long held bass note. */
   private playDrop(time: number, root: number, stepDuration: number): void {
     if (!this.busNode) return;
     this.playNoise(time, 1.6, 0.22, 2500);
@@ -518,17 +521,14 @@ export class MusicEngine {
         }
       }
 
-      if (this.isClimax && gameState === 'play') {
-        // Much faster than the usual slow build, but still a short ramp rather than a jump
-        this.intensity += (1 - this.intensity) * CLIMAX_INTENSITY_RAMP;
+      if (this.climaxLevel > 0 && gameState === 'play') {
+        // The build-up pulls intensity toward full in step with the (slow) climax level
+        const climaxTarget = targetIntensity + (1 - targetIntensity) * this.climaxLevel;
+        this.intensity += (climaxTarget - this.intensity) * CLIMAX_INTENSITY_FOLLOW;
       } else {
         this.intensity += (targetIntensity - this.intensity) * 0.025;
       }
 
-      // Climax-only layers fade in and out over about a bar instead of switching
-      const climaxTarget = this.isClimax ? 1 : 0;
-      this.climaxMix += (climaxTarget - this.climaxMix) * CLIMAX_LAYER_FADE;
-      if (this.climaxMix < 0.01) this.climaxMix = 0;
       const track = this.getCurrentTrack(this.currentStep);
       const stepDuration = 60 / (track.bpm + 8 * this.intensity) / 4;
 

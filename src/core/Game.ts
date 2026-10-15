@@ -212,7 +212,7 @@ export class Game {
     this.renderer.vignette = 0;
 
     this.climax.reset();
-    this.audio.music.setClimax(false);
+    this.audio.music.setClimaxLevel(0);
     this.renderer.climax = 0;
   }
 
@@ -384,10 +384,12 @@ export class Game {
     this.audio.music.setDramaLevel(this.drama.level);
     this.renderer.vignette = this.drama.level;
 
+    // Slow build-up while the rally stays hot; the drop lands when it peaks
     if (this.climax.update(realDt, isMatchActive, this.rally, this.serveTime)) {
       this.renderer.triggerClimaxSurge();
+      this.audio.music.triggerDrop();
     }
-    this.audio.music.setClimax(this.climax.isActive);
+    this.audio.music.setClimaxLevel(this.climax.level);
     this.renderer.climax = this.climax.level;
 
     // Simulation runs on scaled time; screen effects below keep the wall clock
