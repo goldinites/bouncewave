@@ -8,6 +8,8 @@ import {
   MEMPHIS_DROP_PUSH,
   MEMPHIS_GRADIENT_COOL,
   MEMPHIS_GRADIENT_HOT,
+  MEMPHIS_PULSE_ATTACK,
+  MEMPHIS_PULSE_RELEASE,
   MEMPHIS_SHAPE_COUNT,
 } from '@/constants/visual.constants';
 import { MemphisShape, MemphisShapeKind } from '@/types/game.types';
@@ -33,6 +35,7 @@ export class BackgroundRenderer {
   private shapeClock = 0;
   private lastTime: number | null = null;
   private dropAge = Infinity;
+  private shapePulse = 0;
 
   constructor() {
     this.backgroundIndex = Math.floor(Math.random() * 2);
@@ -110,10 +113,15 @@ export class BackgroundRenderer {
     this.shapeClock += dt * (1 + MEMPHIS_CLIMAX_SPEEDUP * this.heat);
     this.dropAge += dt;
 
+    // Shapes swell with an envelope instead of the raw pulse, so a single loud hit
+    // (the climax drop's full-volume kick) can't make them jump in size in one frame
+    const rate = pulse > this.shapePulse ? MEMPHIS_PULSE_ATTACK : MEMPHIS_PULSE_RELEASE;
+    this.shapePulse += (pulse - this.shapePulse) * Math.min(1, dt * rate);
+
     if (this.backgroundIndex === 0) {
       this.renderLaserBackground(ctx, pulse, time);
     } else {
-      this.renderMemphisBackground(ctx, pulse, time, isRotated);
+      this.renderMemphisBackground(ctx, this.shapePulse, time, isRotated);
     }
 
     // Semi-transparent dark overlay tint

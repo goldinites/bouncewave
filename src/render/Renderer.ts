@@ -130,11 +130,14 @@ export class Renderer {
     this.screenFlash = Math.max(this.screenFlash, amount);
   }
 
-  /** Soft accent when the climax peaks: a gentle laser swell and flash, no screen shake. */
+  /**
+   * Soft accent when the climax peaks: a gentle laser swell and flash, no screen shake.
+   * Memphis shapes are not thrown outward here: the uniform push reads as a zoom of the
+   * whole background mid-rally. That burst is kept for the victory celebration only.
+   */
   public triggerClimaxSurge(): void {
     // Raises the laser target rather than the value, so the swell eases in
     this.laserSurge = CLIMAX_LASER_SURGE;
-    this.background.triggerDrop();
     this.addFlash(CLIMAX_FLASH);
   }
 

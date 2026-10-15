@@ -52,6 +52,10 @@ export const MEMPHIS_GRADIENT_HOT = ['#3d0a45', '#8f1460', '#c2432f'];
 export const MEMPHIS_CLIMAX_SPEEDUP = 2; // shapes move/spin up to (1 + this)× faster
 export const MEMPHIS_DROP_PUSH = 60; // px the drop shockwave throws shapes outward
 export const MEMPHIS_DROP_PEAK_TIME = 0.18; // s until the push peaks, then it eases back
+// Envelope on the bass pulse that sizes Memphis shapes (1/s): beats still pump,
+// but a sudden loud hit swells over ~0.15 s instead of snapping
+export const MEMPHIS_PULSE_ATTACK = 12;
+export const MEMPHIS_PULSE_RELEASE = 6;
 
 // Durations of the CSS stage effects (ms)
 export const VICTORY_DURATION = 900;
