@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InputHandler } from '@/input/InputHandler';
+import { COURT } from '@/match/config';
+import { Paddle } from '@/match/Paddle';
 
 const makeHandler = () => {
   const callbacks = {
@@ -8,11 +10,52 @@ const makeHandler = () => {
     onToggleFullscreen: vi.fn(),
     onPress: vi.fn(),
   };
-  const handler = new InputHandler(document.createElement('canvas'), callbacks);
-  return { handler, callbacks };
+  const canvas = document.createElement('canvas');
+  // happy-dom lays nothing out, so a real rect has to be faked for the pointer math to run
+  vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+    left: 0,
+    top: 0,
+    width: COURT.WIDTH,
+    height: COURT.HEIGHT,
+  } as DOMRect);
+
+  const handler = new InputHandler(canvas, callbacks);
+  return { handler, callbacks, canvas };
 };
 
 describe('InputHandler', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('steers the paddle toward a tap on the court', () => {
+    const { handler } = makeHandler();
+    const paddle = new Paddle(0, 0, '#19f0ff');
+
+    document.body.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, clientX: 50, clientY: 50 }),
+    );
+    handler.pollPlayerMovement(paddle, 1);
+
+    expect(paddle.targetY).not.toBe(COURT.HEIGHT / 2);
+    handler.dispose();
+  });
+
+  it('ignores a tap that lands on a UI button instead of the court', () => {
+    const { handler } = makeHandler();
+    const paddle = new Paddle(0, 0, '#19f0ff');
+    const button = document.createElement('button');
+    document.body.appendChild(button);
+
+    button.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, clientX: 50, clientY: 50 }),
+    );
+    handler.pollPlayerMovement(paddle, 1);
+
+    expect(paddle.targetY).toBe(COURT.HEIGHT / 2); // unmoved from its starting position
+    handler.dispose();
+  });
+
   it('reports fresh presses but not held-key repeats', () => {
     const { handler, callbacks } = makeHandler();
 

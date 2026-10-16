@@ -266,17 +266,39 @@ body {
   width: min(99vw, calc(95dvh * 1.45));
 }
 
+/* Bottom-right, not top: a thumb resting on a phone reaches the near corner without a grip
+   shift, and a drag gesture (it spans the full width while steering the paddle) rarely travels
+   all the way into the literal corner pixels, so this stays a comparatively safe parking spot. */
 .game-pause {
   --button-color: var(--white);
 
   display: none;
   position: fixed;
-  top: calc(10px + env(safe-area-inset-top, 0px));
-  right: 10px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  right: calc(14px + env(safe-area-inset-right, 0px));
   z-index: 5;
-  padding: 5px 6px;
+
+  padding: 10px 12px;
+  border-radius: 50%;
+  background: rgba(8, 2, 26, 0.55);
+
   color: var(--button-color);
-  transition: opacity 0.3s;
+  /* A quiet ring at rest (noticeable, not shouting), brighter the instant a finger lands */
+  box-shadow:
+    0 0 0 1px rgba(25, 240, 255, 0.4),
+    0 0 10px rgba(25, 240, 255, 0.25);
+
+  transition:
+    opacity 0.3s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+
+.game-pause:active {
+  background: rgba(8, 2, 26, 0.85);
+  box-shadow:
+    0 0 0 1.5px var(--cyan),
+    0 0 18px rgba(25, 240, 255, 0.7);
 }
 
 .game-pause--hidden {
@@ -376,8 +398,12 @@ body {
 
 @media (orientation: portrait) and (max-width: 900px) {
   :root {
-    --game-width: min(96vw, 50vh);
-    --game-width: min(96vw, 50dvh);
+    /* The rotated court keeps its real 8:5 shape, so width and height grow together — on most
+       phones (tall and narrow) the vw term is what actually binds, with vh along as a ceiling
+       for wider/shorter ones. Nudged up from 96vw/50vh to close some of the top/bottom margin,
+       kept shy of the edge so it still clears the hint text under it on a small phone. */
+    --game-width: min(98vw, 55vh);
+    --game-width: min(98vw, 55dvh);
   }
 
   .game {

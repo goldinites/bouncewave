@@ -4,6 +4,10 @@ import { clamp } from '@/shared/math';
 
 const PADDLE_SPEED = 500; // px/s under keyboard control
 
+/** A tap that landed on a UI button (pause, menu) rather than the court itself. */
+const isUiTarget = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest('button') !== null;
+
 export interface InputHandlerCallbacks {
   onUnlockAudio: () => void;
   onTogglePause: () => void;
@@ -107,6 +111,8 @@ export class InputHandler {
 
     const handlePointer = (e: PointerEvent) => {
       this.callbacks.onUnlockAudio();
+      if (isUiTarget(e.target)) return;
+
       const rect = this.canvas.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
 
@@ -122,7 +128,7 @@ export class InputHandler {
       'pointerdown',
       (e) => {
         handlePointer(e);
-        this.callbacks.onPress();
+        if (!isUiTarget(e.target)) this.callbacks.onPress();
       },
       { signal },
     );
