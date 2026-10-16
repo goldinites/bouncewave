@@ -7,6 +7,7 @@ const PADDLE_SPEED = 500; // px/s under keyboard control
 export interface InputHandlerCallbacks {
   onUnlockAudio: () => void;
   onTogglePause: () => void;
+  onToggleFullscreen: () => void;
   /** A fresh key press or tap (not a held-key repeat), e.g. to skip a cutscene. */
   onPress: () => void;
 }
@@ -75,6 +76,12 @@ export class InputHandler {
           if (e.repeat) return;
 
           this.callbacks.onTogglePause();
+        }
+
+        if (e.code === 'KeyF') {
+          if (e.repeat) return;
+
+          this.callbacks.onToggleFullscreen();
         }
       },
       { signal },

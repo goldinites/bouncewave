@@ -255,6 +255,17 @@ body {
   text-align: center;
 }
 
+/* The whole point of fullscreen is a bigger court: the hint is freed real estate, so the
+   stage's own width/height caps relax to use almost the entire screen instead of ~80%. */
+:fullscreen .game-hint {
+  display: none;
+}
+
+:fullscreen .game__stage {
+  width: min(99vw, calc(95vh * 1.45));
+  width: min(99vw, calc(95dvh * 1.45));
+}
+
 .game-pause {
   --button-color: var(--white);
 

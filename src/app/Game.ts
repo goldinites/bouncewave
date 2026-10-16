@@ -75,6 +75,7 @@ export class Game {
     this.inputHandler = new InputHandler(canvas, {
       onUnlockAudio: () => this.unlockAudio(),
       onTogglePause: () => this.togglePause(),
+      onToggleFullscreen: () => this.toggleFullscreen(),
       onPress: () => this.flow.skipFinale(),
     });
 
@@ -159,6 +160,21 @@ export class Game {
     this.classicMode = enabled;
     this.renderer.setClassicMode(enabled);
     this.uiManager.setClassicMode(enabled);
+  }
+
+  /**
+   * F toggles fullscreen; the field itself grows via the `:fullscreen` CSS in main.css.
+   * Desktop only — skipped on a touch pointer even if a keyboard happens to be attached
+   * (e.g. an iPad), since phones and tablets already run full-bleed in their browser chrome.
+   */
+  private toggleFullscreen(): void {
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+
+    const request = document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen();
+
+    request.catch((error: unknown) => this.fpsMeter.reportError(error));
   }
 
   public start(): void {

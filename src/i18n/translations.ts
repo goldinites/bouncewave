@@ -50,7 +50,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
-    hintK: `Paddle: W / S or ↑ / ↓ · mouse or touch works too<br>Esc / P — pause · first to ${WINNING_SCORE} points`,
+    hintK: `Paddle: W / S or ↑ / ↓ · mouse or touch works too<br>Esc / P — pause · F — fullscreen · first to ${WINNING_SCORE} points`,
     hintT: `Drag your finger to move the paddle<br>First to ${WINNING_SCORE} points`,
     d: [
       ['EASY', 'vs CPU: slow, misses often'],
@@ -78,7 +78,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'ИГРА ОКОНЧЕНА',
     ready: 'ГОТОВЬСЬ',
     decider: 'РЕШАЮЩЕЕ ОЧКО',
-    hintK: `Ракетка: W / S или ↑ / ↓ · мышь или касание тоже работают<br>Esc / P — пауза · играем до ${WINNING_SCORE} очков`,
+    hintK: `Ракетка: W / S или ↑ / ↓ · мышь или касание тоже работают<br>Esc / P — пауза · F — полный экран · играем до ${WINNING_SCORE} очков`,
     hintT: `Двигайте ракетку пальцем<br>Играем до ${WINNING_SCORE} очков`,
     d: [
       ['ЛЁГКАЯ', 'Против CPU: медленный, часто мажет'],
