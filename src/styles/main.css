@@ -395,6 +395,15 @@ body {
     box-shadow 0.15s;
 }
 
+/* Left alone for a while: fades back further, slowly, until a pointer or a change wakes it.
+   Hover is left to the script: a phone keeps :hover on whatever was tapped last */
+.now-playing--idle:not(:focus-within) {
+  opacity: 0.3;
+  transition:
+    opacity 1.2s,
+    box-shadow 0.15s;
+}
+
 .now-playing:hover,
 .now-playing:focus-within {
   opacity: 1;

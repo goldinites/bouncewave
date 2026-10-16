@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nManager } from '@/i18n/I18nManager';
-import { NowPlaying } from '@/ui/NowPlaying';
+import { NOW_PLAYING_IDLE_MS, NowPlaying } from '@/ui/NowPlaying';
 
 const setup = () => {
   const actions = { onToggle: vi.fn(), onNext: vi.fn() };
@@ -58,5 +58,45 @@ describe('NowPlaying', () => {
     nowPlaying.update(null, false);
     expect(byId('nowPlaying').classList.contains('now-playing--classic')).toBe(true);
     expect(byId('nowPlayingTitle').textContent).toBe('MUSIC');
+  });
+
+  describe('when left alone', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    const isIdle = () => byId('nowPlaying').classList.contains('now-playing--idle');
+
+    it('fades back after a while, and wakes on a touch', () => {
+      const { nowPlaying } = setup();
+      nowPlaying.update('Night Drive', false);
+
+      vi.advanceTimersByTime(NOW_PLAYING_IDLE_MS);
+      expect(isIdle()).toBe(true);
+
+      byId('nowPlaying').dispatchEvent(new Event('pointerdown'));
+      expect(isIdle()).toBe(false);
+    });
+
+    it('wakes up when the song changes', () => {
+      const { nowPlaying } = setup();
+      nowPlaying.update('Night Drive', false);
+      vi.advanceTimersByTime(NOW_PLAYING_IDLE_MS);
+
+      nowPlaying.update('Chrome Heart', false);
+      expect(isIdle()).toBe(false);
+    });
+
+    it('stays awake while a pointer rests on it', () => {
+      const { nowPlaying } = setup();
+      nowPlaying.update('Night Drive', false);
+
+      byId('nowPlaying').dispatchEvent(new Event('pointerenter'));
+      vi.advanceTimersByTime(NOW_PLAYING_IDLE_MS * 2);
+      expect(isIdle()).toBe(false);
+
+      byId('nowPlaying').dispatchEvent(new Event('pointerleave'));
+      vi.advanceTimersByTime(NOW_PLAYING_IDLE_MS);
+      expect(isIdle()).toBe(true);
+    });
   });
 });
