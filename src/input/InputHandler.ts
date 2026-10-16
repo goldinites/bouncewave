@@ -3,6 +3,8 @@ import { Paddle } from '@/match/Paddle';
 import { clamp } from '@/shared/math';
 
 const PADDLE_SPEED = 500; // px/s under keyboard control
+// Two taps closer than this make iOS zoom in; a little over its own double-tap window
+const DOUBLE_TAP_MS = 350;
 
 /** A tap that landed on a UI button (pause, menu) rather than the court itself. */
 const isUiTarget = (target: EventTarget | null): boolean =>
@@ -146,6 +148,21 @@ export class InputHandler {
       },
       { signal },
     );
+
+    // iOS zooms in on a quick double tap and on a pinch, ignoring the viewport's no-zoom, and
+    // the page's touch-action: none then leaves no gesture to zoom back out. So the second tap
+    // of a pair never becomes a double tap, and a pinch never starts. Steering is unaffected:
+    // it runs on pointer events, which fire before this
+    let lastTouchEnd = -Infinity;
+    window.addEventListener(
+      'touchend',
+      (e) => {
+        if (e.timeStamp - lastTouchEnd < DOUBLE_TAP_MS) e.preventDefault();
+        lastTouchEnd = e.timeStamp;
+      },
+      { signal, passive: false },
+    );
+    window.addEventListener('gesturestart', (e) => e.preventDefault(), { signal });
   }
 
   private lastPointerY: number | null = null;

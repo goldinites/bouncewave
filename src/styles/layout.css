@@ -24,6 +24,10 @@ html {
      height short of the bottom of the screen and leaves a black band there */
   height: 100vh;
   height: 100dvh;
+
+  /* Not only body's: the root's safe-area padding lies outside body, and a double tap or pinch
+     there would zoom the page with no way back (body's touch-action: none blocks the pinch out) */
+  touch-action: none;
   scroll-padding-top: env(safe-area-inset-top, 0px);
 }
 
