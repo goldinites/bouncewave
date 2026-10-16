@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- App icon: the court with a lob arcing from the cyan paddle toward the pink one.
+       Full bleed, everything that matters inside the maskable safe circle (r = 40%). -->
+  <defs>
+    <radialGradient id="bg" cx="0.5" cy="0.45" r="0.75"><stop offset="0" stop-color="#34105a"/><stop offset="1" stop-color="#0b0320"/></radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g stroke="#b79bff" stroke-width="6" stroke-linecap="round" opacity="0.55">
+    <line x1="72" y1="112" x2="440" y2="112"/>
+    <line x1="72" y1="400" x2="440" y2="400"/>
+  </g>
+  <rect x="96" y="236" width="30" height="120" rx="12" fill="#19f0ff" filter="url(#glow)"/>
+  <rect x="386" y="196" width="30" height="120" rx="12" fill="#ff2bd6" filter="url(#glow)"/>
+  <g filter="url(#glow)">
+    <circle cx="146" cy="300" r="4.5" fill="#19f0ff" opacity="0.40"/>
+    <circle cx="153.3" cy="278.4" r="5" fill="#33e2ff" opacity="0.45"/>
+    <circle cx="161" cy="257.6" r="5.6" fill="#4ed4ff" opacity="0.49"/>
+    <circle cx="169.8" cy="237" r="6.1" fill="#68c6ff" opacity="0.54"/>
+    <circle cx="180" cy="216.6" r="6.7" fill="#82b7ff" opacity="0.58"/>
+    <circle cx="191.2" cy="198.1" r="7.2" fill="#9da9ff" opacity="0.63"/>
+    <circle cx="205.4" cy="180.6" r="7.8" fill="#b79bff" opacity="0.68"/>
+    <circle cx="223.2" cy="167.2" r="8.3" fill="#c388f8" opacity="0.72"/>
+    <circle cx="244.4" cy="162.4" r="8.8" fill="#cf76f1" opacity="0.77"/>
+    <circle cx="265.8" cy="168.8" r="9.4" fill="#db63eb" opacity="0.81"/>
+    <circle cx="283.8" cy="182.2" r="9.9" fill="#e750e4" opacity="0.86"/>
+    <circle cx="299.1" cy="199" r="10.5" fill="#f33edd" opacity="0.90"/>
+    <circle cx="312.2" cy="216.9" r="11" fill="#ff2bd6" opacity="0.95"/>
+  </g>
+  <circle cx="334" cy="254" r="24" fill="#ffffff" filter="url(#glow)"/>
+</svg>

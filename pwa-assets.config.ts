@@ -1,13 +1,15 @@
-import { defineConfig, minimal2023Preset } from '@vite-pwa/assets-generator/config';
+import { defineConfig } from '@vite-pwa/assets-generator/config';
 
-// Home-screen icons drawn from the favicon; maskable and Apple ones sit on the game's night sky
-// so the launcher's crop never shows a white square. Regenerate with `npm run icons`.
+// Home-screen and install icons, drawn from the app icon. It is full bleed with its own night sky
+// and keeps everything that matters inside the maskable safe circle, so none of them is padded.
+// The favicon is a separate, simpler mark: see pwa-assets.favicon.config.ts. Regenerate both with
+// `npm run icons`.
 export default defineConfig({
   headLinkOptions: { preset: '2023' },
   preset: {
-    ...minimal2023Preset,
-    maskable: { ...minimal2023Preset.maskable, resizeOptions: { background: '#0b0320' } },
-    apple: { ...minimal2023Preset.apple, resizeOptions: { background: '#0b0320' } },
+    transparent: { sizes: [64, 192, 512], padding: 0 },
+    maskable: { sizes: [512], padding: 0 },
+    apple: { sizes: [180], padding: 0 },
   },
-  images: ['public/favicon.svg'],
+  images: ['public/app-icon.svg'],
 });
