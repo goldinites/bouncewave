@@ -34,6 +34,19 @@
       <span class="game-pause__bar game-pause__bar--right" aria-hidden="true"></span>
     </button>
 
+    <!-- What's playing: tap the record to turn the music on or off, the arrows to skip -->
+    <div class="now-playing" id="nowPlaying">
+      <button class="now-playing__toggle" id="musicToggle" aria-pressed="true">
+        <span class="now-playing__record" aria-hidden="true"></span>
+        <span class="now-playing__title" id="nowPlayingTitle"></span>
+      </button>
+      <button class="now-playing__next" id="nextTrack">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M2 3.5 8 8l-6 4.5zM8 3.5 14 8l-6 4.5z" />
+        </svg>
+      </button>
+    </div>
+
     <script type="module" src="/src/index.ts"></script>
   </body>
 </html>

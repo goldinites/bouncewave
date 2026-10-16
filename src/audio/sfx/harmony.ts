@@ -1,8 +1,8 @@
 import { Harmony } from '@/audio/music/HarmonyTimeline';
-import { CHORD_TYPES } from '@/audio/music/tracks';
+import { MINOR_TRIAD } from '@/audio/music/theory';
 // Paddle and wall sounds are drawn from the chord the music is playing
-// (bar roots sit around MIDI 29–40, so offsets lift them into melody / mid registers)
-const DEFAULT_HARMONY: Harmony = { root: 33, chord: CHORD_TYPES[0] }; // A minor, before music starts
+// (chord roots sit at MIDI 28–39, so offsets lift them into melody / mid registers)
+const DEFAULT_HARMONY: Harmony = { root: 33, chord: MINOR_TRIAD }; // A minor, before music starts
 const MELODY_OCTAVE_OFFSET = 24;
 const MELODY_OCTAVES = 2; // the rally melody climbs this many octaves, then stays on top
 export const MELODY_MAX_NOTE = 84; // C6; higher notes fold down an octave

@@ -6,7 +6,7 @@ A retro-futuristic, synthwave-themed Canvas Pong game decomposed and refactored 
 
 ## 🚀 Features
 
-- **Procedural Synthwave Music Engine**: Dynamic Web Audio API synthesizer generating multitrack retro synthwave music with adaptive intensity responding in real-time to ball speeds, rallies, and game points.
+- **Procedural Synthwave Music Engine**: Web Audio synthesizer playing five composed synthwave songs, each with an intro, verse, build, chorus and breakdown. The music moves between them as rallies heat up and cool down, with drum fills and risers on the way, while the mix fills out with ball speed, rally length and game points.
 - **Dynamic 2D Visualizer**:
   - Laser light show with audio spectrum analyzer and oscilloscope.
   - Memphis 80s/90s geometric aesthetic with CRT/VHS scan lines, chromatic glitching, and OSD playback timer.
@@ -41,7 +41,7 @@ The project follows clean architecture principles with single-responsibility mod
 │   │   └── …                    # Ball, Paddle, AiController, heat
 │   ├── fx/                      # Presentation reacting to the match: shake, particles, drama, climax
 │   ├── render/                  # Canvas 2D rendering; backgrounds/ holds one class per background
-│   ├── audio/                   # Web Audio: music/ (sequencer, tracks) and sfx/
+│   ├── audio/                   # Web Audio: music/ (songs, conductor, sequencer) and sfx/
 │   ├── input/                   # Keyboard, mouse, touch and orientation
 │   ├── ui/                      # DOM menus
 │   ├── i18n/                    # EN and RU dictionaries
@@ -59,13 +59,13 @@ Only domain-free values (the palette, math) go to `shared/`.
 
 **Adding content.**
 
-| To add        | Do this                                                                                                                                                           |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A background  | Implement `Background` in `render/backgrounds/` and list it in `createBackgrounds` (`BackgroundRenderer.ts`)                                                      |
-| A setting     | Add a field to `UserSettings` and an entry to `SETTINGS` (`settings/UserSettings.ts`); list it in `SETTINGS_MENU` (`ui/MenuController.ts`) to show it in the menu |
-| A music track | Add a `TrackConfig` to `MUSIC_TRACKS` (`audio/music/tracks.ts`)                                                                                                   |
-| A difficulty  | Add it to `DifficultyLevel` and `DIFFICULTY_CONFIGS` (`match/difficulty.ts`) and describe it in every dictionary                                                  |
-| A language    | Add it to `Language` and a dictionary to `TRANSLATIONS` (`i18n/translations.ts`)                                                                                  |
+| To add       | Do this                                                                                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A background | Implement `Background` in `render/backgrounds/` and list it in `createBackgrounds` (`BackgroundRenderer.ts`)                                                      |
+| A setting    | Add a field to `UserSettings` and an entry to `SETTINGS` (`settings/UserSettings.ts`); list it in `SETTINGS_MENU` (`ui/MenuController.ts`) to show it in the menu |
+| A song       | Add a `SongDef` to `SONG_DEFS` (`audio/music/songs.ts`), with a section for every tier; the notation is described on `SectionDef` (`audio/music/score.ts`)        |
+| A difficulty | Add it to `DifficultyLevel` and `DIFFICULTY_CONFIGS` (`match/difficulty.ts`) and describe it in every dictionary                                                  |
+| A language   | Add it to `Language` and a dictionary to `TRANSLATIONS` (`i18n/translations.ts`)                                                                                  |
 
 The compiler points out anything missing, such as a translation for a new difficulty.
 
