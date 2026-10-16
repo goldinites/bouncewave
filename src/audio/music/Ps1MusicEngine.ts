@@ -40,6 +40,8 @@ export class Ps1MusicEngine {
   private reverbSend: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private active = false;
+  /** The active state last sent to the gain node, so `setActive` can skip redundant calls. */
+  private appliedActive: boolean | null = null;
   private nextStepTime = 0;
   private currentStep = 0;
   private schedulerId: number | null = null;
@@ -70,11 +72,16 @@ export class Ps1MusicEngine {
     this.schedulerId = window.setInterval(() => this.scheduleSteps(), SCHEDULER_INTERVAL_MS);
   }
 
-  /** Fades the loop in or out; scheduling itself keeps running so a fade-in never jumps bars. */
+  /**
+   * Fades the loop in or out; scheduling itself keeps running so a fade-in never jumps bars.
+   * Called every frame, so it only touches the gain node when the state actually flips —
+   * otherwise it would pile up a fresh automation event on the gain param 60 times a second.
+   */
   public setActive(active: boolean): void {
     this.active = active;
-    if (!this.context || !this.master) return;
+    if (!this.context || !this.master || this.appliedActive === active) return;
 
+    this.appliedActive = active;
     this.master.gain.setTargetAtTime(
       active ? MASTER_LEVEL : 0,
       this.context.currentTime,

@@ -1,0 +1,226 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { AudioEngine } from '@/audio/AudioEngine';
+import { EffectsDirector } from '@/fx/EffectsDirector';
+import { ParticleSystem } from '@/fx/ParticleSystem';
+import { Ball } from '@/match/Ball';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { Paddle } from '@/match/Paddle';
+import type { Renderer } from '@/render/Renderer';
+import { COLORS } from '@/shared/palette';
+
+const makeRenderer = () => ({
+  addShake: vi.fn(),
+  addFlash: vi.fn(),
+  triggerClimaxSurge: vi.fn(),
+  celebrate: vi.fn(),
+  triggerVictoryEffect: vi.fn(),
+  triggerCrtGlitch: vi.fn(),
+  nextBackground: vi.fn(),
+  hideFinalScore: vi.fn(),
+  showFinalScore: vi.fn(),
+  classicMode: false,
+});
+
+const makeAudio = () => ({
+  sfx: {
+    playWallBounce: vi.fn(),
+    playPaddleHit: vi.fn(),
+    playScore: vi.fn(),
+    playVictory: vi.fn(),
+    playDefeat: vi.fn(),
+    playHeartbeat: vi.fn(),
+    playFireworkPop: vi.fn(),
+  },
+  music: {
+    setDramaLevel: vi.fn(),
+    triggerDrop: vi.fn(),
+    setClimaxLevel: vi.fn(),
+    duck: vi.fn(),
+    tapeStop: vi.fn(),
+    recover: vi.fn(),
+    newSong: vi.fn(),
+    resetClimax: vi.fn(),
+  },
+});
+
+/** Just enough of MatchFlow for afterSimulation's reads; nothing else is touched. */
+const fakeFlow = (overrides: Partial<MatchFlow> = {}): MatchFlow =>
+  ({ phase: 'finale', rally: 0, isBallLive: false, ...overrides }) as unknown as MatchFlow;
+
+const makeDirector = () => {
+  const renderer = makeRenderer();
+  const audio = makeAudio();
+  const particles = new ParticleSystem();
+  const paddles: [Paddle, Paddle] = [
+    new Paddle(0, 34, COLORS.CYAN),
+    new Paddle(1, 750, COLORS.PINK),
+  ];
+  const ball = new Ball();
+  const translate = (key: 'win' | 'lose') => (key === 'win' ? 'YOU WIN' : 'YOU LOSE');
+
+  const effects = new EffectsDirector({
+    renderer: renderer as unknown as Renderer,
+    audio: audio as unknown as AudioEngine,
+    particles,
+    paddles,
+    ball,
+    translate,
+  });
+
+  return { effects, renderer, audio, particles, paddles, ball };
+};
+
+const handle = (effects: EffectsDirector, event: MatchEvent) => effects.handle(event);
+
+describe('EffectsDirector.handle', () => {
+  it('flashes and resets paddle glow on matchStart', () => {
+    const { effects, renderer } = makeDirector();
+
+    handle(effects, {
+      type: 'paddleHit',
+      paddleIndex: 0,
+      isPerfect: false,
+      x: 40,
+      y: 250,
+      speed: 400,
+      rally: 1,
+    });
+    expect(effects.paddleGlow[0]).toBe(1);
+
+    handle(effects, { type: 'matchStart' });
+
+    expect(renderer.addFlash).toHaveBeenCalled();
+    expect(effects.paddleGlow).toEqual([0, 0]);
+  });
+
+  it('starts a new song and the next background on returnToMenu', () => {
+    const { effects, audio, renderer } = makeDirector();
+
+    handle(effects, { type: 'returnToMenu' });
+
+    expect(audio.music.newSong).toHaveBeenCalledOnce();
+    expect(renderer.nextBackground).toHaveBeenCalledOnce();
+  });
+
+  it('shakes and beeps on a wall bounce', () => {
+    const { effects, audio, renderer } = makeDirector();
+
+    handle(effects, { type: 'wallBounce', x: 10, y: 20 });
+
+    expect(renderer.addShake).toHaveBeenCalled();
+    expect(audio.sfx.playWallBounce).toHaveBeenCalledOnce();
+  });
+
+  it('lights up the hit paddle and forwards the hit to sfx', () => {
+    const { effects, audio, particles } = makeDirector();
+
+    handle(effects, {
+      type: 'paddleHit',
+      paddleIndex: 1,
+      isPerfect: false,
+      x: 760,
+      y: 300,
+      speed: 500,
+      rally: 4,
+    });
+
+    expect(effects.paddleGlow[1]).toBe(1);
+    expect(effects.paddleGlow[0]).toBe(0);
+    expect(particles.particles.length).toBeGreaterThan(0);
+    expect(particles.rings.length).toBeGreaterThan(0);
+    expect(audio.sfx.playPaddleHit).toHaveBeenCalledWith(4, false, 1);
+  });
+
+  it('adds an extra white burst and a flash on a perfect hit', () => {
+    const { effects, renderer, particles } = makeDirector();
+
+    handle(effects, {
+      type: 'paddleHit',
+      paddleIndex: 0,
+      isPerfect: true,
+      x: 40,
+      y: 300,
+      speed: 700,
+      rally: 8,
+    });
+
+    const perfectBurst = particles.particles.filter((p) => p.color === COLORS.WHITE);
+    expect(perfectBurst.length).toBeGreaterThan(0);
+    expect(renderer.addFlash).toHaveBeenCalled();
+  });
+
+  it('plays the score sound for a real point but not for the attract-mode demo', () => {
+    const { effects, audio } = makeDirector();
+
+    handle(effects, { type: 'score', scoringPlayerIndex: 0, y: 250, isDemo: true });
+    expect(audio.sfx.playScore).not.toHaveBeenCalled();
+
+    handle(effects, { type: 'score', scoringPlayerIndex: 0, y: 250, isDemo: false });
+    expect(audio.sfx.playScore).toHaveBeenCalledOnce();
+  });
+
+  it('shows the final score, fireworks and a victory sting when the player wins', () => {
+    const { effects, renderer, audio } = makeDirector();
+
+    handle(effects, { type: 'finaleStart', winnerIndex: 0, ballY: 250, scores: [10, 7] });
+
+    expect(renderer.triggerVictoryEffect).toHaveBeenCalledOnce();
+    expect(renderer.celebrate).toHaveBeenCalledOnce();
+    expect(audio.sfx.playVictory).toHaveBeenCalledOnce();
+    expect(audio.music.duck).toHaveBeenCalledOnce();
+    expect(renderer.showFinalScore).toHaveBeenCalledWith({
+      scores: [10, 7],
+      label: 'YOU WIN',
+      color: COLORS.CYAN,
+      isWin: true,
+    });
+  });
+
+  it('glitches the screen and tape-stops the music when the player loses', () => {
+    const { effects, renderer, audio } = makeDirector();
+
+    handle(effects, { type: 'finaleStart', winnerIndex: 1, ballY: 250, scores: [7, 10] });
+
+    expect(renderer.triggerCrtGlitch).toHaveBeenCalledOnce();
+    expect(audio.sfx.playDefeat).toHaveBeenCalledOnce();
+    expect(audio.music.tapeStop).toHaveBeenCalledOnce();
+    expect(renderer.showFinalScore).toHaveBeenCalledWith({
+      scores: [7, 10],
+      label: 'YOU LOSE',
+      color: COLORS.PINK,
+      isWin: false,
+    });
+  });
+
+  it('skips the victory fireworks entirely in classic mode', () => {
+    const { effects, renderer, audio } = makeDirector();
+    renderer.classicMode = true;
+
+    handle(effects, { type: 'finaleStart', winnerIndex: 0, ballY: 250, scores: [10, 7] });
+    effects.afterSimulation(0, fakeFlow());
+
+    // A non-classic win fires its first shot immediately (see VictoryFireworks' own tests);
+    // in classic mode there is no fireworks instance at all, so nothing pops.
+    expect(audio.sfx.playFireworkPop).not.toHaveBeenCalled();
+  });
+
+  it('pops the first firework shot right away outside classic mode', () => {
+    const { effects, audio } = makeDirector();
+
+    handle(effects, { type: 'finaleStart', winnerIndex: 0, ballY: 250, scores: [10, 7] });
+    effects.afterSimulation(0, fakeFlow());
+
+    expect(audio.sfx.playFireworkPop).toHaveBeenCalledOnce();
+  });
+
+  it('hides the final score and recovers the music on gameOver', () => {
+    const { effects, renderer, audio } = makeDirector();
+
+    handle(effects, { type: 'gameOver', winnerIndex: 0, scores: [10, 7] });
+
+    expect(renderer.hideFinalScore).toHaveBeenCalledOnce();
+    expect(audio.music.recover).toHaveBeenCalledOnce();
+    expect(audio.music.setDramaLevel).toHaveBeenCalledWith(0);
+    expect(audio.music.resetClimax).toHaveBeenCalledOnce();
+  });
+});
