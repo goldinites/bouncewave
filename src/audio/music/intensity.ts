@@ -1,5 +1,6 @@
 import { getRallyHeat, getSpeedHeat } from '@/match/heat';
 import { GameState } from '@/match/GameState';
+import { DifficultyLevel } from '@/match/difficulty';
 import { clamp } from '@/shared/math';
 
 // Per sequencer step (~0.13 s), how quickly intensity follows the rally climax
@@ -18,6 +19,7 @@ export interface MusicState {
   rally: number;
   scores: [number, number];
   isMuted: boolean;
+  difficulty: DifficultyLevel;
 }
 
 export const INITIAL_MUSIC_STATE: MusicState = {
@@ -28,6 +30,7 @@ export const INITIAL_MUSIC_STATE: MusicState = {
   rally: 0,
   scores: [0, 0],
   isMuted: false,
+  difficulty: DifficultyLevel.NORMAL,
 };
 
 const MENU_INTENSITY = 0.35;

@@ -1,6 +1,7 @@
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { TrackConfig, CHORD_TYPES, BASS_PATTERNS } from '@/audio/music/tracks';
+import { DifficultyLevel } from '@/match/difficulty';
 import { clamp } from '@/shared/math';
 
 /** Everything that decides what one 16th-note step plays. */
@@ -14,7 +15,23 @@ export interface StepContext {
   intensity: number;
   /** 0..1: rally climax build-up; fades the climax-only layers in. */
   climaxLevel: number;
+  difficulty: DifficultyLevel;
 }
+
+/** How the lead arpeggio's character sharpens as the AI gets tougher. */
+interface DifficultySignature {
+  /** Multiplies the lead's filter cutoff: brighter and more biting the harder the level. */
+  leadBrightness: number;
+  /** An extra octave-up retrigger right after every strong beat, for a nervous edge. */
+  stutter: boolean;
+}
+
+const DIFFICULTY_SIGNATURES: Record<DifficultyLevel, DifficultySignature> = {
+  [DifficultyLevel.EASY]: { leadBrightness: 0.7, stutter: false },
+  [DifficultyLevel.NORMAL]: { leadBrightness: 1, stutter: false },
+  [DifficultyLevel.HARD]: { leadBrightness: 1.3, stutter: false },
+  [DifficultyLevel.INSANE]: { leadBrightness: 1.6, stutter: true },
+};
 
 /**
  * The composition: which instruments play on which step at which intensity.
@@ -40,11 +57,13 @@ export class Arrangement {
     track,
     intensity: I,
     climaxLevel,
+    difficulty,
   }: StepContext): void {
     const bar = (step >> 4) & 3;
     const stepInBar = step & 15;
     const root = track.rootNotes[bar];
     const triad = CHORD_TYPES[track.chordTypes[bar]];
+    const signature = DIFFICULTY_SIGNATURES[difficulty];
 
     // Crash at the top of every song
     if (step % 256 === 0) {
@@ -93,15 +112,29 @@ export class Arrangement {
     if (I > 0.25) {
       const arpeggioIndex = track.arpeggioPattern[stepInBar];
       const leadNote = root + 24 + triad[arpeggioIndex % 3] + (arpeggioIndex > 2 ? 12 : 0);
+      const leadVolume = clamp((I - 0.22) * 0.14, 0, 0.07);
+      const leadCutoff = (1500 + I * 2500) * signature.leadBrightness;
       this.play.note(
         track.arpeggioWave,
         leadNote,
         time,
         stepDuration * 1.6,
-        clamp((I - 0.22) * 0.14, 0, 0.07),
+        leadVolume,
         this.aux,
-        1500 + I * 2500,
+        leadCutoff,
       );
+
+      if (signature.stutter && stepInBar % 4 === 0) {
+        this.play.note(
+          track.arpeggioWave,
+          leadNote + 12,
+          time + stepDuration * 0.5,
+          stepDuration * 0.5,
+          leadVolume * 0.6,
+          this.aux,
+          leadCutoff,
+        );
+      }
     }
 
     if (I > 0.6 && stepInBar % 4 === 0) {

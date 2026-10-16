@@ -201,6 +201,7 @@ export class MusicEngine {
           track,
           intensity: this.intensity,
           climaxLevel: this.climaxLevel,
+          difficulty: this.state.difficulty,
         });
       }
 

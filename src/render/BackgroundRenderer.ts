@@ -3,13 +3,18 @@ import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { Background, BackgroundMood } from '@/render/backgrounds/Background';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
+import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
 import { clamp } from '@/shared/math';
 
 // Dark tint over the background so the court reads clearly on top of it
 const OVERLAY_TINT_RGB = '10, 2, 32';
 
 /** Every background the game rotates through; add new ones here. */
-const createBackgrounds = (): Background[] => [new LaserBackground(), new MemphisBackground()];
+const createBackgrounds = (): Background[] => [
+  new LaserBackground(),
+  new MemphisBackground(),
+  new OutrunBackground(),
+];
 
 /** Picks the active background, feeds it the music analysis and the game's mood. */
 export class BackgroundRenderer {

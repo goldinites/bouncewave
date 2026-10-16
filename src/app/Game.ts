@@ -240,6 +240,7 @@ export class Game {
       rally: this.flow.rally,
       scores: [this.paddles[0].score, this.paddles[1].score],
       isMuted: this.settings.current.musicMuted,
+      difficulty: this.settings.current.difficulty,
     };
   }
 
