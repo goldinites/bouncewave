@@ -288,35 +288,75 @@ body {
    shift, and a drag gesture (it spans the full width while steering the paddle) rarely travels
    all the way into the literal corner pixels, so this stays a comparatively safe parking spot. */
 .game-pause {
-  --button-color: var(--white);
+  --pause-fill: #0d0326;
 
   display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   position: fixed;
   bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   right: calc(14px + env(safe-area-inset-right, 0px));
   z-index: 5;
 
-  padding: 10px 12px;
-  border-radius: 50%;
-  background: rgba(8, 2, 26, 0.55);
+  width: 40px;
+  height: 40px;
 
-  color: var(--button-color);
-  /* A quiet ring at rest (noticeable, not shouting), brighter the instant a finger lands */
+  /* Same language as the menu buttons and the stage: an 8px-rounded neon frame, here in the
+     stage border's cyan-to-pink. The fill is opaque, or the border gradient would show through */
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background:
+    linear-gradient(var(--pause-fill), var(--pause-fill)) padding-box,
+    linear-gradient(135deg, var(--cyan), var(--pink)) border-box;
+
+  /* A quiet glow at rest, brighter the instant a finger lands */
   box-shadow:
-    0 0 0 1px rgba(25, 240, 255, 0.4),
-    0 0 10px rgba(25, 240, 255, 0.25);
+    -2px 0 10px rgba(25, 240, 255, 0.3),
+    2px 0 10px rgba(255, 43, 214, 0.3);
 
   transition:
     opacity 0.3s,
-    box-shadow 0.15s,
-    background 0.15s;
+    transform 0.1s,
+    box-shadow 0.15s;
 }
 
-.game-pause:active {
-  background: rgba(8, 2, 26, 0.85);
+/* Each bar is a little paddle: neon color with a white-hot core and a glow */
+.game-pause__bar {
+  width: 6px;
+  height: 18px;
+  border-radius: 2px;
+
+  background: linear-gradient(
+    90deg,
+    var(--bar-color) 0 30%,
+    rgba(255, 255, 255, 0.85) 30% 70%,
+    var(--bar-color) 70%
+  );
+}
+
+.game-pause__bar--left {
+  --bar-color: var(--cyan);
+}
+
+.game-pause__bar--right {
+  --bar-color: var(--pink);
+}
+
+.game-pause:active,
+.game-pause:focus-visible {
+  outline: none;
+  transform: scale(0.94);
   box-shadow:
-    0 0 0 1.5px var(--cyan),
-    0 0 18px rgba(25, 240, 255, 0.7);
+    -3px 0 16px rgba(25, 240, 255, 0.65),
+    3px 0 16px rgba(255, 43, 214, 0.65);
+}
+
+.game-pause:active .game-pause__bar,
+.game-pause:focus-visible .game-pause__bar {
+  box-shadow:
+    0 0 6px var(--bar-color),
+    0 0 14px var(--bar-color);
 }
 
 .game-pause--hidden {
@@ -383,7 +423,7 @@ body {
 
 @media (pointer: coarse) {
   .game-pause {
-    display: block;
+    display: flex;
   }
 }
 
@@ -546,15 +586,32 @@ body.classic-mode .game__buttons button:focus-visible {
 
 /* Flat and square, not a glowing circle — the rest of the chrome's "vintage cabinet" look */
 body.classic-mode .game-pause {
+  --pause-fill: var(--black);
+
   border: 1px solid var(--white);
   border-radius: 0;
   background: var(--black);
   box-shadow: none;
 }
 
-body.classic-mode .game-pause:active {
+body.classic-mode .game-pause__bar {
+  --bar-color: var(--white);
+
+  border-radius: 0;
   background: var(--white);
-  color: var(--black);
+  box-shadow: none;
+}
+
+body.classic-mode .game-pause:active,
+body.classic-mode .game-pause:focus-visible {
+  transform: none;
+  background: var(--white);
+  box-shadow: none;
+}
+
+body.classic-mode .game-pause:active .game-pause__bar,
+body.classic-mode .game-pause:focus-visible .game-pause__bar {
+  background: var(--black);
   box-shadow: none;
 }
 
