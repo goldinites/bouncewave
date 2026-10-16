@@ -21,6 +21,11 @@ export const PERFECT_HIT = {
   ZONE: 0.15, // central share of the half-height that counts as perfect
   BOOST: 0.25, // temporary extra speed share right after a perfect hit
   BOOST_DURATION: 0.8, // seconds for the boost to fade out
+  // A center hit alone goes out flat, the easiest ball to return; a perfect one lets the
+  // paddle's motion steer it much harder (up to ~60° instead of ~11°), and already at a modest
+  // paddle speed, so it can be aimed
+  SPIN_MAX_ANGLE: 1.05,
+  SPIN_REFERENCE_SPEED: 300, // px/s where the steer reaches ~76% of its max
 } as const;
 
 /** Something that happened to the ball during a physics step, in the order it happened. */
@@ -99,8 +104,15 @@ export class Physics {
         if (isCollidingX && isCollidingY) {
           const hitOffset = clamp((ball.y - paddle.y) / (PADDLE.HEIGHT / 2), -1, 1);
           const isPerfect = Math.abs(hitOffset) <= PERFECT_HIT.ZONE;
+          const spin = isPerfect
+            ? Physics.getSpinAngle(
+                paddle.velocity,
+                PERFECT_HIT.SPIN_MAX_ANGLE,
+                PERFECT_HIT.SPIN_REFERENCE_SPEED,
+              )
+            : Physics.getSpinAngle(paddle.velocity);
           const bounceAngle = clamp(
-            Physics.getBounceAngle(hitOffset) + Physics.getSpinAngle(paddle.velocity),
+            Physics.getBounceAngle(hitOffset) + spin,
             -BOUNCE.MAX_ANGLE,
             BOUNCE.MAX_ANGLE,
           );
@@ -158,9 +170,15 @@ export class Physics {
   /**
    * Angle nudge from paddle motion at impact (positive velocity = down = steeper downward shot).
    * Small speeds are ignored and large ones saturate, so jerky touch input stays harmless.
+   * @param maxAngle what it saturates at: SPIN.MAX_ANGLE, or more on a perfect hit
+   * @param referenceSpeed paddle speed where it reaches ~76% of `maxAngle`
    */
-  public static getSpinAngle(paddleVelocity: number): number {
+  public static getSpinAngle(
+    paddleVelocity: number,
+    maxAngle: number = SPIN.MAX_ANGLE,
+    referenceSpeed: number = SPIN.REFERENCE_SPEED,
+  ): number {
     const effective = Math.max(0, Math.abs(paddleVelocity) - SPIN.DEADZONE);
-    return Math.sign(paddleVelocity) * Math.tanh(effective / SPIN.REFERENCE_SPEED) * SPIN.MAX_ANGLE;
+    return Math.sign(paddleVelocity) * Math.tanh(effective / referenceSpeed) * maxAngle;
   }
 }

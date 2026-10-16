@@ -1,6 +1,7 @@
 import { Particle, ShockwaveRing } from '@/fx/ParticleSystem';
 import { Ball } from '@/match/Ball';
 import { PADDLE } from '@/match/config';
+import { OVERDRIVE } from '@/match/Overdrive';
 import { getRallyHeat } from '@/match/heat';
 import { Paddle } from '@/match/Paddle';
 import { glowMargin, sprites } from '@/render/SpriteCache';
@@ -11,11 +12,26 @@ const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
 // Paddle neon in canvas pixels: always lit, flaring up to HOT on a hit
 const PADDLE_GLOW = { BASE: 18, HOT: 48 } as const;
 
+// The Overdrive meter rides along the player's paddle, on its goal side: one segment per
+// perfect hit in the streak; once full they and the paddle's core pulse yellow
+const OVERDRIVE_METER = {
+  GAP: 7, // px between the paddle and the meter
+  SEGMENT: { WIDTH: 4, HEIGHT: 16, GAP: 5 },
+  HALO: 3, // px of soft glow around a lit segment
+  PULSE_SPEED: 10, // rad/s
+} as const;
+
 export class EntityRenderer {
   /** @param ctx
    @param paddle
-   @param glow hit glow in [0, 1] */
-  public static renderPaddle(ctx: CanvasRenderingContext2D, paddle: Paddle, glow: number): void {
+   @param glow hit glow in [0, 1]
+   @param overdrivePulse > 0 while the paddle's Overdrive is charged: its core pulses yellow */
+  public static renderPaddle(
+    ctx: CanvasRenderingContext2D,
+    paddle: Paddle,
+    glow: number,
+    overdrivePulse = 0,
+  ): void {
     const topY = paddle.y - PADDLE.HEIGHT / 2;
 
     ctx.save();
@@ -27,9 +43,12 @@ export class EntityRenderer {
       ctx.globalAlpha = 1;
     }
 
-    // Inner bright neon core
+    // Inner bright neon core, yellow-hot while Overdrive is charged
     ctx.shadowBlur = 0;
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + glow * 0.3})`;
+    ctx.fillStyle =
+      overdrivePulse > 0
+        ? `rgba(255, 229, 59, ${0.75 + 0.25 * overdrivePulse})`
+        : `rgba(255, 255, 255, ${0.7 + glow * 0.3})`;
     this.roundRect(ctx, paddle.x + PADDLE.WIDTH / 2 - 2, topY + 8, 4, PADDLE.HEIGHT - 16, 2);
     ctx.fill();
 
@@ -64,6 +83,50 @@ export class EntityRenderer {
         spriteCtx.fill();
       },
     );
+  }
+
+  /**
+   * The player's Overdrive meter: segments stacked along the goal side of their paddle.
+   * @param classic plain white blocks, no glow or pulse
+   */
+  public static renderOverdriveMeter(
+    ctx: CanvasRenderingContext2D,
+    paddle: Paddle,
+    charge: number,
+    time: number,
+    classic = false,
+  ): void {
+    const { GAP, SEGMENT, HALO, PULSE_SPEED } = OVERDRIVE_METER;
+    const isFull = charge >= OVERDRIVE.CHARGE;
+    const pulse = isFull && !classic ? 0.5 + 0.5 * Math.sin(time * PULSE_SPEED) : 1;
+    const color = classic ? '#ffffff' : isFull ? COLORS.YELLOW : paddle.color;
+    const x = paddle.index === 0 ? paddle.x - GAP - SEGMENT.WIDTH : paddle.x + PADDLE.WIDTH + GAP;
+    const columnHeight = OVERDRIVE.CHARGE * SEGMENT.HEIGHT + (OVERDRIVE.CHARGE - 1) * SEGMENT.GAP;
+
+    ctx.save();
+    for (let i = 0; i < OVERDRIVE.CHARGE; i++) {
+      // Filled from the bottom up
+      const y = paddle.y + columnHeight / 2 - SEGMENT.HEIGHT - i * (SEGMENT.HEIGHT + SEGMENT.GAP);
+      const isLit = i < charge;
+
+      if (isLit && !classic) {
+        // Halo as a wider faint block rather than shadowBlur
+        ctx.globalAlpha = 0.18 + 0.17 * pulse;
+        ctx.fillStyle = color;
+        ctx.fillRect(x - HALO, y - HALO, SEGMENT.WIDTH + HALO * 2, SEGMENT.HEIGHT + HALO * 2);
+      }
+
+      ctx.globalAlpha = isLit ? 0.7 + 0.3 * pulse : 0.18;
+      ctx.fillStyle = isLit ? color : '#ffffff';
+      ctx.fillRect(x, y, SEGMENT.WIDTH, SEGMENT.HEIGHT);
+    }
+    ctx.restore();
+  }
+
+  /** The 0..1 pulse of a charged Overdrive, for the paddle's core. */
+  public static overdrivePulse(charge: number, time: number): number {
+    if (charge < OVERDRIVE.CHARGE) return 0;
+    return 0.5 + 0.5 * Math.sin(time * OVERDRIVE_METER.PULSE_SPEED);
   }
 
   /** Flat white block, no glow or rounded corners — a paddle as it looked in 1972. */

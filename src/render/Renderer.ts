@@ -66,6 +66,8 @@ export interface RenderFrame {
   climax: number;
   /** Hit glow of each paddle in [0, 1]. */
   paddleGlow: readonly [number, number];
+  /** Charges in the player's Overdrive meter (0..OVERDRIVE.CHARGE). */
+  overdriveCharge: number;
 }
 
 export class Renderer {
@@ -325,10 +327,21 @@ export class Renderer {
     }
 
     // Paddles
-    paddles.forEach((paddle, i) => EntityRenderer.renderPaddle(ctx, paddle, frame.paddleGlow[i]));
+    // The player's paddle carries their Overdrive meter (only in a match)
+    const overdrivePulse = isDemo
+      ? 0
+      : EntityRenderer.overdrivePulse(frame.overdriveCharge, gameTime);
+    paddles.forEach((paddle, i) =>
+      EntityRenderer.renderPaddle(ctx, paddle, frame.paddleGlow[i], i === 0 ? overdrivePulse : 0),
+    );
+    if (!isDemo && !this.finalSign) {
+      EntityRenderer.renderOverdriveMeter(ctx, paddles[0], frame.overdriveCharge, gameTime);
+    }
 
     // Ball
-    EntityRenderer.renderBall(ctx, ball, frame.rally, gameTime, serveTime, frame.climax);
+    // A power shot burns as hot as the full rally climax
+    const ballHeat = Math.max(frame.climax, ball.isPowerShot ? 1 : 0);
+    EntityRenderer.renderBall(ctx, ball, frame.rally, gameTime, serveTime, ballHeat);
 
     // Particles and shockwaves
     EntityRenderer.renderParticles(ctx, particles.particles);
@@ -397,6 +410,9 @@ export class Renderer {
     }
 
     paddles.forEach((paddle) => EntityRenderer.renderClassicPaddle(ctx, paddle));
+    if (!isDemo && !this.finalSign) {
+      EntityRenderer.renderOverdriveMeter(ctx, paddles[0], frame.overdriveCharge, frame.time, true);
+    }
     EntityRenderer.renderClassicBall(ctx, ball);
 
     if (this.finalSign) {

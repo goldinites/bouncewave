@@ -50,8 +50,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
-    hintK: `Paddle: W / S or ↑ / ↓ · mouse or touch works too<br>Esc / P — pause · F — fullscreen · first to ${WINNING_SCORE} points`,
-    hintT: `Drag your finger to move the paddle<br>First to ${WINNING_SCORE} points`,
+    hintK: `Paddle: W / S or ↑ / ↓ · mouse or touch works too<br>Esc / P — pause · F — fullscreen · first to ${WINNING_SCORE} points<br>Hit with the paddle's center for a perfect shot · 3 in a row charge Overdrive`,
+    hintT: `Drag your finger to move the paddle<br>First to ${WINNING_SCORE} points · paddle center = perfect shot`,
     d: {
       [DifficultyLevel.NORMAL]: ['NORMAL', 'vs CPU: a balanced opponent'],
       [DifficultyLevel.HARD]: ['HARD', 'vs CPU: fast and accurate'],
@@ -77,8 +77,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
-    hintK: `Ракетка: W / S или ↑ / ↓ · мышь или касание тоже работают<br>Esc / P — пауза · F — полный экран · играем до ${WINNING_SCORE} очков`,
-    hintT: `Двигайте ракетку пальцем<br>Играем до ${WINNING_SCORE} очков`,
+    hintK: `Ракетка: W / S или ↑ / ↓ · мышь или касание тоже работают<br>Esc / P — пауза · F — полный экран · играем до ${WINNING_SCORE} очков<br>Удар центром ракетки — идеальный · 3 подряд заряжают Overdrive`,
+    hintT: `Двигайте ракетку пальцем<br>Играем до ${WINNING_SCORE} очков · центр ракетки — идеальный удар`,
     d: {
       [DifficultyLevel.NORMAL]: ['СРЕДНЯЯ', 'Против CPU: сбалансированный соперник'],
       [DifficultyLevel.HARD]: ['СЛОЖНАЯ', 'Против CPU: быстрый и точный'],

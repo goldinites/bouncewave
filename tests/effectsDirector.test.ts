@@ -30,6 +30,8 @@ const makeAudio = () => ({
     playDefeat: vi.fn(),
     playHeartbeat: vi.fn(),
     playFireworkPop: vi.fn(),
+    playPowerShot: vi.fn(),
+    playOverdriveReady: vi.fn(),
   },
   music: {
     setDramaLevel: vi.fn(),
@@ -84,6 +86,8 @@ describe('EffectsDirector.handle', () => {
       y: 250,
       speed: 400,
       rally: 1,
+      isPowerShot: false,
+      chargedOverdrive: false,
     });
     expect(effects.paddleGlow[0]).toBe(1);
 
@@ -122,6 +126,8 @@ describe('EffectsDirector.handle', () => {
       y: 300,
       speed: 500,
       rally: 4,
+      isPowerShot: false,
+      chargedOverdrive: false,
     });
 
     expect(effects.paddleGlow[1]).toBe(1);
@@ -129,6 +135,47 @@ describe('EffectsDirector.handle', () => {
     expect(particles.particles.length).toBeGreaterThan(0);
     expect(particles.rings.length).toBeGreaterThan(0);
     expect(audio.sfx.playPaddleHit).toHaveBeenCalledWith(4, false, 1);
+  });
+
+  it('blasts an Overdrive power shot instead of the usual hit sound', () => {
+    const { effects, audio, renderer, particles } = makeDirector();
+
+    handle(effects, {
+      type: 'paddleHit',
+      paddleIndex: 0,
+      isPerfect: false,
+      x: 40,
+      y: 300,
+      speed: 700,
+      rally: 9,
+      isPowerShot: true,
+      chargedOverdrive: false,
+    });
+
+    expect(audio.sfx.playPowerShot).toHaveBeenCalledWith(9);
+    expect(audio.sfx.playPaddleHit).not.toHaveBeenCalled();
+    expect(particles.particles.some((p) => p.color === COLORS.YELLOW)).toBe(true);
+    expect(renderer.addFlash).toHaveBeenCalled();
+    expect(renderer.addShake).toHaveBeenCalled();
+  });
+
+  it('chimes when a hit fills the Overdrive meter', () => {
+    const { effects, audio } = makeDirector();
+
+    handle(effects, {
+      type: 'paddleHit',
+      paddleIndex: 0,
+      isPerfect: true,
+      x: 40,
+      y: 300,
+      speed: 700,
+      rally: 6,
+      isPowerShot: false,
+      chargedOverdrive: true,
+    });
+
+    expect(audio.sfx.playOverdriveReady).toHaveBeenCalledOnce();
+    expect(audio.sfx.playPaddleHit).toHaveBeenCalledWith(6, true, 0);
   });
 
   it('adds an extra white burst and a flash on a perfect hit', () => {
@@ -142,6 +189,8 @@ describe('EffectsDirector.handle', () => {
       y: 300,
       speed: 700,
       rally: 8,
+      isPowerShot: false,
+      chargedOverdrive: false,
     });
 
     const perfectBurst = particles.particles.filter((p) => p.color === COLORS.WHITE);

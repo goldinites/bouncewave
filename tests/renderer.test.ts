@@ -55,6 +55,7 @@ const baseFrame = (overrides: Partial<RenderFrame> = {}): RenderFrame => ({
   zoom: 1,
   climax: 0,
   paddleGlow: [0, 0],
+  overdriveCharge: 0,
   ...overrides,
 });
 

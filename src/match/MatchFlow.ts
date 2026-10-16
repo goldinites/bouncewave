@@ -1,10 +1,11 @@
-import { AiController } from '@/match/AiController';
+import { AiController, SHOT_THREAT } from '@/match/AiController';
 import { AiForm } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
 import { BALL, WINNING_SCORE } from '@/match/config';
 import { AiSkill, DEMO_AI_SKILL, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
+import { OVERDRIVE, Overdrive } from '@/match/Overdrive';
 import { Physics, PhysicsEvent } from '@/match/Physics';
 
 // Seconds the ball waits at center before each kind of serve
@@ -45,6 +46,10 @@ export type MatchEvent =
       speed: number;
       /** Rally length including this hit. */
       rally: number;
+      /** The player's Overdrive went off on this hit. */
+      isPowerShot: boolean;
+      /** This hit filled the player's Overdrive meter. */
+      chargedOverdrive: boolean;
     }
   | { type: 'score'; scoringPlayerIndex: 0 | 1; y: number; isDemo: boolean }
   | { type: 'finaleStart'; winnerIndex: 0 | 1; ballY: number; scores: [number, number] }
@@ -86,6 +91,8 @@ export class MatchFlow {
   private readonly aiForm = new AiForm();
   /** How the CPU plays this point; picked on every serve. */
   private aiSkill: AiSkill = DEMO_AI_SKILL;
+  /** The player's Overdrive meter; only fills in a real match. */
+  private readonly overdrive = new Overdrive();
   private readonly paddles: [Paddle, Paddle];
   private readonly ball: Ball;
   private readonly input: PlayerInput;
@@ -110,6 +117,11 @@ export class MatchFlow {
   /** Seconds left before the ball is served (0 once it is in play). */
   public get serveTime(): number {
     return this._serveTime;
+  }
+
+  /** Charges in the player's Overdrive meter, 0..OVERDRIVE.CHARGE. */
+  public get overdriveCharge(): number {
+    return this.overdrive.charge;
   }
 
   public get rally(): number {
@@ -236,12 +248,28 @@ export class MatchFlow {
       case 'wallBounce':
         this.emit(event);
         break;
-      case 'paddleHit':
+      case 'paddleHit': {
         this._rally++;
-        // The other paddle now has to read the return
-        this.ai.readShot(this.paddles[1 - event.paddleIndex], this.aiSkill);
-        this.emit({ ...event, rally: this._rally });
+        const isPlayerHit = event.paddleIndex === 0 && !this.isDemo;
+        const wasCharged = this.overdrive.isCharged;
+        const isPowerShot = isPlayerHit && this.overdrive.onHit(event.isPerfect);
+        const chargedOverdrive = isPlayerHit && !wasCharged && this.overdrive.isCharged;
+
+        this.ball.isPowerShot = isPowerShot;
+        if (isPowerShot) {
+          this.ball.applyBoost(OVERDRIVE.BOOST, OVERDRIVE.BOOST_DURATION);
+        }
+
+        // The other paddle now has to read the return, the harder the better it was hit
+        const threat = isPowerShot
+          ? SHOT_THREAT.POWER
+          : event.isPerfect
+            ? SHOT_THREAT.PERFECT
+            : SHOT_THREAT.NORMAL;
+        this.ai.readShot(this.paddles[1 - event.paddleIndex], this.aiSkill, threat);
+        this.emit({ ...event, rally: this._rally, isPowerShot, chargedOverdrive });
         break;
+      }
       case 'score':
         this.handleScore(event.scoringPlayerIndex, event.y);
         break;
@@ -313,6 +341,7 @@ export class MatchFlow {
     this.paddles.forEach((p) => p.resetScore());
     this.ai.reset();
     this.aiForm.reset();
+    this.overdrive.reset();
   }
 
   private get scores(): [number, number] {
