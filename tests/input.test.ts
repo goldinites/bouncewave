@@ -9,6 +9,7 @@ const makeHandler = () => {
     onTogglePause: vi.fn(),
     onToggleFullscreen: vi.fn(),
     onToggleMusic: vi.fn(),
+    onNextTrack: vi.fn(),
     onPress: vi.fn(),
   };
   const canvas = document.createElement('canvas');
@@ -64,6 +65,14 @@ describe('InputHandler', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyM', repeat: true }));
 
     expect(callbacks.onToggleMusic).toHaveBeenCalledTimes(1);
+    handler.dispose();
+  });
+
+  it('skips to the next track on N', () => {
+    const { handler, callbacks } = makeHandler();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyN' }));
+    expect(callbacks.onNextTrack).toHaveBeenCalledOnce();
     handler.dispose();
   });
 

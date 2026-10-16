@@ -124,14 +124,24 @@ export class MusicEngine {
     this.isTapeStopped = false;
   }
 
-  /** Move on to the next song at the next phrase boundary. */
+  /** Move on to another song at the next phrase boundary. */
   public newSong(): void {
     this.conductor.requestNewSong();
   }
 
-  /** Title of the song playing (or about to, before the first user gesture starts audio). */
+  /** The player's skip: another song, at random, from the next bar line. */
+  public skipSong(): void {
+    const { conductor } = this;
+    conductor.skip(
+      getWantedTier(this.state.gameState, this.intensity, this.climaxLevel, conductor.section.tier),
+    );
+    // Before the first step there is nothing to finish: start the new song right away
+    if (this.currentStep === 0) conductor.advance();
+  }
+
+  /** Title of the song playing, or of the one it is about to change into. */
   public getSongTitle(): string {
-    return this.conductor.song.title;
+    return this.conductor.upcomingSong.title;
   }
 
   public getAnalyser(): AnalyserNode | null {

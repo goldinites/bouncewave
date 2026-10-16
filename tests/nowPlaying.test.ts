@@ -2,42 +2,61 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nManager } from '@/i18n/I18nManager';
 import { NowPlaying } from '@/ui/NowPlaying';
 
+const setup = () => {
+  const actions = { onToggle: vi.fn(), onNext: vi.fn() };
+  const nowPlaying = new NowPlaying(new I18nManager('en'), actions);
+  return { nowPlaying, actions };
+};
+
+const byId = (id: string) => document.getElementById(id)!;
+
 describe('NowPlaying', () => {
   beforeEach(() => {
     document.body.innerHTML = `
-      <button id="nowPlaying"><span id="nowPlayingTitle"></span></button>`;
+      <div id="nowPlaying">
+        <button id="musicToggle"><span id="nowPlayingTitle"></span></button>
+        <button id="nextTrack"></button>
+      </div>`;
   });
-
-  const chip = () => document.getElementById('nowPlaying')!;
-  const title = () => document.getElementById('nowPlayingTitle')!;
 
   it('names the song playing, and says when the music is off', () => {
-    const nowPlaying = new NowPlaying(new I18nManager('en'), () => {});
+    const { nowPlaying } = setup();
 
     nowPlaying.update('Night Drive', false);
-    expect(title().textContent).toBe('NIGHT DRIVE');
-    expect(chip().getAttribute('aria-pressed')).toBe('true');
+    expect(byId('nowPlayingTitle').textContent).toBe('NIGHT DRIVE');
+    expect(byId('musicToggle').getAttribute('aria-pressed')).toBe('true');
 
     nowPlaying.update('Night Drive', true);
-    expect(title().textContent).toBe('MUSIC: OFF');
-    expect(chip().getAttribute('aria-pressed')).toBe('false');
+    expect(byId('nowPlayingTitle').textContent).toBe('MUSIC: OFF');
+    expect(byId('musicToggle').getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('slides a new song in, but not the first one shown', () => {
-    const nowPlaying = new NowPlaying(new I18nManager('en'), () => {});
+  it('slides a new song in, but not the first one shown or music coming back on', () => {
+    const { nowPlaying } = setup();
+    const isEntering = () =>
+      byId('nowPlayingTitle').classList.contains('now-playing__title--enter');
 
     nowPlaying.update('Night Drive', false);
-    expect(title().classList.contains('now-playing__title--enter')).toBe(false);
+    expect(isEntering()).toBe(false);
 
     nowPlaying.update('Chrome Heart', false);
-    expect(title().classList.contains('now-playing__title--enter')).toBe(true);
+    expect(isEntering()).toBe(true);
   });
 
-  it('toggles the music on a tap', () => {
-    const onToggle = vi.fn();
-    new NowPlaying(new I18nManager('en'), onToggle);
+  it('toggles the music and skips on a tap', () => {
+    const { actions } = setup();
 
-    chip().click();
-    expect(onToggle).toHaveBeenCalledOnce();
+    byId('musicToggle').click();
+    byId('nextTrack').click();
+    expect(actions.onToggle).toHaveBeenCalledOnce();
+    expect(actions.onNext).toHaveBeenCalledOnce();
+  });
+
+  it('hides the skip in classic mode, which has a single loop', () => {
+    const { nowPlaying } = setup();
+
+    nowPlaying.update(null, false);
+    expect(byId('nowPlaying').classList.contains('now-playing--classic')).toBe(true);
+    expect(byId('nowPlayingTitle').textContent).toBe('MUSIC');
   });
 });

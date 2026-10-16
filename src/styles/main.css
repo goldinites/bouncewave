@@ -364,22 +364,20 @@ body {
   pointer-events: none;
 }
 
-/* Top-right, out of the way of the paddles' corners at the bottom: the song playing, and a tap
-   to turn the music on or off. Same neon frame as the pause button, slimmer */
+/* Top-right, out of the way of the paddles' corners at the bottom: the song playing, a tap to
+   turn the music on or off, and a skip. Same neon frame as the pause button, slimmer */
 .now-playing {
   --chip-fill: #0d0326;
 
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
   position: fixed;
   top: calc(14px + env(safe-area-inset-top, 0px));
   right: calc(14px + env(safe-area-inset-right, 0px));
   z-index: 5;
 
-  max-width: min(60vw, 260px);
-  height: 30px;
-  padding: 0 12px 0 10px;
+  max-width: min(66vw, 290px);
+  height: 32px;
 
   border: 2px solid transparent;
   border-radius: 8px;
@@ -390,32 +388,54 @@ body {
     -2px 0 8px rgba(25, 240, 255, 0.25),
     2px 0 8px rgba(255, 43, 214, 0.25);
 
-  color: var(--text);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  cursor: pointer;
-
   /* Quiet enough not to pull the eye off the court */
   opacity: 0.75;
   transition:
     opacity 0.3s,
-    transform 0.1s,
     box-shadow 0.15s;
 }
 
 .now-playing:hover,
-.now-playing:focus-visible {
-  outline: none;
+.now-playing:focus-within {
   opacity: 1;
   box-shadow:
     -3px 0 14px rgba(25, 240, 255, 0.55),
     3px 0 14px rgba(255, 43, 214, 0.55);
 }
 
-.now-playing:active {
-  transform: scale(0.95);
+.now-playing__toggle,
+.now-playing__next {
+  display: flex;
+  align-items: center;
+
+  padding: 0;
+  border: none;
+  background: none;
+
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.now-playing__toggle:focus-visible,
+.now-playing__next:focus-visible {
+  outline: none;
+}
+
+.now-playing__toggle:active,
+.now-playing__next:active {
+  transform: scale(0.92);
+}
+
+.now-playing__toggle {
+  gap: 8px;
+  min-width: 0;
+  padding: 0 10px 0 6px;
+
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
 }
 
 .now-playing__title {
@@ -428,45 +448,77 @@ body {
   animation: now-playing-enter 0.6s ease-out both;
 }
 
-/* Three equalizer bars bouncing out of step while the music plays */
-.now-playing__eq {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
+/* A little vinyl: grooves, a glint, and a two-tone label so the turning shows. It spins while
+   the music plays and stops where it is when the music is turned off, like a turntable */
+.now-playing__record {
+  position: relative;
   flex: none;
 
-  height: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+
+  background:
+    conic-gradient(
+      transparent 0 30deg,
+      rgba(255, 255, 255, 0.28) 45deg,
+      transparent 60deg 210deg,
+      rgba(255, 255, 255, 0.18) 225deg,
+      transparent 240deg
+    ),
+    repeating-radial-gradient(circle, #120822 0 1px, #2b1a4a 1px 2px);
+  box-shadow: 0 0 0 1px rgba(183, 155, 255, 0.35);
+
+  animation: now-playing-spin 1.8s linear infinite;
 }
 
-.now-playing__bar {
-  width: 3px;
-  height: 100%;
-  border-radius: 1px;
+.now-playing__record::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
 
-  background: linear-gradient(var(--pink), var(--cyan));
-  transform-origin: bottom;
-  animation: now-playing-eq 0.9s ease-in-out infinite alternate;
+  background:
+    radial-gradient(circle, var(--chip-fill) 0 1px, transparent 1.5px),
+    conic-gradient(var(--pink) 0 50%, var(--cyan) 0);
 }
 
-.now-playing__bar:nth-child(2) {
-  animation-duration: 0.6s;
-  animation-delay: -0.3s;
+/* Skip: split off from the title by a thin rule */
+.now-playing__next {
+  justify-content: center;
+  flex: none;
+
+  width: 30px;
+  border-left: 1px solid rgba(183, 155, 255, 0.3);
+
+  color: var(--cyan);
 }
 
-.now-playing__bar:nth-child(3) {
-  animation-duration: 0.75s;
-  animation-delay: -0.5s;
+.now-playing__next svg {
+  width: 14px;
+  height: 14px;
+
+  fill: currentColor;
+  filter: drop-shadow(0 0 3px rgba(25, 240, 255, 0.6));
 }
 
-/* Off: the bars lie flat and the chip dims */
-.now-playing[aria-pressed='false'] {
+.now-playing__next:hover {
+  color: var(--pink);
+}
+
+/* Off: the record stops and the chip dims */
+.now-playing__toggle[aria-pressed='false'] {
   color: var(--purple);
 }
 
-.now-playing[aria-pressed='false'] .now-playing__bar {
-  background: var(--purple);
-  transform: scaleY(0.25);
-  animation: none;
+.now-playing__toggle[aria-pressed='false'] .now-playing__record {
+  animation-play-state: paused;
+  opacity: 0.55;
+}
+
+/* Classic mode has one loop and nothing to skip to */
+.now-playing--classic .now-playing__next {
+  display: none;
 }
 
 /* End-of-match effects animate only opacity and transform: a filter or blend mode over the
@@ -728,16 +780,25 @@ body.classic-mode .now-playing {
   border-radius: 0;
   background: var(--black);
   box-shadow: none;
+}
+
+body.classic-mode .now-playing__toggle {
   color: var(--white);
 }
 
-body.classic-mode .now-playing__bar {
-  border-radius: 0;
-  background: var(--white);
+body.classic-mode .now-playing__record {
+  background: repeating-radial-gradient(circle, var(--black) 0 1px, #555 1px 2px);
+  box-shadow: 0 0 0 1px var(--white);
+}
+
+body.classic-mode .now-playing__record::after {
+  background:
+    radial-gradient(circle, var(--black) 0 1px, transparent 1.5px),
+    conic-gradient(var(--white) 0 50%, #888 0);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .now-playing__bar,
+  .now-playing__record,
   .now-playing__title--enter,
   .game__title,
   .game__border,

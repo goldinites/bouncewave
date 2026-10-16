@@ -23,7 +23,8 @@ function route(current: Tier, wanted: Tier): Tier {
 
 /**
  * The song's form, decided bar by bar: which section plays, when the music moves to another
- * one as the game heats up or cools down, and when to move on to the next song.
+ * one as the game heats up or cools down, and when to move on to another song (picked at
+ * random, never the one that just played).
  *
  * Halfway through every bar `plan` decides the next one, so a drum fill can lead into a new
  * section; `advance` then moves there at the bar line.
@@ -36,11 +37,20 @@ export class Conductor {
   private barsInSection = 0;
   private barsInSong = 0;
   private isSongChangeRequested = false;
+  /** Where a skip goes; it overrides every plan until the bar line takes the music there. */
+  private skipTarget: Position | null = null;
+  private readonly random: () => number;
   /** How many times each tier was entered, to take turns between a song's sections of it. */
   private readonly turns = new Map<Tier, number>();
 
-  constructor(songs: readonly Song[], songIndex: number, tier: Tier = 'calm') {
+  constructor(
+    songs: readonly Song[],
+    songIndex: number,
+    tier: Tier = 'calm',
+    random: () => number = Math.random,
+  ) {
     this.songs = songs;
+    this.random = random;
     const index = songIndex % songs.length;
     this.position = { songIndex: index, sectionIndex: this.pickSection(index, tier), bar: 0 };
   }
@@ -51,6 +61,11 @@ export class Conductor {
 
   public get section(): Section {
     return this.song.sections[this.position.sectionIndex];
+  }
+
+  /** The song the music is heading into: the next bar's, once a change is decided. */
+  public get upcomingSong(): Song {
+    return this.songs[(this.planned ?? this.position).songIndex];
   }
 
   /** Bar of the current section, from 0. */
@@ -70,13 +85,29 @@ export class Conductor {
     return chordAt(section, next.bar * STEPS_PER_BAR);
   }
 
-  /** Move on to the next song at the next phrase boundary. */
+  /** Move on to another song at the next phrase boundary. */
   public requestNewSong(): void {
     this.isSongChangeRequested = true;
   }
 
+  /**
+   * Jump to another song, picked at random, at the very next bar line (the player asked for
+   * it), into a section of the tier the game wants right now.
+   */
+  public skip(wanted: Tier): void {
+    const songIndex = this.pickOtherSong();
+    const tier = wanted === 'rise' ? 'high' : wanted;
+    this.skipTarget = { songIndex, sectionIndex: this.pickSection(songIndex, tier), bar: 0 };
+    this.planned = this.skipTarget;
+  }
+
   /** Decides where the next bar goes, given the tier the game wants right now. */
   public plan(wanted: Tier): void {
+    if (this.skipTarget) {
+      this.planned = this.skipTarget;
+      return;
+    }
+
     const { section, bar, position } = this;
     const isEnd = bar >= section.bars - 1;
     const tier = route(section.tier, wanted);
@@ -88,7 +119,7 @@ export class Conductor {
       isQuiet &&
       ((this.isSongChangeRequested && canLeave) || (isEnd && this.barsInSong + 1 >= SONG_BARS))
     ) {
-      const songIndex = (position.songIndex + 1) % this.songs.length;
+      const songIndex = this.pickOtherSong();
       this.planned = { songIndex, sectionIndex: this.pickSection(songIndex, tier), bar: 0 };
     } else if (tier !== section.tier && canLeave) {
       this.planned = {
@@ -123,12 +154,24 @@ export class Conductor {
 
     this.position = next;
     this.planned = null;
+    this.skipTarget = null;
   }
 
   /** The next bar of the current section, looping. */
   private continuation(): Position {
     const { position, section } = this;
     return { ...position, bar: (position.bar + 1) % section.bars };
+  }
+
+  /**
+   * Any song but the one playing, at random — and, when a skip is already on its way, not that
+   * one either, so every press of skip brings a new title.
+   */
+  private pickOtherSong(): number {
+    const excluded = new Set([this.position.songIndex, this.skipTarget?.songIndex]);
+    const candidates = this.songs.flatMap((_, i) => (excluded.has(i) ? [] : [i]));
+    if (candidates.length === 0) return this.position.songIndex;
+    return candidates[Math.floor(this.random() * candidates.length)];
   }
 
   /** One of the song's sections of `tier`, taking turns; falls back to the groove. */

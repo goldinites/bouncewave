@@ -80,6 +80,7 @@ export class Game {
       onTogglePause: () => this.togglePause(),
       onToggleFullscreen: () => this.toggleFullscreen(),
       onToggleMusic: () => this.toggleMusic(),
+      onNextTrack: () => this.nextTrack(),
       onPress: () => this.flow.skipFinale(),
     });
 
@@ -113,7 +114,10 @@ export class Game {
       },
     );
 
-    this.nowPlaying = new NowPlaying(this.i18n, () => this.toggleMusic());
+    this.nowPlaying = new NowPlaying(this.i18n, {
+      onToggle: () => this.toggleMusic(),
+      onNext: () => this.nextTrack(),
+    });
 
     this.uiManager.bindPauseButton(() => {
       this.unlockAudio();
@@ -165,6 +169,13 @@ export class Game {
   private toggleMusic(): void {
     this.unlockAudio();
     this.settings.cycle('musicMuted');
+  }
+
+  /** The chip's skip and the N key: another synthwave song, at random (classic mode has one). */
+  private nextTrack(): void {
+    if (this.classicMode) return;
+    this.unlockAudio();
+    this.audio.music.skipSong();
   }
 
   /** Swaps the whole presentation (canvas, menu chrome and music) for the 1972 look. */

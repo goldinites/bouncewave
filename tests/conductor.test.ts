@@ -26,6 +26,7 @@ const def = (title: string): SongDef => ({
 });
 
 const SONGS = [compileSong(def('One')), compileSong(def('Two'))];
+const THREE = [...SONGS, compileSong(def('Three'))];
 
 /** Plays `bars` bars wanting `tier`; returns the section name of every bar played. */
 const play = (conductor: Conductor, tier: Tier, bars: number): string[] =>
@@ -87,5 +88,36 @@ describe('Conductor', () => {
     play(conductor, 'calm', 2);
     expect(conductor.song.title).toBe('Two');
     expect(conductor.section.tier).toBe('calm');
+  });
+
+  it('skips to another song at the very next bar line, even mid-chorus', () => {
+    const conductor = new Conductor(SONGS, 0, 'high');
+    play(conductor, 'high', 1);
+
+    conductor.skip('high');
+    expect(conductor.upcomingSong.title).toBe('Two'); // shown at once
+    expect(conductor.isLastBar).toBe(true); // a fill leads into it
+
+    conductor.plan('high'); // the regular mid-bar plan doesn't undo the skip
+    conductor.advance();
+    expect(conductor.song.title).toBe('Two');
+    expect(conductor.section.name).toBe('chorus');
+  });
+
+  it('picks the next song at random, never the one playing', () => {
+    const picks = [0, 0.99].map((roll) => {
+      const conductor = new Conductor(THREE, 0, 'groove', () => roll);
+      conductor.skip('groove');
+      conductor.advance();
+      return conductor.song.title;
+    });
+    expect(picks).toEqual(['Two', 'Three']);
+  });
+
+  it('never skips back to the song a skip is already heading for', () => {
+    const conductor = new Conductor(THREE, 0, 'groove', () => 0);
+    conductor.skip('groove');
+    conductor.skip('groove');
+    expect(conductor.upcomingSong.title).toBe('Three');
   });
 });
