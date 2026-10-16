@@ -2,6 +2,7 @@ import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
 import { FpsMeter } from '@/debug/FpsMeter';
 import { KonamiCode } from '@/easterEgg/KonamiCode';
+import { TitleTaps } from '@/easterEgg/TitleTaps';
 import { EffectsDirector } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { I18nManager } from '@/i18n/I18nManager';
@@ -42,8 +43,12 @@ export class Game {
   private readonly effects: EffectsDirector;
   private readonly fpsMeter = new FpsMeter();
   private readonly konamiCode: KonamiCode;
+  private readonly titleTaps: TitleTaps | null;
 
-  /** The classic-mode easter egg: `?classic` in the URL, or the Konami code, toggles it. */
+  /**
+   * The classic-mode easter egg: `?classic` in the URL turns it on; the Konami code, or five
+   * quick taps on the menu's title, toggles it.
+   */
   private classicMode = false;
 
   private lastTimestamp = 0;
@@ -125,6 +130,10 @@ export class Game {
     });
 
     this.konamiCode = new KonamiCode(() => this.setClassicMode(!this.classicMode));
+    const title = document.getElementById('gameTitle');
+    this.titleTaps = title
+      ? new TitleTaps(title, () => this.setClassicMode(!this.classicMode))
+      : null;
     this.setClassicMode(new URLSearchParams(window.location.search).has('classic'));
 
     // Errors outside the game loop (input and button handlers): shown in the ?fps overlay
@@ -344,6 +353,7 @@ export class Game {
 
     this.listeners.abort();
     this.konamiCode.dispose();
+    this.titleTaps?.dispose();
     this.inputHandler.dispose();
     this.uiManager.dispose();
     this.renderer.dispose();
