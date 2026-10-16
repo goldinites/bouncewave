@@ -1,4 +1,5 @@
 import { I18nManager } from '@/i18n/I18nManager';
+import { getRequiredElement } from '@/ui/dom';
 
 const CSS_CLASSES = {
   GAME_UI_HIDDEN: 'game__ui--hidden',
@@ -37,17 +38,20 @@ export class UIManager {
   private pauseButton: HTMLButtonElement;
   private i18n: I18nManager;
   private isCoarsePointer: boolean;
+  /** The main menu's title, as index.html shows it before any script runs. */
+  public readonly gameTitle: string;
   private readonly listeners = new AbortController();
 
   constructor(i18n: I18nManager) {
     this.i18n = i18n;
 
-    this.uiOverlay = this.getRequiredElement<HTMLElement>('gameUI');
-    this.titleElement = this.getRequiredElement<HTMLElement>('gameTitle');
-    this.subtitleElement = this.getRequiredElement<HTMLElement>('gameSubtitle');
-    this.buttonsContainer = this.getRequiredElement<HTMLElement>('gameButtons');
-    this.hintElement = this.getRequiredElement<HTMLElement>('gameHint');
-    this.pauseButton = this.getRequiredElement<HTMLButtonElement>('pauseButton');
+    this.uiOverlay = getRequiredElement<HTMLElement>('gameUI');
+    this.titleElement = getRequiredElement<HTMLElement>('gameTitle');
+    this.gameTitle = this.titleElement.textContent ?? '';
+    this.subtitleElement = getRequiredElement<HTMLElement>('gameSubtitle');
+    this.buttonsContainer = getRequiredElement<HTMLElement>('gameButtons');
+    this.hintElement = getRequiredElement<HTMLElement>('gameHint');
+    this.pauseButton = getRequiredElement<HTMLButtonElement>('pauseButton');
 
     this.isCoarsePointer = window.matchMedia('(pointer:coarse)').matches;
     this.updateTexts();
@@ -159,13 +163,5 @@ export class UIManager {
   public updateTexts(): void {
     this.hintElement.innerHTML = this.i18n.t(this.isCoarsePointer ? 'hintT' : 'hintK');
     this.pauseButton.setAttribute('aria-label', this.i18n.t('pauseButton'));
-  }
-
-  private getRequiredElement<T extends HTMLElement>(id: string): T {
-    const el = document.getElementById(id);
-    if (!el) {
-      throw new Error(`Required DOM element with id "${id}" not found`);
-    }
-    return el as T;
   }
 }

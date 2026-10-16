@@ -48,7 +48,12 @@ export class Ball {
     this.boostTimeLeft = Math.max(0, this.boostTimeLeft - dt);
   }
 
-  public serve(direction: number, initialSpeed = BALL.INITIAL_SPEED): void {
+  /** @param random the source of the serve's angle; MatchFlow passes its own */
+  public serve(
+    direction: number,
+    initialSpeed = BALL.INITIAL_SPEED,
+    random: () => number = Math.random,
+  ): void {
     this.x = COURT.WIDTH / 2;
     this.y = COURT.HEIGHT / 2;
     this.speed = initialSpeed;
@@ -57,7 +62,7 @@ export class Ball {
     this.clearBoost();
     this.isPowerShot = false;
 
-    const angle = (Math.random() - 0.5) * 0.8;
+    const angle = (random() - 0.5) * 0.8;
     this.vx = direction * Math.cos(angle) * this.speed;
     this.vy = Math.sin(angle) * this.speed;
   }

@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
+import { BACKGROUND } from './src/shared/palette';
 
 export default defineConfig({
   base: '/bouncewave/',
@@ -11,6 +12,11 @@ export default defineConfig({
     },
   },
   plugins: [
+    // The background color index.html can't import (see BACKGROUND)
+    {
+      name: 'background-color',
+      transformIndexHtml: (html) => html.replaceAll('__BACKGROUND__', BACKGROUND),
+    },
     // Installable and playable offline: the whole game is precached, a new deploy swaps in on the next launch
     VitePWA({
       registerType: 'autoUpdate',
@@ -20,8 +26,8 @@ export default defineConfig({
         short_name: 'Bouncewave',
         description: 'Synthwave pong with procedural music, neon backgrounds and an AI opponent.',
         lang: 'en',
-        theme_color: '#0b0320',
-        background_color: '#0b0320',
+        theme_color: BACKGROUND,
+        background_color: BACKGROUND,
         display: 'standalone',
         display_override: ['fullscreen', 'standalone'],
         orientation: 'any',

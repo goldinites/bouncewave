@@ -14,6 +14,14 @@ describe('Ball', () => {
     expect(ball.trail).toEqual([]);
   });
 
+  it('takes the serve angle from the random source it is given', () => {
+    const ball = new Ball();
+    ball.serve(1, BALL.INITIAL_SPEED, () => 0.5);
+
+    expect(ball.vy).toBe(0);
+    expect(ball.vx).toBe(BALL.INITIAL_SPEED);
+  });
+
   it('serves ball leftwards when direction is -1', () => {
     const ball = new Ball();
     ball.serve(-1);

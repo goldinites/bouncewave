@@ -31,4 +31,9 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
+  {
+    // Build scripts run in Node, not the browser
+    files: ['scripts/**'],
+    languageOptions: { globals: globals.node },
+  },
 );
