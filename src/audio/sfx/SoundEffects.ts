@@ -107,6 +107,20 @@ export class SoundEffects {
     }
   }
 
+  /** Overdrive power shot: the rally's note as a rising saw roar with a fifth and an octave. */
+  public playPowerShot(rally: number): void {
+    const freq = midiToFrequency(getRallyNote(this.harmonyGetter(), rally));
+    this.beep(freq, 0.32, 'sawtooth', 0.06, 2);
+    this.beep(freq * 1.5, 0.26, 'square', 0.035);
+    this.beep(freq * 2, 0.4, 'sine', 0.05);
+  }
+
+  /** The Overdrive meter just filled: a bright two-tone chime. */
+  public playOverdriveReady(): void {
+    this.beep(1046.5, 0.16, 'triangle', 0.05, 1.5);
+    this.beep(1568, 0.26, 'sine', 0.035);
+  }
+
   public playScore(): void {
     this.beep(SFX_FREQUENCIES.SCORE, 0.35, 'sawtooth', 0.07, 0.3);
   }

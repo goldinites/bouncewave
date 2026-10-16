@@ -14,6 +14,8 @@ export class Ball {
   public speed: number = BALL.INITIAL_SPEED;
   public radius: number = BALL.INITIAL_RADIUS;
   public trail: Point[] = [];
+  /** In flight from an Overdrive power shot; cleared by the next hit or serve. */
+  public isPowerShot = false;
 
   // Temporary speed surge (e.g. after a perfect hit); fades out linearly
   private boostAmount = 0;
@@ -46,6 +48,7 @@ export class Ball {
     this.speed = initialSpeed;
     this.trail = [];
     this.clearBoost();
+    this.isPowerShot = false;
 
     const angle = (Math.random() - 0.5) * 0.8;
     this.vx = direction * Math.cos(angle) * this.speed;

@@ -44,6 +44,16 @@ const BURST = {
   SCORE_INSET: 6, // score bursts go off just inside the goal line
   FIREWORK_COUNT: 40,
   FIREWORK_SPEED: 340,
+  POWER_COUNT: 36, // per color, twice over
+  POWER_SPEED: 560,
+} as const;
+
+// Overdrive: the meter filling up, and the power shot going off
+const OVERDRIVE_FX = {
+  POWER_SHAKE: 8,
+  POWER_FLASH: 0.7,
+  POWER_RING_SPEED: 760,
+  READY_RING_SPEED: 380,
 } as const;
 
 // Shockwave ring expansion speeds; a plain hit uses the ParticleSystem default
@@ -149,8 +159,10 @@ export class EffectsDirector {
     const sparkRally = flow.phase === 'finale' ? 0 : flow.rally;
     this.paddleFx.update(dt, this.paddles, this.particles, sparkRally);
 
-    if (flow.isBallLive && this.climax.level > 0.05) {
-      this.emitClimaxEmbers(dt);
+    // A power shot burns like the full climax
+    const emberLevel = Math.max(this.climax.level, this.ball.isPowerShot ? 1 : 0);
+    if (flow.isBallLive && emberLevel > 0.05) {
+      this.emitClimaxEmbers(dt, emberLevel);
     }
 
     for (const shot of this.fireworks?.update(dt) ?? []) {
@@ -229,7 +241,28 @@ export class EffectsDirector {
       this.renderer.addFlash(FLASH.PERFECT_HIT);
     }
 
-    this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, hit.paddleIndex);
+    if (hit.isPowerShot) {
+      this.onPowerShot(hit);
+    } else {
+      this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, hit.paddleIndex);
+    }
+
+    if (hit.chargedOverdrive) {
+      this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, OVERDRIVE_FX.READY_RING_SPEED);
+      this.audio.sfx.playOverdriveReady();
+    }
+  }
+
+  /** The player's Overdrive goes off: a white-hot blast on top of the usual hit. */
+  private onPowerShot(hit: Extract<MatchEvent, { type: 'paddleHit' }>): void {
+    for (const color of [COLORS.YELLOW, COLORS.WHITE]) {
+      this.particles.burst(hit.x, hit.y, color, BURST.POWER_COUNT, BURST.POWER_SPEED);
+    }
+    this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, OVERDRIVE_FX.POWER_RING_SPEED);
+    this.particles.shockwave(hit.x, hit.y, COLORS.PINK, SHOCKWAVE_SPEED.PERFECT);
+    this.renderer.addFlash(OVERDRIVE_FX.POWER_FLASH);
+    this.renderer.addShake(OVERDRIVE_FX.POWER_SHAKE);
+    this.audio.sfx.playPowerShot(hit.rally);
   }
 
   private onScore(score: Extract<MatchEvent, { type: 'score' }>): void {
@@ -298,9 +331,9 @@ export class EffectsDirector {
     this.audio.music.resetClimax();
   }
 
-  /** Burning-ball embers during the rally climax. */
-  private emitClimaxEmbers(dt: number): void {
-    const expected = EMBERS.RATE * this.climax.level * dt;
+  /** Burning-ball embers during the rally climax or a power shot, `level` in [0, 1]. */
+  private emitClimaxEmbers(dt: number, level: number): void {
+    const expected = EMBERS.RATE * level * dt;
     const count = Math.floor(expected + Math.random());
     const ball = this.ball;
 

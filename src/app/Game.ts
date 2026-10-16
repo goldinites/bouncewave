@@ -304,6 +304,7 @@ export class Game {
       zoom: this.effects.cameraZoom,
       climax: this.effects.climaxLevel,
       paddleGlow: this.effects.paddleGlow,
+      overdriveCharge: this.flow.overdriveCharge,
     };
   }
 

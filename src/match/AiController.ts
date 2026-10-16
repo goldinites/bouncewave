@@ -31,6 +31,22 @@ const TRUST_PER_GLANCE = 0.25;
 const TWITCH = { CHANCE: 0.35, SIZE: 26, DURATION: 0.12, CALM_BEFORE: 0.35 } as const;
 const IDLE_TWITCH_SIZE = 14; // smaller ones while it waits for the ball to come back
 
+/** How hard a shot is to read, on top of the AI's own skill. */
+export interface ShotThreat {
+  /** Seconds added to the reaction time. */
+  extraReaction: number;
+  /** Multiplies the misjudgment. */
+  misjudgmentScale: number;
+}
+
+export const SHOT_THREAT = {
+  NORMAL: { extraReaction: 0, misjudgmentScale: 1 },
+  // A perfect hit comes off the paddle cleaner and faster than it looks
+  PERFECT: { extraReaction: 0.08, misjudgmentScale: 1.5 },
+  // An Overdrive power shot is a blur
+  POWER: { extraReaction: 0.22, misjudgmentScale: 2.2 },
+} as const satisfies Record<string, ShotThreat>;
+
 /** Where a ball will cross a vertical line, and how many walls it bounces off on the way. */
 export interface Arrival {
   y: number;
@@ -68,7 +84,7 @@ export function predictArrival(
 interface ShotRead {
   /** Seconds before it reacts to the shot at all. */
   reactIn: number;
-  /** How it misjudges the arrival, in [-0.5, 0.5]; scaled by the skill and the walls ahead. */
+  /** How it misjudges the arrival, in [-0.5, 0.5] times the shot's threat; scaled by the skill and the walls ahead. */
   misjudgment: number;
   /** The misjudgment in px, fixed once it reads the shot; null until then. */
   misread: number | null;
@@ -139,11 +155,12 @@ export class AiController {
   /**
    * A new shot is heading at `paddle` (the opponent hit it, or it was served):
    * rolls how this paddle will read it and whether it will angle the return.
+   * @param threat how much harder than usual the shot is to read (a perfect hit, a power shot)
    */
-  public readShot(paddle: Paddle, skill: AiSkill): void {
+  public readShot(paddle: Paddle, skill: AiSkill, threat: ShotThreat = SHOT_THREAT.NORMAL): void {
     const read = this.reads[paddle.index];
-    read.reactIn = skill.reaction;
-    read.misjudgment = this.random() - 0.5;
+    read.reactIn = skill.reaction + threat.extraReaction;
+    read.misjudgment = (this.random() - 0.5) * threat.misjudgmentScale;
     read.misread = null;
     read.watched = 0;
     read.hitOffset = 0;
@@ -199,7 +216,8 @@ export class AiController {
 
     // Watching the ball, the AI sees its mistake and corrects it, sooner the slower the ball
     const correction = clamp(1 - read.watched / WATCH.TO_CORRECT, 0, 1);
-    read.watched += (dt * WATCH.REFERENCE_SPEED) / Math.max(ball.speed, WATCH.REFERENCE_SPEED);
+    const apparentSpeed = ball.speed * ball.speedMultiplier; // boosts included
+    read.watched += (dt * WATCH.REFERENCE_SPEED) / Math.max(apparentSpeed, WATCH.REFERENCE_SPEED);
 
     // The ball meets the paddle `hitOffset` half-heights below its center
     return seenY + read.misread * correction - (read.hitOffset * PADDLE.HEIGHT) / 2;

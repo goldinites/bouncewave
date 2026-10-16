@@ -78,6 +78,22 @@ describe('Physics.step', () => {
     expect(paddles[1]).toEqual(makePaddles()[1]);
   });
 
+  it('lets a moving paddle steer a perfect hit much harder than an ordinary one', () => {
+    const angleOf = (ball: Ball) => Math.atan2(ball.vy, ball.vx);
+
+    const perfect = hitLeftPaddleAt(0, 900).ball;
+    const ordinary = hitLeftPaddleAt(30, 900).ball;
+    const ordinaryStill = hitLeftPaddleAt(30, 0).ball;
+
+    const perfectSpin = angleOf(perfect);
+    const ordinarySpin = angleOf(ordinary) - angleOf(ordinaryStill);
+    expect(perfectSpin).toBeGreaterThan(ordinarySpin * 2);
+    expect(perfectSpin).toBeLessThanOrEqual(PERFECT_HIT.SPIN_MAX_ANGLE);
+
+    // Still, a perfect hit with the paddle at rest goes out flat
+    expect(angleOf(hitLeftPaddleAt(0, 0).ball)).toBeCloseTo(0);
+  });
+
   it('rewards a center hit with a temporary boost and marks it perfect', () => {
     const perfect = hitLeftPaddleAt(0);
     const offCenter = hitLeftPaddleAt(PADDLE.HEIGHT * 0.2);

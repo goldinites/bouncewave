@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AiController, predictArrival } from '@/match/AiController';
+import { AiController, predictArrival, SHOT_THREAT } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
 import { BALL, COURT, PADDLE } from '@/match/config';
 import {
@@ -110,6 +110,32 @@ describe('AiController', () => {
     ai.update(cpu, ball, slow, 0.15, playerPaddle());
     ai.update(cpu, ball, slow, 0.1, playerPaddle());
     expect(cpu.targetY).toBeCloseTo(400);
+  });
+
+  it('reacts later to a power shot and misjudges a perfect one more', () => {
+    const cpu = cpuPaddle();
+    cpu.targetY = 100;
+    const ball = ballAt(200, 400, 400, 0);
+    const ai = new AiController(() => 0.5);
+    const quick = skill({ reaction: 0.1 });
+
+    ai.readShot(cpu, quick, SHOT_THREAT.POWER);
+    for (let t = 0; t < 0.25; t += 0.05) ai.update(cpu, ball, quick, 0.05, playerPaddle());
+    expect(cpu.targetY).toBe(100);
+
+    const misreadOf = (threat: (typeof SHOT_THREAT)[keyof typeof SHOT_THREAT]) => {
+      const paddle = cpuPaddle();
+      const reader = new AiController(() => 1);
+      const sloppy = skill({ error: 40 });
+      reader.readShot(paddle, sloppy, threat);
+      // So fast it gives no time to correct the read
+      const ball = ballAt(400, 250, 1e6, 0);
+      // Two frames: a threat's extra reaction time may take up the first
+      reader.update(paddle, ball, sloppy, 1, playerPaddle());
+      reader.update(paddle, ball, sloppy, 1, playerPaddle());
+      return paddle.targetY - 250;
+    };
+    expect(misreadOf(SHOT_THREAT.PERFECT)).toBeCloseTo(misreadOf(SHOT_THREAT.NORMAL) * 1.5);
   });
 
   it('returns toward the center when the ball heads away', () => {
