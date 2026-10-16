@@ -1,9 +1,9 @@
 import { COURT } from '@/match/config';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { Background, BackgroundMood } from '@/render/backgrounds/Background';
-import { HyperspaceBackground } from '@/render/backgrounds/HyperspaceBackground';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
+import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
 import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
 import { clamp } from '@/shared/math';
 
@@ -15,7 +15,7 @@ const createBackgrounds = (): Background[] => [
   new LaserBackground(),
   new MemphisBackground(),
   new OutrunBackground(),
-  new HyperspaceBackground(),
+  new NeonCityBackground(),
 ];
 
 /**
