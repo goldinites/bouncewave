@@ -78,6 +78,7 @@ The compiler points out anything missing, such as a translation for a new diffic
 - `npm run build` — Typecheck (`tsc`) and compile an optimized production bundle to `dist/`.
 - `npm run preview` — Locally preview the production build.
 - `npm test` — Run all unit test suites via Vitest.
+- `npm run coverage` — Run the tests and report coverage (an HTML report lands in `coverage/`).
 - `npm run lint` — Lint codebase with ESLint.
 - `npm run lint:fix` — Automatically fix ESLint lint errors.
 - `npm run format` — Format all files with Prettier.

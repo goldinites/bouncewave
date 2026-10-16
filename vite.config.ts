@@ -57,5 +57,11 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
+    // npm run coverage
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      reporter: ['text-summary', 'text', 'html'],
+    },
   },
 });
