@@ -1,3 +1,4 @@
+import { Tier } from '@/audio/music/score';
 import { getRallyHeat, getSpeedHeat } from '@/match/heat';
 import { GameState } from '@/match/GameState';
 import { DifficultyLevel } from '@/match/difficulty';
@@ -44,6 +45,11 @@ const LATE_MATCH_SCORE = 6;
 const LATE_MATCH_BONUS = 0.1;
 // Per sequencer step; intensity drifts slowly so the arrangement never lurches
 const INTENSITY_FOLLOW = 0.025;
+// The chorus takes over above this intensity or climax, and lets go only once intensity falls
+// below the lower bar, so a rally hovering at the edge doesn't bounce between sections
+const HIGH_INTENSITY = 0.7;
+const HIGH_RELEASE_INTENSITY = 0.55;
+const HIGH_CLIMAX = 0.25;
 
 /** Where intensity is heading for the current game state. Paused holds the current value. */
 export function getTargetIntensity(state: MusicState, current: number): number {
@@ -87,4 +93,23 @@ export function stepIntensity(
     return current + (climaxTarget - current) * CLIMAX_INTENSITY_FOLLOW;
   }
   return current + (target - current) * INTENSITY_FOLLOW;
+}
+
+/**
+ * Which kind of section the game calls for: calm in the menu, the groove during play and the
+ * chorus when a rally gets hot. Paused holds on to whatever is playing.
+ */
+export function getWantedTier(
+  gameState: GameState,
+  intensity: number,
+  climaxLevel: number,
+  current: Tier,
+): Tier {
+  if (gameState === 'menu') return 'calm';
+
+  const isHigh = current === 'high' || current === 'rise';
+  if (gameState === 'paused') return isHigh ? 'high' : current;
+
+  const threshold = isHigh ? HIGH_RELEASE_INTENSITY : HIGH_INTENSITY;
+  return climaxLevel > HIGH_CLIMAX || intensity > threshold ? 'high' : 'groove';
 }

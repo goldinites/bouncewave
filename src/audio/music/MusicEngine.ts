@@ -1,20 +1,23 @@
-import { Arrangement } from '@/audio/music/Arrangement';
+import { Arrangement, BASS_LOW } from '@/audio/music/Arrangement';
+import { Conductor } from '@/audio/music/Conductor';
 import { Harmony, HarmonyTimeline } from '@/audio/music/HarmonyTimeline';
 import { Instruments } from '@/audio/music/Instruments';
 import {
   getTargetIntensity,
+  getWantedTier,
   INITIAL_MUSIC_STATE,
   MusicState,
   followClimax,
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { getTargetBpm, glideTempo } from '@/audio/music/tempo';
-import { CHORD_TYPES, MUSIC_TRACKS } from '@/audio/music/tracks';
+import { chordAt, STEPS_PER_BAR } from '@/audio/music/score';
+import { SONGS } from '@/audio/music/songs';
+import { placeAbove } from '@/audio/music/theory';
 import { GameState } from '@/match/GameState';
 import { clamp } from '@/shared/math';
 
-const HARMONY_HISTORY = 4; // scheduled bar changes kept to find what is audible now
+const HARMONY_HISTORY = 8; // scheduled chord changes kept to find what is audible now
 const TAPE_STOP_DURATION = 1.1; // s for the music to grind to a halt on defeat
 
 // Look-ahead scheduling: wake up often, schedule a little ahead on the precise audio clock
@@ -25,13 +28,15 @@ const START_DELAY = 0.1;
 const RESYNC_THRESHOLD = 0.1;
 const RESYNC_DELAY = 0.05;
 
-const STEPS_PER_SONG = 256;
+// The conductor decides the next bar halfway through the current one, in time for a fill
+const PLAN_STEP = 8;
 const ECHO_STEPS = 3; // lead echo time, in steps
 const TONE_FILTER: Record<GameState, number> = { paused: 450, menu: 2800, play: 16000 };
 
 /**
  * Procedural synthwave soundtrack. The game pushes its state in with `setState` every frame;
- * a look-ahead scheduler turns that into intensity and plays the arrangement step by step.
+ * a look-ahead scheduler turns that into intensity, lets the conductor pick the section that
+ * fits, and plays the arrangement step by step. Each song keeps its own tempo throughout.
  * Effect commands (drama, climax, duck, tape stop) are forwarded to the audio graph.
  */
 export class MusicEngine {
@@ -41,8 +46,6 @@ export class MusicEngine {
 
   private state: MusicState = INITIAL_MUSIC_STATE;
   private intensity = 0.3;
-  /** Current tempo, gliding toward the target; null until the first step sets it. */
-  private bpm: number | null = null;
   /** The game's climax build-up, as last pushed in. */
   private gameClimaxLevel = 0;
   /** The music's own climax level: follows the game's, but dies away more slowly. */
@@ -52,7 +55,7 @@ export class MusicEngine {
 
   private nextStepTime = 0;
   private currentStep = 0;
-  private readonly songTrackOffset = Math.floor(Math.random() * MUSIC_TRACKS.length);
+  private readonly conductor = new Conductor(SONGS, Math.floor(Math.random() * SONGS.length));
   private schedulerIntervalId: number | null = null;
 
   /** Builds the audio graph and starts the scheduler; safe to call more than once. */
@@ -121,9 +124,9 @@ export class MusicEngine {
     this.isTapeStopped = false;
   }
 
-  /** Jump to the start of the next song. */
+  /** Move on to the next song at the next phrase boundary. */
   public newSong(): void {
-    this.currentStep = (this.currentStep | (STEPS_PER_SONG - 1)) + 1;
+    this.conductor.requestNewSong();
   }
 
   public getAnalyser(): AnalyserNode | null {
@@ -140,11 +143,6 @@ export class MusicEngine {
       clearInterval(this.schedulerIntervalId);
       this.schedulerIntervalId = null;
     }
-  }
-
-  private getTrack(step: number) {
-    const index = (this.songTrackOffset + Math.floor(step / STEPS_PER_SONG)) % MUSIC_TRACKS.length;
-    return MUSIC_TRACKS[index];
   }
 
   private scheduleSteps(): void {
@@ -166,27 +164,29 @@ export class MusicEngine {
       const target = getTargetIntensity(this.state, this.intensity);
       this.intensity = stepIntensity(this.intensity, target, this.climaxLevel, gameState);
 
-      const step = this.currentStep;
-      const time = this.nextStepTime;
-      const track = this.getTrack(step);
-      const targetBpm = getTargetBpm(track.bpm, this.intensity);
-      const bpm = this.bpm ?? targetBpm;
-      const stepDuration = 60 / bpm / 4;
-      this.bpm = glideTempo(bpm, targetBpm, stepDuration);
-      const bar = (step >> 4) & 3;
+      const { conductor } = this;
+      const stepInBar = this.currentStep % STEPS_PER_BAR;
+      if (stepInBar === 0 && this.currentStep > 0) conductor.advance();
+      if (stepInBar === PLAN_STEP) {
+        conductor.plan(
+          getWantedTier(gameState, this.intensity, this.climaxLevel, conductor.section.tier),
+        );
+      }
 
-      // Remember chord changes (even while muted) so hits can be tuned to the audible bar
-      if ((step & 15) === 0 || this.harmony.isEmpty) {
-        this.harmony.push(time, {
-          root: track.rootNotes[bar],
-          chord: CHORD_TYPES[track.chordTypes[bar]],
-        });
+      const { song, section, bar } = conductor;
+      const time = this.nextStepTime;
+      const stepDuration = 60 / song.bpm / 4;
+      const chord = chordAt(section, bar * STEPS_PER_BAR + stepInBar);
+
+      // Remember chord changes (even while muted) so hits can be tuned to the audible chord
+      if (stepInBar % PLAN_STEP === 0 || this.harmony.isEmpty) {
+        this.harmony.push(time, { root: placeAbove(chord.root, BASS_LOW), chord: chord.triad });
       }
 
       if (this.isDropPending) {
         this.isDropPending = false;
         if (!isMuted) {
-          arrangement.playDrop(time, track.rootNotes[bar], stepDuration);
+          arrangement.playDrop(time, chord, stepDuration);
         }
       }
 
@@ -196,9 +196,13 @@ export class MusicEngine {
       if (!isMuted) {
         arrangement.playStep({
           time,
-          step,
           stepDuration,
-          track,
+          song,
+          section,
+          bar,
+          stepInBar,
+          isLastBar: conductor.isLastBar,
+          nextBarChord: conductor.nextBarChord,
           intensity: this.intensity,
           climaxLevel: this.climaxLevel,
           difficulty: this.state.difficulty,

@@ -1,28 +1,46 @@
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { TrackConfig, CHORD_TYPES, BASS_PATTERNS } from '@/audio/music/tracks';
+import {
+  ARP_PATTERNS,
+  BASS_PATTERNS,
+  DRUM_FILLS,
+  DRUM_PATTERNS,
+  DrumFill,
+  DrumPattern,
+  HIT_VELOCITY,
+  STAB_PATTERNS,
+} from '@/audio/music/patterns';
+import { chordAt, LeadVoice, MelodyNote, Section, Song, STEPS_PER_BAR } from '@/audio/music/score';
+import { Chord, placeAbove, voiceChord } from '@/audio/music/theory';
 import { DifficultyLevel } from '@/match/difficulty';
 import { clamp } from '@/shared/math';
 
 /** Everything that decides what one 16th-note step plays. */
 export interface StepContext {
   time: number;
-  /** Absolute step counter; 16 steps per bar, 4 bars per chord loop, 256 per song. */
-  step: number;
   stepDuration: number;
-  track: TrackConfig;
-  /** 0..1: how hot the game is right now; more layers join as it rises. */
+  song: Song;
+  section: Section;
+  /** Bar of the section, from 0. */
+  bar: number;
+  /** Step of the bar, 0–15. */
+  stepInBar: number;
+  /** Whether this bar leads into a new section, so its second half plays the fill. */
+  isLastBar: boolean;
+  /** The chord the next bar opens with. */
+  nextBarChord: Chord;
+  /** 0..1: how hot the game is right now; the mix fills out and brightens as it rises. */
   intensity: number;
   /** 0..1: rally climax build-up; fades the climax-only layers in. */
   climaxLevel: number;
   difficulty: DifficultyLevel;
 }
 
-/** How the lead arpeggio's character sharpens as the AI gets tougher. */
+/** How the lead lines' character sharpens as the AI gets tougher. */
 interface DifficultySignature {
-  /** Multiplies the lead's filter cutoff: brighter and more biting the harder the level. */
+  /** Multiplies the leads' filter cutoff: brighter and more biting the harder the level. */
   leadBrightness: number;
-  /** An extra octave-up retrigger right after every strong beat, for a nervous edge. */
+  /** An extra octave-up retrigger on the arpeggio's strong beats, for a nervous edge. */
   stutter: boolean;
 }
 
@@ -32,16 +50,77 @@ const DIFFICULTY_SIGNATURES: Record<DifficultyLevel, DifficultySignature> = {
   [DifficultyLevel.INSANE]: { leadBrightness: 1.6, stutter: true },
 };
 
+// Registers: bass roots in E1–D#2 (the SFX tune to these too), arpeggios from A3
+export const BASS_LOW = 28;
+const ARP_LOW = 57;
+const ARP_HIGH = 86; // higher arpeggio notes fold down an octave
+const SPARKLE_HIGH = 96;
+
+// In a groove section some layers wait for the rally to heat up
+const GROOVE_ARP_INTENSITY = 0.4;
+const GROOVE_EXTRA_HATS_INTENSITY = 0.45;
+const GROOVE_COUNTER_INTENSITY = 0.55;
+
+// Peak levels; most scale with intensity on top
+const LEAD_VOLUME: Record<LeadVoice, number> = {
+  saw: 0.075,
+  square: 0.06,
+  bell: 0.11,
+  pluck: 0.09,
+};
+const COUNTER_SHARE = 0.55;
+const ARP_VOLUME = 0.045;
+const PAD_VOLUME = 0.022;
+const STAB_VOLUME = 0.05;
+const BASS_VOLUME = 0.15;
+const RISER_VOLUME = 0.07;
+
+/** The bass note a pattern token stands for over `chord`; null for holds and rests. */
+function bassNote(token: string, chord: Chord, next: Chord): number | null {
+  const root = placeAbove(chord.root, BASS_LOW);
+  switch (token) {
+    case 'R':
+      return root;
+    case 'O':
+      return root + 12;
+    case '5':
+      return root + 7;
+    case '3':
+      return root + chord.triad[1];
+    case 'A':
+      return placeAbove(next.root, BASS_LOW) - 1;
+    default:
+      return null;
+  }
+}
+
+/** The arpeggio's `index`-th note: the chord's tones from the bottom up, octave after octave. */
+function arpNote(chord: Chord, index: number): number {
+  const base = placeAbove(chord.root, ARP_LOW);
+  const ladder = [...new Set(chord.intervals.map((i) => i % 12))].sort((a, b) => a - b);
+  let note = base + ladder[index % ladder.length] + 12 * Math.floor(index / ladder.length);
+  while (note > ARP_HIGH) note -= 12;
+  return note;
+}
+
+/** Steps a token in a pattern sounds for: itself plus the holds after it. */
+function heldSteps(pattern: string, step: number): number {
+  let steps = 1;
+  while (pattern[step + steps] === '-') steps++;
+  return steps;
+}
+
 /**
- * The composition: which instruments play on which step at which intensity.
- * Layers enter in order as intensity rises: pad, bass, kick and hats always;
- * snare above 0.2, lead arpeggio above 0.25, extra hats above 0.45, melody above 0.6;
- * and climax layers on top while a long rally builds.
+ * Plays the score: every part of the current section on every step — pad, stabs, bass,
+ * arpeggio, melody, counter-melody, drums and fills — shaped by how hot the game is, plus the
+ * climax layers on top while a long rally builds.
  */
 export class Arrangement {
   private readonly play: Instruments;
   private readonly bus: AudioNode;
   private readonly aux: AudioNode;
+  /** The pad's last voicing, so the next chord moves as little as possible from it. */
+  private voicing: number[] | null = null;
 
   constructor(instruments: Instruments, graph: MusicGraph) {
     this.play = instruments;
@@ -49,143 +128,221 @@ export class Arrangement {
     this.aux = graph.aux;
   }
 
-  public playStep({
-    time,
-    step,
-    stepDuration,
-    track,
-    intensity: I,
-    climaxLevel,
-    difficulty,
-  }: StepContext): void {
-    const bar = (step >> 4) & 3;
-    const stepInBar = step & 15;
-    const root = track.rootNotes[bar];
-    const triad = CHORD_TYPES[track.chordTypes[bar]];
-    const signature = DIFFICULTY_SIGNATURES[difficulty];
+  public playStep(context: StepContext): void {
+    const { stepInBar: s, section, bar, stepDuration, song, intensity: I } = context;
+    const sectionStep = bar * STEPS_PER_BAR + s;
+    const chord = chordAt(section, sectionStep);
+    // Swing pushes the off-beat 16ths late
+    const time = context.time + (s % 2 ? song.swing * stepDuration : 0);
+    const isGroove = section.tier === 'groove';
 
-    // Crash at the top of every song
-    if (step % 256 === 0) {
-      this.play.noise(time, 1.2, 0.14, 3000);
-    }
-
-    if (stepInBar === 0) {
-      this.play.pad(
-        triad.map((x) => root + 12 + x),
-        time,
-        stepDuration * 16,
-        0.03 + 0.03 * I,
-        700 + I * 1800,
-      );
-    }
-
-    if (BASS_PATTERNS[track.bassPatternIndex][stepInBar] === '1') {
-      const bassNote = root + (stepInBar % 8 === 6 ? 12 : 0);
-      this.play.note(
-        'sawtooth',
-        bassNote,
-        time,
-        stepDuration * 1.8,
-        0.16 + 0.1 * I,
-        this.bus,
-        500 + I * 1800,
-      );
-    }
-
-    if (stepInBar % 4 === 0) {
-      this.play.kick(time, 0.3 + 0.4 * I);
-    }
-
-    // Snare on 2 and 4
-    if ((stepInBar === 4 || stepInBar === 12) && I > 0.2) {
-      this.play.noise(time, 0.25, 0.2 + 0.15 * I, 1200);
-    }
-
-    // Hi-hats: off-beat 16ths, plus the remaining 8ths once it heats up
-    if (stepInBar % 2) {
-      this.play.noise(time, 0.05, 0.04 + 0.05 * I, 7000);
-    } else if (I > 0.45 && stepInBar % 4) {
-      this.play.noise(time, 0.03, clamp((I - 0.4) * 0.08, 0, 0.035), 8000);
-    }
-
-    if (I > 0.25) {
-      const arpeggioIndex = track.arpeggioPattern[stepInBar];
-      const leadNote = root + 24 + triad[arpeggioIndex % 3] + (arpeggioIndex > 2 ? 12 : 0);
-      const leadVolume = clamp((I - 0.22) * 0.14, 0, 0.07);
-      const leadCutoff = (1500 + I * 2500) * signature.leadBrightness;
-      this.play.note(
-        track.arpeggioWave,
-        leadNote,
-        time,
-        stepDuration * 1.6,
-        leadVolume,
-        this.aux,
-        leadCutoff,
-      );
-
-      if (signature.stutter && stepInBar % 4 === 0) {
-        this.play.note(
-          track.arpeggioWave,
-          leadNote + 12,
-          time + stepDuration * 0.5,
-          stepDuration * 0.5,
-          leadVolume * 0.6,
-          this.aux,
-          leadCutoff,
-        );
+    if (sectionStep === 0) {
+      // A crash marks every new section except the quiet ones
+      if (section.tier !== 'calm') this.play.noise(time, 1.2, 0.12, 3000);
+      if (section.riser) {
+        const duration = section.bars * STEPS_PER_BAR * stepDuration;
+        this.play.riser(time, duration, RISER_VOLUME * (0.6 + 0.4 * I));
       }
     }
 
-    if (I > 0.6 && stepInBar % 4 === 0) {
-      const chordIndex = (stepInBar >> 2) % 3;
-      const melodyNote = root + 36 + triad[chordIndex];
-      this.play.note(
-        'sawtooth',
-        melodyNote,
+    this.playHarmony(time, sectionStep, chord, context);
+    this.playBass(time, chord, context);
+
+    if (section.arp && (!isGroove || I > GROOVE_ARP_INTENSITY)) {
+      this.playArp(time, chord, context);
+    }
+
+    const leadVoice = section.leadVoice ?? song.voices.lead;
+    this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context);
+    if (!isGroove || I > GROOVE_COUNTER_INTENSITY) {
+      this.playMelody(
         time,
-        stepDuration * 3.5,
-        clamp((I - 0.55) * 0.14, 0, 0.055),
-        this.aux,
-        2500,
+        section.counter?.[sectionStep],
+        song.voices.counter,
+        COUNTER_SHARE,
+        context,
       );
     }
 
-    if (climaxLevel > 0.01) {
-      this.playClimaxLayers(time, stepInBar, stepDuration, root, triad, track, climaxLevel);
+    this.playDrums(time, context);
+
+    if (context.climaxLevel > 0.01) {
+      this.playClimaxLayers(time, chord, context);
     }
   }
 
   /** One-shot impact when the build-up peaks: crash, heavy kick and a long held bass note. */
-  public playDrop(time: number, root: number, stepDuration: number): void {
+  public playDrop(time: number, chord: Chord, stepDuration: number): void {
     this.play.noise(time, 1.6, 0.22, 2500);
     this.play.kick(time, 1.0);
     // Bass root register (not an octave lower) so it stays audible on phone speakers
+    const root = placeAbove(chord.root, BASS_LOW);
     this.play.note('sawtooth', root, time, stepDuration * 8, 0.22, this.bus, 900);
   }
 
-  /** Extra layers that only play during the climax, on top of the full-intensity mix. */
-  private playClimaxLayers(
+  /** Pad on every chord change, and stabs on the section's stab pattern. */
+  private playHarmony(time: number, sectionStep: number, chord: Chord, context: StepContext): void {
+    const { section, stepInBar: s, stepDuration, intensity: I } = context;
+
+    const isChordStart =
+      s % 8 === 0 && (sectionStep === 0 || chordAt(section, sectionStep - 1) !== chord);
+    if (isChordStart) {
+      this.voicing = voiceChord(chord, this.voicing);
+
+      if (section.pad !== 'none') {
+        // Hold until the chord changes, within the section
+        let length = 8;
+        while (
+          sectionStep + length < section.bars * STEPS_PER_BAR &&
+          chordAt(section, sectionStep + length) === chord
+        ) {
+          length += 8;
+        }
+        this.play.pad(
+          this.voicing,
+          time,
+          length * stepDuration,
+          PAD_VOLUME + 0.02 * I,
+          700 + I * 1800,
+          section.pad === 'swell',
+        );
+      }
+    }
+
+    if (section.stabs && this.voicing && STAB_PATTERNS[section.stabs][s] !== '.') {
+      this.play.stab(this.voicing, time, stepDuration * 1.5, STAB_VOLUME * (0.7 + 0.3 * I));
+    }
+  }
+
+  private playBass(time: number, chord: Chord, context: StepContext): void {
+    const { section, stepInBar: s, stepDuration, intensity: I, song } = context;
+    const pattern = BASS_PATTERNS[section.bass];
+    // The approach note aims at the chord after this one: halfway through the bar, or the next bar
+    const next = s < 8 ? chordAt(section, context.bar * STEPS_PER_BAR + 8) : context.nextBarChord;
+    const note = bassNote(pattern[s], chord, next);
+    if (note === null) return;
+
+    this.play.note(
+      song.voices.bass,
+      note,
+      time,
+      stepDuration * (heldSteps(pattern, s) - 0.1),
+      BASS_VOLUME + 0.08 * I,
+      this.bus,
+      450 + I * 1500,
+    );
+  }
+
+  private playArp(time: number, chord: Chord, context: StepContext): void {
+    const { section, stepInBar: s, stepDuration, intensity: I, song, difficulty } = context;
+    const token = ARP_PATTERNS[section.arp!][s];
+    if (token === '.') return;
+
+    const signature = DIFFICULTY_SIGNATURES[difficulty];
+    const note = arpNote(chord, Number(token));
+    const volume = ARP_VOLUME * (0.5 + 0.5 * I);
+    const cutoff = (1400 + I * 2600) * signature.leadBrightness;
+    this.play.note(song.voices.arp, note, time, stepDuration * 1.6, volume, this.aux, cutoff);
+
+    if (signature.stutter && s % 4 === 0) {
+      const at = time + stepDuration * 0.5;
+      this.play.note(
+        song.voices.arp,
+        note + 12,
+        at,
+        stepDuration * 0.5,
+        volume * 0.6,
+        this.aux,
+        cutoff,
+      );
+    }
+  }
+
+  private playMelody(
     time: number,
-    stepInBar: number,
-    stepDuration: number,
-    root: number,
-    triad: number[],
-    track: TrackConfig,
-    mix: number,
+    melodyNote: MelodyNote | null | undefined,
+    voice: LeadVoice,
+    share: number,
+    context: StepContext,
   ): void {
+    if (!melodyNote) return;
+    const { stepDuration, intensity: I, difficulty } = context;
+    const brightness = DIFFICULTY_SIGNATURES[difficulty].leadBrightness;
+
+    this.play.lead(
+      voice,
+      melodyNote.note,
+      time,
+      melodyNote.steps * stepDuration * 0.95,
+      LEAD_VOLUME[voice] * share * (0.65 + 0.35 * I),
+      this.aux,
+      (1800 + I * 2200) * brightness,
+    );
+  }
+
+  /** The section's beat, the fill in the second half of a last bar, and hats that heat up. */
+  private playDrums(time: number, context: StepContext): void {
+    const { section, stepInBar: s, intensity: I, isLastBar } = context;
+    const hit = (line: string | undefined, index: number) =>
+      HIT_VELOCITY[line?.[index] ?? '.'] ?? 0;
+
+    const fill: DrumFill | null =
+      isLastBar && s >= 8 && section.fill ? DRUM_FILLS[section.fill] : null;
+    if (fill) {
+      const i = s - 8;
+      this.playKick(time, hit(fill.kick, i), I);
+      const snare = hit(fill.snare, i);
+      if (snare) this.play.snare(time, snare * (0.18 + 0.12 * I));
+      const tom = fill.tom?.[i];
+      if (tom && tom !== '.') this.play.tom(tom, time, 0.35);
+      const open = hit(fill.open, i);
+      if (open) this.play.noise(time, 0.3, open * 0.08, 8000);
+      return;
+    }
+
+    const beat: DrumPattern = DRUM_PATTERNS[section.drums];
+    this.playKick(time, hit(beat.kick, s), I);
+
+    const snare = hit(beat.snare, s);
+    if (snare) this.play.snare(time, snare * (0.18 + 0.12 * I));
+    const clap = hit(beat.clap, s);
+    if (clap) this.play.clap(time, clap * (0.22 + 0.1 * I));
+
+    const hat = hit(beat.hat, s);
+    if (hat) {
+      this.play.noise(time, 0.05, hat * (0.05 + 0.05 * I), 7000);
+    } else if (section.tier === 'groove' && I > GROOVE_EXTRA_HATS_INTENSITY && s % 2 === 0) {
+      this.play.noise(time, 0.03, clamp((I - 0.4) * 0.08, 0, 0.035), 8000);
+    }
+    const open = hit(beat.open, s);
+    if (open) this.play.noise(time, 0.18, open * (0.05 + 0.04 * I), 8000);
+  }
+
+  private playKick(time: number, velocity: number, intensity: number): void {
+    if (velocity) this.play.kick(time, velocity * (0.4 + 0.35 * intensity));
+  }
+
+  /** Extra layers that only play during the climax, on top of the full mix. */
+  private playClimaxLayers(time: number, chord: Chord, context: StepContext): void {
+    const { stepInBar: s, stepDuration, climaxLevel: mix, section } = context;
+
     // Crash on every bar
-    if (stepInBar === 0) {
+    if (s === 0) {
       this.play.noise(time, 0.9, 0.12 * mix, 4000);
     }
 
     // Open hats on the off-beats
-    if (stepInBar % 4 === 2) {
+    if (s % 4 === 2) {
       this.play.noise(time, 0.12, 0.07 * mix, 9000);
     }
 
-    // Sparkle arpeggio an octave above the lead
-    const arpeggioIndex = track.arpeggioPattern[(stepInBar + 2) & 15];
-    const sparkleNote = root + 36 + triad[arpeggioIndex % 3] + (arpeggioIndex > 2 ? 12 : 0);
-    this.play.note('square', sparkleNote, time, stepDuration * 0.9, 0.025 * mix, this.aux, 6000);
+    // Sparkle arpeggio an octave above the chord, running ahead of the section's own
+    const pattern = ARP_PATTERNS[section.arp ?? 'up'];
+    const token = pattern[(s + 2) & 15];
+    if (token !== '.') {
+      let note = arpNote(chord, Number(token)) + 12;
+      while (note > SPARKLE_HIGH) note -= 12;
+      this.play.note('square', note, time, stepDuration * 0.9, 0.025 * mix, this.aux, 6000);
+    }
   }
 }

@@ -3,6 +3,7 @@ import { HarmonyTimeline } from '@/audio/music/HarmonyTimeline';
 import {
   followClimax,
   getTargetIntensity,
+  getWantedTier,
   INITIAL_MUSIC_STATE,
   MUSIC_CLIMAX_RELEASE,
   MusicState,
@@ -109,5 +110,28 @@ describe('HarmonyTimeline', () => {
     timeline.push(3, F_MAJOR);
 
     expect(timeline.at(1.5)).toEqual(F_MAJOR); // the t = 1 entry was dropped
+  });
+});
+
+describe('wanted tier', () => {
+  it('is calm in the menu and grooves during play', () => {
+    expect(getWantedTier('menu', 0.9, 0, 'high')).toBe('calm');
+    expect(getWantedTier('play', 0.3, 0, 'calm')).toBe('groove');
+  });
+
+  it('calls for the chorus on a hot rally or a climax', () => {
+    expect(getWantedTier('play', 0.8, 0, 'groove')).toBe('high');
+    expect(getWantedTier('play', 0.3, 0.5, 'groove')).toBe('high');
+  });
+
+  it('lets go of the chorus only once the rally has clearly cooled', () => {
+    expect(getWantedTier('play', 0.6, 0, 'groove')).toBe('groove');
+    expect(getWantedTier('play', 0.6, 0, 'high')).toBe('high');
+    expect(getWantedTier('play', 0.5, 0, 'high')).toBe('groove');
+  });
+
+  it('holds what is playing while paused', () => {
+    expect(getWantedTier('paused', 0, 0, 'groove')).toBe('groove');
+    expect(getWantedTier('paused', 0, 0, 'rise')).toBe('high');
   });
 });

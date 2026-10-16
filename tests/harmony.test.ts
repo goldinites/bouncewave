@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { Harmony } from '@/audio/music/HarmonyTimeline';
-import { CHORD_TYPES, MUSIC_TRACKS } from '@/audio/music/tracks';
+import { BASS_LOW } from '@/audio/music/Arrangement';
+import { SONGS } from '@/audio/music/songs';
+import { MINOR_TRIAD, placeAbove } from '@/audio/music/theory';
 import { getRallyNote, getWallNote, MELODY_MAX_NOTE } from '@/audio/sfx/harmony';
 
-const A_MINOR: Harmony = { root: 33, chord: CHORD_TYPES[0] };
+const A_MINOR: Harmony = { root: 33, chord: MINOR_TRIAD };
 const pitchClass = (note: number) => ((note % 12) + 12) % 12;
 
 describe('getRallyNote', () => {
@@ -29,14 +31,13 @@ describe('getRallyNote', () => {
     }
   });
 
-  it('never gets shrill on any bar of any track', () => {
-    for (const track of MUSIC_TRACKS) {
-      track.rootNotes.forEach((root, bar) => {
-        const harmony = { root, chord: CHORD_TYPES[track.chordTypes[bar]] };
-        for (let rally = 0; rally < 30; rally++) {
-          expect(getRallyNote(harmony, rally)).toBeLessThanOrEqual(MELODY_MAX_NOTE);
-        }
-      });
+  it('never gets shrill on any chord of any song', () => {
+    const chords = SONGS.flatMap((song) => song.sections.flatMap((section) => section.chords));
+    for (const chord of chords) {
+      const harmony = { root: placeAbove(chord.root, BASS_LOW), chord: chord.triad };
+      for (let rally = 0; rally < 30; rally++) {
+        expect(getRallyNote(harmony, rally)).toBeLessThanOrEqual(MELODY_MAX_NOTE);
+      }
     }
   });
 
