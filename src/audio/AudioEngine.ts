@@ -61,13 +61,28 @@ export class AudioEngine {
       }
     }
 
-    if (this.audioContext && this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+    const ac = this.audioContext;
+    // Not only 'suspended': iOS also has 'interrupted', which a home-screen app can start in and
+    // falls back to after a call or the app switcher, and only a gesture's resume() clears it
+    if (ac.state !== 'running') {
+      void ac.resume().catch(() => {});
+      // iOS keeps a resumed context silent until a sound is started inside a gesture, so the
+      // music stayed mute until the first paddle hit. A one-sample silent buffer is enough
+      this.playSilence(ac);
     }
 
-    if (this.audioContext) {
-      this.music.init(this.audioContext);
-      this.classicMusic.init(this.audioContext);
+    this.music.init(ac);
+    this.classicMusic.init(ac);
+  }
+
+  private playSilence(ac: AudioContext): void {
+    try {
+      const source = ac.createBufferSource();
+      source.buffer = ac.createBuffer(1, 1, ac.sampleRate);
+      source.connect(ac.destination);
+      source.start();
+    } catch {
+      // Nothing more to try if the context refuses even this
     }
   }
 }

@@ -157,6 +157,9 @@ export class InputHandler {
     window.addEventListener(
       'touchend',
       (e) => {
+        // iOS lets a touch start audio only once it ends: pointerdown above is too early, and
+        // the context it creates or resumes there stays silent
+        this.callbacks.onUnlockAudio();
         if (e.timeStamp - lastTouchEnd < DOUBLE_TAP_MS) e.preventDefault();
         lastTouchEnd = e.timeStamp;
       },
