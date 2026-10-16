@@ -1,19 +1,14 @@
 import { COURT } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { measureText, paintText, sprites } from '@/render/SpriteCache';
+import { gameFont } from '@/shared/fonts';
 import { COLORS } from '@/shared/palette';
 
 const SCORE_POP_DURATION = 0.22; // s for a changed score to swell and settle
-const SCORE_FONT = "700 64px Orbitron, 'Russo One', sans-serif";
+const SCORE_FONT = gameFont(700, 64);
 const SCORE_GLOW = 22;
-
-// Cyrillic has no Orbitron glyphs and falls back to Russo One, which comes in one weight only:
-// asked for bold, the browser thickens it and the glow then blurs it, so it is drawn as it is
-const CYRILLIC = /[\u0400-\u04ff]/;
-const READY_STYLE = {
-  latin: { font: "700 22px Orbitron, 'Russo One', sans-serif", glow: 6 },
-  cyrillic: { font: "400 22px 'Russo One', sans-serif", glow: 2 },
-} as const;
+const READY_FONT = gameFont(700, 22);
+const READY_GLOW = 6;
 
 export class HudRenderer {
   private displayedScores: [number, number] = [-1, -1];
@@ -100,10 +95,9 @@ export class HudRenderer {
 
     // "GET READY" indicator — the original had no such prompt, so classic mode stays silent
     if (serveTime > 0 && !classic) {
-      const style = CYRILLIC.test(readyText) ? READY_STYLE.cyrillic : READY_STYLE.latin;
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
 
-      this.renderReadyText(ctx, readyText, style, COURT.WIDTH / 2, COURT.HEIGHT / 2 + 8, isRotated);
+      this.renderReadyText(ctx, readyText, COURT.WIDTH / 2, COURT.HEIGHT / 2 + 8, isRotated);
     }
 
     ctx.restore();
@@ -112,7 +106,6 @@ export class HudRenderer {
   private renderReadyText(
     ctx: CanvasRenderingContext2D,
     text: string,
-    style: { font: string; glow: number },
     x: number,
     y: number,
     isRotated: boolean,
@@ -125,11 +118,11 @@ export class HudRenderer {
 
     sprites.draw(
       ctx,
-      `ready|${style.font}|${text}`,
+      `ready|${text}`,
       0,
       0,
-      (measureCtx, scale) => measureText(measureCtx, scale, text, style.font, style.glow),
-      (spriteCtx) => paintText(spriteCtx, text, style.font, COLORS.WHITE, style.glow),
+      (measureCtx, scale) => measureText(measureCtx, scale, text, READY_FONT, READY_GLOW),
+      (spriteCtx) => paintText(spriteCtx, text, READY_FONT, COLORS.WHITE, READY_GLOW),
     );
 
     ctx.restore();

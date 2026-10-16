@@ -1,5 +1,6 @@
 import { COURT } from '@/match/config';
 import { measureText, paintText, sprites } from '@/render/SpriteCache';
+import { gameFont } from '@/shared/fonts';
 
 // Neon tube glow in canvas pixels: wide colored halo, tight white core
 const TUBE_GLOW = 34;
@@ -81,7 +82,7 @@ export class FinalScoreRenderer {
     this.renderTube(
       ctx,
       sign.label,
-      classic ? "700 26px 'Courier New', monospace" : "700 30px 'Russo One', Orbitron, sans-serif",
+      classic ? "700 26px 'Courier New', monospace" : gameFont(700, 30),
       -62,
       color,
       brightness,
@@ -90,7 +91,7 @@ export class FinalScoreRenderer {
     this.renderTube(
       ctx,
       scoreText,
-      classic ? "700 96px 'Courier New', monospace" : "700 104px Orbitron, 'Russo One', sans-serif",
+      classic ? "700 96px 'Courier New', monospace" : gameFont(700, 104),
       22,
       color,
       brightness,
