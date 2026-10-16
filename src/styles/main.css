@@ -1,5 +1,8 @@
 /* The stylesheet entry. Each component file keeps its own breakpoints next to its rules; the
    order matters only where files override one another: layout first, classic mode last. */
+/* The game's typeface, served with the game: no third-party request, and it works offline */
+@import '@fontsource-variable/tektur/wght.css';
+
 @import 'reset.css';
 @import 'vars.css';
 @import 'animations.css';
