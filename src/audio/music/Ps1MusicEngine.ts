@@ -1,13 +1,10 @@
+import { StepScheduler } from '@/audio/music/StepScheduler';
 import { midiToFrequency } from '@/shared/math';
 
 const BPM = 92;
 const STEP_SECONDS = 60 / BPM / 4; // 16th notes
 const MASTER_LEVEL = 0.26;
 const FADE_SECONDS = 0.4; // slow fade, like a menu screen's music easing in
-
-// Look-ahead scheduling, same shape as MusicEngine but with no intensity to track
-const SCHEDULER_INTERVAL_MS = 25;
-const SCHEDULE_AHEAD = 0.15;
 
 const STEPS_PER_BAR = 16;
 // i - VI - III - VII in A minor: the warm, slightly wistful loop late-90s menu screens ran on
@@ -42,9 +39,8 @@ export class Ps1MusicEngine {
   private active = false;
   /** The active state last sent to the gain node, so `setActive` can skip redundant calls. */
   private appliedActive: boolean | null = null;
-  private nextStepTime = 0;
   private currentStep = 0;
-  private schedulerId: number | null = null;
+  private scheduler: StepScheduler | null = null;
 
   /** Builds the audio graph and starts the scheduler; safe to call more than once. */
   public init(context: AudioContext): void {
@@ -68,13 +64,16 @@ export class Ps1MusicEngine {
 
     this.noiseBuffer = this.buildNoiseBuffer(context);
 
-    this.nextStepTime = context.currentTime;
-    this.schedulerId = window.setInterval(() => this.scheduleSteps(), SCHEDULER_INTERVAL_MS);
+    // Only runs while the loop is on: switched back on later, the clock resyncs to the present
+    // and the loop picks up where it stopped, rather than replaying every step it missed
+    this.scheduler = new StepScheduler(context, {
+      playStep: (time) => this.playStep(time),
+      canRun: () => this.active,
+    });
   }
 
   /**
-   * Fades the loop in or out; scheduling itself keeps running so a fade-in never jumps bars.
-   * Called every frame, so it only touches the gain node when the state actually flips —
+   * Fades the loop in or out; switched off, it stops scheduling notes. Called every frame, so it only touches the gain node when the state actually flips —
    * otherwise it would pile up a fresh automation event on the gain param 60 times a second.
    */
   public setActive(active: boolean): void {
@@ -90,10 +89,8 @@ export class Ps1MusicEngine {
   }
 
   public dispose(): void {
-    if (this.schedulerId !== null) {
-      clearInterval(this.schedulerId);
-      this.schedulerId = null;
-    }
+    this.scheduler?.dispose();
+    this.scheduler = null;
   }
 
   private buildReverbImpulse(context: AudioContext): AudioBuffer {
@@ -117,32 +114,27 @@ export class Ps1MusicEngine {
     return buffer;
   }
 
-  private scheduleSteps(): void {
-    const { context } = this;
-    if (!this.active || !context) return;
+  /** Plays the step at `time`. @returns its length in seconds */
+  private playStep(time: number): number {
+    const step = this.currentStep;
+    const stepInLoop = step % STEPS_PER_PROGRESSION;
+    const bar = Math.floor(stepInLoop / STEPS_PER_BAR);
+    const stepInBar = stepInLoop % STEPS_PER_BAR;
+    const root = CHORD_ROOTS[bar];
 
-    while (this.nextStepTime < context.currentTime + SCHEDULE_AHEAD) {
-      const step = this.currentStep;
-      const stepInLoop = step % STEPS_PER_PROGRESSION;
-      const bar = Math.floor(stepInLoop / STEPS_PER_BAR);
-      const stepInBar = stepInLoop % STEPS_PER_BAR;
-      const root = CHORD_ROOTS[bar];
-      const time = this.nextStepTime;
+    if (stepInBar === 0) this.playPad(root, time);
+    if (stepInBar === 0 || stepInBar === 8) this.playBass(root, time);
 
-      if (stepInBar === 0) this.playPad(root, time);
-      if (stepInBar === 0 || stepInBar === 8) this.playBass(root, time);
+    const leadNote = LEAD_PATTERN[step % LEAD_PATTERN.length];
+    if (leadNote >= 0) this.playLead(leadNote, time);
 
-      const leadNote = LEAD_PATTERN[step % LEAD_PATTERN.length];
-      if (leadNote >= 0) this.playLead(leadNote, time);
+    // Half-time groove: kick on 1 and 3, snare on the backbeat, a soft constant 8th hat
+    if (stepInBar === 0 || stepInBar === 8) this.playKick(time);
+    if (stepInBar === 4 || stepInBar === 12) this.playSnare(time);
+    if (stepInBar % 2 === 1) this.playHat(time);
 
-      // Half-time groove: kick on 1 and 3, snare on the backbeat, a soft constant 8th hat
-      if (stepInBar === 0 || stepInBar === 8) this.playKick(time);
-      if (stepInBar === 4 || stepInBar === 12) this.playSnare(time);
-      if (stepInBar % 2 === 1) this.playHat(time);
-
-      this.nextStepTime += STEP_SECONDS;
-      this.currentStep++;
-    }
+    this.currentStep++;
+    return STEP_SECONDS;
   }
 
   /** Slow-swelling detuned chord, the pad underneath everything else. */
