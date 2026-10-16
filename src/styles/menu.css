@@ -8,15 +8,36 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 12px;
 
   padding: 12px;
   text-align: center;
 
+  /* A menu taller than the court (settings on a short phone on its side) scrolls instead of
+     being cut off. The scrollbar stays hidden: a system bar has no place in the neon frame.
+     pan-y lets a swipe scroll it; the page around it blocks every touch gesture */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  touch-action: pan-y;
+
   transition:
     opacity 0.35s,
     visibility 0.35s;
+}
+
+.game__ui::-webkit-scrollbar {
+  display: none;
+}
+
+/* Centered with auto margins, not justify-content: a centered column that overflows spills
+   past the top too, out of reach of the scroll */
+.game__ui > :first-child {
+  margin-top: auto;
+}
+
+.game__ui > :last-child {
+  margin-bottom: auto;
 }
 
 .game__ui--hidden {
@@ -154,8 +175,20 @@
 }
 
 @media (max-height: 520px) {
+  /* The court is sized by the screen's height here, so the title is too: sized by the width
+     it pushed the five settings buttons past the bottom of the court */
+  .game__ui {
+    gap: 8px;
+  }
+
+  .game__title {
+    font-size: clamp(22px, 9 * var(--vh), 58px);
+    line-height: 1.1;
+  }
+
   .game__buttons {
     gap: 6px;
+    margin-top: 0;
   }
 
   .game__buttons button {
