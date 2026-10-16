@@ -284,6 +284,10 @@ export class Renderer {
     const gameTime = frame.time;
     const ctx = this.ctx;
 
+    // A canvas laid out at no size (hidden, or caught mid-layout) has nothing to draw on, and a
+    // zero scale would size the sprites' glow margins at infinity, so their canvases at zero
+    if (this.canvas.width === 0 || this.canvas.height === 0) return;
+
     const dimTarget = gameState === 'play' ? 0 : MENU_DIM.ALPHA;
 
     this.menuDim += (dimTarget - this.menuDim) * Math.min(1, realDt * MENU_DIM.SPEED);

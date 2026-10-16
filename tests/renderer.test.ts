@@ -20,12 +20,15 @@ const makeGradientSafeContext = () => {
   return { ctx, spies };
 };
 
-const makeRenderer = () => {
+/** @param width the canvas's laid-out width in CSS pixels; happy-dom lays nothing out itself */
+const makeRenderer = (width = 800) => {
   const { ctx, spies } = makeGradientSafeContext();
 
   const stage = document.createElement('div');
   stage.id = 'gameStage';
   const canvas = document.createElement('canvas');
+  Object.defineProperty(canvas, 'clientWidth', { value: width });
+  Object.defineProperty(canvas, 'clientHeight', { value: (width * 5) / 8 });
   stage.appendChild(canvas);
   document.body.appendChild(stage);
 
@@ -62,6 +65,14 @@ const baseFrame = (overrides: Partial<RenderFrame> = {}): RenderFrame => ({
 describe('Renderer', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+  });
+
+  it('draws nothing on a canvas laid out at no size', () => {
+    const { renderer, spies } = makeRenderer(0);
+
+    renderer.render(baseFrame(), 0.016);
+    expect(spies.drawImage).not.toHaveBeenCalled();
+    expect(spies.stroke).not.toHaveBeenCalled();
   });
 
   it('draws the flat classic scene instead of the neon one once classic mode is on', () => {
