@@ -11,7 +11,7 @@ A retro-futuristic, synthwave-themed Canvas Pong game decomposed and refactored 
   - Laser light show with audio spectrum analyzer and oscilloscope.
   - Memphis 80s/90s geometric aesthetic with CRT/VHS scan lines, chromatic glitching, and OSD playback timer.
 - **Physics & Particle Engine**: Accurate sub-step deflection collisions, acceleration, particle bursts, shockwave rings, and screen shake.
-- **AI Opponents**: 4 configurable difficulty levels (Easy, Normal, Hard, Insane) with realistic human-like error modeling.
+- **AI Opponents**: 3 configurable difficulty levels (Normal, Hard, Insane) with realistic human-like error modeling.
 - **Full Localization (i18n)**: English and Russian languages supported.
 - **Persistent Storage**: Player settings (difficulty, sound FX, music, language) saved to `localStorage`.
 - **Responsive & Mobile Support**: Full touch gestures, desktop keyboard, mouse, and auto-rotated mobile portrait/landscape handling.

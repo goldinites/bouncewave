@@ -27,7 +27,6 @@ interface DifficultySignature {
 }
 
 const DIFFICULTY_SIGNATURES: Record<DifficultyLevel, DifficultySignature> = {
-  [DifficultyLevel.EASY]: { leadBrightness: 0.7, stutter: false },
   [DifficultyLevel.NORMAL]: { leadBrightness: 1, stutter: false },
   [DifficultyLevel.HARD]: { leadBrightness: 1.3, stutter: false },
   [DifficultyLevel.INSANE]: { leadBrightness: 1.6, stutter: true },

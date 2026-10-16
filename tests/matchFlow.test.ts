@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Ball } from '@/match/Ball';
 import { COURT, PADDLE, BALL, WINNING_SCORE } from '@/match/config';
-import { DifficultyLevel, DIFFICULTY_CONFIGS } from '@/match/difficulty';
+import { DifficultyLevel } from '@/match/difficulty';
 import { FINALE, MatchEvent, MatchFlow, SERVE_DELAY } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 
@@ -17,7 +17,7 @@ const setup = () => {
     paddles,
     ball,
     input: { pollPlayerMovement: () => {} },
-    getDifficulty: () => DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
+    getDifficulty: () => DifficultyLevel.NORMAL,
     onEvent: (event) => events.push(event),
     random: () => 0.25, // player serves first (direction -1 → toward the player)
   });

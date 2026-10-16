@@ -93,7 +93,7 @@ export class Game {
       paddles: this.paddles,
       ball: this.ball,
       input: this.inputHandler,
-      getDifficulty: () => DIFFICULTY_CONFIGS[this.settings.current.difficulty],
+      getDifficulty: () => this.settings.current.difficulty,
       onEvent: (event) => this.onMatchEvent(event),
     });
 

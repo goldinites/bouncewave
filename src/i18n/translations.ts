@@ -52,12 +52,11 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     decider: 'MATCH POINT',
     hintK: `Paddle: W / S or ↑ / ↓ · mouse or touch works too<br>Esc / P — pause · F — fullscreen · first to ${WINNING_SCORE} points`,
     hintT: `Drag your finger to move the paddle<br>First to ${WINNING_SCORE} points`,
-    d: [
-      ['EASY', 'vs CPU: slow, misses often'],
-      ['NORMAL', 'vs CPU: a balanced opponent'],
-      ['HARD', 'vs CPU: fast and accurate'],
-      ['INSANE', 'vs CPU: barely makes mistakes'],
-    ],
+    d: {
+      [DifficultyLevel.NORMAL]: ['NORMAL', 'vs CPU: a balanced opponent'],
+      [DifficultyLevel.HARD]: ['HARD', 'vs CPU: fast and accurate'],
+      [DifficultyLevel.INSANE]: ['INSANE', 'vs CPU: barely makes mistakes'],
+    },
   },
   ru: {
     play: 'ИГРАТЬ',
@@ -80,12 +79,11 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     decider: 'MATCH POINT',
     hintK: `Ракетка: W / S или ↑ / ↓ · мышь или касание тоже работают<br>Esc / P — пауза · F — полный экран · играем до ${WINNING_SCORE} очков`,
     hintT: `Двигайте ракетку пальцем<br>Играем до ${WINNING_SCORE} очков`,
-    d: [
-      ['ЛЁГКАЯ', 'Против CPU: медленный, часто мажет'],
-      ['СРЕДНЯЯ', 'Против CPU: сбалансированный соперник'],
-      ['СЛОЖНАЯ', 'Против CPU: быстрый и точный'],
-      ['БЕЗУМИЕ', 'Против CPU: почти не ошибается'],
-    ],
+    d: {
+      [DifficultyLevel.NORMAL]: ['СРЕДНЯЯ', 'Против CPU: сбалансированный соперник'],
+      [DifficultyLevel.HARD]: ['СЛОЖНАЯ', 'Против CPU: быстрый и точный'],
+      [DifficultyLevel.INSANE]: ['БЕЗУМИЕ', 'Против CPU: почти не ошибается'],
+    },
   },
 };
 
