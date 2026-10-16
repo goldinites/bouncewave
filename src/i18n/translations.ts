@@ -21,6 +21,8 @@ export interface TranslationSchema {
   lang: string;
   lang_name: string;
   pause: string;
+  /** The pause button's label for screen readers. */
+  pauseButton: string;
   win: string;
   lose: string;
   ready: string;
@@ -50,6 +52,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lang: 'LANGUAGE',
     lang_name: 'ENGLISH',
     pause: 'PAUSED',
+    pauseButton: 'Pause',
     win: 'YOU WIN',
     lose: 'GAME OVER',
     ready: 'GET READY',
@@ -78,6 +81,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lang: 'ЯЗЫК',
     lang_name: 'РУССКИЙ',
     pause: 'ПАУЗА',
+    pauseButton: 'Пауза',
     win: 'YOU WIN',
     lose: 'GAME OVER',
     ready: 'GET READY',

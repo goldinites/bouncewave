@@ -5,6 +5,17 @@ const CSS_CLASSES = {
   GAME_PAUSE_HIDDEN: 'game-pause--hidden',
 } as const;
 
+// Keys that move the focus through a menu's buttons, by how far they move it. Enter and Space
+// press the focused button (the browser does that); Enter with no button focused picks the first
+const MENU_KEYS: Record<string, 'previous' | 'next' | 'first' | 'last'> = {
+  ArrowUp: 'previous',
+  KeyW: 'previous',
+  ArrowDown: 'next',
+  KeyS: 'next',
+  Home: 'first',
+  End: 'last',
+};
+
 /** Button colors; all but the default cyan have a .game-button--<color> modifier in main.css. */
 export type ButtonColor = 'cyan' | 'yellow' | 'pink' | 'purple' | 'green';
 
@@ -26,6 +37,7 @@ export class UIManager {
   private pauseButton: HTMLButtonElement;
   private i18n: I18nManager;
   private isCoarsePointer: boolean;
+  private readonly listeners = new AbortController();
 
   constructor(i18n: I18nManager) {
     this.i18n = i18n;
@@ -38,7 +50,35 @@ export class UIManager {
     this.pauseButton = this.getRequiredElement<HTMLButtonElement>('pauseButton');
 
     this.isCoarsePointer = window.matchMedia('(pointer:coarse)').matches;
-    this.updateHint();
+    this.updateTexts();
+
+    window.addEventListener('keydown', (e) => this.onKeyDown(e), {
+      signal: this.listeners.signal,
+    });
+  }
+
+  /** Arrows (or W and S), Home and End walk the open menu, wrapping around at either end. */
+  private onKeyDown(e: KeyboardEvent): void {
+    if (!this.isMenuVisible || e.altKey || e.ctrlKey || e.metaKey) return;
+
+    const buttons = [...this.buttonsContainer.querySelectorAll('button')];
+    if (buttons.length === 0) return;
+
+    const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const move = e.code === 'Enter' && current < 0 ? 'first' : MENU_KEYS[e.code];
+    if (!move) return;
+
+    // Arrows would otherwise scroll a menu taller than the court
+    e.preventDefault();
+    const last = buttons.length - 1;
+    const target = {
+      // From outside the menu, either arrow starts at the top
+      previous: current < 0 ? 0 : current === 0 ? last : current - 1,
+      next: current < 0 ? 0 : current === last ? 0 : current + 1,
+      first: 0,
+      last,
+    }[move];
+    buttons[target].focus();
   }
 
   public showMenu(
@@ -47,6 +87,14 @@ export class UIManager {
     items: MenuItem[],
     onAnyClick?: () => void,
   ): void {
+    // The buttons are rebuilt every time, so a keyboard player's focus would drop out of the
+    // menu: put it back on the same button when the same menu is redrawn (a setting changed),
+    // on the first one when it is another menu
+    const focusedIndex = [...this.buttonsContainer.children].indexOf(
+      document.activeElement as Element,
+    );
+    const isSameMenu = this.titleElement.textContent === title;
+
     this.titleElement.textContent = title;
     this.subtitleElement.textContent = subtitle;
     this.buttonsContainer.textContent = '';
@@ -67,6 +115,12 @@ export class UIManager {
       };
       this.buttonsContainer.appendChild(btn);
     });
+
+    if (focusedIndex >= 0) {
+      const buttons = this.buttonsContainer.children;
+      const target = isSameMenu ? Math.min(focusedIndex, buttons.length - 1) : 0;
+      (buttons[target] as HTMLElement | undefined)?.focus();
+    }
 
     document.body.style.cursor = 'default';
     this.uiOverlay.classList.remove(CSS_CLASSES.GAME_UI_HIDDEN);
@@ -94,14 +148,17 @@ export class UIManager {
     this.pauseButton.onclick = onClick;
   }
 
-  /** Detaches click handlers (menu buttons are rebuilt on every showMenu, so only these). */
+  /** Detaches its listeners (menu buttons are rebuilt on every showMenu, so not theirs). */
   public dispose(): void {
+    this.listeners.abort();
     this.pauseButton.onclick = null;
     this.buttonsContainer.textContent = '';
   }
 
-  public updateHint(): void {
+  /** The texts outside the menus, in the current language. */
+  public updateTexts(): void {
     this.hintElement.innerHTML = this.i18n.t(this.isCoarsePointer ? 'hintT' : 'hintK');
+    this.pauseButton.setAttribute('aria-label', this.i18n.t('pauseButton'));
   }
 
   private getRequiredElement<T extends HTMLElement>(id: string): T {
