@@ -1,0 +1,136 @@
+/* Classic-mode easter egg: flat black and white, no neon, no glow, no motion on the chrome
+   around the canvas (the canvas itself switches in Renderer.renderClassic). Imported last, so
+   it lays over every component's own look. */
+body.classic-mode {
+  background: var(--black);
+}
+
+body.classic-mode * {
+  transition: none;
+}
+
+body.classic-mode .game__stage {
+  background: var(--black);
+  box-shadow: none;
+  border-radius: 0;
+}
+
+body.classic-mode .game__border {
+  background: var(--white);
+  animation: none;
+}
+
+body.classic-mode .game__canvas {
+  border-radius: 0;
+}
+
+body.classic-mode .game__stage::after {
+  content: none;
+}
+
+body.classic-mode .game__title {
+  color: var(--white);
+  font-family: 'Courier New', monospace;
+  animation: none;
+}
+
+body.classic-mode .game__subtitle,
+body.classic-mode .game-hint {
+  color: var(--white);
+  text-shadow: none;
+}
+
+body.classic-mode .game-hint kbd {
+  border-color: var(--white);
+  border-radius: 0;
+  background: none;
+  color: var(--white);
+}
+
+body.classic-mode .game-button {
+  --button-color: var(--white);
+
+  border-radius: 0;
+  background: var(--black);
+  box-shadow: none;
+  text-shadow: none;
+  font-family: 'Courier New', monospace;
+}
+
+body.classic-mode .game__buttons button[aria-pressed='true'] {
+  background: var(--white);
+  color: var(--black);
+}
+
+@media (hover: hover) {
+  body.classic-mode .game-button:hover,
+  body.classic-mode .game__buttons button:hover {
+    transform: none;
+    animation: none;
+    background: var(--white);
+    color: var(--black);
+  }
+}
+
+body.classic-mode .game-button:focus-visible,
+body.classic-mode .game__buttons button:focus-visible {
+  transform: none;
+  background: var(--white);
+  color: var(--black);
+}
+
+/* Flat and square, not a glowing circle — the rest of the chrome's "vintage cabinet" look */
+body.classic-mode .game-pause {
+  --pause-fill: var(--black);
+
+  border: 1px solid var(--white);
+  border-radius: 0;
+  background: var(--black);
+  box-shadow: none;
+}
+
+body.classic-mode .game-pause__bar {
+  --bar-color: var(--white);
+
+  border-radius: 0;
+  background: var(--white);
+  box-shadow: none;
+}
+
+body.classic-mode .game-pause:active,
+body.classic-mode .game-pause:focus-visible {
+  transform: none;
+  background: var(--white);
+  box-shadow: none;
+}
+
+body.classic-mode .game-pause:active .game-pause__bar,
+body.classic-mode .game-pause:focus-visible .game-pause__bar {
+  background: var(--black);
+  box-shadow: none;
+}
+
+/* Flat black and white, like the pause button */
+body.classic-mode .now-playing {
+  --chip-fill: var(--black);
+
+  border: 1px solid var(--white);
+  border-radius: 0;
+  background: var(--black);
+  box-shadow: none;
+}
+
+body.classic-mode .now-playing__toggle {
+  color: var(--white);
+}
+
+body.classic-mode .now-playing__record {
+  background: repeating-radial-gradient(circle, var(--black) 0 1px, #555 1px 2px);
+  box-shadow: 0 0 0 1px var(--white);
+}
+
+body.classic-mode .now-playing__record::after {
+  background:
+    radial-gradient(circle, var(--black) 0 1px, transparent 1.5px),
+    conic-gradient(var(--white) 0 50%, #888 0);
+}

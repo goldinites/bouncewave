@@ -1,0 +1,176 @@
+/* The court: the canvas in its flowing neon frame, the CRT overlay and the end-of-match effects */
+
+.game {
+  display: contents;
+}
+
+.game__stage {
+  --border-width: 2px;
+
+  position: relative;
+  isolation: isolate;
+
+  width: var(--stage-width);
+  aspect-ratio: 8 / 5;
+  /* Never squeezed by the flex body: the canvas draws the court scaled to the stage's width,
+     so a stage shorter than 8:5 cuts off the bottom of the court */
+  flex-shrink: 0;
+
+  overflow: hidden;
+  /* The neon border is .game__border showing through this padding around the canvas */
+  padding: var(--border-width);
+  border-radius: 14px;
+
+  background: var(--black);
+
+  /* Static on purpose: an animated box-shadow repaints the whole stage on every frame */
+  box-shadow:
+    0 0 12px var(--cyan),
+    0 0 30px rgba(255, 43, 214, 0.4);
+}
+
+/* The flowing cyan/pink border: a gradient three times the stage's size slides under the
+   canvas. Moved with transform rather than background-position, so it runs on the compositor
+   and never repaints the stage */
+.game__border {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: -1;
+
+  width: 300%;
+  height: 300%;
+
+  pointer-events: none;
+
+  background: linear-gradient(135deg, var(--cyan), var(--pink), var(--cyan));
+
+  animation: neon-border 5s ease-in-out infinite;
+}
+
+.game__canvas {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+  border-radius: calc(14px - var(--border-width));
+
+  cursor: none;
+  touch-action: none;
+}
+
+.game__stage::after {
+  content: '';
+
+  position: absolute;
+  inset: var(--border-width);
+  z-index: 1;
+  border-radius: calc(14px - var(--border-width));
+
+  pointer-events: none;
+
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px 4px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55));
+
+  animation: screen-flicker 5s infinite;
+}
+
+/* End-of-match effects animate only opacity and transform: a filter or blend mode over the
+   live canvas would make the browser run it through an extra pass on every frame. The brightness
+   punch of a win comes from the canvas's own screen flash */
+.game__stage.victory-burst-active::before {
+  content: '';
+  position: absolute;
+  inset: -15%;
+  z-index: 1;
+  pointer-events: none;
+
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(0, 255, 240, 0.65) 9%,
+    rgba(255, 0, 200, 0.35) 25%,
+    transparent 62%
+  );
+
+  opacity: 0;
+  animation: victory-energy-burst 900ms ease-out both;
+}
+
+.game__stage.victory-burst-active::after {
+  animation: victory-scanline-surge 900ms steps(2, end) both;
+}
+
+.game__stage.crt-glitch-active::before {
+  content: '';
+  position: absolute;
+  inset: -2%;
+  z-index: 1;
+  pointer-events: none;
+
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 7px,
+      rgba(255, 0, 65, 0.9) 8px 10px,
+      transparent 11px 19px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 29px,
+      rgba(0, 255, 255, 0.9) 30px 33px,
+      transparent 34px 47px
+    ),
+    linear-gradient(90deg, rgba(255, 0, 80, 0.35), transparent 35%, rgba(0, 255, 255, 0.4));
+
+  opacity: 0;
+  animation: catastrophic-tearing 700ms steps(1, end) both;
+}
+
+.game__stage.crt-glitch-active::after {
+  opacity: 1;
+  animation: catastrophic-scan 700ms steps(1, end) both;
+}
+
+/* A portrait phone gets the court on its side: .game holds the space of the rotated court and
+   the stage, still laid out as 8:5, is swept -90° inside it */
+@media (orientation: portrait) and (max-width: 900px) {
+  .game {
+    display: block;
+
+    position: relative;
+    flex: none;
+
+    width: var(--game-width);
+    height: calc(var(--game-width) * 1.6);
+  }
+
+  .game__stage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+
+    width: calc(var(--game-width) * 1.6);
+    height: var(--game-width);
+
+    aspect-ratio: auto;
+    transform: translate(-50%, -50%) rotate(-90deg);
+  }
+
+  .game__stage::after {
+    background:
+      repeating-linear-gradient(to right, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px 4px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game__border,
+  .game__stage::after,
+  .game__stage.crt-glitch-active,
+  .game__stage.crt-glitch-active::before,
+  .game__stage.crt-glitch-active::after {
+    animation: none !important;
+  }
+}

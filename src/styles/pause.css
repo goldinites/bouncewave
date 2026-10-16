@@ -1,0 +1,97 @@
+/* The touch-screen pause button, drawn as the game's two paddles */
+
+/* Above the court's left corner, across from the chip: off the court, so a drag steering the
+   paddle never lands on it, and away from the hint so it never covers the text */
+.game-pause {
+  --pause-fill: #0d0326;
+
+  display: none;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  width: 40px;
+  height: 40px;
+
+  /* Same language as the menu buttons and the stage: an 8px-rounded neon frame, here in the
+     stage border's cyan-to-pink. The fill is opaque, or the border gradient would show through */
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background:
+    linear-gradient(var(--pause-fill), var(--pause-fill)) padding-box,
+    linear-gradient(135deg, var(--cyan), var(--pink)) border-box;
+
+  /* A quiet glow at rest, brighter the instant a finger lands */
+  box-shadow:
+    -2px 0 10px rgba(25, 240, 255, 0.3),
+    2px 0 10px rgba(255, 43, 214, 0.3);
+
+  transition:
+    opacity 0.3s,
+    transform 0.1s,
+    box-shadow 0.15s;
+}
+
+/* Each bar is a little paddle: neon color with a white-hot core and a glow. 14px tall, like the
+   skip arrows in the chip beside it, so the two buttons read as one size */
+.game-pause__bar {
+  width: 4px;
+  height: 14px;
+  border-radius: 1.5px;
+
+  background: linear-gradient(
+    90deg,
+    var(--bar-color) 0 30%,
+    rgba(255, 255, 255, 0.85) 30% 70%,
+    var(--bar-color) 70%
+  );
+}
+
+.game-pause__bar--left {
+  --bar-color: var(--cyan);
+}
+
+.game-pause__bar--right {
+  --bar-color: var(--pink);
+}
+
+.game-pause:active,
+.game-pause:focus-visible {
+  outline: none;
+  transform: scale(0.94);
+  box-shadow:
+    -3px 0 16px rgba(25, 240, 255, 0.65),
+    3px 0 16px rgba(255, 43, 214, 0.65);
+}
+
+.game-pause:active .game-pause__bar,
+.game-pause:focus-visible .game-pause__bar {
+  box-shadow:
+    0 0 6px var(--bar-color),
+    0 0 14px var(--bar-color);
+}
+
+.game-pause--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .game-pause {
+    display: flex;
+  }
+}
+
+/* A phone on its side: pinned to the bottom of the margin beside the court, under the thumb, and
+   down to the chip's 32px, the two now sitting alone in the same narrow column */
+@media (max-height: 520px) and (orientation: landscape) {
+  .game-pause {
+    position: fixed;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+
+    width: 32px;
+    height: 32px;
+  }
+}

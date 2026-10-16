@@ -49,7 +49,7 @@ The project follows clean architecture principles with single-responsibility mod
 │   ├── settings/                # User settings and their LocalStorage persistence
 │   ├── shared/                  # Domain-free helpers: math, color palette
 │   ├── debug/                   # FPS overlay (F3 or ?fps)
-│   └── styles/                  # CRT overlay, glitch title, neon buttons & responsive layout
+│   └── styles/                  # One file per component (stage, menu, bars, pause, now-playing), each with its own breakpoints
 └── tests/                       # Unit tests (Vitest)
 ```
 

@@ -1,0 +1,105 @@
+/* The strips of the court's width above and below it: the controls on top, the hint underneath */
+
+.game-bar {
+  flex: none;
+
+  width: var(--stage-width);
+  /* Pulled in a little from the court's rounded corners */
+  padding-inline: 8px;
+}
+
+.game-bar--top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.game-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+
+  margin: 0;
+
+  color: var(--purple);
+  font-size: clamp(10px, 1.5vw, 12px);
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Controls as keycaps grouped by what they do, so the eye finds the key, not a sentence */
+.game-hint__keys {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+}
+
+.game-hint__keys > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.game-hint kbd {
+  display: inline-block;
+  min-width: 1.7em;
+  padding: 0.15em 0.4em;
+  margin-right: 1px;
+
+  border: 1px solid rgba(183, 155, 255, 0.45);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: rgba(183, 155, 255, 0.08);
+
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9em;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.game-hint__rules {
+  opacity: 0.7;
+}
+
+/* Fullscreen is for a bigger court: the hint gives its room up to it (layout.css) */
+:fullscreen .game-hint {
+  display: none;
+}
+
+@media (max-height: 520px) {
+  .game-hint {
+    display: none;
+  }
+}
+
+/* A phone on its side: the top bar becomes a dock in the right-hand margin beside the court,
+   holding the chip in its corner (the pause is pinned to the bottom corner in pause.css) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .game-bar--top {
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    z-index: 5;
+
+    width: auto;
+    padding-inline: 0;
+  }
+
+  /* Only the hint lives there, and it's hidden at this height */
+  .game-bar--bottom {
+    display: none;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .game-bar {
+    width: var(--game-width);
+  }
+
+  .game-hint {
+    font-size: 12px;
+  }
+}

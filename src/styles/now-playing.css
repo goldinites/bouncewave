@@ -1,0 +1,215 @@
+/* The "now playing" chip: a spinning record, the song's title and a skip */
+
+/* Above the court's right corner: the song playing, a tap to turn the music on or off, and a
+   skip. Same neon frame as the pause button, slimmer */
+.now-playing {
+  --chip-fill: #0d0326;
+
+  display: flex;
+  align-items: stretch;
+  /* Pushed right whether or not the pause button is there */
+  margin-left: auto;
+
+  min-width: 0;
+  max-width: 290px;
+  height: 32px;
+
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background:
+    linear-gradient(var(--chip-fill), var(--chip-fill)) padding-box,
+    linear-gradient(135deg, var(--cyan), var(--pink)) border-box;
+  box-shadow:
+    -2px 0 8px rgba(25, 240, 255, 0.25),
+    2px 0 8px rgba(255, 43, 214, 0.25);
+
+  /* Quiet enough not to pull the eye off the court */
+  opacity: 0.75;
+  transition:
+    opacity 0.3s,
+    box-shadow 0.15s;
+}
+
+/* Left alone for a while: fades back further, slowly, until a pointer or a change wakes it.
+   Hover is left to the script: a phone keeps :hover on whatever was tapped last */
+.now-playing--idle:not(:focus-within) {
+  opacity: 0.3;
+  transition:
+    opacity 1.2s,
+    box-shadow 0.15s;
+}
+
+.now-playing:focus-within {
+  opacity: 1;
+  box-shadow:
+    -3px 0 14px rgba(25, 240, 255, 0.55),
+    3px 0 14px rgba(255, 43, 214, 0.55);
+}
+
+/* Only with a real pointer: a phone keeps :hover on the last thing tapped, which would leave
+   the chip lit and the skip pink until the next tap somewhere else */
+@media (hover: hover) {
+  .now-playing:hover {
+    opacity: 1;
+    box-shadow:
+      -3px 0 14px rgba(25, 240, 255, 0.55),
+      3px 0 14px rgba(255, 43, 214, 0.55);
+  }
+
+  .now-playing__next:hover {
+    color: var(--pink);
+  }
+}
+
+.now-playing__toggle,
+.now-playing__next {
+  display: flex;
+  align-items: center;
+
+  padding: 0;
+  border: none;
+  background: none;
+
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.now-playing__toggle:focus-visible,
+.now-playing__next:focus-visible {
+  outline: none;
+}
+
+.now-playing__toggle:active,
+.now-playing__next:active {
+  transform: scale(0.92);
+}
+
+.now-playing__toggle {
+  gap: 8px;
+  min-width: 0;
+  padding: 0 10px 0 6px;
+
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.now-playing__title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.now-playing__title--enter {
+  animation: now-playing-enter 0.6s ease-out both;
+}
+
+/* A little vinyl: grooves, a glint, and a two-tone label so the turning shows. It spins while
+   the music plays and stops where it is when the music is turned off, like a turntable */
+.now-playing__record {
+  position: relative;
+  flex: none;
+
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+
+  background:
+    conic-gradient(
+      transparent 0 30deg,
+      rgba(255, 255, 255, 0.28) 45deg,
+      transparent 60deg 210deg,
+      rgba(255, 255, 255, 0.18) 225deg,
+      transparent 240deg
+    ),
+    repeating-radial-gradient(circle, #120822 0 1px, #2b1a4a 1px 2px);
+  box-shadow: 0 0 0 1px rgba(183, 155, 255, 0.35);
+
+  animation: now-playing-spin 1.8s linear infinite;
+}
+
+.now-playing__record::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+
+  background:
+    radial-gradient(circle, var(--chip-fill) 0 1px, transparent 1.5px),
+    conic-gradient(var(--pink) 0 50%, var(--cyan) 0);
+}
+
+/* Skip: split off from the title by a thin rule */
+.now-playing__next {
+  justify-content: center;
+  flex: none;
+
+  width: 30px;
+  border-left: 1px solid rgba(183, 155, 255, 0.3);
+
+  color: var(--cyan);
+}
+
+.now-playing__next svg {
+  width: 14px;
+  height: 14px;
+
+  fill: currentColor;
+  filter: drop-shadow(0 0 3px rgba(25, 240, 255, 0.6));
+}
+
+/* Off: the record stops and the chip dims */
+.now-playing__toggle[aria-pressed='false'] {
+  color: var(--purple);
+}
+
+.now-playing__toggle[aria-pressed='false'] .now-playing__record {
+  animation-play-state: paused;
+  opacity: 0.55;
+}
+
+/* Classic mode has one loop and nothing to skip to */
+.now-playing--classic .now-playing__next {
+  display: none;
+}
+
+/* On a touch screen the chip sits across from the pause button, so it stays as bright as the
+   pause instead of fading back: a dimmed chip would leave the pause standing out on its own */
+@media (pointer: coarse) {
+  .now-playing,
+  .now-playing--idle:not(:focus-within) {
+    opacity: 1;
+  }
+}
+
+/* A phone on its side: in the narrow margin beside the court, shrunk to the record and the skip */
+@media (max-height: 520px) and (orientation: landscape) {
+  /* The buttons keep their aria-labels, so the title can go entirely */
+  .now-playing__title {
+    display: none;
+  }
+
+  .now-playing__toggle {
+    padding: 0 8px;
+  }
+}
+
+/* Side by side with the pause button in the bar above the court: one height for both */
+@media (orientation: portrait) and (max-width: 900px) {
+  .now-playing {
+    height: 40px;
+  }
+
+  .now-playing__next {
+    width: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .now-playing__record,
+  .now-playing__title--enter {
+    animation: none !important;
+  }
+}
