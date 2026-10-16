@@ -2,6 +2,23 @@
 @import 'vars.css';
 @import 'animations.css';
 
+/* The page and how big the court gets: everything else sizes itself from these variables */
+
+:root {
+  /* One hundredth of the visible height: in Safari, vh ignores the toolbars and the stage
+     overflows, so dvh where the browser has it */
+  --vh: 1vh;
+
+  /* The court's width, shared with the control bars above and below it so they line up */
+  --stage-width: min(96vw, calc(80 * var(--vh) * 1.45));
+}
+
+@supports (height: 1dvh) {
+  :root {
+    --vh: 1dvh;
+  }
+}
+
 html {
   height: 100%;
   scroll-padding-top: env(safe-area-inset-top, 0px);
@@ -31,6 +48,41 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* The whole point of fullscreen is a bigger court: the hint is hidden, so the
+   stage's own width/height caps relax to use almost the entire screen instead of ~80%. */
+:fullscreen {
+  --stage-width: min(99vw, calc(95 * var(--vh) * 1.45));
+}
+
+@media (max-height: 520px) {
+  :root {
+    --stage-width: min(96vw, calc(92 * var(--vh) * 1.6));
+  }
+}
+
+/* A phone on its side has no height to spare above or below the court, so the controls move
+   into the margin beside it. The court leaves a gutter
+   wide enough for the shrunk chip on both sides, so it stays centered */
+@media (max-height: 520px) and (orientation: landscape) {
+  :root {
+    --dock-gutter: calc(
+      70px + 2 * 12px + max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px))
+    );
+    --stage-width: min(calc(100vw - 2 * var(--dock-gutter)), calc(92 * var(--vh) * 1.6));
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  :root {
+    /* The rotated court keeps its real 8:5 shape, so width and height grow together. On most
+       phones the height is what binds: the court takes what's left once the controls above it
+       and the hint below (with the gaps between) are given their room. */
+    --game-width: min(98vw, calc((100 * var(--vh) - 136px) / 1.6));
+  }
+}
+
+/* The court: the canvas in its flowing neon frame, the CRT overlay and the end-of-match effects */
+
 .game {
   display: contents;
 }
@@ -41,10 +93,7 @@ body {
   position: relative;
   isolation: isolate;
 
-  /* dvh is the visible height: in Safari, vh ignores the toolbars and the stage overflows.
-     The vh line is a fallback for browsers without dvh. */
-  width: min(96vw, calc(80vh * 1.45));
-  width: min(96vw, calc(80dvh * 1.45));
+  width: var(--stage-width);
   aspect-ratio: 8 / 5;
   /* Never squeezed by the flex body: the canvas draws the court scaled to the stage's width,
      so a stage shorter than 8:5 cuts off the bottom of the court */
@@ -109,6 +158,107 @@ body {
 
   animation: screen-flicker 5s infinite;
 }
+
+/* End-of-match effects animate only opacity and transform: a filter or blend mode over the
+   live canvas would make the browser run it through an extra pass on every frame. The brightness
+   punch of a win comes from the canvas's own screen flash */
+.game__stage.victory-burst-active::before {
+  content: '';
+  position: absolute;
+  inset: -15%;
+  z-index: 1;
+  pointer-events: none;
+
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(0, 255, 240, 0.65) 9%,
+    rgba(255, 0, 200, 0.35) 25%,
+    transparent 62%
+  );
+
+  opacity: 0;
+  animation: victory-energy-burst 900ms ease-out both;
+}
+
+.game__stage.victory-burst-active::after {
+  animation: victory-scanline-surge 900ms steps(2, end) both;
+}
+
+.game__stage.crt-glitch-active::before {
+  content: '';
+  position: absolute;
+  inset: -2%;
+  z-index: 1;
+  pointer-events: none;
+
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 7px,
+      rgba(255, 0, 65, 0.9) 8px 10px,
+      transparent 11px 19px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 29px,
+      rgba(0, 255, 255, 0.9) 30px 33px,
+      transparent 34px 47px
+    ),
+    linear-gradient(90deg, rgba(255, 0, 80, 0.35), transparent 35%, rgba(0, 255, 255, 0.4));
+
+  opacity: 0;
+  animation: catastrophic-tearing 700ms steps(1, end) both;
+}
+
+.game__stage.crt-glitch-active::after {
+  opacity: 1;
+  animation: catastrophic-scan 700ms steps(1, end) both;
+}
+
+/* A portrait phone gets the court on its side: .game holds the space of the rotated court and
+   the stage, still laid out as 8:5, is swept -90° inside it */
+@media (orientation: portrait) and (max-width: 900px) {
+  .game {
+    display: block;
+
+    position: relative;
+    flex: none;
+
+    width: var(--game-width);
+    height: calc(var(--game-width) * 1.6);
+  }
+
+  .game__stage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+
+    width: calc(var(--game-width) * 1.6);
+    height: var(--game-width);
+
+    aspect-ratio: auto;
+    transform: translate(-50%, -50%) rotate(-90deg);
+  }
+
+  .game__stage::after {
+    background:
+      repeating-linear-gradient(to right, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px 4px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game__border,
+  .game__stage::after,
+  .game__stage.crt-glitch-active,
+  .game__stage.crt-glitch-active::before,
+  .game__stage.crt-glitch-active::after {
+    animation: none !important;
+  }
+}
+
+/* The menu over the court: the glitching title, the subtitle and the neon buttons */
 
 .game__ui {
   position: absolute;
@@ -263,6 +413,68 @@ body {
   outline-offset: 3px;
 }
 
+@media (max-height: 520px) {
+  .game__buttons {
+    gap: 6px;
+  }
+
+  .game__buttons button {
+    padding: 0.6em 1.2em;
+  }
+}
+
+/* The court is on its side here, so the menu is turned back upright over it */
+@media (orientation: portrait) and (max-width: 900px) {
+  .game__ui {
+    inset: auto;
+
+    top: 50%;
+    left: 50%;
+
+    width: var(--game-width);
+    height: calc(var(--game-width) * 1.6);
+
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+
+  .game__title {
+    font-size: clamp(30px, 11vw, 52px);
+  }
+
+  .game__subtitle {
+    font-size: 12px;
+  }
+
+  .game__buttons button {
+    padding: 1em 1.4em;
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game__title,
+  .game-button:hover,
+  .game__buttons button:hover {
+    animation: none !important;
+  }
+}
+
+/* The strips of the court's width above and below it: the controls on top, the hint underneath */
+
+.game-bar {
+  flex: none;
+
+  width: var(--stage-width);
+  /* Pulled in a little from the court's rounded corners */
+  padding-inline: 8px;
+}
+
+.game-bar--top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .game-hint {
   display: flex;
   flex-direction: column;
@@ -270,7 +482,6 @@ body {
   gap: 6px;
 
   margin: 0;
-  padding: 0 12px;
 
   color: var(--purple);
   font-size: clamp(10px, 1.5vw, 12px);
@@ -314,31 +525,58 @@ body {
   opacity: 0.7;
 }
 
-/* The whole point of fullscreen is a bigger court: the hint is freed real estate, so the
-   stage's own width/height caps relax to use almost the entire screen instead of ~80%. */
+/* Fullscreen is for a bigger court: the hint gives its room up to it */
 :fullscreen .game-hint {
   display: none;
 }
 
-:fullscreen .game__stage {
-  width: min(99vw, calc(95vh * 1.45));
-  width: min(99vw, calc(95dvh * 1.45));
+@media (max-height: 520px) {
+  .game-hint {
+    display: none;
+  }
 }
 
-/* Bottom-right, not top: a thumb resting on a phone reaches the near corner without a grip
-   shift, and a drag gesture (it spans the full width while steering the paddle) rarely travels
-   all the way into the literal corner pixels, so this stays a comparatively safe parking spot. */
+/* A phone on its side: the top bar becomes a dock in the right-hand margin beside the court,
+   holding the chip in its corner (the pause is pinned to the bottom corner) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .game-bar--top {
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    z-index: 5;
+
+    width: auto;
+    padding-inline: 0;
+  }
+
+  /* Only the hint lives there, and it's hidden at this height */
+  .game-bar--bottom {
+    display: none;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .game-bar {
+    width: var(--game-width);
+  }
+
+  .game-hint {
+    font-size: 12px;
+  }
+}
+
+/* The touch-screen pause button, drawn as the game's two paddles */
+
+/* Above the court's left corner, across from the chip: off the court, so a drag steering the
+   paddle never lands on it, and away from the hint so it never covers the text */
 .game-pause {
   --pause-fill: #0d0326;
 
   display: none;
+  flex: none;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  position: fixed;
-  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-  right: calc(14px + env(safe-area-inset-right, 0px));
-  z-index: 5;
+  gap: 5px;
 
   width: 40px;
   height: 40px;
@@ -362,11 +600,12 @@ body {
     box-shadow 0.15s;
 }
 
-/* Each bar is a little paddle: neon color with a white-hot core and a glow */
+/* Each bar is a little paddle: neon color with a white-hot core and a glow. 14px tall, like the
+   skip arrows in the chip beside it, so the two buttons read as one size */
 .game-pause__bar {
-  width: 6px;
-  height: 18px;
-  border-radius: 2px;
+  width: 4px;
+  height: 14px;
+  border-radius: 1.5px;
 
   background: linear-gradient(
     90deg,
@@ -405,19 +644,39 @@ body {
   pointer-events: none;
 }
 
-/* Top-right, out of the way of the paddles' corners at the bottom: the song playing, a tap to
-   turn the music on or off, and a skip. Same neon frame as the pause button, slimmer */
+@media (pointer: coarse) {
+  .game-pause {
+    display: flex;
+  }
+}
+
+/* A phone on its side: pinned to the bottom of the margin beside the court, under the thumb, and
+   down to the chip's 32px, the two now sitting alone in the same narrow column */
+@media (max-height: 520px) and (orientation: landscape) {
+  .game-pause {
+    position: fixed;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* The "now playing" chip: a spinning record, the song's title and a skip */
+
+/* Above the court's right corner: the song playing, a tap to turn the music on or off, and a
+   skip. Same neon frame as the pause button, slimmer */
 .now-playing {
   --chip-fill: #0d0326;
 
   display: flex;
   align-items: stretch;
-  position: fixed;
-  top: calc(14px + env(safe-area-inset-top, 0px));
-  right: calc(14px + env(safe-area-inset-right, 0px));
-  z-index: 5;
+  /* Pushed right whether or not the pause button is there */
+  margin-left: auto;
 
-  max-width: min(66vw, 290px);
+  min-width: 0;
+  max-width: 290px;
   height: 32px;
 
   border: 2px solid transparent;
@@ -571,155 +830,48 @@ body {
   display: none;
 }
 
-/* End-of-match effects animate only opacity and transform: a filter or blend mode over the
-   live canvas would make the browser run it through an extra pass on every frame. The brightness
-   punch of a win comes from the canvas's own screen flash */
-.game__stage.victory-burst-active::before {
-  content: '';
-  position: absolute;
-  inset: -15%;
-  z-index: 1;
-  pointer-events: none;
-
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(0, 255, 240, 0.65) 9%,
-    rgba(255, 0, 200, 0.35) 25%,
-    transparent 62%
-  );
-
-  opacity: 0;
-  animation: victory-energy-burst 900ms ease-out both;
-}
-
-.game__stage.victory-burst-active::after {
-  animation: victory-scanline-surge 900ms steps(2, end) both;
-}
-
-.game__stage.crt-glitch-active::before {
-  content: '';
-  position: absolute;
-  inset: -2%;
-  z-index: 1;
-  pointer-events: none;
-
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 7px,
-      rgba(255, 0, 65, 0.9) 8px 10px,
-      transparent 11px 19px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 29px,
-      rgba(0, 255, 255, 0.9) 30px 33px,
-      transparent 34px 47px
-    ),
-    linear-gradient(90deg, rgba(255, 0, 80, 0.35), transparent 35%, rgba(0, 255, 255, 0.4));
-
-  opacity: 0;
-  animation: catastrophic-tearing 700ms steps(1, end) both;
-}
-
-.game__stage.crt-glitch-active::after {
-  opacity: 1;
-  animation: catastrophic-scan 700ms steps(1, end) both;
-}
-
+/* On a touch screen the chip sits across from the pause button, so it stays as bright as the
+   pause instead of fading back: a dimmed chip would leave the pause standing out on its own */
 @media (pointer: coarse) {
-  .game-pause {
-    display: flex;
+  .now-playing,
+  .now-playing--idle:not(:focus-within) {
+    opacity: 1;
   }
 }
 
-@media (max-height: 520px) {
-  .game-hint {
+/* A phone on its side: in the narrow margin beside the court, shrunk to the record and the skip */
+@media (max-height: 520px) and (orientation: landscape) {
+  /* The buttons keep their aria-labels, so the title can go entirely */
+  .now-playing__title {
     display: none;
   }
 
-  .game__stage {
-    width: min(96vw, calc(92vh * 1.6));
-    width: min(96vw, calc(92dvh * 1.6));
-  }
-
-  .game__buttons {
-    gap: 6px;
-  }
-
-  .game__buttons button {
-    padding: 0.6em 1.2em;
+  .now-playing__toggle {
+    padding: 0 8px;
   }
 }
 
+/* Side by side with the pause button in the bar above the court: one height for both */
 @media (orientation: portrait) and (max-width: 900px) {
-  :root {
-    /* The rotated court keeps its real 8:5 shape, so width and height grow together — on most
-       phones (tall and narrow) the vw term is what actually binds, with vh along as a ceiling
-       for wider/shorter ones. Nudged up from 96vw/50vh to close some of the top/bottom margin,
-       kept shy of the edge so it still clears the hint text under it on a small phone. */
-    --game-width: min(98vw, 55vh);
-    --game-width: min(98vw, 55dvh);
+  .now-playing {
+    height: 40px;
   }
 
-  .game {
-    display: block;
-
-    position: relative;
-    flex: none;
-
-    width: var(--game-width);
-    height: calc(var(--game-width) * 1.6);
+  .now-playing__next {
+    width: 36px;
   }
+}
 
-  .game__stage {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-
-    width: calc(var(--game-width) * 1.6);
-    height: var(--game-width);
-
-    aspect-ratio: auto;
-    transform: translate(-50%, -50%) rotate(-90deg);
-  }
-
-  .game__stage::after {
-    background:
-      repeating-linear-gradient(to right, transparent 0 2px, rgba(0, 0, 0, 0.22) 3px 4px),
-      radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55));
-  }
-
-  .game__ui {
-    inset: auto;
-
-    top: 50%;
-    left: 50%;
-
-    width: var(--game-width);
-    height: calc(var(--game-width) * 1.6);
-
-    transform: translate(-50%, -50%) rotate(90deg);
-  }
-
-  .game__title {
-    font-size: clamp(30px, 11vw, 52px);
-  }
-
-  .game__subtitle,
-  .game-hint {
-    font-size: 12px;
-  }
-
-  .game__buttons button {
-    padding: 1em 1.4em;
-    font-size: 15px;
+@media (prefers-reduced-motion: reduce) {
+  .now-playing__record,
+  .now-playing__title--enter {
+    animation: none !important;
   }
 }
 
 /* Classic-mode easter egg: flat black and white, no neon, no glow, no motion on the chrome
-   around the canvas (the canvas itself switches in Renderer.renderClassic). */
+   around the canvas (the canvas itself switches in Renderer.renderClassic). Last in the file, so
+   it lays over every component's own look. */
 body.classic-mode {
   background: var(--black);
 }
@@ -852,19 +1004,4 @@ body.classic-mode .now-playing__record::after {
   background:
     radial-gradient(circle, var(--black) 0 1px, transparent 1.5px),
     conic-gradient(var(--white) 0 50%, #888 0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .now-playing__record,
-  .now-playing__title--enter,
-  .game__title,
-  .game__border,
-  .game__stage::after,
-  .game-button:hover,
-  .game__buttons button:hover,
-  .game__stage.crt-glitch-active,
-  .game__stage.crt-glitch-active::before,
-  .game__stage.crt-glitch-active::after {
-    animation: none !important;
-  }
 }
