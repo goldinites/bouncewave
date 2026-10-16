@@ -46,7 +46,7 @@ body {
 
   color: var(--text);
   /* One family for English and Russian, with real weights from 400 to 900 */
-  font-family: 'Tektur', system-ui, sans-serif;
+  font-family: 'Tektur Variable', system-ui, sans-serif;
 
   touch-action: none;
   overscroll-behavior: none;

@@ -58,6 +58,7 @@ export class MenuController {
   private actions: GameMenuActions;
   /** Where the settings menu's BACK leads while it is on screen; null when it isn't. */
   private settingsBack: (() => void) | null = null;
+  private readonly unsubscribe: () => void;
 
   constructor(
     uiManager: UIManager,
@@ -73,17 +74,21 @@ export class MenuController {
     this.actions = actions;
 
     // A setting may also change from outside the menu (the music chip, the M key)
-    settings.subscribe(() => {
+    this.unsubscribe = settings.subscribe(() => {
       if (this.settingsBack && this.uiManager.isMenuVisible) {
         this.showSettingsMenu(this.settingsBack);
       }
     });
   }
 
+  public dispose(): void {
+    this.unsubscribe();
+  }
+
   public showMainMenu(): void {
     this.settingsBack = null;
     this.uiManager.showMenu(
-      'BOUNCEWAVE',
+      this.uiManager.gameTitle,
       '',
       [
         {

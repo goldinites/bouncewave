@@ -1,8 +1,8 @@
 import { COURT, PADDLE } from '@/match/config';
-import { clamp } from '@/shared/math';
+import { approach, clamp } from '@/shared/math';
 
-const PADDLE_SMOOTH_FACTOR = 22;
-const PADDLE_VELOCITY_SMOOTHING = 12; // 1/s, ~80 ms averaging window
+const PADDLE_SMOOTH_FACTOR = 27.4; // 1/s toward the target
+const PADDLE_VELOCITY_SMOOTHING = 13.4; // 1/s, ~75 ms averaging window
 // Range of the paddle center, so the whole paddle stays clear of the walls
 const MIN_Y = PADDLE.TOP_MARGIN + PADDLE.HEIGHT / 2;
 const MAX_Y = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - PADDLE.HEIGHT / 2;
@@ -44,12 +44,12 @@ export class Paddle {
   /** Moves toward the target and tracks its speed. */
   public update(dt: number): void {
     const previousY = this.y;
-    this.y += (this.targetY - this.y) * Math.min(1, dt * PADDLE_SMOOTH_FACTOR);
+    this.y = approach(this.y, this.targetY, PADDLE_SMOOTH_FACTOR, dt);
 
     // Low-pass the measured speed so jerky touch input doesn't produce spikes
     if (dt > 0) {
       const rawVelocity = (this.y - previousY) / dt;
-      this.velocity += (rawVelocity - this.velocity) * Math.min(1, dt * PADDLE_VELOCITY_SMOOTHING);
+      this.velocity = approach(this.velocity, rawVelocity, PADDLE_VELOCITY_SMOOTHING, dt);
     }
   }
 }

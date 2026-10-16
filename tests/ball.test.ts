@@ -14,6 +14,14 @@ describe('Ball', () => {
     expect(ball.trail).toEqual([]);
   });
 
+  it('takes the serve angle from the random source it is given', () => {
+    const ball = new Ball();
+    ball.serve(1, BALL.INITIAL_SPEED, () => 0.5);
+
+    expect(ball.vy).toBe(0);
+    expect(ball.vx).toBe(BALL.INITIAL_SPEED);
+  });
+
   it('serves ball leftwards when direction is -1', () => {
     const ball = new Ball();
     ball.serve(-1);
@@ -21,16 +29,32 @@ describe('Ball', () => {
     expect(ball.vx).toBeLessThan(0);
   });
 
-  it('manages trail length without exceeding maximum', () => {
+  it('keeps nine points of trail at 60 fps, newest last', () => {
     const ball = new Ball();
     for (let i = 0; i < 20; i++) {
       ball.x = i * 10;
       ball.y = i * 5;
-      ball.updateTrail();
+      ball.updateTrail(1 / 60);
     }
 
-    expect(ball.trail.length).toBe(BALL.TRAIL_MAX_LENGTH);
+    expect(ball.trail.length).toBe(9);
     expect(ball.trail[ball.trail.length - 1]).toEqual({ x: 190, y: 95 });
+  });
+
+  it('draws a trail of the same length at any frame rate', () => {
+    // A ball flying right at 600 px/s, a second at each frame rate
+    const trailLength = (fps: number) => {
+      const ball = new Ball();
+      for (let i = 0; i <= fps; i++) {
+        ball.x = (i / fps) * 600;
+        ball.updateTrail(1 / fps);
+      }
+      return ball.trail[ball.trail.length - 1].x - ball.trail[0].x;
+    };
+
+    expect(trailLength(120)).toBeCloseTo(trailLength(60), -1);
+    expect(trailLength(30)).toBeCloseTo(trailLength(60), -1);
+    expect(trailLength(60)).toBeLessThanOrEqual(BALL.TRAIL_DURATION * 600);
   });
 
   it('fades a temporary boost out over its duration', () => {

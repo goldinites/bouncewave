@@ -1,10 +1,10 @@
 import { createAppleSplashScreens, defineConfig } from '@vite-pwa/assets-generator/config';
+import { BACKGROUND } from './src/shared/palette';
 
 // iOS launch screens for the home-screen app. Without them iOS shows a black screen while the
 // page loads; with them it shows the launch mark on the night sky, and the loader in index.html
 // takes over in the same place. Keep .boot__mark's size there in step with the padding below.
-// Regenerate with `npm run icons`, then paste the printed <link> tags into index.html with the
-// "-light" taken out of their names: the generator prints it, but the files are named without.
+// Regenerate with `npm run icons`: scripts/splash.mjs runs this and writes the <link> tags.
 // Only the last four iPhone generations: every other device gets the black screen back.
 export default defineConfig({
   headLinkOptions: { preset: '2023' },
@@ -16,7 +16,7 @@ export default defineConfig({
       {
         // The mark is drawn 40% of the screen's shorter side
         padding: 0.6,
-        resizeOptions: { background: '#0b0320', fit: 'contain' },
+        resizeOptions: { background: BACKGROUND, fit: 'contain' },
         linkMediaOptions: { basePath: '/splash/' },
       },
       [

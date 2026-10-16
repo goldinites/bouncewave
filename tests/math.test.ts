@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { clamp, lerp, midiToFrequency, mixHexColors, randomRange } from '@/shared/math';
+import { approach, clamp, lerp, midiToFrequency, mixHexColors, randomRange } from '@/shared/math';
 
 describe('Math utilities', () => {
+  it('approaches a target the same way at any frame rate', () => {
+    const run = (fps: number) => {
+      let value = 0;
+      for (let i = 0; i < fps / 2; i++) value = approach(value, 100, 10, 1 / fps);
+      return value;
+    };
+
+    expect(run(30)).toBeCloseTo(run(60), 6);
+    expect(run(144)).toBeCloseTo(run(60), 6);
+    expect(run(60)).toBeCloseTo(100 * (1 - Math.exp(-5)), 6);
+  });
+
+  it('never overshoots the target, even on a long step', () => {
+    expect(approach(0, 100, 30, 1)).toBeLessThanOrEqual(100);
+    expect(approach(100, 100, 30, 0.016)).toBe(100);
+  });
+
   describe('mixHexColors', () => {
     it('returns the endpoints at t = 0 and t = 1', () => {
       expect(mixHexColors('#000000', '#ffffff', 0)).toBe('rgb(0, 0, 0)');

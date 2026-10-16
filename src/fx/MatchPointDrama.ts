@@ -1,11 +1,11 @@
 import { Ball } from '@/match/Ball';
 import { PADDLE, WINNING_SCORE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
-import { clamp, lerp } from '@/shared/math';
+import { approach, clamp, lerp } from '@/shared/math';
 
 export const DRAMA = {
   LEVEL: 0.6, // tension for the whole deciding rally: vignette, muffled music
-  LEVEL_SMOOTHING: 4, // 1/s
+  LEVEL_SMOOTHING: 4.1, // 1/s
   // Heartbeat through the deciding rally, quickening the longer it lasts
   HEARTBEAT_FIRST: 0.4, // s from the start of the deciding point to the first beat
   HEARTBEAT_START_INTERVAL: 0.85, // s between beats at first
@@ -16,7 +16,7 @@ export const DRAMA = {
   // Once the deciding ball is past a paddle
   SLOWMO_SCALE: 0.1, // simulation speed
   SLOWMO_MAX_DURATION: 2.5, // s wall-clock; the point is normally scored well before
-  TIME_SCALE_SMOOTHING: 6, // 1/s
+  TIME_SCALE_SMOOTHING: 6.3, // 1/s
   ZOOM: 0.2, // extra camera zoom on the ball at full slow motion
 } as const;
 
@@ -95,11 +95,10 @@ export class MatchPointDrama {
     if (isSlowMo) this.slowMoElapsed += realDt;
 
     const targetScale = isSlowMo ? DRAMA.SLOWMO_SCALE : 1;
-    this._timeScale +=
-      (targetScale - this._timeScale) * Math.min(1, realDt * DRAMA.TIME_SCALE_SMOOTHING);
+    this._timeScale = approach(this._timeScale, targetScale, DRAMA.TIME_SCALE_SMOOTHING, realDt);
 
     const targetLevel = isSlowMo ? 1 : isDeciding ? DRAMA.LEVEL : 0;
-    this._level += (targetLevel - this._level) * Math.min(1, realDt * DRAMA.LEVEL_SMOOTHING);
+    this._level = approach(this._level, targetLevel, DRAMA.LEVEL_SMOOTHING, realDt);
 
     this.beatPulse = Math.max(0, this.beatPulse - realDt * DRAMA.BEAT_PULSE_DECAY);
     return isDeciding && !this.hasTriggered && this.advanceHeartbeat(realDt);

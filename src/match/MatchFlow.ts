@@ -219,7 +219,7 @@ export class MatchFlow {
         this._phase = 'rally';
       }
     } else {
-      this.ball.updateTrail();
+      this.ball.updateTrail(dt);
       for (const event of Physics.step(this.ball, this.paddles, difficulty, dt)) {
         this.handlePhysicsEvent(event);
       }
@@ -316,7 +316,7 @@ export class MatchFlow {
   }
 
   private serve(direction: number, delay: number): void {
-    this.ball.serve(direction, BALL.INITIAL_SPEED);
+    this.ball.serve(direction, BALL.INITIAL_SPEED, this.random);
     // The receiver reads the serve like any other shot
     this.aiSkill = this.pickAiSkill();
     this.ai.readShot(this.paddles[direction > 0 ? 1 : 0], this.aiSkill);

@@ -1,4 +1,5 @@
 import { I18nManager } from '@/i18n/I18nManager';
+import { getRequiredElement } from '@/ui/dom';
 
 const TITLE_ENTER_CLASS = 'now-playing__title--enter';
 const CLASSIC_CLASS = 'now-playing--classic';
@@ -29,10 +30,10 @@ export class NowPlaying {
 
   constructor(i18n: I18nManager, actions: NowPlayingActions) {
     this.i18n = i18n;
-    this.chip = this.getRequiredElement<HTMLElement>('nowPlaying');
-    this.toggle = this.getRequiredElement<HTMLButtonElement>('musicToggle');
-    this.next = this.getRequiredElement<HTMLButtonElement>('nextTrack');
-    this.title = this.getRequiredElement<HTMLElement>('nowPlayingTitle');
+    this.chip = getRequiredElement<HTMLElement>('nowPlaying');
+    this.toggle = getRequiredElement<HTMLButtonElement>('musicToggle');
+    this.next = getRequiredElement<HTMLButtonElement>('nextTrack');
+    this.title = getRequiredElement<HTMLElement>('nowPlayingTitle');
 
     // Blurred right away, so Space or Enter during play never re-presses a chip button
     this.toggle.onclick = () => {
@@ -115,13 +116,5 @@ export class NowPlaying {
     this.next.onclick = null;
     this.listeners.abort();
     if (this.idleTimer !== null) window.clearTimeout(this.idleTimer);
-  }
-
-  private getRequiredElement<T extends HTMLElement>(id: string): T {
-    const el = document.getElementById(id);
-    if (!el) {
-      throw new Error(`Required DOM element with id "${id}" not found`);
-    }
-    return el as T;
   }
 }

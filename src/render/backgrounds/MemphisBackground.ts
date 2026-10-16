@@ -2,7 +2,7 @@ import { COURT } from '@/match/config';
 import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
 import { measureText, paintText, sprites } from '@/render/SpriteCache';
 import { gameFont } from '@/shared/fonts';
-import { mixHexColors, randomRange, TWO_PI } from '@/shared/math';
+import { approach, mixHexColors, randomRange, TWO_PI } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
 type MemphisShapeKind = 0 | 1 | 2 | 3 | 4 | 5;
@@ -28,8 +28,8 @@ const DROP_PUSH = 60; // px the drop shockwave throws shapes outward
 const DROP_PEAK_TIME = 0.18; // s until the push peaks, then it eases back
 // Envelope on the bass pulse that sizes the shapes (1/s): beats still pump,
 // but a sudden loud hit swells over ~0.15 s instead of snapping
-const PULSE_ATTACK = 12;
-const PULSE_RELEASE = 6;
+const PULSE_ATTACK = 13.4;
+const PULSE_RELEASE = 6.3;
 // The background gradient is rebuilt only when the heat moves by a step this size
 const HEAT_STEPS = 40;
 
@@ -92,7 +92,7 @@ export class MemphisBackground implements Background {
     // Shapes swell with an envelope instead of the raw pulse, so a single loud hit
     // (the climax drop's full-volume kick) can't make them jump in size in one frame
     const rate = pulse > this.shapePulse ? PULSE_ATTACK : PULSE_RELEASE;
-    this.shapePulse += (pulse - this.shapePulse) * Math.min(1, dt * rate);
+    this.shapePulse = approach(this.shapePulse, pulse, rate, dt);
   }
 
   public render(frame: BackgroundFrame): void {

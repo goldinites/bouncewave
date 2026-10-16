@@ -55,6 +55,7 @@ export class Game {
   private isRunning = false;
   private animationFrameId: number | null = null;
   private readonly listeners = new AbortController();
+  private readonly unsubscribeLanguage: () => void;
 
   constructor(canvas: HTMLCanvasElement) {
     this.i18n = new I18nManager(this.settings.current.language);
@@ -74,7 +75,7 @@ export class Game {
     this.uiManager = new UIManager(this.i18n);
 
     // The UI language follows the settings
-    this.settings.subscribe(({ language }) => {
+    this.unsubscribeLanguage = this.settings.subscribe(({ language }) => {
       if (language === this.i18n.language) return;
       this.i18n.language = language;
       this.uiManager.updateTexts();
@@ -355,6 +356,9 @@ export class Game {
     }
 
     this.listeners.abort();
+    this.unsubscribeLanguage();
+    this.menuController.dispose();
+    this.nowPlaying.dispose();
     this.konamiCode.dispose();
     this.titleTaps?.dispose();
     this.inputHandler.dispose();

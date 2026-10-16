@@ -15,6 +15,16 @@ export function lerp(start: number, end: number, t: number): number {
 }
 
 /**
+ * Moves `current` toward `target`, closing the gap at `rate` per second (exponential smoothing).
+ * Any frame rate covers the same distance in the same time: one 1/30 s step lands exactly where
+ * two 1/60 s steps do. Writing `current += (target - current) * Math.min(1, dt * rate)` instead
+ * moves faster at low frame rates and slower at high ones.
+ */
+export function approach(current: number, target: number, rate: number, dt: number): number {
+  return target + (current - target) * Math.exp(-rate * dt);
+}
+
+/**
  * Blends two `#rrggbb` colors and returns an `rgb(...)` string.
  */
 export function mixHexColors(from: string, to: string, t: number): string {
