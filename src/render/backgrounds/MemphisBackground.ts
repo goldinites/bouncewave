@@ -37,6 +37,9 @@ const DOT_SPACING = 28;
 const VHS_NOISE_STREAKS = 5;
 const OSD_FONT = "700 16px 'Russo One', Orbitron, monospace";
 const OSD_GLOW = 6;
+// U+FE0E asks for the text glyph: neither OSD font has ▶, and iOS otherwise falls back to the
+// color emoji, which ignores the fill color
+const PLAY_SIGN = '\u25b6\ufe0e';
 const OSD_COLORS = {
   NORMAL: { text: 'rgba(255, 255, 255, 0.75)', glow: COLORS.CYAN },
   FAST_FORWARD: { text: 'rgba(255, 229, 59, 0.9)', glow: COLORS.PINK },
@@ -76,6 +79,8 @@ export class MemphisBackground implements Background {
   /**
    * Advances the shapes' motion. Called every frame even while another background is shown,
    * so switching backgrounds never makes the shapes jump.
+   * @param dt
+   * @param pulse
    * @param heat how hard the shapes dance, in [0, 1] (climax or celebration)
    */
   public advance(dt: number, pulse: number, heat: number): void {
@@ -245,7 +250,7 @@ export class MemphisBackground implements Background {
     const isFastForward = climax > 0.5;
     this.renderOsdText(
       ctx,
-      isFastForward ? '▶▶ FF' : '▶ PLAY',
+      isFastForward ? `${PLAY_SIGN}${PLAY_SIGN} FF` : `${PLAY_SIGN} PLAY`,
       isFastForward ? OSD_COLORS.FAST_FORWARD : OSD_COLORS.NORMAL,
       playTextX,
       38,
