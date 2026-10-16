@@ -102,6 +102,12 @@ export class Renderer {
 
   /** The classic-mode easter egg; also silences every flashy feedback method below. */
   private isClassicMode = false;
+  /**
+   * The player asked the system for less motion: no screen shake, white flashes or camera zoom.
+   * Read live, so changing the setting mid-game takes effect at once. The stage's CSS effects
+   * honor the same setting in stage.css.
+   */
+  private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -201,12 +207,12 @@ export class Renderer {
   }
 
   public addShake(amount: number): void {
-    if (this.isClassicMode) return;
+    if (this.isClassicMode || this.reducedMotion.matches) return;
     this.screenShake = Math.max(this.screenShake, amount);
   }
 
   public addFlash(amount: number): void {
-    if (this.isClassicMode) return;
+    if (this.isClassicMode || this.reducedMotion.matches) return;
     this.screenFlash = Math.max(this.screenFlash, amount);
   }
 
@@ -435,7 +441,7 @@ export class Renderer {
    * always covers the whole canvas even when the ball is already past the goal line.
    */
   private applyZoom(zoom: number, focusX: number, focusY: number): void {
-    if (zoom <= 1.001) return;
+    if (zoom <= 1.001 || this.reducedMotion.matches) return;
 
     const x = clamp(focusX, 0, COURT.WIDTH);
     const y = clamp(focusY, 0, COURT.HEIGHT);

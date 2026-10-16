@@ -107,6 +107,50 @@ describe('Renderer', () => {
     expect(ctx.fillStyle).toMatch(/^rgba\(255, 255, 255,/);
   });
 
+  describe('with reduced motion asked for', () => {
+    /** Answers the reduced-motion media query as `reduce`, everything else as no match. */
+    const preferReducedMotion = () =>
+      vi
+        .spyOn(window, 'matchMedia')
+        .mockImplementation(
+          (query: string) =>
+            ({ matches: query.includes('reduced-motion: reduce'), media: query }) as MediaQueryList,
+        );
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("doesn't flash the screen", () => {
+      preferReducedMotion();
+      const { renderer, ctx } = makeRenderer();
+
+      renderer.addFlash(1.0);
+      renderer.render(baseFrame(), 0.016);
+      expect(ctx.fillStyle).not.toMatch(/^rgba\(255, 255, 255,/);
+    });
+
+    it("doesn't shake or zoom the camera", () => {
+      const normal = makeRenderer();
+      preferReducedMotion();
+      const reduced = makeRenderer();
+
+      // A shake of 20 then moves the scene by exactly (10, 10); the zoom scales it by 1.2
+      vi.spyOn(Math, 'random').mockReturnValue(1);
+      const shakeAndZoom = ({ renderer, spies }: typeof normal) => {
+        renderer.addShake(20);
+        renderer.render(baseFrame({ zoom: 1.2 }), 0.016);
+        return [
+          spies.translate.mock.calls.some(([x, y]) => x === 10 && y === 10),
+          spies.scale.mock.calls.some(([x, y]) => x === 1.2 && y === 1.2),
+        ];
+      };
+
+      expect(shakeAndZoom(normal)).toEqual([true, true]);
+      expect(shakeAndZoom(reduced)).toEqual([false, false]);
+    });
+  });
+
   it("doesn't leave a flash that only shows up once classic mode is switched off again", () => {
     const { renderer, ctx } = makeRenderer();
 
