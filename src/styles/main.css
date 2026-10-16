@@ -704,12 +704,26 @@ body {
     box-shadow 0.15s;
 }
 
-.now-playing:hover,
 .now-playing:focus-within {
   opacity: 1;
   box-shadow:
     -3px 0 14px rgba(25, 240, 255, 0.55),
     3px 0 14px rgba(255, 43, 214, 0.55);
+}
+
+/* Only with a real pointer: a phone keeps :hover on the last thing tapped, which would leave
+   the chip lit and the skip pink until the next tap somewhere else */
+@media (hover: hover) {
+  .now-playing:hover {
+    opacity: 1;
+    box-shadow:
+      -3px 0 14px rgba(25, 240, 255, 0.55),
+      3px 0 14px rgba(255, 43, 214, 0.55);
+  }
+
+  .now-playing__next:hover {
+    color: var(--pink);
+  }
 }
 
 .now-playing__toggle,
@@ -809,10 +823,6 @@ body {
 
   fill: currentColor;
   filter: drop-shadow(0 0 3px rgba(25, 240, 255, 0.6));
-}
-
-.now-playing__next:hover {
-  color: var(--pink);
 }
 
 /* Off: the record stops and the chip dims */
