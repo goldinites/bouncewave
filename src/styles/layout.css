@@ -5,6 +5,10 @@
      overflows, so dvh where the browser has it */
   --vh: 1vh;
 
+  /* The height the root's safe-area padding (vars.css) takes from the page: nothing in a
+     browser tab, the status bar and the home indicator in an iPhone home-screen app */
+  --safe-y: calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+
   /* The court's width, shared with the control bars above and below it so they line up */
   --stage-width: min(96vw, calc(80 * var(--vh) * 1.45));
 }
@@ -16,7 +20,14 @@
 }
 
 html {
-  height: 100%;
+  /* Not 100%: in an iOS home-screen app with a translucent status bar, 100% stops a status bar's
+     height short of the bottom of the screen and leaves a black band there */
+  height: 100vh;
+  height: 100dvh;
+
+  /* Not only body's: the root's safe-area padding lies outside body, and a double tap or pinch
+     there would zoom the page with no way back (body's touch-action: none blocks the pinch out) */
+  touch-action: none;
   scroll-padding-top: env(safe-area-inset-top, 0px);
 }
 
@@ -71,8 +82,8 @@ body {
 @media (orientation: portrait) and (max-width: 900px) {
   :root {
     /* The rotated court keeps its real 8:5 shape, so width and height grow together. On most
-       phones the height is what binds: the court takes what's left once the controls above it
-       and the hint below (with the gaps between) are given their room. */
-    --game-width: min(98vw, calc((100 * var(--vh) - 136px) / 1.6));
+       phones the height is what binds: the court takes what's left once the safe areas, the
+       controls above it and the hint below (with the gaps between) are given their room. */
+    --game-width: min(98vw, calc((100 * var(--vh) - var(--safe-y) - 136px) / 1.6));
   }
 }

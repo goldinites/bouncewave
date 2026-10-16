@@ -2,7 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- No zoom: a game steered by dragging has no use for it. Android honors this, iOS doesn't,
+         so InputHandler blocks the double tap and the pinch there -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
     <title>Bouncewave</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />

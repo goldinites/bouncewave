@@ -58,6 +58,29 @@ describe('InputHandler', () => {
     handler.dispose();
   });
 
+  it('keeps a quick second tap from turning into a double-tap zoom', () => {
+    const { handler } = makeHandler();
+    const tap = () => {
+      const touchEnd = new Event('touchend', { bubbles: true, cancelable: true });
+      document.body.dispatchEvent(touchEnd);
+      return touchEnd.defaultPrevented;
+    };
+
+    expect(tap()).toBe(false);
+    expect(tap()).toBe(true);
+    handler.dispose();
+  });
+
+  it('never lets a pinch start zooming the page', () => {
+    const { handler } = makeHandler();
+    const pinch = new Event('gesturestart', { cancelable: true });
+
+    window.dispatchEvent(pinch);
+
+    expect(pinch.defaultPrevented).toBe(true);
+    handler.dispose();
+  });
+
   it('toggles the music on M, once per press', () => {
     const { handler, callbacks } = makeHandler();
 
