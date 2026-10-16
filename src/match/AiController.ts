@@ -11,6 +11,15 @@ const AIM_DEADZONE = 6; // px; closer than this the paddle holds still
 // steep enough to matter, clear of the very edge so a small misjudgment doesn't whiff
 const ANGLE_SHOT = { MIN: 0.55, MAX: 0.85 } as const;
 
+// The longer the AI watches a shot, the better it sees where it is going, and a slow ball is far
+// easier to follow than a fast one: its misjudgment fades out over WATCH_TO_CORRECT seconds of
+// watching a ball at WATCH_REFERENCE_SPEED, proportionally longer for a faster ball. A slow
+// ball is always read in time; a fast, steep one zigzags in before the AI can correct
+const WATCH = {
+  TO_CORRECT: 3,
+  REFERENCE_SPEED: 340, // px/s, the serve
+} as const;
+
 // The AI's eyes, all scaled by the skill's nerves. It looks at the ball in glances rather than
 // continuously; its first glance at a shot only half trusts the trajectory it works out (it
 // leans toward where the ball is now), and every glance after trusts it more.
@@ -63,6 +72,8 @@ interface ShotRead {
   misjudgment: number;
   /** The misjudgment in px, fixed once it reads the shot; null until then. */
   misread: number | null;
+  /** How long it has watched the shot, in seconds at WATCH.REFERENCE_SPEED. */
+  watched: number;
   /** Planned return: where on the paddle to take the ball, in [-1, 1]; 0 = a flat return. */
   hitOffset: number;
   /** Whether it plays an angled return this time; the side is picked once it reads the shot. */
@@ -81,6 +92,7 @@ const freshRead = (): ShotRead => ({
   reactIn: 0,
   misjudgment: 0,
   misread: null,
+  watched: 0,
   hitOffset: 0,
   wantsAngle: false,
   angleSize: 0,
@@ -97,7 +109,9 @@ const freshRead = (): ShotRead => ({
  * The AI reads each shot the way a player does: after a reaction time it works out where the
  * ball will arrive, bounces off the walls included, and heads there. Its read is off by a
  * misjudgment that grows with every wall bounce it has to see through, so steep shots that
- * zigzag across the court are the ones it gets wrong — more often the lower the level. On
+ * zigzag across the court are the ones it gets wrong — more often the lower the level. As it
+ * keeps watching it corrects the misjudgment, quickly for a slow ball and slowly for a fast one,
+ * so it loses points to fast steep shots, never by standing next to a slow ball. On
  * higher levels it also takes the ball off-center on purpose, to angle the return away from
  * the opponent.
  *
@@ -131,6 +145,7 @@ export class AiController {
     read.reactIn = skill.reaction;
     read.misjudgment = this.random() - 0.5;
     read.misread = null;
+    read.watched = 0;
     read.hitOffset = 0;
     read.wantsAngle = this.random() < skill.angleShots;
     read.angleSize = ANGLE_SHOT.MIN + this.random() * (ANGLE_SHOT.MAX - ANGLE_SHOT.MIN);
@@ -182,8 +197,12 @@ export class AiController {
     const timeLeft = (faceX - ball.x) / ball.vx;
     const seenY = this.see(read, ball, arrival.y, timeLeft, skill.nerves, dt);
 
+    // Watching the ball, the AI sees its mistake and corrects it, sooner the slower the ball
+    const correction = clamp(1 - read.watched / WATCH.TO_CORRECT, 0, 1);
+    read.watched += (dt * WATCH.REFERENCE_SPEED) / Math.max(ball.speed, WATCH.REFERENCE_SPEED);
+
     // The ball meets the paddle `hitOffset` half-heights below its center
-    return seenY + read.misread - (read.hitOffset * PADDLE.HEIGHT) / 2;
+    return seenY + read.misread * correction - (read.hitOffset * PADDLE.HEIGHT) / 2;
   }
 
   /**

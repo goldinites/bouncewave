@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AiController, predictArrival } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
-import { COURT, PADDLE } from '@/match/config';
+import { BALL, COURT, PADDLE } from '@/match/config';
 import {
   AiSkill,
   DifficultyLevel,
@@ -247,8 +247,12 @@ describe('AiController', () => {
 });
 
 describe('AI balance', () => {
-  /** Share of fully accelerated edge-of-paddle shots the CPU returns at a level. */
-  const edgeShotReturnRate = (level: DifficultyLevel, trials = 400): number => {
+  /** Share of edge-of-paddle shots at `speed` (top speed by default) the CPU returns. */
+  const edgeShotReturnRate = (
+    level: DifficultyLevel,
+    trials = 400,
+    speed = DIFFICULTY_CONFIGS[level].maxSpeed,
+  ): number => {
     const random = seeded(level + 1);
     const config = DIFFICULTY_CONFIGS[level];
     let returned = 0;
@@ -261,13 +265,13 @@ describe('AI balance', () => {
       const ball = ballAt(
         PADDLE.OFFSET_X + PADDLE.WIDTH + RADIUS,
         60 + random() * 380,
-        Math.cos(angle) * config.maxSpeed,
-        Math.sin(angle) * config.maxSpeed,
+        Math.cos(angle) * speed,
+        Math.sin(angle) * speed,
       );
       const ai = new AiController(random);
       ai.readShot(cpu, config);
 
-      for (let t = 0; t < 5; t += 1 / 60) {
+      for (let t = 0; t < 8; t += 1 / 60) {
         ai.update(cpu, ball, config, 1 / 60, player);
         cpu.update(1 / 60);
         const events = Physics.step(ball, [player, cpu], config, 1 / 60);
@@ -286,5 +290,11 @@ describe('AI balance', () => {
     }
     expect(rates[0]).toBeLessThan(0.78); // still a good shot on Normal
     expect(rates[rates.length - 1]).toBeGreaterThan(0.82);
+  });
+
+  it('never lets a slow ball past, however steep: it has all the time it needs to read it', () => {
+    for (const level of DIFFICULTY_LEVELS) {
+      expect(edgeShotReturnRate(level, 300, BALL.INITIAL_SPEED)).toBeGreaterThan(0.97);
+    }
   });
 });
