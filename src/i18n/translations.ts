@@ -26,6 +26,7 @@ export interface TranslationSchema {
   ready: string;
   /** Shown instead of `ready` before the point that decides the match. */
   decider: string;
+  /** Controls and rules under the court, as HTML: a row of keycaps, then a line of rules. */
   hintK: string;
   hintT: string;
   /** Name and description of every difficulty level, by level. */
@@ -53,8 +54,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
-    hintK: `Paddle: W / S or ↑ / ↓ · mouse or touch works too<br>Esc / P — pause · F — fullscreen · M — music · N — next track<br>First to ${WINNING_SCORE} points · paddle center = perfect shot · 3 in a row charge Overdrive`,
-    hintT: `Drag your finger to move the paddle<br>First to ${WINNING_SCORE} points · paddle center = perfect shot`,
+    hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Esc</kbd> pause</span><span><kbd>F</kbd> fullscreen</span><span><kbd>M</kbd> music</span><span><kbd>N</kbd> next track</span></span><span class="game-hint__rules">First to ${WINNING_SCORE} · paddle center = perfect shot · 3 in a row = Overdrive</span>`,
+    hintT: `<span class="game-hint__keys">Drag your finger to move the paddle</span><span class="game-hint__rules">First to ${WINNING_SCORE} · paddle center = perfect shot</span>`,
     d: {
       [DifficultyLevel.NORMAL]: ['NORMAL', 'vs CPU: a balanced opponent'],
       [DifficultyLevel.HARD]: ['HARD', 'vs CPU: fast and accurate'],
@@ -81,8 +82,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
-    hintK: `Ракетка: W / S или ↑ / ↓ · мышь или касание тоже работают<br>Esc / P — пауза · F — полный экран · M — музыка · N — следующий трек<br>Играем до ${WINNING_SCORE} очков · центр ракетки — идеальный удар · 3 подряд заряжают Overdrive`,
-    hintT: `Двигайте ракетку пальцем<br>Играем до ${WINNING_SCORE} очков · центр ракетки — идеальный удар`,
+    hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> ракетка</span><span><kbd>Esc</kbd> пауза</span><span><kbd>F</kbd> полный экран</span><span><kbd>M</kbd> музыка</span><span><kbd>N</kbd> следующий трек</span></span><span class="game-hint__rules">До ${WINNING_SCORE} очков · центр ракетки — идеальный удар · 3 подряд — Overdrive</span>`,
+    hintT: `<span class="game-hint__keys">Двигайте ракетку пальцем</span><span class="game-hint__rules">До ${WINNING_SCORE} очков · центр ракетки — идеальный удар</span>`,
     d: {
       [DifficultyLevel.NORMAL]: ['СРЕДНЯЯ', 'Против CPU: сбалансированный соперник'],
       [DifficultyLevel.HARD]: ['СЛОЖНАЯ', 'Против CPU: быстрый и точный'],
