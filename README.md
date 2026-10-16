@@ -1,85 +1,47 @@
-# BOUNCEWAVE (Retrowave / Synthwave Pong)
+**English** · [Русский](README.ru.md)
 
-A retro-futuristic, synthwave-themed Canvas Pong game decomposed and refactored into a modern TypeScript web application with Vite, full strict typing, modular architecture, and automated tests.
+# Bouncewave
 
----
+Synthwave Pong with music that plays along with every rally.
 
-## 🚀 Features
+**Play:** https://goldinites.github.io/bouncewave/
 
-- **Procedural Synthwave Music Engine**: Web Audio synthesizer playing five composed synthwave songs, each with an intro, verse, build, chorus and breakdown. The music moves between them as rallies heat up and cool down, with drum fills and risers on the way, while the mix fills out with ball speed, rally length and game points.
-- **Dynamic 2D Visualizer**:
-  - Laser light show with audio spectrum analyzer and oscilloscope.
-  - Memphis 80s/90s geometric aesthetic with CRT/VHS scan lines, chromatic glitching, and OSD playback timer.
-- **Physics & Particle Engine**: Accurate sub-step deflection collisions, acceleration, particle bursts, shockwave rings, and screen shake.
-- **AI Opponents**: 3 configurable difficulty levels (Normal, Hard, Insane) with realistic human-like error modeling.
-- **Full Localization (i18n)**: English and Russian languages supported.
-- **Persistent Storage**: Player settings (difficulty, sound FX, music, language) saved to `localStorage`.
-- **Responsive & Mobile Support**: Full touch gestures, desktop keyboard, mouse, and auto-rotated mobile portrait/landscape handling.
-- **Installable PWA**: Add it to the home screen or install it from the browser; it launches fullscreen and plays offline after the first visit. The home-screen icons are generated from `public/app-icon.svg` and `favicon.ico` from the simpler `public/favicon.svg`, both with `npm run icons`, which also regenerates the iOS launch screens and their links in `index.html`.
+## Features
 
----
+- **Live soundtrack** — eight synthwave songs; the music builds as the rally heats up and drops at its peak, and every hit plays a note of the song.
+- **Four backgrounds** — lasers, Memphis, outrun and a neon city, all moving to the music.
+- **Opponent that plays like a person** — three difficulty levels; it misreads shots and reacts with a delay, never perfectly.
+- **Game feel** — perfect hits, Overdrive power shots, slow motion on the deciding point, fireworks when you win.
+- **Plays anywhere** — keyboard, mouse or touch, phone in either orientation, English or Russian.
 
-## 🏗 Architecture & Project Structure
+## How to play
 
-The project follows clean architecture principles with single-responsibility modular design:
+First to 10 points wins.
 
-```
-├── .prettierrc                  # Prettier formatting rules
-├── .prettierignore              # Prettier ignore patterns
-├── eslint.config.js             # Flat ESLint configuration (TypeScript + Prettier)
-├── index.html                   # Clean HTML entry point
-├── package.json                 # Dependencies and npm scripts
-├── tsconfig.json                # Strict TypeScript configuration
-├── vite.config.ts               # Bundler configuration with aliases & Vitest setup
-├── src/
-│   ├── index.ts                 # Application bootstrap entry point
-│   ├── app/                     # Composition root and main requestAnimationFrame loop
-│   ├── match/                   # Rules and simulation: no DOM, sound or canvas
-│   │   ├── config.ts            # Court, paddle and ball sizes, winning score
-│   │   ├── difficulty.ts        # Difficulty levels and their AI / ball settings
-│   │   ├── MatchFlow.ts         # Phases, serves, scoring, finale timing
-│   │   ├── Physics.ts           # Ball movement, collisions, bounce angles
-│   │   └── …                    # Ball, Paddle, AiController, heat
-│   ├── fx/                      # Presentation reacting to the match: shake, particles, drama, climax
-│   ├── render/                  # Canvas 2D rendering; backgrounds/ holds one class per background
-│   ├── audio/                   # Web Audio: music/ (songs, conductor, sequencer) and sfx/
-│   ├── input/                   # Keyboard, mouse, touch and orientation
-│   ├── ui/                      # DOM menus
-│   ├── i18n/                    # EN and RU dictionaries
-│   ├── settings/                # User settings and their LocalStorage persistence
-│   ├── shared/                  # Domain-free helpers: math, color palette
-│   ├── debug/                   # FPS overlay (F3 or ?fps)
-│   └── styles/                  # One file per component (stage, menu, bars, pause, now-playing), each with its own breakpoints
-└── tests/                       # Unit tests (Vitest)
-```
+- Hit the ball with the **center of the paddle** for a perfect shot.
+- Three perfect shots in a row charge **Overdrive**: your next hit becomes a power shot — faster and much harder to read.
+- The angle of your return depends on where the ball meets the paddle and on how the paddle is moving.
 
-**Where constants live.** A tuning value sits at the top of the module that uses it, next to
-the code it tunes (exported only when a test needs it). Values read by several modules live in
-the owning folder's `config.ts`, grouped into objects such as `PADDLE.WIDTH` or `COURT.HEIGHT`.
-Only domain-free values (the palette, math) go to `shared/`.
+| Action       | Keyboard          | Touch          |
+| ------------ | ----------------- | -------------- |
+| Move         | `W` `S` / `↑` `↓` | Drag           |
+| Pause        | `Esc` / `P`       | Pause button   |
+| Music on/off | `M`               | Tap the record |
+| Next track   | `N`               | `▸▸` button    |
+| Fullscreen   | `F`               | —              |
 
-**Adding content.**
+Menus work with the arrow keys, `Enter` and `Esc`. Difficulty, music, sound effects and language are in **Settings**.
 
-| To add       | Do this                                                                                                                                                           |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A background | Implement `Background` in `render/backgrounds/` and list it in `createBackgrounds` (`BackgroundRenderer.ts`)                                                      |
-| A setting    | Add a field to `UserSettings` and an entry to `SETTINGS` (`settings/UserSettings.ts`); list it in `SETTINGS_MENU` (`ui/MenuController.ts`) to show it in the menu |
-| A song       | Add a `SongDef` to `SONG_DEFS` (`audio/music/songs.ts`), with a section for every tier; the notation is described on `SectionDef` (`audio/music/score.ts`)        |
-| A difficulty | Add it to `DifficultyLevel` and `DIFFICULTY_CONFIGS` (`match/difficulty.ts`) and describe it in every dictionary                                                  |
-| A language   | Add it to `Language` and a dictionary to `TRANSLATIONS` (`i18n/translations.ts`)                                                                                  |
+## Install as an app
 
-The compiler points out anything missing, such as a translation for a new difficulty.
+The game can be installed and played offline after the first visit.
+
+- **iPhone / iPad** — open the link in Safari, tap Share, then **Add to Home Screen**.
+- **Android** — open the link in Chrome, then **Install app** in the menu.
+- **Desktop** — use the install button in the address bar of Chrome or Edge.
+
+Turn on "Reduce motion" in your system settings to switch off screen shake, flashes and camera zoom.
 
 ---
 
-## 💻 Available Scripts
-
-- `npm run dev` — Run a local development server with Hot Module Reloading (HMR) at http://localhost:3000.
-- `npm run build` — Typecheck (`tsc`) and compile an optimized production bundle to `dist/`.
-- `npm run preview` — Locally preview the production build.
-- `npm test` — Run all unit test suites via Vitest.
-- `npm run coverage` — Run the tests and report coverage (an HTML report lands in `coverage/`).
-- `npm run lint` — Lint codebase with ESLint.
-- `npm run lint:fix` — Automatically fix ESLint lint errors.
-- `npm run format` — Format all files with Prettier.
-- `npm run format:check` — Check code formatting with Prettier.
+Made with [Claude Code](https://claude.com/claude-code).
