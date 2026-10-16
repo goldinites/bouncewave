@@ -1,51 +1,21 @@
+/* Slides .game__border (3× the stage) the way background-position 0% → 35% → 100% → 65%
+   used to: 100% of the travel is two stage widths, i.e. 66.667% of the element's own width */
 @keyframes neon-border {
   0%,
   100% {
-    background-position:
-      0 0,
-      0 50%;
-
-    box-shadow:
-      0 0 10px var(--cyan),
-      0 0 25px rgba(255, 43, 214, 0.3),
-      0 0 45px rgba(25, 240, 255, 0.1),
-      inset 0 0 35px rgba(25, 240, 255, 0.2);
+    transform: translateX(0);
   }
 
   25% {
-    background-position:
-      0 0,
-      35% 50%;
-
-    box-shadow:
-      0 0 14px var(--cyan),
-      0 0 32px rgba(255, 43, 214, 0.4),
-      0 0 55px rgba(25, 240, 255, 0.16),
-      inset 0 0 40px rgba(25, 240, 255, 0.24);
+    transform: translateX(-23.333%);
   }
 
   50% {
-    background-position:
-      0 0,
-      100% 50%;
-
-    box-shadow:
-      0 0 17px var(--pink),
-      0 0 38px rgba(25, 240, 255, 0.4),
-      0 0 60px rgba(255, 43, 214, 0.15),
-      inset 0 0 42px rgba(255, 43, 214, 0.18);
+    transform: translateX(-66.667%);
   }
 
   75% {
-    background-position:
-      0 0,
-      65% 50%;
-
-    box-shadow:
-      0 0 12px var(--pink),
-      0 0 28px rgba(25, 240, 255, 0.3),
-      0 0 45px rgba(255, 43, 214, 0.1),
-      inset 0 0 35px rgba(255, 43, 214, 0.16);
+    transform: translateX(-43.333%);
   }
 }
 
@@ -161,32 +131,6 @@
   }
 }
 
-@keyframes victory-stage-pulse {
-  0% {
-    filter: brightness(1);
-    box-shadow: 0 0 0 rgba(0, 255, 240, 0);
-  }
-
-  15% {
-    filter: brightness(1.8) saturate(1.8);
-    box-shadow:
-      0 0 25px rgba(0, 255, 240, 0.95),
-      0 0 65px rgba(255, 0, 200, 0.75);
-  }
-
-  35% {
-    filter: brightness(1.2) saturate(1.6);
-    box-shadow:
-      0 0 40px rgba(0, 255, 240, 0.65),
-      0 0 80px rgba(255, 0, 200, 0.45);
-  }
-
-  100% {
-    filter: brightness(1);
-    box-shadow: 0 0 0 rgba(0, 255, 240, 0);
-  }
-}
-
 @keyframes victory-energy-burst {
   0% {
     opacity: 0;
@@ -216,79 +160,18 @@
 
   12% {
     opacity: 1;
-    filter: hue-rotate(70deg) brightness(1.8);
   }
 
   28% {
     opacity: 0.35;
-    filter: hue-rotate(-45deg);
   }
 
   45% {
     opacity: 0.8;
-    filter: hue-rotate(35deg) brightness(1.5);
   }
 
   65% {
     opacity: 0.2;
-  }
-}
-
-@keyframes signal-collapse {
-  0% {
-    filter: none;
-  }
-
-  8% {
-    filter: contrast(2.5) saturate(0);
-  }
-
-  13% {
-    filter: brightness(0.08) contrast(3);
-  }
-
-  19% {
-    filter: brightness(1.8) saturate(3) hue-rotate(90deg);
-  }
-
-  27% {
-    filter: brightness(0.05) contrast(4);
-  }
-
-  34% {
-    filter: brightness(1.5) hue-rotate(-100deg) saturate(4);
-  }
-
-  39% {
-    filter: brightness(0.12) contrast(3);
-  }
-
-  48% {
-    filter: brightness(2.2) contrast(2) saturate(0);
-  }
-
-  53% {
-    filter: brightness(0.03);
-  }
-
-  65% {
-    filter: brightness(1.4) contrast(3) hue-rotate(160deg);
-  }
-
-  72% {
-    filter: brightness(0.06) contrast(4);
-  }
-
-  84% {
-    filter: brightness(1.7) saturate(4);
-  }
-
-  91% {
-    filter: brightness(0.02) contrast(5);
-  }
-
-  100% {
-    filter: brightness(0.15) grayscale(1);
   }
 }
 
@@ -370,6 +253,8 @@
   }
 }
 
+/* Also carries the signal collapse the whole stage used to get from a filter: dark dropouts
+   and bright pops, as plain color over the canvas */
 @keyframes catastrophic-scan {
   0%,
   100% {
@@ -377,28 +262,39 @@
     background-color: transparent;
   }
 
-  13% {
+  8% {
     opacity: 1;
     background-color: rgba(255, 0, 60, 0.3);
-    filter: contrast(2);
+  }
+
+  13% {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.9);
+  }
+
+  19% {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.35);
   }
 
   27% {
     opacity: 0.95;
     background-color: rgba(0, 0, 0, 0.9);
-    filter: none;
   }
 
-  35% {
+  34% {
     opacity: 1;
-    background-color: rgba(0, 255, 255, 0.22);
-    filter: hue-rotate(120deg);
+    background-color: rgba(0, 255, 255, 0.3);
   }
 
   39% {
     opacity: 0.9;
     background-color: rgba(0, 0, 0, 0.85);
-    filter: none;
+  }
+
+  48% {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.4);
   }
 
   53% {
@@ -413,11 +309,21 @@
 
   72% {
     opacity: 1;
-    background-color: #222;
+    background-color: rgba(0, 0, 0, 0.92);
+  }
+
+  84% {
+    opacity: 1;
+    background-color: rgba(255, 229, 59, 0.3);
   }
 
   91% {
     opacity: 1;
     background-color: #000;
+  }
+
+  96% {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.85);
   }
 }

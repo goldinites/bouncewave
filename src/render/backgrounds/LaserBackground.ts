@@ -32,31 +32,38 @@ const BAR_COUNT = 32;
 const BOTTOM_BAR_ROWS = 14;
 const TOP_BAR_ROWS = 7;
 const WAVE_POINTS = 64;
+const BOTTOM_ROW_COLORS = Array.from(
+  { length: BOTTOM_BAR_ROWS },
+  (_, j) => `hsl(${185 + j * 10}, 100%, ${55 + j}%)`,
+);
+const TOP_ROW_COLORS = Array.from(
+  { length: TOP_BAR_ROWS },
+  (_, j) => `hsl(${320 - j * 8}, 100%, 60%)`,
+);
 
 /** Laser light show: sweeping beams, a spectrum analyzer and an oscilloscope line. */
+// Horizontal stretch of the dark ellipse behind the court
+const VIGNETTE_STRETCH = (COURT.WIDTH * 0.5) / (COURT.HEIGHT * 0.4);
+
 export class LaserBackground implements Background {
   public readonly overlayTint = 0.15;
 
+  /** Gradients that never change, built on first use. */
+  private gradients: { sky: CanvasGradient; vignette: CanvasGradient } | null = null;
+  private readonly barHeights = new Array<number>(BAR_COUNT).fill(0);
+
   public render(frame: BackgroundFrame): void {
     const { ctx, pulse, laserIntensity } = frame;
-    const centerX = COURT.WIDTH / 2;
-    const centerY = COURT.HEIGHT * 0.45;
+    const gradients = (this.gradients ??= this.createGradients(ctx));
 
-    const bgGradient = ctx.createRadialGradient(
-      centerX,
-      centerY,
-      10,
-      centerX,
-      centerY,
-      COURT.WIDTH * 0.7,
-    );
-    bgGradient.addColorStop(0, '#2b0a5c');
-    bgGradient.addColorStop(1, '#05010d');
-    ctx.fillStyle = bgGradient;
+    ctx.fillStyle = gradients.sky;
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
-    ctx.fillStyle = `rgba(90, 70, 255, ${pulse * 0.1 * laserIntensity})`;
-    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+    const pulseAlpha = pulse * 0.1 * laserIntensity;
+    if (pulseAlpha > 0.004) {
+      ctx.fillStyle = `rgba(90, 70, 255, ${pulseAlpha})`;
+      ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+    }
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -68,7 +75,26 @@ export class LaserBackground implements Background {
 
     ctx.restore();
 
-    this.renderVignette(ctx);
+    this.renderVignette(ctx, gradients.vignette);
+  }
+
+  private createGradients(ctx: CanvasRenderingContext2D): {
+    sky: CanvasGradient;
+    vignette: CanvasGradient;
+  } {
+    const centerX = COURT.WIDTH / 2;
+    const centerY = COURT.HEIGHT * 0.45;
+    const sky = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, COURT.WIDTH * 0.7);
+    sky.addColorStop(0, '#2b0a5c');
+    sky.addColorStop(1, '#05010d');
+
+    // Centered on the origin; renderVignette moves and stretches it into place
+    const vignette = ctx.createRadialGradient(0, 0, 0, 0, 0, COURT.HEIGHT * 0.4);
+    vignette.addColorStop(0, 'rgba(4, 1, 12, 0.92)');
+    vignette.addColorStop(0.55, 'rgba(4, 1, 12, 0.82)');
+    vignette.addColorStop(1, 'rgba(4, 1, 12, 0)');
+
+    return { sky, vignette };
   }
 
   private renderBeams({ ctx, pulse, time, laserIntensity, celebration }: BackgroundFrame): void {
@@ -97,33 +123,38 @@ export class LaserBackground implements Background {
     // The climax mix is louder, so calm the bars down to keep the focus on play
     const spectrumCalm = 1 - CLIMAX_SPECTRUM_DAMPING * climax;
     const barWidth = COURT.WIDTH / BAR_COUNT;
-    const barHeights: number[] = [];
+    const barHeights = this.barHeights;
     for (let i = 0; i < BAR_COUNT; i++) {
-      barHeights.push(
-        Math.round(spectrum.getBarLevel(i, BAR_COUNT, time) * BOTTOM_BAR_ROWS * spectrumCalm),
+      barHeights[i] = Math.round(
+        spectrum.getBarLevel(i, BAR_COUNT, time) * BOTTOM_BAR_ROWS * spectrumCalm,
       );
     }
 
+    // Each row of cells shares a color, so it is one path and one fill
     // Bottom cyan bars
     ctx.globalAlpha = 0.5 * spectrumCalm;
     for (let j = 0; j < BOTTOM_BAR_ROWS; j++) {
-      ctx.fillStyle = `hsl(${185 + j * 10}, 100%, ${55 + j}%)`;
+      ctx.fillStyle = BOTTOM_ROW_COLORS[j];
+      ctx.beginPath();
       for (let i = 0; i < BAR_COUNT; i++) {
         if (barHeights[i] > j) {
-          ctx.fillRect(i * barWidth + 2, COURT.HEIGHT - 24 - j * 8, barWidth - 4, 6);
+          ctx.rect(i * barWidth + 2, COURT.HEIGHT - 24 - j * 8, barWidth - 4, 6);
         }
       }
+      ctx.fill();
     }
 
     // Top pink bars, mirrored
     ctx.globalAlpha = 0.25 * spectrumCalm;
     for (let j = 0; j < TOP_BAR_ROWS; j++) {
-      ctx.fillStyle = `hsl(${320 - j * 8}, 100%, 60%)`;
+      ctx.fillStyle = TOP_ROW_COLORS[j];
+      ctx.beginPath();
       for (let i = 0; i < BAR_COUNT; i++) {
         if (barHeights[BAR_COUNT - 1 - i] > j * 2) {
-          ctx.fillRect(i * barWidth + 2, 22 + j * 8, barWidth - 4, 6);
+          ctx.rect(i * barWidth + 2, 22 + j * 8, barWidth - 4, 6);
         }
       }
+      ctx.fill();
     }
   }
 
@@ -146,16 +177,14 @@ export class LaserBackground implements Background {
   }
 
   /** Dark elliptical shadow behind the court so the play area stays readable. */
-  private renderVignette(ctx: CanvasRenderingContext2D): void {
+  private renderVignette(ctx: CanvasRenderingContext2D, gradient: CanvasGradient): void {
     ctx.save();
     ctx.translate(COURT.WIDTH / 2, COURT.HEIGHT / 2);
-    ctx.scale((COURT.WIDTH * 0.5) / (COURT.HEIGHT * 0.4), 1);
-    const vignetteGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, COURT.HEIGHT * 0.4);
-    vignetteGrad.addColorStop(0, 'rgba(4, 1, 12, 0.92)');
-    vignetteGrad.addColorStop(0.55, 'rgba(4, 1, 12, 0.82)');
-    vignetteGrad.addColorStop(1, 'rgba(4, 1, 12, 0)');
-    ctx.fillStyle = vignetteGrad;
-    ctx.fillRect(-COURT.WIDTH, -COURT.HEIGHT, COURT.WIDTH * 2, COURT.HEIGHT * 2);
+    ctx.scale(VIGNETTE_STRETCH, 1);
+    ctx.fillStyle = gradient;
+    // Exactly the court in the stretched space: nothing outside it is ever seen
+    const halfWidth = COURT.WIDTH / 2 / VIGNETTE_STRETCH;
+    ctx.fillRect(-halfWidth, -COURT.HEIGHT / 2, halfWidth * 2, COURT.HEIGHT);
     ctx.restore();
   }
 }

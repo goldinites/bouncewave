@@ -3,10 +3,13 @@ import { Ball } from '@/match/Ball';
 import { PADDLE } from '@/match/config';
 import { getRallyHeat } from '@/match/heat';
 import { Paddle } from '@/match/Paddle';
+import { glowMargin, sprites } from '@/render/SpriteCache';
 import { TWO_PI } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
 const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
+// Paddle neon in canvas pixels: always lit, flaring up to HOT on a hit
+const PADDLE_GLOW = { BASE: 18, HOT: 48 } as const;
 
 export class EntityRenderer {
   /** @param ctx
@@ -16,12 +19,13 @@ export class EntityRenderer {
     const topY = paddle.y - PADDLE.HEIGHT / 2;
 
     ctx.save();
-    ctx.shadowColor = paddle.color;
-    ctx.shadowBlur = 18 + glow * 30;
-    ctx.fillStyle = paddle.color;
-
-    this.roundRect(ctx, paddle.x, topY, PADDLE.WIDTH, PADDLE.HEIGHT, 6);
-    ctx.fill();
+    // Pre-rendered neon; a hit fades the hot one in on top
+    this.drawPaddleGlow(ctx, paddle, topY, PADDLE_GLOW.BASE);
+    if (glow > 0.01) {
+      ctx.globalAlpha = glow;
+      this.drawPaddleGlow(ctx, paddle, topY, PADDLE_GLOW.HOT);
+      ctx.globalAlpha = 1;
+    }
 
     // Inner bright neon core
     ctx.shadowBlur = 0;
@@ -30,6 +34,36 @@ export class EntityRenderer {
     ctx.fill();
 
     ctx.restore();
+  }
+
+  private static drawPaddleGlow(
+    ctx: CanvasRenderingContext2D,
+    paddle: Paddle,
+    topY: number,
+    blur: number,
+  ): void {
+    sprites.draw(
+      ctx,
+      `paddle|${paddle.color}|${blur}`,
+      paddle.x,
+      topY,
+      (_measureCtx, scale) => {
+        const margin = glowMargin(blur, scale);
+        return {
+          left: -margin,
+          top: -margin,
+          width: PADDLE.WIDTH + margin * 2,
+          height: PADDLE.HEIGHT + margin * 2,
+        };
+      },
+      (spriteCtx) => {
+        spriteCtx.shadowColor = paddle.color;
+        spriteCtx.shadowBlur = blur;
+        spriteCtx.fillStyle = paddle.color;
+        this.roundRect(spriteCtx, 0, 0, PADDLE.WIDTH, PADDLE.HEIGHT, 6);
+        spriteCtx.fill();
+      },
+    );
   }
 
   /** Flat white block, no glow or rounded corners — a paddle as it looked in 1972. */
@@ -75,15 +109,19 @@ export class EntityRenderer {
     const x = ball.x;
     const y = ball.y;
 
-    // Fading ball trail
+    // Fading ball trail: one color, faded through globalAlpha (on top of the serve's fade)
+    const baseAlpha = ctx.globalAlpha;
+    const trailAlpha = 0.22 + rallyIntensity * 0.2;
     ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = `hsl(${hue}, ${glowSat}%, ${lit}%)`;
     ball.trail.forEach((point, index) => {
       const alpha = (index + 1) / ball.trail.length;
-      ctx.fillStyle = `hsla(${hue}, ${glowSat}%, ${lit}%, ${alpha * (0.22 + rallyIntensity * 0.2)})`;
+      ctx.globalAlpha = baseAlpha * alpha * trailAlpha;
       ctx.beginPath();
       ctx.arc(point.x, point.y, currentRadius * (0.35 + 0.55 * alpha), 0, TWO_PI);
       ctx.fill();
     });
+    ctx.globalAlpha = baseAlpha;
 
     // Outer plasma corona
     const coronaRadius = currentRadius * (2 + rallyIntensity * 1.8 + climax * 1.6) * flicker;
@@ -97,12 +135,20 @@ export class EntityRenderer {
     ctx.arc(x, y, coronaRadius, 0, TWO_PI);
     ctx.fill();
 
-    // Solid ball core with inner gradient
+    // Tight glow hugging the core: a gradient ring, where shadowBlur would blur the core twice
+    // a frame (and blurs cost more the hotter the ball burns)
     ctx.globalCompositeOperation = 'source-over';
-    ctx.save();
-    ctx.shadowColor = `hsl(${hue}, ${glowSat}%, ${lit - 8}%)`;
-    ctx.shadowBlur = currentRadius * (1.4 + rallyIntensity * 1.6 + climax * 1.4) * flicker;
+    const haloRadius =
+      currentRadius * (1 + 0.5 * (1.4 + rallyIntensity * 1.6 + climax * 1.4) * flicker);
+    const haloGradient = ctx.createRadialGradient(x, y, currentRadius * 0.8, x, y, haloRadius);
+    haloGradient.addColorStop(0, `hsla(${hue}, ${glowSat}%, ${lit - 8}%, 0.85)`);
+    haloGradient.addColorStop(1, `hsla(${hue}, ${glowSat}%, ${lit - 8}%, 0)`);
+    ctx.fillStyle = haloGradient;
+    ctx.beginPath();
+    ctx.arc(x, y, haloRadius, 0, TWO_PI);
+    ctx.fill();
 
+    // Solid ball core with inner gradient
     const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, currentRadius);
     coreGradient.addColorStop(0, COLORS.WHITE);
     coreGradient.addColorStop(0.45, `hsl(${hue - 6}, ${sat}%, ${Math.min(96, lit + 6)}%)`);
@@ -112,15 +158,8 @@ export class EntityRenderer {
     ctx.beginPath();
     ctx.arc(x, y, currentRadius, 0, TWO_PI);
     ctx.fill();
-    ctx.shadowBlur = currentRadius * (0.6 + rallyIntensity * 0.5) * flicker;
-    ctx.fill();
-    ctx.restore();
 
-    // Internal electric arc filaments
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(x, y, currentRadius, 0, TWO_PI);
-    ctx.clip();
+    // Internal electric arc filaments: they stay within 0.9 of the radius, so need no clip
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = 2;
 

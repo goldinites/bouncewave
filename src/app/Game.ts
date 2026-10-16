@@ -63,6 +63,7 @@ export class Game {
     );
 
     this.renderer = new Renderer(canvas);
+    this.showResolution();
     this.uiManager = new UIManager(this.i18n);
 
     // The UI language follows the settings
@@ -240,6 +241,9 @@ export class Game {
 
   private runFrame(timestamp: number): void {
     this.fpsMeter.tick(timestamp);
+    if (this.renderer.trackFrameTime(timestamp - this.lastTimestamp)) {
+      this.showResolution();
+    }
 
     const realDt = Math.min(MAX_FRAME_DT, (timestamp - this.lastTimestamp) / 1000);
     this.lastTimestamp = timestamp;
@@ -263,6 +267,11 @@ export class Game {
       this.renderer.update(realDt, frame);
     }
     this.renderer.render(frame, realDt);
+  }
+
+  /** Shows the dynamic resolution in the ?fps overlay. */
+  private showResolution(): void {
+    this.fpsMeter.setDetail(`res ×${this.renderer.pixelRatio.toFixed(2)}`);
   }
 
   private buildMusicState(): MusicState {

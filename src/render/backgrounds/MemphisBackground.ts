@@ -1,5 +1,6 @@
 import { COURT } from '@/match/config';
 import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
+import { measureText, paintText, sprites } from '@/render/SpriteCache';
 import { mixHexColors, randomRange, TWO_PI } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
@@ -28,10 +29,18 @@ const DROP_PEAK_TIME = 0.18; // s until the push peaks, then it eases back
 // but a sudden loud hit swells over ~0.15 s instead of snapping
 const PULSE_ATTACK = 12;
 const PULSE_RELEASE = 6;
+// The background gradient is rebuilt only when the heat moves by a step this size
+const HEAT_STEPS = 40;
 
 const SHAPE_COLORS = [COLORS.CYAN, COLORS.PINK, COLORS.YELLOW, COLORS.PURPLE];
 const DOT_SPACING = 28;
 const VHS_NOISE_STREAKS = 5;
+const OSD_FONT = "700 16px 'Russo One', Orbitron, monospace";
+const OSD_GLOW = 6;
+const OSD_COLORS = {
+  NORMAL: { text: 'rgba(255, 255, 255, 0.75)', glow: COLORS.CYAN },
+  FAST_FORWARD: { text: 'rgba(255, 229, 59, 0.9)', glow: COLORS.PINK },
+} as const;
 
 /** 80s/90s Memphis design on a VHS screen: drifting shapes, dot grid, scan bar, OSD text. */
 export class MemphisBackground implements Background {
@@ -43,6 +52,7 @@ export class MemphisBackground implements Background {
   private shapePulse = 0;
   private dropAge = Infinity;
   private heat = 0;
+  private gradient: { heatStep: number; value: CanvasGradient } | null = null;
 
   constructor() {
     this.shapes = Array.from({ length: SHAPE_COUNT }, (_, i) => ({
@@ -82,26 +92,37 @@ export class MemphisBackground implements Background {
   public render(frame: BackgroundFrame): void {
     const { ctx, time } = frame;
 
-    // Gradient heats up toward pink/orange during the climax
-    const bgGradient = ctx.createLinearGradient(0, 0, COURT.WIDTH, COURT.HEIGHT);
-    [0, 0.55, 1].forEach((stop, i) => {
-      bgGradient.addColorStop(stop, mixHexColors(GRADIENT_COOL[i], GRADIENT_HOT[i], this.heat));
-    });
-    ctx.fillStyle = bgGradient;
+    ctx.fillStyle = this.getGradient(ctx);
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
-    // Drifting grid dots
+    // Drifting grid dots, all in one path and one fill
     ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
     const offset = (time * 10) % DOT_SPACING;
+    ctx.beginPath();
     for (let y = -DOT_SPACING + offset; y < COURT.HEIGHT; y += DOT_SPACING) {
       for (let x = -DOT_SPACING + offset; x < COURT.WIDTH; x += DOT_SPACING) {
-        ctx.fillRect(x, y, 2, 2);
+        ctx.rect(x, y, 2, 2);
       }
     }
+    ctx.fill();
 
     this.renderShapes(ctx);
     this.renderVhsOverlay(ctx, time);
     this.renderOsd(frame);
+  }
+
+  /** Background gradient, heated toward pink/orange during the climax; cached per heat step. */
+  private getGradient(ctx: CanvasRenderingContext2D): CanvasGradient {
+    const heatStep = Math.round(this.heat * HEAT_STEPS);
+    if (this.gradient?.heatStep === heatStep) return this.gradient.value;
+
+    const heat = heatStep / HEAT_STEPS;
+    const value = ctx.createLinearGradient(0, 0, COURT.WIDTH, COURT.HEIGHT);
+    [0, 0.55, 1].forEach((stop, i) => {
+      value.addColorStop(stop, mixHexColors(GRADIENT_COOL[i], GRADIENT_HOT[i], heat));
+    });
+    this.gradient = { heatStep, value };
+    return value;
   }
 
   /** Outward push in px: rises smoothly from 0, peaks at DROP_PEAK_TIME, then fades. */
@@ -212,13 +233,6 @@ export class MemphisBackground implements Background {
 
   /** VCR on-screen display: play state and tape counter. */
   private renderOsd({ ctx, time, isRotated, climax }: BackgroundFrame): void {
-    ctx.save();
-    ctx.textAlign = 'left';
-    ctx.font = "700 16px 'Russo One', Orbitron, monospace";
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.shadowColor = COLORS.CYAN;
-    ctx.shadowBlur = 6;
-
     const seconds = Math.floor(time);
     const minutes = Math.floor(seconds / 60) % 60;
     const remainingSeconds = seconds % 60;
@@ -229,20 +243,22 @@ export class MemphisBackground implements Background {
 
     // VCR fast-forward during the climax
     const isFastForward = climax > 0.5;
-    if (isFastForward) {
-      ctx.fillStyle = 'rgba(255, 229, 59, 0.9)';
-      ctx.shadowColor = COLORS.PINK;
-    }
-    this.renderOsdText(ctx, isFastForward ? '▶▶ FF' : '▶ PLAY', playTextX, 38, isRotated);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.shadowColor = COLORS.CYAN;
-    this.renderOsdText(ctx, timeString, 26, timeTextY, isRotated);
-    ctx.restore();
+    this.renderOsdText(
+      ctx,
+      isFastForward ? '▶▶ FF' : '▶ PLAY',
+      isFastForward ? OSD_COLORS.FAST_FORWARD : OSD_COLORS.NORMAL,
+      playTextX,
+      38,
+      isRotated,
+    );
+    this.renderOsdText(ctx, timeString, OSD_COLORS.NORMAL, 26, timeTextY, isRotated);
   }
 
+  /** Pre-rendered glowing text; the tape counter only changes once a second. */
   private renderOsdText(
     ctx: CanvasRenderingContext2D,
     text: string,
+    colors: { text: string; glow: string },
     x: number,
     y: number,
     isRotated: boolean,
@@ -252,7 +268,15 @@ export class MemphisBackground implements Background {
     if (isRotated) {
       ctx.rotate(Math.PI / 2);
     }
-    ctx.fillText(text, 0, 0);
+    sprites.draw(
+      ctx,
+      `osd|${colors.text}|${text}`,
+      0,
+      0,
+      (measureCtx, scale) => measureText(measureCtx, scale, text, OSD_FONT, OSD_GLOW, 'left'),
+      (spriteCtx) =>
+        paintText(spriteCtx, text, OSD_FONT, colors.text, OSD_GLOW, colors.glow, 'left'),
+    );
     ctx.restore();
   }
 }

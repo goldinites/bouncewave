@@ -21,6 +21,7 @@ export class FpsMeter {
   private lastTimestamp = 0;
   private lastRefresh = 0;
   private statsText = 'FPS ...';
+  private detail = '';
   private errorCount = 0;
   private lastError = '';
   private visible = false;
@@ -72,6 +73,12 @@ export class FpsMeter {
       this.lastRefresh = timestamp;
       this.refresh(delta);
     }
+  }
+
+  /** An extra line of state to show under the stats (e.g. the render resolution). */
+  public setDetail(text: string): void {
+    this.detail = text;
+    this.updateText();
   }
 
   /** Logs an error the game caught and survived, and shows it in the overlay. */
@@ -126,7 +133,8 @@ export class FpsMeter {
   private updateText(): void {
     if (!this.visible) return;
     const errors = this.errorCount ? `\nERR ×${this.errorCount}: ${this.lastError}` : '';
-    this.el.textContent = this.statsText + errors;
+    const detail = this.detail ? `\n${this.detail}` : '';
+    this.el.textContent = this.statsText + detail + errors;
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {

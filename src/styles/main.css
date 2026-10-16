@@ -52,23 +52,35 @@ body {
   flex-shrink: 0;
 
   overflow: hidden;
-  border: var(--border-width) solid transparent;
+  /* The neon border is .game__border showing through this padding around the canvas */
+  padding: var(--border-width);
   border-radius: 14px;
 
-  background:
-    linear-gradient(var(--black), var(--black)) padding-box,
-    linear-gradient(135deg, var(--cyan), var(--pink), var(--cyan)) border-box;
+  background: var(--black);
 
-  background-size:
-    100% 100%,
-    300% 300%;
-
-  animation: neon-border 5s ease-in-out infinite;
-
+  /* Static on purpose: an animated box-shadow repaints the whole stage on every frame */
   box-shadow:
     0 0 12px var(--cyan),
-    0 0 30px rgba(255, 43, 214, 0.4),
-    inset 0 0 40px rgba(25, 240, 255, 0.25);
+    0 0 30px rgba(255, 43, 214, 0.4);
+}
+
+/* The flowing cyan/pink border: a gradient three times the stage's size slides under the
+   canvas. Moved with transform rather than background-position, so it runs on the compositor
+   and never repaints the stage */
+.game__border {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: -1;
+
+  width: 300%;
+  height: 300%;
+
+  pointer-events: none;
+
+  background: linear-gradient(135deg, var(--cyan), var(--pink), var(--cyan));
+
+  animation: neon-border 5s ease-in-out infinite;
 }
 
 .game__canvas {
@@ -76,6 +88,7 @@ body {
 
   width: 100%;
   height: 100%;
+  border-radius: calc(14px - var(--border-width));
 
   cursor: none;
   touch-action: none;
@@ -85,8 +98,9 @@ body {
   content: '';
 
   position: absolute;
-  inset: 0;
+  inset: var(--border-width);
   z-index: 1;
+  border-radius: calc(14px - var(--border-width));
 
   pointer-events: none;
 
@@ -131,6 +145,11 @@ body {
   letter-spacing: 0.06em;
 
   animation: glitch 4s steps(1, end) infinite;
+}
+
+/* The menu fades out but stays in the page: no point running its glitch under the game */
+.game__ui--hidden .game__title {
+  animation: none;
 }
 
 .game__subtitle {
@@ -306,10 +325,9 @@ body {
   pointer-events: none;
 }
 
-.game__stage.victory-burst-active {
-  animation: victory-stage-pulse 900ms ease-out both;
-}
-
+/* End-of-match effects animate only opacity and transform: a filter or blend mode over the
+   live canvas would make the browser run it through an extra pass on every frame. The brightness
+   punch of a win comes from the canvas's own screen flash */
 .game__stage.victory-burst-active::before {
   content: '';
   position: absolute;
@@ -326,17 +344,11 @@ body {
   );
 
   opacity: 0;
-  mix-blend-mode: screen;
   animation: victory-energy-burst 900ms ease-out both;
 }
 
 .game__stage.victory-burst-active::after {
   animation: victory-scanline-surge 900ms steps(2, end) both;
-}
-
-.game__stage.crt-glitch-active {
-  animation: signal-collapse 700ms steps(1, end) both;
-  will-change: filter;
 }
 
 .game__stage.crt-glitch-active::before {
@@ -361,7 +373,6 @@ body {
     ),
     linear-gradient(90deg, rgba(255, 0, 80, 0.35), transparent 35%, rgba(0, 255, 255, 0.4));
 
-  mix-blend-mode: screen;
   opacity: 0;
   animation: catastrophic-tearing 700ms steps(1, end) both;
 }
@@ -472,11 +483,18 @@ body.classic-mode * {
 }
 
 body.classic-mode .game__stage {
-  border-color: var(--white);
   background: var(--black);
   box-shadow: none;
   border-radius: 0;
+}
+
+body.classic-mode .game__border {
+  background: var(--white);
   animation: none;
+}
+
+body.classic-mode .game__canvas {
+  border-radius: 0;
 }
 
 body.classic-mode .game__stage::after {
@@ -543,7 +561,7 @@ body.classic-mode .game-pause:active {
 
 @media (prefers-reduced-motion: reduce) {
   .game__title,
-  .game__stage,
+  .game__border,
   .game__stage::after,
   .game-button:hover,
   .game__buttons button:hover,

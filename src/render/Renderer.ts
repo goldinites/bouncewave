@@ -3,11 +3,13 @@ import { Ball } from '@/match/Ball';
 import { COURT } from '@/match/config';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
+import { AdaptiveResolution } from '@/render/AdaptiveResolution';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
+import { sprites } from '@/render/SpriteCache';
 import { clamp } from '@/shared/math';
 
 // Lightweight scene dimming for menu and pause overlays
@@ -28,6 +30,12 @@ const LASERS = {
 } as const;
 const CLIMAX_FLASH = 0.2; // soft flash on the drop, no screen shake
 const CELEBRATION_DECAY = 0.45; // 1/s, linear
+
+// Sharpest canvas pixel ratio; phones report 3, which costs more fill rate than it shows
+const MAX_PIXEL_RATIO = 2;
+// The background is drawn at this share of the scene's resolution (about half the pixels), but
+// never below one canvas pixel per CSS pixel unless the scene itself is
+const BACKGROUND_RESOLUTION = 0.7;
 
 // CSS effects on the stage at the end of a match; their animations live in main.css
 const STAGE_CLASSES = {
@@ -65,6 +73,9 @@ export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private scale = 1;
   private resizeObserver: ResizeObserver;
+  private readonly resolution = new AdaptiveResolution(
+    Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO),
+  );
 
   private readonly background = new BackgroundRenderer();
   private readonly hud = new HudRenderer();
@@ -93,7 +104,8 @@ export class Renderer {
     this.canvas = canvas;
     this.stage = canvas.closest('#gameStage');
 
-    const context = canvas.getContext('2d');
+    // Opaque: every frame paints the whole canvas, so the page never has to be blended under it
+    const context = canvas.getContext('2d', { alpha: false });
     if (!context) {
       throw new Error('Canvas 2D context not supported');
     }
@@ -119,12 +131,30 @@ export class Renderer {
   }
 
   public fitToDisplay(): void {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const ratio = this.resolution.pixelRatio;
 
-    this.canvas.width = this.canvas.clientWidth * dpr;
-    this.canvas.height = this.canvas.clientHeight * dpr;
+    this.canvas.width = Math.round(this.canvas.clientWidth * ratio);
+    this.canvas.height = Math.round(this.canvas.clientHeight * ratio);
 
     this.scale = this.canvas.width / COURT.WIDTH;
+
+    const backgroundRatio = Math.max(Math.min(ratio, 1), ratio * BACKGROUND_RESOLUTION);
+    this.background.setScale((this.scale * backgroundRatio) / ratio);
+  }
+
+  /** Canvas pixels per CSS pixel, lowered while frames are slow. */
+  public get pixelRatio(): number {
+    return this.resolution.pixelRatio;
+  }
+
+  /**
+   * Feeds the wall-clock time of the last frame to the dynamic resolution.
+   * @returns true when the canvas resolution changed
+   */
+  public trackFrameTime(frameMs: number): boolean {
+    if (!this.resolution.tick(frameMs)) return false;
+    this.fitToDisplay();
+    return true;
   }
 
   /**
@@ -258,6 +288,7 @@ export class Renderer {
 
     // Reset transform for high-DPI displays
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    sprites.setScale(this.scale);
 
     if (this.isClassicMode) {
       this.renderClassic(frame, realDt);

@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, Mock, vi } from 'vitest';
+import { COURT } from '@/match/config';
 import { Background } from '@/render/backgrounds/Background';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import { fakeContext } from './helpers/fakeContext';
@@ -51,5 +52,37 @@ describe('BackgroundRenderer', () => {
     // Heat is the stronger of climax and celebration
     expect(lively.advance).toHaveBeenLastCalledWith(expect.closeTo(0.05), 0, 0.6);
     expect(lively.triggerDrop).toHaveBeenCalledOnce();
+  });
+
+  describe('with a layer of its own', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('draws the background into the layer at its scale and copies it onto the scene', () => {
+      const layer = fakeContext();
+      const createElement = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        const element = createElement(tag);
+        if (tag === 'canvas') {
+          vi.spyOn(element as HTMLCanvasElement, 'getContext').mockReturnValue(layer.ctx);
+        }
+        return element;
+      });
+
+      const background = fakeBackground(0.42);
+      const renderer = new BackgroundRenderer([background]);
+      renderer.setScale(0.5);
+      const scene = draw(renderer, 0);
+
+      expect(vi.mocked(background.render).mock.calls[0][0].ctx).toBe(layer.ctx);
+      expect(layer.spies.setTransform).toHaveBeenCalledWith(0.5, 0, 0, 0.5, 0, 0);
+      expect(layer.ctx.fillStyle).toBe('rgba(10, 2, 32, 0.42)');
+
+      const [image, ...rect] = (scene.drawImage as unknown as Mock).mock.calls[0];
+      expect(image).toBeInstanceOf(HTMLCanvasElement);
+      expect([image.width, image.height]).toEqual([COURT.WIDTH / 2, COURT.HEIGHT / 2]);
+      expect(rect).toEqual([0, 0, COURT.WIDTH, COURT.HEIGHT]);
+    });
   });
 });
