@@ -424,6 +424,72 @@ body {
   }
 }
 
+/* Classic-mode easter egg: flat black and white, no neon, no glow, no motion on the chrome
+   around the canvas (the canvas itself switches in Renderer.renderClassic). */
+body.classic-mode {
+  background: var(--black);
+}
+
+body.classic-mode * {
+  transition: none;
+}
+
+body.classic-mode .game__stage {
+  border-color: var(--white);
+  background: var(--black);
+  box-shadow: none;
+  border-radius: 0;
+  animation: none;
+}
+
+body.classic-mode .game__stage::after {
+  content: none;
+}
+
+body.classic-mode .game__title {
+  color: var(--white);
+  font-family: 'Courier New', monospace;
+  animation: none;
+}
+
+body.classic-mode .game__subtitle,
+body.classic-mode .game-hint {
+  color: var(--white);
+  text-shadow: none;
+}
+
+body.classic-mode .game-button {
+  --button-color: var(--white);
+
+  border-radius: 0;
+  background: var(--black);
+  box-shadow: none;
+  text-shadow: none;
+  font-family: 'Courier New', monospace;
+}
+
+body.classic-mode .game__buttons button[aria-pressed='true'] {
+  background: var(--white);
+  color: var(--black);
+}
+
+@media (hover: hover) {
+  body.classic-mode .game-button:hover,
+  body.classic-mode .game__buttons button:hover {
+    transform: none;
+    animation: none;
+    background: var(--white);
+    color: var(--black);
+  }
+}
+
+body.classic-mode .game-button:focus-visible,
+body.classic-mode .game__buttons button:focus-visible {
+  transform: none;
+  background: var(--white);
+  color: var(--black);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .game__title,
   .game__stage,

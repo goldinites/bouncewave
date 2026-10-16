@@ -16,7 +16,17 @@ export class HudRenderer {
   private displayedScores: [number, number] = [-1, -1];
   private scorePop: [number, number] = [0, 0];
 
-  /** @param dt wall-clock seconds since the last frame (the HUD keeps animating in pause) */
+  /**
+   * @param ctx
+   * @param dt wall-clock seconds since the last frame (the HUD keeps animating in pause)
+   * @param paddles
+   * @param serveTime
+   * @param readyText
+   * @param time
+   * @param isRotated
+   * @param classic plain white blocky digits with no pop, color or glow, and no "get ready"
+   *   prompt at all — the original scoreboard never had one
+   */
   public render(
     ctx: CanvasRenderingContext2D,
     dt: number,
@@ -25,6 +35,7 @@ export class HudRenderer {
     readyText: string,
     time: number,
     isRotated: boolean,
+    classic = false,
   ): void {
     const scores = [paddles[0].score, paddles[1].score] as const;
 
@@ -42,20 +53,27 @@ export class HudRenderer {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = "700 64px Orbitron, 'Russo One', sans-serif";
+    ctx.font = classic
+      ? "700 56px 'Courier New', monospace"
+      : "700 64px Orbitron, 'Russo One', sans-serif";
 
     // Player scores
     paddles.forEach((paddle, index) => {
-      const pop = Math.sin((1 - this.scorePop[index]) * Math.PI);
-
+      const pop = classic ? 0 : Math.sin((1 - this.scorePop[index]) * Math.PI);
       const scale = 1 + pop * 0.5;
 
       ctx.save();
 
-      ctx.shadowColor = paddle.color;
-      ctx.shadowBlur = 22;
-      ctx.fillStyle = paddle.color;
-      ctx.globalAlpha = 0.9;
+      if (classic) {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.shadowColor = paddle.color;
+        ctx.shadowBlur = 22;
+        ctx.fillStyle = paddle.color;
+        ctx.globalAlpha = 0.9;
+      }
 
       const posX = COURT.WIDTH / 2 + (index ? 1 : -1) * 90;
       const posY = 82;
@@ -74,8 +92,8 @@ export class HudRenderer {
       ctx.restore();
     });
 
-    // "GET READY" indicator
-    if (serveTime > 0) {
+    // "GET READY" indicator — the original had no such prompt, so classic mode stays silent
+    if (serveTime > 0 && !classic) {
       const style = CYRILLIC.test(readyText) ? READY_STYLE.cyrillic : READY_STYLE.latin;
       ctx.font = style.font;
       ctx.fillStyle = COLORS.WHITE;

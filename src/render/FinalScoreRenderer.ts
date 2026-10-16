@@ -46,14 +46,24 @@ export class FinalScoreRenderer {
     return hum;
   }
 
+  /**
+   * @param ctx
+   * @param sign
+   * @param age
+   * @param isRotated
+   * @param classic plain white text, shown at once with no delay, flicker or hum — the
+   *   original hardware had no ignition cutscene, it just printed the final score
+   */
   public static render(
     ctx: CanvasRenderingContext2D,
     sign: FinalScoreSign,
     age: number,
     isRotated: boolean,
+    classic = false,
   ): void {
-    const brightness = this.getBrightness(age, sign.isWin);
+    const brightness = classic ? 1 : this.getBrightness(age, sign.isWin);
     const scoreText = `${sign.scores[0]} : ${sign.scores[1]}`;
+    const color = classic ? '#ffffff' : sign.color;
 
     ctx.save();
     ctx.translate(COURT.WIDTH / 2, COURT.HEIGHT / 2);
@@ -66,18 +76,20 @@ export class FinalScoreRenderer {
     this.renderTube(
       ctx,
       sign.label,
-      "700 30px 'Russo One', Orbitron, sans-serif",
+      classic ? "700 26px 'Courier New', monospace" : "700 30px 'Russo One', Orbitron, sans-serif",
       -62,
-      sign.color,
+      color,
       brightness,
+      classic,
     );
     this.renderTube(
       ctx,
       scoreText,
-      "700 104px Orbitron, 'Russo One', sans-serif",
+      classic ? "700 96px 'Courier New', monospace" : "700 104px Orbitron, 'Russo One', sans-serif",
       22,
-      sign.color,
+      color,
       brightness,
+      classic,
     );
 
     ctx.restore();
@@ -91,11 +103,19 @@ export class FinalScoreRenderer {
     y: number,
     color: string,
     brightness: number,
+    classic: boolean,
   ): void {
     ctx.font = font;
+    ctx.shadowBlur = 0;
+
+    if (classic) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = color;
+      ctx.fillText(text, 0, y);
+      return;
+    }
 
     // Unlit glass is always faintly visible
-    ctx.shadowBlur = 0;
     ctx.globalAlpha = FINAL_SIGN.UNLIT_ALPHA;
     ctx.fillStyle = color;
     ctx.fillText(text, 0, y);

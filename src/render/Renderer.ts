@@ -86,6 +86,9 @@ export class Renderer {
   /** Bumped on every stage effect, so a finishing older one never clears a newer one. */
   private stageEffectId = 0;
 
+  /** The classic-mode easter egg; also silences every flashy feedback method below. */
+  private isClassicMode = false;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.stage = canvas.closest('#gameStage');
@@ -131,7 +134,7 @@ export class Renderer {
    */
   private triggerStageEffect(className: StageClass): void {
     const stage = this.stage;
-    if (!stage) return;
+    if (!stage || this.isClassicMode) return;
 
     const id = ++this.stageEffectId;
     stage.classList.remove(STAGE_CLASSES.CRT_GLITCH, STAGE_CLASSES.VICTORY_BURST);
@@ -165,10 +168,12 @@ export class Renderer {
   }
 
   public addShake(amount: number): void {
+    if (this.isClassicMode) return;
     this.screenShake = Math.max(this.screenShake, amount);
   }
 
   public addFlash(amount: number): void {
+    if (this.isClassicMode) return;
     this.screenFlash = Math.max(this.screenFlash, amount);
   }
 
@@ -178,6 +183,7 @@ export class Renderer {
    * whole background mid-rally. That burst is kept for the victory celebration only.
    */
   public triggerClimaxSurge(): void {
+    if (this.isClassicMode) return;
     // Raises the laser target rather than the value, so the swell eases in
     this.laserSurge = LASERS.CLIMAX_SURGE;
     this.addFlash(CLIMAX_FLASH);
@@ -185,6 +191,7 @@ export class Renderer {
 
   /** Victory: lasers flare and sweep through hues, Memphis shapes burst outward and heat up. */
   public celebrate(): void {
+    if (this.isClassicMode) return;
     this.laserSurge = LASERS.CELEBRATION_SURGE;
     this.celebration = 1;
     this.background.triggerDrop();
@@ -193,6 +200,15 @@ export class Renderer {
   /** Switches to the other background (on every return to the menu). */
   public nextBackground(): void {
     this.background.nextBackground();
+  }
+
+  /** Swaps the whole canvas scene for a flat monochrome 1972 look, with no flashy feedback. */
+  public setClassicMode(enabled: boolean): void {
+    this.isClassicMode = enabled;
+  }
+
+  public get classicMode(): boolean {
+    return this.isClassicMode;
   }
 
   public showFinalScore(sign: FinalScoreSign): void {
@@ -242,6 +258,11 @@ export class Renderer {
 
     // Reset transform for high-DPI displays
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+
+    if (this.isClassicMode) {
+      this.renderClassic(frame, realDt);
+      return;
+    }
 
     // Camera: everything up to the screen overlays zooms in on the ball
     ctx.save();
@@ -314,6 +335,45 @@ export class Renderer {
     if (this.screenFlash > 0) {
       ctx.fillStyle = `rgba(255, 255, 255, ${this.screenFlash * 0.25})`;
 
+      ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+    }
+  }
+
+  /**
+   * The classic-mode easter egg's whole scene: flat black and white, no background, glow,
+   * particles, shake, zoom or vignette — just the court, the paddles, the ball and the score.
+   */
+  private renderClassic(frame: RenderFrame, realDt: number): void {
+    const { isDemo, paddles, ball, serveTime, isRotated } = frame;
+    const ctx = this.ctx;
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+
+    CourtRenderer.renderClassic(ctx);
+
+    if (!isDemo && !this.finalSign) {
+      this.hud.render(
+        ctx,
+        realDt,
+        paddles,
+        serveTime,
+        frame.readyText,
+        frame.time,
+        isRotated,
+        true,
+      );
+    }
+
+    paddles.forEach((paddle) => EntityRenderer.renderClassicPaddle(ctx, paddle));
+    EntityRenderer.renderClassicBall(ctx, ball);
+
+    if (this.finalSign) {
+      FinalScoreRenderer.render(ctx, this.finalSign, this.finalSignAge, isRotated, true);
+    }
+
+    if (this.menuDim > 0.003) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${this.menuDim})`;
       ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
     }
   }

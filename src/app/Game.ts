@@ -1,6 +1,7 @@
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
 import { FpsMeter } from '@/debug/FpsMeter';
+import { KonamiCode } from '@/easterEgg/KonamiCode';
 import { EffectsDirector } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { I18nManager } from '@/i18n/I18nManager';
@@ -38,6 +39,10 @@ export class Game {
   private readonly flow: MatchFlow;
   private readonly effects: EffectsDirector;
   private readonly fpsMeter = new FpsMeter();
+  private readonly konamiCode: KonamiCode;
+
+  /** The classic-mode easter egg: `?classic` in the URL, or the Konami code, toggles it. */
+  private classicMode = false;
 
   private lastTimestamp = 0;
   private isRunning = false;
@@ -108,6 +113,9 @@ export class Game {
       this.togglePause();
     });
 
+    this.konamiCode = new KonamiCode(() => this.setClassicMode(!this.classicMode));
+    this.setClassicMode(new URLSearchParams(window.location.search).has('classic'));
+
     // Errors outside the game loop (input and button handlers): shown in the ?fps overlay
     window.addEventListener(
       'error',
@@ -144,6 +152,13 @@ export class Game {
 
   public unlockAudio(): void {
     this.audio.unlock();
+  }
+
+  /** Swaps the whole presentation (canvas, menu chrome and music) for the 1972 look. */
+  private setClassicMode(enabled: boolean): void {
+    this.classicMode = enabled;
+    this.renderer.setClassicMode(enabled);
+    this.uiManager.setClassicMode(enabled);
   }
 
   public start(): void {
@@ -223,6 +238,7 @@ export class Game {
 
     // Music reads this on its own scheduler tick, paused frames included (it muffles in pause)
     this.audio.music.setState(this.buildMusicState());
+    this.audio.classicMusic.setActive(this.classicMode && !this.settings.current.musicMuted);
 
     const frame = this.buildRenderFrame();
     if (!isPaused) {
@@ -239,7 +255,7 @@ export class Game {
       maxBallSpeed: DIFFICULTY_CONFIGS[this.settings.current.difficulty].maxSpeed,
       rally: this.flow.rally,
       scores: [this.paddles[0].score, this.paddles[1].score],
-      isMuted: this.settings.current.musicMuted,
+      isMuted: this.settings.current.musicMuted || this.classicMode,
       difficulty: this.settings.current.difficulty,
     };
   }
@@ -273,6 +289,7 @@ export class Game {
     }
 
     this.listeners.abort();
+    this.konamiCode.dispose();
     this.inputHandler.dispose();
     this.uiManager.dispose();
     this.renderer.dispose();

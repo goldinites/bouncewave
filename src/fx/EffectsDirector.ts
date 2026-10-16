@@ -261,12 +261,15 @@ export class EffectsDirector {
       this.renderer.addFlash(FLASH.FINALE_WIN);
       this.renderer.addShake(SHAKE.FINALE_WIN);
 
-      // The winning ball went into the right-hand goal
-      this.fireworks = new VictoryFireworks(1, finale.ballY, [
-        this.paddles[0].color,
-        COLORS.WHITE,
-        COLORS.YELLOW,
-      ]);
+      // The winning ball went into the right-hand goal (skipped in classic mode: no particles
+      // are drawn there, and the shots' pop sound would otherwise still play on every frame)
+      if (!this.renderer.classicMode) {
+        this.fireworks = new VictoryFireworks(1, finale.ballY, [
+          this.paddles[0].color,
+          COLORS.WHITE,
+          COLORS.YELLOW,
+        ]);
+      }
 
       this.audio.sfx.playVictory();
       this.audio.music.duck();

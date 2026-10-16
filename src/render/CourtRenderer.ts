@@ -35,4 +35,24 @@ export class CourtRenderer {
 
     ctx.restore();
   }
+
+  /** Flat white rails and net, no glow — the court as it looked on a vintage arcade monitor. */
+  public static renderClassic(ctx: CanvasRenderingContext2D): void {
+    ctx.save();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, COURT.TOP_WALL - RAIL_THICKNESS, COURT.WIDTH, RAIL_THICKNESS);
+    ctx.fillRect(0, COURT.HEIGHT - COURT.BOTTOM_WALL, COURT.WIDTH, RAIL_THICKNESS);
+
+    ctx.setLineDash(NET_DASH_PATTERN);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = NET_LINE_WIDTH;
+
+    ctx.beginPath();
+    ctx.moveTo(COURT.WIDTH / 2, COURT.TOP_WALL + RAIL_THICKNESS);
+    ctx.lineTo(COURT.WIDTH / 2, COURT.HEIGHT - COURT.BOTTOM_WALL - RAIL_THICKNESS);
+    ctx.stroke();
+
+    ctx.restore();
+  }
 }

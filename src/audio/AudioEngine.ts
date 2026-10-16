@@ -1,4 +1,5 @@
 import { MusicEngine } from '@/audio/music/MusicEngine';
+import { Ps1MusicEngine } from '@/audio/music/Ps1MusicEngine';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 
 /** Owns the AudioContext (created on the first user gesture) and the music and SFX on it. */
@@ -6,6 +7,8 @@ export class AudioEngine {
   private audioContext: AudioContext | null = null;
   public readonly sfx: SoundEffects;
   public readonly music = new MusicEngine();
+  /** The classic-mode easter egg's own loop, independent of the synthwave mix. */
+  public readonly classicMusic = new Ps1MusicEngine();
   private readonly listeners = new AbortController();
 
   /**
@@ -41,6 +44,7 @@ export class AudioEngine {
   public dispose(): void {
     this.listeners.abort();
     this.music.dispose();
+    this.classicMusic.dispose();
     void this.audioContext?.close();
     this.audioContext = null;
   }
@@ -63,6 +67,7 @@ export class AudioEngine {
 
     if (this.audioContext) {
       this.music.init(this.audioContext);
+      this.classicMusic.init(this.audioContext);
     }
   }
 }

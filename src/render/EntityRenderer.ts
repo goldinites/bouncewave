@@ -9,7 +9,9 @@ import { COLORS } from '@/shared/palette';
 const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
 
 export class EntityRenderer {
-  /** @param glow hit glow in [0, 1] */
+  /** @param ctx
+   @param paddle
+   @param glow hit glow in [0, 1] */
   public static renderPaddle(ctx: CanvasRenderingContext2D, paddle: Paddle, glow: number): void {
     const topY = paddle.y - PADDLE.HEIGHT / 2;
 
@@ -28,6 +30,20 @@ export class EntityRenderer {
     ctx.fill();
 
     ctx.restore();
+  }
+
+  /** Flat white block, no glow or rounded corners — a paddle as it looked in 1972. */
+  public static renderClassicPaddle(ctx: CanvasRenderingContext2D, paddle: Paddle): void {
+    const topY = paddle.y - PADDLE.HEIGHT / 2;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(paddle.x, topY, PADDLE.WIDTH, PADDLE.HEIGHT);
+  }
+
+  /** The ball as a plain white square, the way the original hardware drew it. */
+  public static renderClassicBall(ctx: CanvasRenderingContext2D, ball: Ball): void {
+    const size = ball.radius * 2;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(ball.x - ball.radius, ball.y - ball.radius, size, size);
   }
 
   public static renderBall(
