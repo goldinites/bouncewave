@@ -129,6 +129,11 @@ export class MusicEngine {
     this.conductor.requestNewSong();
   }
 
+  /** Title of the song playing (or about to, before the first user gesture starts audio). */
+  public getSongTitle(): string {
+    return this.conductor.song.title;
+  }
+
   public getAnalyser(): AnalyserNode | null {
     return this.graph?.analyser ?? null;
   }

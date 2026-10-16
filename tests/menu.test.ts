@@ -21,7 +21,7 @@ const setup = () => {
   };
   const menu = new MenuController(new UIManager(i18n), i18n, sfx, store, actions);
   const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('#gameButtons button')];
-  return { menu, buttons };
+  return { menu, buttons, store };
 };
 
 describe('settings menu', () => {
@@ -73,5 +73,23 @@ describe('settings menu', () => {
       'game-button game-button--pink',
       'game-button game-button--purple',
     ]);
+  });
+
+  it('redraws an open settings menu when the music is toggled from outside it', () => {
+    const { menu, buttons, store } = setup();
+    menu.showSettingsMenu(() => {});
+
+    store.cycle('musicMuted');
+    expect(buttons()[1].textContent).toBe('MUSIC: ON');
+  });
+
+  it('stays hidden when a setting changes during play', () => {
+    const { menu, buttons, store } = setup();
+    menu.showSettingsMenu(() => {});
+    document.getElementById('gameUI')?.classList.add('game__ui--hidden');
+
+    store.cycle('musicMuted');
+    expect(document.getElementById('gameUI')?.classList.contains('game__ui--hidden')).toBe(true);
+    expect(buttons()[1].textContent).toBe('MUSIC: OFF');
   });
 });

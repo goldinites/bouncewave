@@ -56,6 +56,8 @@ export class MenuController {
   private sfx: SoundEffects;
   private settings: SettingsStore;
   private actions: GameMenuActions;
+  /** Where the settings menu's BACK leads while it is on screen; null when it isn't. */
+  private settingsBack: (() => void) | null = null;
 
   constructor(
     uiManager: UIManager,
@@ -69,9 +71,18 @@ export class MenuController {
     this.sfx = sfx;
     this.settings = settings;
     this.actions = actions;
+
+    // A setting may also change from outside the menu (the music chip, the M key)
+    settings.subscribe(() => {
+      // Esc resumes play straight from a settings menu opened in pause, which hides it
+      if (this.settingsBack && this.uiManager.isMenuVisible) {
+        this.showSettingsMenu(this.settingsBack);
+      }
+    });
   }
 
   public showMainMenu(): void {
+    this.settingsBack = null;
     this.uiManager.showMenu(
       'PING PONG',
       '',
@@ -91,6 +102,7 @@ export class MenuController {
   }
 
   public showPauseMenu(): void {
+    this.settingsBack = null;
     this.uiManager.showMenu(
       this.i18n.t('pause'),
       '',
@@ -115,6 +127,7 @@ export class MenuController {
   }
 
   public showGameOverMenu(winnerIndex: number, scores: [number, number]): void {
+    this.settingsBack = null;
     const isPlayerWin = winnerIndex === 0;
     const title = this.i18n.t(isPlayerWin ? 'win' : 'lose');
     const subtitle = `${scores[0]} : ${scores[1]}`;
@@ -143,6 +156,7 @@ export class MenuController {
   }
 
   public showSettingsMenu(onBack: () => void): void {
+    this.settingsBack = onBack;
     const settings = this.settings.current;
 
     this.uiManager.showMenu(
@@ -151,7 +165,7 @@ export class MenuController {
       [
         ...SETTINGS_MENU.map((entry) => ({
           label: entry.label(settings, this.i18n),
-          action: () => this.changeSetting(entry, onBack),
+          action: () => this.changeSetting(entry),
           isOn: entry.isOn?.(settings),
           color: entry.color,
         })),
@@ -161,13 +175,12 @@ export class MenuController {
     );
   }
 
-  /** Switches one setting and redraws the settings menu to show it. */
-  private changeSetting(entry: SettingsMenuEntry, onBack: () => void): void {
+  /** Switches one setting; the subscription redraws the settings menu to show it. */
+  private changeSetting(entry: SettingsMenuEntry): void {
     this.settings.cycle(entry.key);
     if (entry.clicks) {
       // Only audible when sound is on
       this.sfx.playSettingsClick();
     }
-    this.showSettingsMenu(onBack);
   }
 }

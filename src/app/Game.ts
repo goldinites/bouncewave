@@ -15,6 +15,7 @@ import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { COLORS } from '@/shared/palette';
 import { MenuController } from '@/ui/MenuController';
+import { NowPlaying } from '@/ui/NowPlaying';
 import { UIManager } from '@/ui/UIManager';
 
 // Longest step the simulation takes in one frame (e.g. after a hitch)
@@ -32,6 +33,7 @@ export class Game {
   private readonly uiManager: UIManager;
   private readonly inputHandler: InputHandler;
   private readonly menuController: MenuController;
+  private readonly nowPlaying: NowPlaying;
 
   private readonly paddles: [Paddle, Paddle];
   private readonly ball = new Ball();
@@ -77,6 +79,7 @@ export class Game {
       onUnlockAudio: () => this.unlockAudio(),
       onTogglePause: () => this.togglePause(),
       onToggleFullscreen: () => this.toggleFullscreen(),
+      onToggleMusic: () => this.toggleMusic(),
       onPress: () => this.flow.skipFinale(),
     });
 
@@ -109,6 +112,8 @@ export class Game {
         onUnlockAudio: () => this.unlockAudio(),
       },
     );
+
+    this.nowPlaying = new NowPlaying(this.i18n, () => this.toggleMusic());
 
     this.uiManager.bindPauseButton(() => {
       this.unlockAudio();
@@ -154,6 +159,12 @@ export class Game {
 
   public unlockAudio(): void {
     this.audio.unlock();
+  }
+
+  /** The now-playing chip and the M key: the same switch as the music setting. */
+  private toggleMusic(): void {
+    this.unlockAudio();
+    this.settings.cycle('musicMuted');
   }
 
   /** Swaps the whole presentation (canvas, menu chrome and music) for the 1972 look. */
@@ -261,6 +272,10 @@ export class Game {
     // Music reads this on its own scheduler tick, paused frames included (it muffles in pause)
     this.audio.music.setState(this.buildMusicState());
     this.audio.classicMusic.setActive(this.classicMode && !this.settings.current.musicMuted);
+    this.nowPlaying.update(
+      this.classicMode ? null : this.audio.music.getSongTitle(),
+      this.settings.current.musicMuted,
+    );
 
     const frame = this.buildRenderFrame();
     if (!isPaused) {

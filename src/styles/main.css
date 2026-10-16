@@ -364,6 +364,111 @@ body {
   pointer-events: none;
 }
 
+/* Top-right, out of the way of the paddles' corners at the bottom: the song playing, and a tap
+   to turn the music on or off. Same neon frame as the pause button, slimmer */
+.now-playing {
+  --chip-fill: #0d0326;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  right: calc(14px + env(safe-area-inset-right, 0px));
+  z-index: 5;
+
+  max-width: min(60vw, 260px);
+  height: 30px;
+  padding: 0 12px 0 10px;
+
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background:
+    linear-gradient(var(--chip-fill), var(--chip-fill)) padding-box,
+    linear-gradient(135deg, var(--cyan), var(--pink)) border-box;
+  box-shadow:
+    -2px 0 8px rgba(25, 240, 255, 0.25),
+    2px 0 8px rgba(255, 43, 214, 0.25);
+
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+
+  /* Quiet enough not to pull the eye off the court */
+  opacity: 0.75;
+  transition:
+    opacity 0.3s,
+    transform 0.1s,
+    box-shadow 0.15s;
+}
+
+.now-playing:hover,
+.now-playing:focus-visible {
+  outline: none;
+  opacity: 1;
+  box-shadow:
+    -3px 0 14px rgba(25, 240, 255, 0.55),
+    3px 0 14px rgba(255, 43, 214, 0.55);
+}
+
+.now-playing:active {
+  transform: scale(0.95);
+}
+
+.now-playing__title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.now-playing__title--enter {
+  animation: now-playing-enter 0.6s ease-out both;
+}
+
+/* Three equalizer bars bouncing out of step while the music plays */
+.now-playing__eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex: none;
+
+  height: 12px;
+}
+
+.now-playing__bar {
+  width: 3px;
+  height: 100%;
+  border-radius: 1px;
+
+  background: linear-gradient(var(--pink), var(--cyan));
+  transform-origin: bottom;
+  animation: now-playing-eq 0.9s ease-in-out infinite alternate;
+}
+
+.now-playing__bar:nth-child(2) {
+  animation-duration: 0.6s;
+  animation-delay: -0.3s;
+}
+
+.now-playing__bar:nth-child(3) {
+  animation-duration: 0.75s;
+  animation-delay: -0.5s;
+}
+
+/* Off: the bars lie flat and the chip dims */
+.now-playing[aria-pressed='false'] {
+  color: var(--purple);
+}
+
+.now-playing[aria-pressed='false'] .now-playing__bar {
+  background: var(--purple);
+  transform: scaleY(0.25);
+  animation: none;
+}
+
 /* End-of-match effects animate only opacity and transform: a filter or blend mode over the
    live canvas would make the browser run it through an extra pass on every frame. The brightness
    punch of a win comes from the canvas's own screen flash */
@@ -615,7 +720,25 @@ body.classic-mode .game-pause:focus-visible .game-pause__bar {
   box-shadow: none;
 }
 
+/* Flat black and white, like the pause button */
+body.classic-mode .now-playing {
+  --chip-fill: var(--black);
+
+  border: 1px solid var(--white);
+  border-radius: 0;
+  background: var(--black);
+  box-shadow: none;
+  color: var(--white);
+}
+
+body.classic-mode .now-playing__bar {
+  border-radius: 0;
+  background: var(--white);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .now-playing__bar,
+  .now-playing__title--enter,
   .game__title,
   .game__border,
   .game__stage::after,

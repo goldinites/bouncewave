@@ -12,6 +12,7 @@ export interface InputHandlerCallbacks {
   onUnlockAudio: () => void;
   onTogglePause: () => void;
   onToggleFullscreen: () => void;
+  onToggleMusic: () => void;
   /** A fresh key press or tap (not a held-key repeat), e.g. to skip a cutscene. */
   onPress: () => void;
 }
@@ -86,6 +87,12 @@ export class InputHandler {
           if (e.repeat) return;
 
           this.callbacks.onToggleFullscreen();
+        }
+
+        if (e.code === 'KeyM') {
+          if (e.repeat) return;
+
+          this.callbacks.onToggleMusic();
         }
       },
       { signal },

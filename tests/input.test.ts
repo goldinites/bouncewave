@@ -8,6 +8,7 @@ const makeHandler = () => {
     onUnlockAudio: vi.fn(),
     onTogglePause: vi.fn(),
     onToggleFullscreen: vi.fn(),
+    onToggleMusic: vi.fn(),
     onPress: vi.fn(),
   };
   const canvas = document.createElement('canvas');
@@ -53,6 +54,16 @@ describe('InputHandler', () => {
     handler.pollPlayerMovement(paddle, 1);
 
     expect(paddle.targetY).toBe(COURT.HEIGHT / 2); // unmoved from its starting position
+    handler.dispose();
+  });
+
+  it('toggles the music on M, once per press', () => {
+    const { handler, callbacks } = makeHandler();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyM' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyM', repeat: true }));
+
+    expect(callbacks.onToggleMusic).toHaveBeenCalledTimes(1);
     handler.dispose();
   });
 

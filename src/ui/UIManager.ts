@@ -72,6 +72,10 @@ export class UIManager {
     this.uiOverlay.classList.remove(CSS_CLASSES.GAME_UI_HIDDEN);
   }
 
+  public get isMenuVisible(): boolean {
+    return !this.uiOverlay.classList.contains(CSS_CLASSES.GAME_UI_HIDDEN);
+  }
+
   public hideMenu(): void {
     document.body.style.cursor = 'none';
     this.uiOverlay.classList.add(CSS_CLASSES.GAME_UI_HIDDEN);
