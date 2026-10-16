@@ -29,6 +29,8 @@ const DROP_PEAK_TIME = 0.18; // s until the push peaks, then it eases back
 // but a sudden loud hit swells over ~0.15 s instead of snapping
 const PULSE_ATTACK = 12;
 const PULSE_RELEASE = 6;
+// The background gradient is rebuilt only when the heat moves by a step this size
+const HEAT_STEPS = 40;
 
 const SHAPE_COLORS = [COLORS.CYAN, COLORS.PINK, COLORS.YELLOW, COLORS.PURPLE];
 const DOT_SPACING = 28;
@@ -50,6 +52,7 @@ export class MemphisBackground implements Background {
   private shapePulse = 0;
   private dropAge = Infinity;
   private heat = 0;
+  private gradient: { heatStep: number; value: CanvasGradient } | null = null;
 
   constructor() {
     this.shapes = Array.from({ length: SHAPE_COUNT }, (_, i) => ({
@@ -89,12 +92,7 @@ export class MemphisBackground implements Background {
   public render(frame: BackgroundFrame): void {
     const { ctx, time } = frame;
 
-    // Gradient heats up toward pink/orange during the climax
-    const bgGradient = ctx.createLinearGradient(0, 0, COURT.WIDTH, COURT.HEIGHT);
-    [0, 0.55, 1].forEach((stop, i) => {
-      bgGradient.addColorStop(stop, mixHexColors(GRADIENT_COOL[i], GRADIENT_HOT[i], this.heat));
-    });
-    ctx.fillStyle = bgGradient;
+    ctx.fillStyle = this.getGradient(ctx);
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
     // Drifting grid dots
@@ -109,6 +107,20 @@ export class MemphisBackground implements Background {
     this.renderShapes(ctx);
     this.renderVhsOverlay(ctx, time);
     this.renderOsd(frame);
+  }
+
+  /** Background gradient, heated toward pink/orange during the climax; cached per heat step. */
+  private getGradient(ctx: CanvasRenderingContext2D): CanvasGradient {
+    const heatStep = Math.round(this.heat * HEAT_STEPS);
+    if (this.gradient?.heatStep === heatStep) return this.gradient.value;
+
+    const heat = heatStep / HEAT_STEPS;
+    const value = ctx.createLinearGradient(0, 0, COURT.WIDTH, COURT.HEIGHT);
+    [0, 0.55, 1].forEach((stop, i) => {
+      value.addColorStop(stop, mixHexColors(GRADIENT_COOL[i], GRADIENT_HOT[i], heat));
+    });
+    this.gradient = { heatStep, value };
+    return value;
   }
 
   /** Outward push in px: rises smoothly from 0, peaks at DROP_PEAK_TIME, then fades. */

@@ -39,6 +39,8 @@ const DROP_DURATION = 0.5;
 // with the usual hot pink/orange, same as every other background's heat language.
 const AMBIENT_HUE_SPEED = 3; // deg/s — a full lap of the color wheel takes two minutes
 const HOT_HUE = 322; // COLORS.PINK's hue
+// The sky gradient is rebuilt only when its hue moves a whole degree or the heat a step this size
+const HEAT_STEPS = 40;
 
 /** Hue in degrees, taking the shorter way around the color wheel. */
 function lerpHue(from: number, to: number, t: number): number {
@@ -76,6 +78,7 @@ export class HyperspaceBackground implements Background {
   private ringSpin = 0;
   private coreSpin = 0;
   private dropAge = Infinity;
+  private sky: { key: string; value: CanvasGradient } | null = null;
 
   constructor() {
     this.stars = Array.from({ length: STAR_COUNT }, () => this.resetStar(Math.random()));
@@ -118,12 +121,7 @@ export class HyperspaceBackground implements Background {
 
     // The backdrop stays dark, but its faint tint drifts with the same ambient hue — subtler
     // than the rings and core since it only ever reaches low lightness
-    const skyHue = lerpHue(ambientHue, HOT_HUE, heat);
-    const sky = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxRadius);
-    sky.addColorStop(0, `hsl(${skyHue}, 55%, ${14 + heat * 8}%)`);
-    sky.addColorStop(0.55, `hsl(${skyHue}, 50%, ${8 + heat * 6}%)`);
-    sky.addColorStop(1, '#020108');
-    ctx.fillStyle = sky;
+    ctx.fillStyle = this.getSky(ctx, lerpHue(ambientHue, HOT_HUE, heat), heat, maxRadius);
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
     // Only the core sits exactly on the ball and the net line, so only it needs to clear out
@@ -136,6 +134,27 @@ export class HyperspaceBackground implements Background {
     this.renderTunnel(ctx, cx, cy, maxRadius, heat, laserIntensity, ambientHue, sides);
     this.renderDropShockwave(ctx, cx, cy, maxRadius);
     this.renderCore(ctx, cx, cy, heat, pulse, laserIntensity, ambientHue);
+  }
+
+  private getSky(
+    ctx: CanvasRenderingContext2D,
+    hue: number,
+    heat: number,
+    radius: number,
+  ): CanvasGradient {
+    const skyHue = Math.round(hue) % 360;
+    const heatStep = Math.round(heat * HEAT_STEPS) / HEAT_STEPS;
+    const key = `${skyHue}|${heatStep}`;
+    if (this.sky?.key === key) return this.sky.value;
+
+    const cx = COURT.WIDTH / 2;
+    const cy = COURT.HEIGHT / 2;
+    const value = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    value.addColorStop(0, `hsl(${skyHue}, 55%, ${14 + heatStep * 8}%)`);
+    value.addColorStop(0.55, `hsl(${skyHue}, 50%, ${8 + heatStep * 6}%)`);
+    value.addColorStop(1, '#020108');
+    this.sky = { key, value };
+    return value;
   }
 
   private resetStar(distance: number): Star {

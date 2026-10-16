@@ -26,6 +26,8 @@ const MOUNTAIN_PEAKS: readonly [x: number, height: number][] = [
 
 const GRID_ROWS = 13; // horizontal lines marching toward the viewer
 const GRID_COLS = 16; // vertical lines fanning out from the vanishing point
+// The sky gradient is rebuilt only when the heat moves by a step this size
+const HEAT_STEPS = 40;
 const GRID_SCROLL_SPEED = 1; // loops of the floor per second
 const GRID_SPREAD = 1.7; // how far the floor's outer columns splay past the court's edges
 // Neon on the grid lines without shadowBlur: a wide faint stroke under each one
@@ -43,6 +45,8 @@ interface Layout {
 export class OutrunBackground implements Background {
   public readonly overlayTint = 0.22;
 
+  private sky: { key: string; value: CanvasGradient } | null = null;
+
   public render(frame: BackgroundFrame): void {
     const { ctx, time, pulse, climax, celebration, isRotated } = frame;
     const heat = Math.max(climax, celebration);
@@ -50,10 +54,7 @@ export class OutrunBackground implements Background {
     ctx.save();
     const layout = this.applyOrientation(ctx, isRotated);
 
-    const sky = ctx.createLinearGradient(0, 0, 0, layout.horizonY);
-    [0, 0.6, 1].forEach((stop, i) =>
-      sky.addColorStop(stop, mixHexColors(SKY_COOL[i], SKY_HOT[i], heat)),
-    );
+    const sky = this.getSky(ctx, heat, layout);
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, layout.width, layout.height);
 
@@ -83,6 +84,20 @@ export class OutrunBackground implements Background {
     }
 
     return { width, height, horizonY: height * 0.58, vanishingX: width / 2 };
+  }
+
+  /** Sky gradient down to the horizon; cached per heat step and orientation. */
+  private getSky(ctx: CanvasRenderingContext2D, heat: number, layout: Layout): CanvasGradient {
+    const heatStep = Math.round(heat * HEAT_STEPS);
+    const key = `${heatStep}|${layout.horizonY}`;
+    if (this.sky?.key === key) return this.sky.value;
+
+    const value = ctx.createLinearGradient(0, 0, 0, layout.horizonY);
+    [0, 0.6, 1].forEach((stop, i) =>
+      value.addColorStop(stop, mixHexColors(SKY_COOL[i], SKY_HOT[i], heatStep / HEAT_STEPS)),
+    );
+    this.sky = { key, value };
+    return value;
   }
 
   private renderMountains(ctx: CanvasRenderingContext2D, heat: number, layout: Layout): void {

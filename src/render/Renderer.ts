@@ -33,6 +33,9 @@ const CELEBRATION_DECAY = 0.45; // 1/s, linear
 
 // Sharpest canvas pixel ratio; phones report 3, which costs more fill rate than it shows
 const MAX_PIXEL_RATIO = 2;
+// The background is drawn at this share of the scene's resolution (about half the pixels), but
+// never below one canvas pixel per CSS pixel unless the scene itself is
+const BACKGROUND_RESOLUTION = 0.7;
 
 // CSS effects on the stage at the end of a match; their animations live in main.css
 const STAGE_CLASSES = {
@@ -134,6 +137,9 @@ export class Renderer {
     this.canvas.height = Math.round(this.canvas.clientHeight * ratio);
 
     this.scale = this.canvas.width / COURT.WIDTH;
+
+    const backgroundRatio = Math.max(Math.min(ratio, 1), ratio * BACKGROUND_RESOLUTION);
+    this.background.setScale((this.scale * backgroundRatio) / ratio);
   }
 
   /** Canvas pixels per CSS pixel, lowered while frames are slow. */
