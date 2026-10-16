@@ -1,5 +1,6 @@
 import { COURT } from '@/match/config';
 import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
+import { measureText, paintText, sprites } from '@/render/SpriteCache';
 import { mixHexColors, randomRange, TWO_PI } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
@@ -32,6 +33,12 @@ const PULSE_RELEASE = 6;
 const SHAPE_COLORS = [COLORS.CYAN, COLORS.PINK, COLORS.YELLOW, COLORS.PURPLE];
 const DOT_SPACING = 28;
 const VHS_NOISE_STREAKS = 5;
+const OSD_FONT = "700 16px 'Russo One', Orbitron, monospace";
+const OSD_GLOW = 6;
+const OSD_COLORS = {
+  NORMAL: { text: 'rgba(255, 255, 255, 0.75)', glow: COLORS.CYAN },
+  FAST_FORWARD: { text: 'rgba(255, 229, 59, 0.9)', glow: COLORS.PINK },
+} as const;
 
 /** 80s/90s Memphis design on a VHS screen: drifting shapes, dot grid, scan bar, OSD text. */
 export class MemphisBackground implements Background {
@@ -212,13 +219,6 @@ export class MemphisBackground implements Background {
 
   /** VCR on-screen display: play state and tape counter. */
   private renderOsd({ ctx, time, isRotated, climax }: BackgroundFrame): void {
-    ctx.save();
-    ctx.textAlign = 'left';
-    ctx.font = "700 16px 'Russo One', Orbitron, monospace";
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.shadowColor = COLORS.CYAN;
-    ctx.shadowBlur = 6;
-
     const seconds = Math.floor(time);
     const minutes = Math.floor(seconds / 60) % 60;
     const remainingSeconds = seconds % 60;
@@ -229,20 +229,22 @@ export class MemphisBackground implements Background {
 
     // VCR fast-forward during the climax
     const isFastForward = climax > 0.5;
-    if (isFastForward) {
-      ctx.fillStyle = 'rgba(255, 229, 59, 0.9)';
-      ctx.shadowColor = COLORS.PINK;
-    }
-    this.renderOsdText(ctx, isFastForward ? '▶▶ FF' : '▶ PLAY', playTextX, 38, isRotated);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.shadowColor = COLORS.CYAN;
-    this.renderOsdText(ctx, timeString, 26, timeTextY, isRotated);
-    ctx.restore();
+    this.renderOsdText(
+      ctx,
+      isFastForward ? '▶▶ FF' : '▶ PLAY',
+      isFastForward ? OSD_COLORS.FAST_FORWARD : OSD_COLORS.NORMAL,
+      playTextX,
+      38,
+      isRotated,
+    );
+    this.renderOsdText(ctx, timeString, OSD_COLORS.NORMAL, 26, timeTextY, isRotated);
   }
 
+  /** Pre-rendered glowing text; the tape counter only changes once a second. */
   private renderOsdText(
     ctx: CanvasRenderingContext2D,
     text: string,
+    colors: { text: string; glow: string },
     x: number,
     y: number,
     isRotated: boolean,
@@ -252,7 +254,15 @@ export class MemphisBackground implements Background {
     if (isRotated) {
       ctx.rotate(Math.PI / 2);
     }
-    ctx.fillText(text, 0, 0);
+    sprites.draw(
+      ctx,
+      `osd|${colors.text}|${text}`,
+      0,
+      0,
+      (measureCtx, scale) => measureText(measureCtx, scale, text, OSD_FONT, OSD_GLOW, 'left'),
+      (spriteCtx) =>
+        paintText(spriteCtx, text, OSD_FONT, colors.text, OSD_GLOW, colors.glow, 'left'),
+    );
     ctx.restore();
   }
 }

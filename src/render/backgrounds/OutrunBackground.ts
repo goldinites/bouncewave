@@ -28,6 +28,8 @@ const GRID_ROWS = 13; // horizontal lines marching toward the viewer
 const GRID_COLS = 16; // vertical lines fanning out from the vanishing point
 const GRID_SCROLL_SPEED = 1; // loops of the floor per second
 const GRID_SPREAD = 1.7; // how far the floor's outer columns splay past the court's edges
+// Neon on the grid lines without shadowBlur: a wide faint stroke under each one
+const GRID_HALO = { WIDTH: 6, ALPHA: 0.25 } as const;
 
 /** Where the horizon sits, and how wide/tall the scene is, in whichever space is "up" right now. */
 interface Layout {
@@ -114,14 +116,27 @@ export class OutrunBackground implements Background {
     sunGradient.addColorStop(0.5, mixHexColors(COLORS.YELLOW, COLORS.PINK, 0.5 + heat * 0.3));
     sunGradient.addColorStop(1, mixHexColors(COLORS.PINK, '#ff6a2f', heat));
 
-    ctx.save();
-    ctx.shadowColor = COLORS.PINK;
-    ctx.shadowBlur = 20 + pulse * 20;
+    // Pink halo as a gradient ring rather than shadowBlur, which re-blurs the whole disc
+    const haloRadius = radius + 14 + pulse * 14;
+    const halo = ctx.createRadialGradient(
+      vanishingX,
+      centerY,
+      radius * 0.9,
+      vanishingX,
+      centerY,
+      haloRadius,
+    );
+    halo.addColorStop(0, 'rgba(255, 43, 214, 0.55)');
+    halo.addColorStop(1, 'rgba(255, 43, 214, 0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(vanishingX, centerY, haloRadius, 0, TWO_PI);
+    ctx.fill();
+
     ctx.fillStyle = sunGradient;
     ctx.beginPath();
     ctx.arc(vanishingX, centerY, radius, 0, TWO_PI);
     ctx.fill();
-    ctx.restore();
 
     // Slice gaps into the lower half; repainting the sky's own gradient erases the sun there
     // without needing to clip, since outside the circle it just repaints the sky that's already
@@ -148,34 +163,40 @@ export class OutrunBackground implements Background {
 
     ctx.save();
     ctx.strokeStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 6;
 
-    ctx.globalAlpha = 0.45;
-    ctx.lineWidth = 1.5;
+    // Every column shares one style, so they go out as a single path: halo, then line
+    ctx.beginPath();
     for (let i = 0; i <= GRID_COLS; i++) {
       const t = i / GRID_COLS - 0.5; // -0.5 .. 0.5
-      ctx.beginPath();
       ctx.moveTo(vanishingX, horizonY);
       ctx.lineTo(vanishingX + t * width * GRID_SPREAD, height);
-      ctx.stroke();
     }
+    this.strokeNeon(ctx, 0.45, 1.5);
 
     const scroll = (time * GRID_SCROLL_SPEED) % 1;
-    ctx.lineWidth = 2;
     for (let i = 0; i < GRID_ROWS; i++) {
       // 0 = just past the horizon, 1 = the bottom edge; squared so rows bunch up near the horizon
       const progress = (i + scroll) / GRID_ROWS;
       const eased = progress * progress;
       const y = horizonY + eased * (height - horizonY);
 
-      ctx.globalAlpha = 0.5 * (1 - eased * 0.3);
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
-      ctx.stroke();
+      this.strokeNeon(ctx, 0.5 * (1 - eased * 0.3), 2);
     }
     ctx.restore();
+  }
+
+  /** Strokes the current path as a neon line: a wide faint halo, then the line itself. */
+  private strokeNeon(ctx: CanvasRenderingContext2D, alpha: number, lineWidth: number): void {
+    ctx.globalAlpha = alpha * GRID_HALO.ALPHA;
+    ctx.lineWidth = lineWidth + GRID_HALO.WIDTH;
+    ctx.stroke();
+
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
   }
 
   private renderHorizonGlow(ctx: CanvasRenderingContext2D, heat: number, layout: Layout): void {

@@ -9,6 +9,7 @@ import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
+import { sprites } from '@/render/SpriteCache';
 import { clamp } from '@/shared/math';
 
 // Lightweight scene dimming for menu and pause overlays
@@ -281,6 +282,7 @@ export class Renderer {
 
     // Reset transform for high-DPI displays
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    sprites.setScale(this.scale);
 
     if (this.isClassicMode) {
       this.renderClassic(frame, realDt);

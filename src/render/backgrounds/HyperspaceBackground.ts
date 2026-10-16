@@ -18,6 +18,8 @@ const STAR_TRAIL = { BASE: 10, CLIMAX: 90 }; // px — the hyperspace streak at 
 const RING_COUNT = 13;
 const RING_SPEED = { BASE: 0.3, CLIMAX: 1.15 }; // loops/s
 const RING_SPIN = 0.05; // rad/s the whole tunnel slowly rolls, so it never looks static
+// Neon on the rings without shadowBlur: a wide faint stroke under each one
+const RING_HALO = { WIDTH: 5, ALPHA: 0.3 } as const;
 
 const CORE_RADIUS = 15;
 const CORE_SPIN_SPEED = 0.7; // rad/s at rest
@@ -203,11 +205,9 @@ export class HyperspaceBackground implements Background {
       const hue = lerpHue(ambientHue, HOT_HUE, heat * 0.6 + (1 - progress) * 0.4);
       const color = `hsl(${hue}, 90%, 58%)`;
 
+      const alpha = (1 - progress) * 0.55 * visibility;
+      const lineWidth = 1.5 + (1 - progress) * 1.5;
       ctx.strokeStyle = color;
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 5;
-      ctx.globalAlpha = (1 - progress) * 0.55 * visibility;
-      ctx.lineWidth = 1.5 + (1 - progress) * 1.5;
 
       ctx.beginPath();
       for (let s = 0; s <= SHAPE_SAMPLES; s++) {
@@ -215,6 +215,13 @@ export class HyperspaceBackground implements Background {
         if (s === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
+
+      ctx.globalAlpha = alpha * RING_HALO.ALPHA;
+      ctx.lineWidth = lineWidth + RING_HALO.WIDTH;
+      ctx.stroke();
+
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = lineWidth;
       ctx.stroke();
     }
     ctx.restore();

@@ -1,4 +1,9 @@
 import { COURT } from '@/match/config';
+import { measureText, paintText, sprites } from '@/render/SpriteCache';
+
+// Neon tube glow in canvas pixels: wide colored halo, tight white core
+const TUBE_GLOW = 34;
+const CORE_GLOW = 8;
 export const FINAL_SIGN = {
   DELAY: 0.3, // s before the tubes start to ignite
   IGNITE: 0.55, // s of ignition flicker before it burns steadily
@@ -122,14 +127,30 @@ export class FinalScoreRenderer {
 
     if (brightness <= 0) return;
 
+    // Both glowing layers are pre-rendered at full strength and faded with alpha
     ctx.globalAlpha = brightness;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 34 * brightness;
-    ctx.fillText(text, 0, y);
+    this.drawGlowingText(ctx, text, font, y, color, color, TUBE_GLOW);
 
     ctx.globalAlpha = brightness * 0.7;
-    ctx.shadowBlur = 8 * brightness;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(text, 0, y);
+    this.drawGlowingText(ctx, text, font, y, '#ffffff', color, CORE_GLOW);
+  }
+
+  private static drawGlowingText(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    font: string,
+    y: number,
+    color: string,
+    glowColor: string,
+    glow: number,
+  ): void {
+    sprites.draw(
+      ctx,
+      `final|${font}|${color}|${glowColor}|${glow}|${text}`,
+      0,
+      y,
+      (measureCtx, scale) => measureText(measureCtx, scale, text, font, glow),
+      (spriteCtx) => paintText(spriteCtx, text, font, color, glow, glowColor),
+    );
   }
 }

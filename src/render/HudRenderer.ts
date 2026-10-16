@@ -1,8 +1,11 @@
 import { COURT } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
+import { measureText, paintText, sprites } from '@/render/SpriteCache';
 import { COLORS } from '@/shared/palette';
 
 const SCORE_POP_DURATION = 0.22; // s for a changed score to swell and settle
+const SCORE_FONT = "700 64px Orbitron, 'Russo One', sans-serif";
+const SCORE_GLOW = 22;
 
 // Cyrillic has no Orbitron glyphs and falls back to Russo One, which comes in one weight only:
 // asked for bold, the browser thickens it and the glow then blurs it, so it is drawn as it is
@@ -53,9 +56,7 @@ export class HudRenderer {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = classic
-      ? "700 56px 'Courier New', monospace"
-      : "700 64px Orbitron, 'Russo One', sans-serif";
+    ctx.font = classic ? "700 56px 'Courier New', monospace" : SCORE_FONT;
 
     // Player scores
     paddles.forEach((paddle, index) => {
@@ -64,16 +65,9 @@ export class HudRenderer {
 
       ctx.save();
 
-      if (classic) {
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#ffffff';
-        ctx.globalAlpha = 1;
-      } else {
-        ctx.shadowColor = paddle.color;
-        ctx.shadowBlur = 22;
-        ctx.fillStyle = paddle.color;
-        ctx.globalAlpha = 0.9;
-      }
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = classic ? 1 : 0.9;
 
       const posX = COURT.WIDTH / 2 + (index ? 1 : -1) * 90;
       const posY = 82;
@@ -85,9 +79,21 @@ export class HudRenderer {
       }
 
       ctx.scale(scale, scale);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(paddle.score), 0, 0);
+
+      const text = String(paddle.score);
+      if (classic) {
+        ctx.fillText(text, 0, 0);
+      } else {
+        sprites.draw(
+          ctx,
+          `score|${paddle.color}|${text}`,
+          0,
+          0,
+          (measureCtx, renderScale) =>
+            measureText(measureCtx, renderScale, text, SCORE_FONT, SCORE_GLOW),
+          (spriteCtx) => paintText(spriteCtx, text, SCORE_FONT, paddle.color, SCORE_GLOW),
+        );
+      }
 
       ctx.restore();
     });
@@ -95,38 +101,36 @@ export class HudRenderer {
     // "GET READY" indicator — the original had no such prompt, so classic mode stays silent
     if (serveTime > 0 && !classic) {
       const style = CYRILLIC.test(readyText) ? READY_STYLE.cyrillic : READY_STYLE.latin;
-      ctx.font = style.font;
-      ctx.fillStyle = COLORS.WHITE;
-      ctx.shadowColor = COLORS.WHITE;
-      ctx.shadowBlur = style.glow;
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
 
-      this.renderText(ctx, readyText, COURT.WIDTH / 2, COURT.HEIGHT / 2 + 8, isRotated);
+      this.renderReadyText(ctx, readyText, style, COURT.WIDTH / 2, COURT.HEIGHT / 2 + 8, isRotated);
     }
 
     ctx.restore();
   }
 
-  private renderText(
+  private renderReadyText(
     ctx: CanvasRenderingContext2D,
     text: string,
+    style: { font: string; glow: number },
     x: number,
     y: number,
     isRotated: boolean,
   ): void {
     ctx.save();
-
+    ctx.translate(x, y);
     if (isRotated) {
-      ctx.translate(x, y);
       ctx.rotate(Math.PI / 2);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, 0, 0);
-    } else {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, x, y);
     }
+
+    sprites.draw(
+      ctx,
+      `ready|${style.font}|${text}`,
+      0,
+      0,
+      (measureCtx, scale) => measureText(measureCtx, scale, text, style.font, style.glow),
+      (spriteCtx) => paintText(spriteCtx, text, style.font, COLORS.WHITE, style.glow),
+    );
 
     ctx.restore();
   }

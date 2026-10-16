@@ -29,4 +29,4 @@ export const BALL = {
   OUT_OF_BOUNDS_OFFSET: 30,
 } as const;
 
-export const WINNING_SCORE = 1;
+export const WINNING_SCORE = 2;
