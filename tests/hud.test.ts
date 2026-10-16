@@ -2,6 +2,7 @@ import { describe, expect, it, Mock } from 'vitest';
 import { PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { HudRenderer } from '@/render/HudRenderer';
+import { gameFont } from '@/shared/fonts';
 import { fakeContext } from './helpers/fakeContext';
 
 const paddles = (): [Paddle, Paddle] => [
@@ -29,17 +30,15 @@ describe('HudRenderer', () => {
     expect(draw(0.11)).toBeCloseTo(1); // settled
   });
 
-  it('draws Cyrillic in the real weight of Russo One with a tight glow, so it stays sharp', () => {
+  it('draws the get-ready prompt the same way in every language', () => {
     const drawReady = (text: string) => {
       const { ctx } = fakeContext();
       new HudRenderer().render(ctx, 0, paddles(), 1, text, 0, false);
       return { font: ctx.font, glow: ctx.shadowBlur };
     };
 
-    expect(drawReady('GET READY')).toEqual({
-      font: "700 22px Orbitron, 'Russo One', sans-serif",
-      glow: 6,
-    });
-    expect(drawReady('ГОТОВЬСЬ')).toEqual({ font: "400 22px 'Russo One', sans-serif", glow: 2 });
+    const latin = drawReady('GET READY');
+    expect(latin.font).toBe(gameFont(700, 22));
+    expect(drawReady('ГОТОВЬСЬ')).toEqual(latin);
   });
 });

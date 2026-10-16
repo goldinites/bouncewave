@@ -1,6 +1,7 @@
 import { COURT } from '@/match/config';
 import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
 import { measureText, paintText, sprites } from '@/render/SpriteCache';
+import { gameFont } from '@/shared/fonts';
 import { mixHexColors, randomRange, TWO_PI } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
@@ -35,7 +36,7 @@ const HEAT_STEPS = 40;
 const SHAPE_COLORS = [COLORS.CYAN, COLORS.PINK, COLORS.YELLOW, COLORS.PURPLE];
 const DOT_SPACING = 28;
 const VHS_NOISE_STREAKS = 5;
-const OSD_FONT = "700 16px 'Russo One', Orbitron, monospace";
+const OSD_FONT = gameFont(700, 16);
 const OSD_GLOW = 6;
 // U+FE0E asks for the text glyph: neither OSD font has ▶, and iOS otherwise falls back to the
 // color emoji, which ignores the fill color
