@@ -10,7 +10,6 @@ import {
 describe('difficulty levels', () => {
   it('lists every configured level, easiest first', () => {
     expect(DIFFICULTY_LEVELS).toEqual([
-      DifficultyLevel.EASY,
       DifficultyLevel.NORMAL,
       DifficultyLevel.HARD,
       DifficultyLevel.INSANE,
@@ -19,13 +18,14 @@ describe('difficulty levels', () => {
   });
 
   it('cycles up through the levels and wraps around', () => {
-    expect(nextDifficulty(DifficultyLevel.EASY)).toBe(DifficultyLevel.NORMAL);
-    expect(nextDifficulty(DifficultyLevel.INSANE)).toBe(DifficultyLevel.EASY);
+    expect(nextDifficulty(DifficultyLevel.NORMAL)).toBe(DifficultyLevel.HARD);
+    expect(nextDifficulty(DifficultyLevel.INSANE)).toBe(DifficultyLevel.NORMAL);
   });
 
   it('recognises only real levels', () => {
     expect(isDifficultyLevel(DifficultyLevel.HARD)).toBe(true);
     expect(isDifficultyLevel(4)).toBe(false);
+    expect(isDifficultyLevel(0)).toBe(false); // the removed Easy level
     expect(isDifficultyLevel(1.5)).toBe(false);
     expect(isDifficultyLevel('1')).toBe(false);
   });

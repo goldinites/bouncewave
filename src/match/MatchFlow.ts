@@ -1,7 +1,8 @@
 import { AiController } from '@/match/AiController';
+import { AiForm } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
 import { BALL, WINNING_SCORE } from '@/match/config';
-import { AiSkill, DEMO_AI_SKILL, DifficultyConfig } from '@/match/difficulty';
+import { AiSkill, DEMO_AI_SKILL, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
 import { Physics, PhysicsEvent } from '@/match/Physics';
@@ -58,7 +59,7 @@ export interface MatchFlowDeps {
   paddles: [Paddle, Paddle];
   ball: Ball;
   input: PlayerInput;
-  getDifficulty: () => DifficultyConfig;
+  getDifficulty: () => DifficultyLevel;
   /** Called synchronously, in order, for everything that happens. */
   onEvent: (event: MatchEvent) => void;
   random?: () => number;
@@ -80,11 +81,15 @@ export class MatchFlow {
   private finaleElapsed = 0;
   private finaleDuration = 0;
 
-  private readonly ai = new AiController();
+  private readonly ai: AiController;
+  /** The CPU's form in a match: drifts with the score, see AiForm. */
+  private readonly aiForm = new AiForm();
+  /** How the CPU plays this point; picked on every serve. */
+  private aiSkill: AiSkill = DEMO_AI_SKILL;
   private readonly paddles: [Paddle, Paddle];
   private readonly ball: Ball;
   private readonly input: PlayerInput;
-  private readonly getDifficulty: () => DifficultyConfig;
+  private readonly getDifficulty: () => DifficultyLevel;
   private readonly emit: (event: MatchEvent) => void;
   private readonly random: () => number;
 
@@ -95,6 +100,7 @@ export class MatchFlow {
     this.getDifficulty = deps.getDifficulty;
     this.emit = deps.onEvent;
     this.random = deps.random ?? Math.random;
+    this.ai = new AiController(this.random);
   }
 
   public get phase(): MatchPhase {
@@ -192,8 +198,8 @@ export class MatchFlow {
       return;
     }
 
-    const difficulty = this.getDifficulty();
-    this.updatePaddles(difficulty, dt);
+    const difficulty = DIFFICULTY_CONFIGS[this.getDifficulty()];
+    this.updatePaddles(dt);
 
     if (this._serveTime > 0) {
       this._serveTime -= dt;
@@ -203,7 +209,7 @@ export class MatchFlow {
     } else {
       this.ball.updateTrail();
       for (const event of Physics.step(this.ball, this.paddles, difficulty, dt)) {
-        this.handlePhysicsEvent(event, difficulty);
+        this.handlePhysicsEvent(event);
       }
     }
 
@@ -211,22 +217,21 @@ export class MatchFlow {
     this.ball.updateRadius(dt, this._rally, difficulty.maxSpeed);
   }
 
-  private updatePaddles(difficulty: DifficultyConfig, dt: number): void {
+  private updatePaddles(dt: number): void {
     const [player, cpu] = this.paddles;
-
-    const skill = this.getAiSkill(difficulty);
+    const skill = this.aiSkill;
 
     if (this.isDemo) {
-      this.ai.update(player, this.ball, skill, dt);
+      this.ai.update(player, this.ball, skill, dt, cpu);
     } else {
       this.input.pollPlayerMovement(player, dt);
     }
-    this.ai.update(cpu, this.ball, skill, dt);
+    this.ai.update(cpu, this.ball, skill, dt, player);
 
     this.paddles.forEach((p) => p.update(dt));
   }
 
-  private handlePhysicsEvent(event: PhysicsEvent, difficulty: DifficultyConfig): void {
+  private handlePhysicsEvent(event: PhysicsEvent): void {
     switch (event.type) {
       case 'wallBounce':
         this.emit(event);
@@ -234,7 +239,7 @@ export class MatchFlow {
       case 'paddleHit':
         this._rally++;
         // The other paddle now has to read the return
-        this.ai.rollAimError(this.paddles[1 - event.paddleIndex], this.getAiSkill(difficulty));
+        this.ai.readShot(this.paddles[1 - event.paddleIndex], this.aiSkill);
         this.emit({ ...event, rally: this._rally });
         break;
       case 'score':
@@ -253,6 +258,7 @@ export class MatchFlow {
     }
 
     this.paddles[scorer].score++;
+    this.aiForm.onPoint(scorer);
     this.emit({ type: 'score', scoringPlayerIndex: scorer, y, isDemo: false });
 
     if (this.paddles[scorer].score >= WINNING_SCORE) {
@@ -283,19 +289,30 @@ export class MatchFlow {
 
   private serve(direction: number, delay: number): void {
     this.ball.serve(direction, BALL.INITIAL_SPEED);
+    // The receiver reads the serve like any other shot
+    this.aiSkill = this.pickAiSkill();
+    this.ai.readShot(this.paddles[direction > 0 ? 1 : 0], this.aiSkill);
     this._rally = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });
   }
 
-  /** The demo plays at its own level; in a match the CPU plays at the chosen difficulty. */
-  private getAiSkill(difficulty: DifficultyConfig): AiSkill {
-    return this.isDemo ? DEMO_AI_SKILL : difficulty;
+  /**
+   * The demo plays at its own level; in a match the CPU plays at the chosen difficulty, in
+   * whatever form the score has put it.
+   */
+  private pickAiSkill(): AiSkill {
+    if (this.isDemo) return DEMO_AI_SKILL;
+
+    const level = this.getDifficulty();
+    this.aiForm.update(this.scores, DIFFICULTY_CONFIGS[level].adaptivity);
+    return this.aiForm.skillFor(level);
   }
 
   private resetScores(): void {
     this.paddles.forEach((p) => p.resetScore());
     this.ai.reset();
+    this.aiForm.reset();
   }
 
   private get scores(): [number, number] {

@@ -36,9 +36,9 @@ describe('I18nManager', () => {
 
   it('returns difficulty description tuples for all levels', () => {
     const i18n = new I18nManager('en');
-    const easyInfo = i18n.getDifficultyInfo(DifficultyLevel.EASY);
-    expect(easyInfo[0]).toBe('EASY');
-    expect(easyInfo[1]).toContain('slow');
+    const normalInfo = i18n.getDifficultyInfo(DifficultyLevel.NORMAL);
+    expect(normalInfo[0]).toBe('NORMAL');
+    expect(normalInfo[1]).toContain('balanced');
 
     const insaneInfo = i18n.getDifficultyInfo(DifficultyLevel.INSANE);
     expect(insaneInfo[0]).toBe('INSANE');

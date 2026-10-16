@@ -75,6 +75,11 @@ describe('SettingsStorage', () => {
     expect(loaded.difficulty).toBe(DifficultyLevel.NORMAL);
   });
 
+  it('moves players who had picked the removed Easy level to the default', () => {
+    mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ d: 0 }));
+    expect(SettingsStorage.load().difficulty).toBe(DifficultyLevel.NORMAL);
+  });
+
   it('handles out of range difficulty numbers by falling back to default', () => {
     mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ d: 99 }));
     const loaded = SettingsStorage.load();
