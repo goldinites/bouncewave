@@ -1,5 +1,8 @@
 import { COURT, BALL } from '@/match/config';
 import { getRallyHeat, getSpeedHeat } from '@/match/heat';
+import { approach } from '@/shared/math';
+
+const RADIUS_SMOOTHING = 6.3; // 1/s toward the radius the rally and speed call for
 
 export interface Point {
   x: number;
@@ -13,7 +16,10 @@ export class Ball {
   public vy: number = 0;
   public speed: number = BALL.INITIAL_SPEED;
   public radius: number = BALL.INITIAL_RADIUS;
+  /** Where the ball was over the last BALL.TRAIL_DURATION, oldest first. */
   public trail: Point[] = [];
+  /** Seconds since each trail point was laid. */
+  private trailAges: number[] = [];
   /** In flight from an Overdrive power shot; cleared by the next hit or serve. */
   public isPowerShot = false;
 
@@ -47,6 +53,7 @@ export class Ball {
     this.y = COURT.HEIGHT / 2;
     this.speed = initialSpeed;
     this.trail = [];
+    this.trailAges = [];
     this.clearBoost();
     this.isPowerShot = false;
 
@@ -55,10 +62,14 @@ export class Ball {
     this.vy = Math.sin(angle) * this.speed;
   }
 
-  public updateTrail(): void {
+  public updateTrail(dt: number): void {
+    for (let i = 0; i < this.trailAges.length; i++) this.trailAges[i] += dt;
     this.trail.push({ x: this.x, y: this.y });
-    if (this.trail.length > BALL.TRAIL_MAX_LENGTH) {
+    this.trailAges.push(0);
+
+    while (this.trailAges[0] > BALL.TRAIL_DURATION) {
       this.trail.shift();
+      this.trailAges.shift();
     }
   }
 
@@ -67,6 +78,6 @@ export class Ball {
     const speedFactor = 0.13 * getSpeedHeat(this.speed, maxDifficultySpeed);
     const targetRadius = BALL.INITIAL_RADIUS * (1 + rallyFactor + speedFactor);
 
-    this.radius += (targetRadius - this.radius) * Math.min(1, dt * 6);
+    this.radius = approach(this.radius, targetRadius, RADIUS_SMOOTHING, dt);
   }
 }

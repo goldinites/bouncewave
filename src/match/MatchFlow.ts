@@ -219,7 +219,7 @@ export class MatchFlow {
         this._phase = 'rally';
       }
     } else {
-      this.ball.updateTrail();
+      this.ball.updateTrail(dt);
       for (const event of Physics.step(this.ball, this.paddles, difficulty, dt)) {
         this.handlePhysicsEvent(event);
       }

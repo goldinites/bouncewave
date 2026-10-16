@@ -10,10 +10,10 @@ import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
 import { sprites } from '@/render/SpriteCache';
-import { clamp } from '@/shared/math';
+import { approach, clamp } from '@/shared/math';
 
 // Lightweight scene dimming for menu and pause overlays
-const MENU_DIM = { RGB: '8, 2, 26', ALPHA: 0.6, SPEED: 8 } as const;
+const MENU_DIM = { RGB: '8, 2, 26', ALPHA: 0.6, SPEED: 8.6 } as const;
 // Deciding-point vignette
 const VIGNETTE = { RGB: '4, 0, 14', MAX_ALPHA: 0.6 } as const;
 // Screen shake fades exponentially, flash linearly (1/s)
@@ -27,6 +27,7 @@ const LASERS = {
   CLIMAX_SURGE: 0.2, // on the climax drop
   CELEBRATION_SURGE: 1.0,
   SURGE_DECAY: 1.5, // 1/s
+  EASE: 2.55, // 1/s toward the brightness the moment calls for
 } as const;
 const CLIMAX_FLASH = 0.2; // soft flash on the drop, no screen shake
 const CELEBRATION_DECAY = 0.45; // 1/s, linear
@@ -268,7 +269,7 @@ export class Renderer {
     const playLaserIntensity = 0.12 + Math.max(climaxLasers, celebrationLasers) + this.laserSurge;
     const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : playLaserIntensity;
 
-    this.laserIntensity += (targetLaserIntensity - this.laserIntensity) * Math.min(1, dt * 2.5);
+    this.laserIntensity = approach(this.laserIntensity, targetLaserIntensity, LASERS.EASE, dt);
 
     this.screenShake *= Math.exp(-dt * SHAKE_DECAY);
 
@@ -290,7 +291,7 @@ export class Renderer {
 
     const dimTarget = gameState === 'play' ? 0 : MENU_DIM.ALPHA;
 
-    this.menuDim += (dimTarget - this.menuDim) * Math.min(1, realDt * MENU_DIM.SPEED);
+    this.menuDim = approach(this.menuDim, dimTarget, MENU_DIM.SPEED, realDt);
 
     // Reset transform for high-DPI displays
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
