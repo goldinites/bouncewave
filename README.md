@@ -1,4 +1,4 @@
-# PING PONG (Retrowave / Synthwave Edition)
+# BOUNCEWAVE (Retrowave / Synthwave Pong)
 
 A retro-futuristic, synthwave-themed Canvas Pong game decomposed and refactored into a modern TypeScript web application with Vite, full strict typing, modular architecture, and automated tests.
 
@@ -15,6 +15,7 @@ A retro-futuristic, synthwave-themed Canvas Pong game decomposed and refactored 
 - **Full Localization (i18n)**: English and Russian languages supported.
 - **Persistent Storage**: Player settings (difficulty, sound FX, music, language) saved to `localStorage`.
 - **Responsive & Mobile Support**: Full touch gestures, desktop keyboard, mouse, and auto-rotated mobile portrait/landscape handling.
+- **Installable PWA**: Add it to the home screen or install it from the browser; it launches fullscreen and plays offline after the first visit. The home-screen icons are generated from `public/app-icon.svg` and `favicon.ico` from the simpler `public/favicon.svg`, both with `npm run icons`.
 
 ---
 

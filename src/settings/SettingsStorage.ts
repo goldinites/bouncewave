@@ -1,6 +1,6 @@
 import { getDefaultSettings, SETTING_KEYS, SETTINGS, UserSettings } from '@/settings/UserSettings';
 
-export const LOCAL_STORAGE_KEY = 'neonpong';
+export const LOCAL_STORAGE_KEY = 'bouncewave_settings';
 
 /** Saves settings to LocalStorage under the short keys from SETTINGS. */
 export class SettingsStorage {
