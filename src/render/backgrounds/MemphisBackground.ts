@@ -95,14 +95,16 @@ export class MemphisBackground implements Background {
     ctx.fillStyle = this.getGradient(ctx);
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
-    // Drifting grid dots
+    // Drifting grid dots, all in one path and one fill
     ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
     const offset = (time * 10) % DOT_SPACING;
+    ctx.beginPath();
     for (let y = -DOT_SPACING + offset; y < COURT.HEIGHT; y += DOT_SPACING) {
       for (let x = -DOT_SPACING + offset; x < COURT.WIDTH; x += DOT_SPACING) {
-        ctx.fillRect(x, y, 2, 2);
+        ctx.rect(x, y, 2, 2);
       }
     }
+    ctx.fill();
 
     this.renderShapes(ctx);
     this.renderVhsOverlay(ctx, time);

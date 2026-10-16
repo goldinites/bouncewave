@@ -109,15 +109,19 @@ export class EntityRenderer {
     const x = ball.x;
     const y = ball.y;
 
-    // Fading ball trail
+    // Fading ball trail: one color, faded through globalAlpha (on top of the serve's fade)
+    const baseAlpha = ctx.globalAlpha;
+    const trailAlpha = 0.22 + rallyIntensity * 0.2;
     ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = `hsl(${hue}, ${glowSat}%, ${lit}%)`;
     ball.trail.forEach((point, index) => {
       const alpha = (index + 1) / ball.trail.length;
-      ctx.fillStyle = `hsla(${hue}, ${glowSat}%, ${lit}%, ${alpha * (0.22 + rallyIntensity * 0.2)})`;
+      ctx.globalAlpha = baseAlpha * alpha * trailAlpha;
       ctx.beginPath();
       ctx.arc(point.x, point.y, currentRadius * (0.35 + 0.55 * alpha), 0, TWO_PI);
       ctx.fill();
     });
+    ctx.globalAlpha = baseAlpha;
 
     // Outer plasma corona
     const coronaRadius = currentRadius * (2 + rallyIntensity * 1.8 + climax * 1.6) * flicker;
