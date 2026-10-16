@@ -84,7 +84,7 @@ export class MenuController {
   public showMainMenu(): void {
     this.settingsBack = null;
     this.uiManager.showMenu(
-      'PING PONG',
+      'BOUNCEWAVE',
       '',
       [
         {

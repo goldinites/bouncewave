@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
 
 export default defineConfig({
-  base: '/pong-retrowave/',
+  base: '/bouncewave/',
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -16,9 +16,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'Retrowave Pong',
-        short_name: 'Pong',
-        description: 'Synthwave Pong with procedural music, neon backgrounds and an AI opponent.',
+        name: 'Bouncewave',
+        short_name: 'Bouncewave',
+        description: 'Synthwave pong with procedural music, neon backgrounds and an AI opponent.',
         lang: 'en',
         theme_color: '#0b0320',
         background_color: '#0b0320',

@@ -1,4 +1,4 @@
-# PING PONG (Retrowave / Synthwave Edition)
+# BOUNCEWAVE (Retrowave / Synthwave Pong)
 
 A retro-futuristic, synthwave-themed Canvas Pong game decomposed and refactored into a modern TypeScript web application with Vite, full strict typing, modular architecture, and automated tests.
 
