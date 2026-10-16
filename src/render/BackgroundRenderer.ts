@@ -1,6 +1,7 @@
 import { COURT } from '@/match/config';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { Background, BackgroundMood } from '@/render/backgrounds/Background';
+import { HyperspaceBackground } from '@/render/backgrounds/HyperspaceBackground';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
 import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
@@ -14,6 +15,7 @@ const createBackgrounds = (): Background[] => [
   new LaserBackground(),
   new MemphisBackground(),
   new OutrunBackground(),
+  new HyperspaceBackground(),
 ];
 
 /** Picks the active background, feeds it the music analysis and the game's mood. */

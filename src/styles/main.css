@@ -527,6 +527,20 @@ body.classic-mode .game__buttons button:focus-visible {
   color: var(--black);
 }
 
+/* Flat and square, not a glowing circle — the rest of the chrome's "vintage cabinet" look */
+body.classic-mode .game-pause {
+  border: 1px solid var(--white);
+  border-radius: 0;
+  background: var(--black);
+  box-shadow: none;
+}
+
+body.classic-mode .game-pause:active {
+  background: var(--white);
+  color: var(--black);
+  box-shadow: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .game__title,
   .game__stage,

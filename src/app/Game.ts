@@ -200,12 +200,14 @@ export class Game {
   private pause(): void {
     if (this.flow.pause()) {
       this.menuController.showPauseMenu();
+      this.uiManager.setPauseButtonVisibility(false);
     }
   }
 
   public resume(): void {
     this.flow.resume();
     this.uiManager.hideMenu();
+    this.uiManager.setPauseButtonVisibility(true);
   }
 
   private onMatchEvent(event: MatchEvent): void {
