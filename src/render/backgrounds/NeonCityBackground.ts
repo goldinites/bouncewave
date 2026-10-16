@@ -66,6 +66,7 @@ const SPECTRUM_BARS = 16; // the front rooftops share this many analyzer bars
 const ANTENNA_SHARE = 0.35;
 const GAP_SHARE = 0.2;
 const ANTENNA_BLINK_PERIOD = 1.6; // s
+const ANTENNA_COLOR = mixHexColors(LAYERS[1].coolColor, COLORS.PURPLE, 0.3);
 const REFLECTION_STREAKS = 4;
 // Neon on the rooftops without shadowBlur: a wide faint stroke under each one
 const NEON_HALO = { WIDTH: 6, ALPHA: 0.3 } as const;
@@ -91,6 +92,20 @@ interface Building {
   hasAntenna: boolean;
   /** Fixed per-building salt for the window and antenna patterns. */
   salt: number;
+  /**
+   * Steady windows as (dx, dy, threshold) triples from the building's top-left corner, sorted
+   * by threshold: a window is lit while its threshold is under the layer's lit share, so a
+   * frame just walks the front of the list instead of hashing every window again.
+   */
+  windows: Float32Array;
+  /** Windows that switch on and off on their own, as (dx, dy, id) triples. */
+  flickers: Float32Array;
+}
+
+/** One skyline: its buildings, grouped by window color so each color is a single fill. */
+interface Skyline {
+  buildings: Building[];
+  byWindowColor: { color: string; buildings: Building[] }[];
 }
 
 /** Where the street sits, and how wide/tall the scene is, in whichever space is "up" right now. */
@@ -120,7 +135,37 @@ function hash(a: number, b: number): number {
   return (h >>> 0) / 4294967296;
 }
 
-function buildSkyline(layer: SkylineLayer): Building[] {
+/** Lays out a building's window grid once; which windows are lit is decided per frame. */
+function buildWindows(
+  layer: SkylineLayer,
+  width: number,
+  height: number,
+  salt: number,
+): Pick<Building, 'windows' | 'flickers'> {
+  const { width: w, stepX, stepY } = layer.window;
+  const columns = Math.floor((width - 4) / stepX);
+  const rows = Math.floor((height - 10) / stepY);
+  const left = (width - (columns - 1) * stepX - w) / 2;
+  const steady: [dx: number, dy: number, threshold: number][] = [];
+  const flickers: number[] = [];
+
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
+      const id = row * 64 + column;
+      const dx = left + column * stepX;
+      const dy = 8 + row * stepY;
+      if (hash(salt + 1, id) < FLICKER_SHARE) {
+        flickers.push(dx, dy, id);
+      } else {
+        steady.push([dx, dy, hash(salt, id)]);
+      }
+    }
+  }
+  steady.sort((a, b) => a[2] - b[2]);
+  return { windows: Float32Array.from(steady.flat()), flickers: Float32Array.from(flickers) };
+}
+
+function buildSkyline(layer: SkylineLayer): Skyline {
   const random = seededRandom(layer.seed);
   const pick = <T>(list: readonly T[]) => list[Math.floor(random() * list.length)];
   const buildings: Building[] = [];
@@ -129,20 +174,32 @@ function buildSkyline(layer: SkylineLayer): Building[] {
     const width = layer.width[0] + random() * (layer.width[1] - layer.width[0]);
     // Squared so most buildings are low and only a few tower over the rest
     const height = layer.height[0] + random() ** 2 * (layer.height[1] - layer.height[0]);
+    const clippedWidth = Math.min(width, TILE_LENGTH - x);
+    const windowColor = pick(WINDOW_COLORS);
+    const neonColor = pick(ROOF_NEON_COLORS);
+    const spectrumBar = Math.floor(random() * SPECTRUM_BARS);
+    const hasAntenna = random() < ANTENNA_SHARE;
+    const salt = Math.floor(random() * 1e6);
     buildings.push({
       x,
-      width: Math.min(width, TILE_LENGTH - x),
+      width: clippedWidth,
       height,
-      windowColor: pick(WINDOW_COLORS),
-      neonColor: pick(ROOF_NEON_COLORS),
-      spectrumBar: Math.floor(random() * SPECTRUM_BARS),
-      hasAntenna: random() < ANTENNA_SHARE,
-      salt: Math.floor(random() * 1e6),
+      windowColor,
+      neonColor,
+      spectrumBar,
+      hasAntenna,
+      salt,
+      ...buildWindows(layer, clippedWidth, height, salt),
     });
     // Now and then an alley opens a view onto the far skyline
     x += width + (random() < GAP_SHARE ? 20 + random() * 40 : random() * 6);
   }
-  return buildings;
+
+  const byWindowColor = [...new Set(WINDOW_COLORS)].map((color) => ({
+    color,
+    buildings: buildings.filter((building) => building.windowColor === color),
+  }));
+  return { buildings, byWindowColor };
 }
 
 /**
@@ -168,6 +225,7 @@ export class NeonCityBackground implements Background {
   }));
   private dropAge = Infinity;
   private sky: { key: string; value: CanvasGradient } | null = null;
+  private haze: { streetY: number; value: CanvasGradient } | null = null;
 
   public triggerDrop(): void {
     this.dropAge = 0;
@@ -211,9 +269,9 @@ export class NeonCityBackground implements Background {
     ctx.fillRect(0, layout.streetY, layout.width, layout.height - layout.streetY);
 
     LAYERS.forEach((layer, i) => {
-      const visible = this.visibleBuildings(i, layout);
+      const visible = this.visibleBuildings(this.skylines[i].buildings, i, layout);
       this.renderSilhouettes(ctx, layer, visible, heat, layout);
-      this.renderWindows(ctx, layer, visible, time, pulse, lights, flash, layout);
+      this.renderWindows(ctx, layer, i, time, pulse, lights, flash, layout);
       if (layer.isFront) {
         this.renderRooftops(ctx, visible, frame, heat, lights, layout);
       }
@@ -282,23 +340,26 @@ export class NeonCityBackground implements Background {
     layout: Layout,
   ): void {
     const top = layout.streetY - LAYERS[1].height[1] * 1.2;
-    const haze = ctx.createLinearGradient(0, top, 0, layout.streetY);
-    haze.addColorStop(0, 'rgba(255, 43, 214, 0)');
-    haze.addColorStop(1, 'rgba(255, 43, 214, 1)');
+    if (this.haze?.streetY !== layout.streetY) {
+      const value = ctx.createLinearGradient(0, top, 0, layout.streetY);
+      value.addColorStop(0, 'rgba(255, 43, 214, 0)');
+      value.addColorStop(1, 'rgba(255, 43, 214, 1)');
+      this.haze = { streetY: layout.streetY, value };
+    }
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.18 + heat * 0.2 + pulse * 0.08;
-    ctx.fillStyle = haze;
+    ctx.fillStyle = this.haze.value;
     ctx.fillRect(0, top, layout.width, layout.streetY - top);
     ctx.restore();
   }
 
-  /** The buildings of layer `i` on screen right now, each with its x already scrolled. */
-  private visibleBuildings(i: number, layout: Layout): Building[] {
+  /** Those of `buildings` (from layer `i`) on screen right now, each with its x scrolled. */
+  private visibleBuildings(buildings: Building[], i: number, layout: Layout): Building[] {
     const visible: Building[] = [];
     for (let start = -this.scroll[i]; start < layout.width; start += TILE_LENGTH) {
-      for (const building of this.skylines[i]) {
+      for (const building of buildings) {
         const x = start + building.x;
         if (x + building.width > 0 && x < layout.width) {
           visible.push({ ...building, x });
@@ -330,44 +391,32 @@ export class NeonCityBackground implements Background {
   private renderWindows(
     ctx: CanvasRenderingContext2D,
     layer: SkylineLayer,
-    buildings: Building[],
+    i: number,
     time: number,
     pulse: number,
     lights: number,
     flash: number,
     layout: Layout,
   ): void {
-    const { width: w, height: h, stepX, stepY } = layer.window;
+    const { width: w, height: h } = layer.window;
     const flickerTick = Math.floor(time * FLICKER_RATE);
     const litShare = layer.litShare + (1 - layer.litShare) * flash;
-    const byColor = new Map<string, Building[]>();
-    for (const building of buildings) {
-      const group = byColor.get(building.windowColor) ?? [];
-      group.push(building);
-      byColor.set(building.windowColor, group);
-    }
 
     ctx.save();
     ctx.globalAlpha = Math.min(1, (layer.windowAlpha + pulse * 0.25) * lights + flash * 0.3);
-    for (const [color, group] of byColor) {
+    for (const { color, buildings } of this.skylines[i].byWindowColor) {
       ctx.fillStyle = color;
       ctx.beginPath();
-      for (const building of group) {
-        const columns = Math.floor((building.width - 4) / stepX);
-        const rows = Math.floor((building.height - 10) / stepY);
-        const left = building.x + (building.width - (columns - 1) * stepX - w) / 2;
-        const top = layout.streetY - building.height + 8;
+      for (const building of this.visibleBuildings(buildings, i, layout)) {
+        const top = layout.streetY - building.height;
+        const { windows, flickers } = building;
 
-        for (let row = 0; row < rows; row++) {
-          for (let column = 0; column < columns; column++) {
-            const id = row * 64 + column;
-            let isLit = hash(building.salt, id) < litShare;
-            if (hash(building.salt + 1, id) < FLICKER_SHARE) {
-              isLit = hash(building.salt + 2, id + flickerTick) < 0.5;
-            }
-            if (isLit) {
-              ctx.rect(left + column * stepX, top + row * stepY, w, h);
-            }
+        for (let k = 0; k < windows.length && windows[k + 2] < litShare; k += 3) {
+          ctx.rect(building.x + windows[k], top + windows[k + 1], w, h);
+        }
+        for (let k = 0; k < flickers.length; k += 3) {
+          if (hash(building.salt + 2, flickers[k + 2] + flickerTick) < 0.5) {
+            ctx.rect(building.x + flickers[k], top + flickers[k + 1], w, h);
           }
         }
       }
@@ -428,7 +477,7 @@ export class NeonCityBackground implements Background {
         const antennaX = building.x + building.width * 0.7;
         const antennaTop = roofY - 18;
         ctx.globalAlpha = 1;
-        ctx.strokeStyle = mixHexColors(LAYERS[1].coolColor, COLORS.PURPLE, 0.3);
+        ctx.strokeStyle = ANTENNA_COLOR;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(antennaX, roofY);
