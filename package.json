@@ -13,7 +13,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "icons": "pwa-assets-generator && pwa-assets-generator --config pwa-assets.favicon.config.ts"
+    "icons": "pwa-assets-generator && pwa-assets-generator --config pwa-assets.favicon.config.ts && pwa-assets-generator --config pwa-assets.splash.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -40,6 +40,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        // iOS keeps its own copy of the launch screen it shows; no need to download them all
+        globIgnores: ['splash/**'],
         // Tektur comes from Google Fonts; keep a copy so the HUD keeps its face offline
         runtimeCaching: [
           {

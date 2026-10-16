@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="1024" height="1024">
+  <!-- The launch mark: the two paddles with the ball between them, on nothing (the splash screens
+       lay it on the night sky). index.html draws the same mark as the loader, the ball moving.
+       Rendered at 1024 so the big iPad splash screens aren't upscaled from 512. -->
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect x="96" y="196" width="30" height="120" rx="12" fill="#19f0ff" filter="url(#glow)"/>
+  <rect x="386" y="196" width="30" height="120" rx="12" fill="#ff2bd6" filter="url(#glow)"/>
+  <circle cx="256" cy="256" r="20" fill="#ffffff" filter="url(#glow)"/>
+</svg>
