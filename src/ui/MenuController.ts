@@ -74,7 +74,6 @@ export class MenuController {
 
     // A setting may also change from outside the menu (the music chip, the M key)
     settings.subscribe(() => {
-      // Esc resumes play straight from a settings menu opened in pause, which hides it
       if (this.settingsBack && this.uiManager.isMenuVisible) {
         this.showSettingsMenu(this.settingsBack);
       }
@@ -153,6 +152,16 @@ export class MenuController {
       ],
       this.actions.onUnlockAudio,
     );
+  }
+
+  /**
+   * Esc in the settings menu: back to the menu it was opened from, as its BACK button does.
+   * @returns whether it went back (false outside the settings menu)
+   */
+  public goBack(): boolean {
+    if (!this.settingsBack || !this.uiManager.isMenuVisible) return false;
+    this.settingsBack();
+    return true;
   }
 
   public showSettingsMenu(onBack: () => void): void {

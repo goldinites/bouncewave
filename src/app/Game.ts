@@ -77,12 +77,15 @@ export class Game {
     this.settings.subscribe(({ language }) => {
       if (language === this.i18n.language) return;
       this.i18n.language = language;
-      this.uiManager.updateHint();
+      this.uiManager.updateTexts();
     });
 
     this.inputHandler = new InputHandler(canvas, {
       onUnlockAudio: () => this.unlockAudio(),
-      onTogglePause: () => this.togglePause(),
+      // In the settings menu Esc steps back to the menu it came from instead
+      onTogglePause: () => {
+        if (!this.menuController.goBack()) this.togglePause();
+      },
       onToggleFullscreen: () => this.toggleFullscreen(),
       onToggleMusic: () => this.toggleMusic(),
       onNextTrack: () => this.nextTrack(),

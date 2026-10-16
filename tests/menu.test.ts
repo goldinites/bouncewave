@@ -1,10 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { getDefaultSettings } from '@/settings/UserSettings';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
+
+// Each one listens for keys on the window until disposed
+const managers: UIManager[] = [];
+const makeUIManager = (i18n: I18nManager) => {
+  const manager = new UIManager(i18n);
+  managers.push(manager);
+  return manager;
+};
 
 const setup = () => {
   const store = new SettingsStore({
@@ -19,12 +27,16 @@ const setup = () => {
     onReturnToMainMenu: vi.fn(),
     onUnlockAudio: vi.fn(),
   };
-  const menu = new MenuController(new UIManager(i18n), i18n, sfx, store, actions);
+  const menu = new MenuController(makeUIManager(i18n), i18n, sfx, store, actions);
   const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('#gameButtons button')];
   return { menu, buttons, store };
 };
 
 describe('settings menu', () => {
+  afterEach(() => {
+    managers.splice(0).forEach((manager) => manager.dispose());
+  });
+
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
@@ -81,6 +93,95 @@ describe('settings menu', () => {
 
     store.cycle('musicMuted');
     expect(buttons()[1].textContent).toBe('MUSIC: ON');
+  });
+
+  it('keeps the keyboard focus on the setting that was just changed', () => {
+    const { menu, buttons } = setup();
+    menu.showSettingsMenu(() => {});
+
+    buttons()[2].focus();
+    buttons()[2].click(); // sound, redrawing the whole menu
+    expect(document.activeElement).toBe(buttons()[2]);
+  });
+
+  it('moves the focus to the first button of the menu it leads to', () => {
+    const { menu, buttons } = setup();
+    menu.showSettingsMenu(() => menu.showMainMenu());
+
+    buttons()[4].focus();
+    buttons()[4].click(); // back
+    expect(document.activeElement).toBe(buttons()[0]);
+  });
+
+  it("leaves the focus alone when it wasn't in the menu", () => {
+    const { menu, buttons } = setup();
+    menu.showSettingsMenu(() => {});
+
+    menu.showPauseMenu();
+    expect(buttons()).not.toContain(document.activeElement);
+  });
+
+  it('walks the menu with the arrow keys, wrapping around at either end', () => {
+    const { menu, buttons } = setup();
+    menu.showPauseMenu(); // resume, settings, menu
+    const press = (code: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code }));
+    const focused = () => buttons().indexOf(document.activeElement as HTMLButtonElement);
+
+    press('ArrowDown');
+    expect(focused()).toBe(0); // from outside the menu, the first button
+    press('ArrowDown');
+    press('KeyS');
+    expect(focused()).toBe(2);
+    press('ArrowDown');
+    expect(focused()).toBe(0);
+    press('ArrowUp');
+    expect(focused()).toBe(2);
+    press('Home');
+    expect(focused()).toBe(0);
+    press('End');
+    expect(focused()).toBe(2);
+  });
+
+  it('puts Enter on the first button when nothing in the menu is focused yet', () => {
+    const { menu, buttons } = setup();
+    menu.showPauseMenu();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' }));
+    expect(document.activeElement).toBe(buttons()[0]);
+  });
+
+  it('leaves the arrow keys to the game while the menu is hidden', () => {
+    const { menu, buttons } = setup();
+    menu.showPauseMenu();
+    document.getElementById('gameUI')?.classList.add('game__ui--hidden');
+
+    const event = new KeyboardEvent('keydown', { code: 'ArrowDown', cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(buttons()).not.toContain(document.activeElement);
+  });
+
+  it('goes back from the settings menu on Esc, and only from there', () => {
+    const { menu } = setup();
+    const back = vi.fn();
+
+    menu.showSettingsMenu(back);
+    expect(menu.goBack()).toBe(true);
+    expect(back).toHaveBeenCalledOnce();
+
+    menu.showPauseMenu();
+    expect(menu.goBack()).toBe(false);
+  });
+
+  it('names the pause button in the current language', () => {
+    const { store } = setup();
+    const label = () => document.getElementById('pauseButton')?.getAttribute('aria-label');
+    expect(label()).toBe('Pause');
+
+    store.cycle('language');
+    const i18n = new I18nManager(store.current.language);
+    makeUIManager(i18n);
+    expect(label()).toBe('Пауза');
   });
 
   it('stays hidden when a setting changes during play', () => {
