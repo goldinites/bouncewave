@@ -1,0 +1,200 @@
+/* The menu over the court: the glitching title, the subtitle and the neon buttons */
+
+.game__ui {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  padding: 12px;
+  text-align: center;
+
+  transition:
+    opacity 0.35s,
+    visibility 0.35s;
+}
+
+.game__ui--hidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.game__title {
+  margin: 0;
+
+  color: var(--white);
+  font-size: clamp(22px, 5.6vw, 58px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+
+  animation: glitch 4s steps(1, end) infinite;
+}
+
+/* The menu fades out but stays in the page: no point running its glitch under the game */
+.game__ui--hidden .game__title {
+  animation: none;
+}
+
+.game__subtitle {
+  margin: 0;
+
+  color: var(--cyan);
+  font-size: clamp(10px, 1.9vw, 15px);
+  letter-spacing: 0.14em;
+  text-shadow: 0 0 4px var(--cyan);
+}
+
+.game__subtitle:empty {
+  display: none;
+}
+
+.game__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  min-width: clamp(170px, 38%, 280px);
+  margin-top: 6px;
+}
+
+.game-button {
+  --button-color: var(--cyan);
+
+  padding: 0.85em 1.5em;
+
+  border: 2px solid var(--button-color);
+  border-radius: 8px;
+
+  background: rgba(8, 2, 26, 0.5);
+
+  color: var(--button-color);
+  font-family: inherit;
+  font-size: clamp(11px, 2vw, 15px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+
+  cursor: pointer;
+
+  /* Glow via shadows, not filter: drop-shadow — inside the rotated portrait UI, iOS Safari
+     draws a filtered button's layer as a dark box around the whole button column */
+  box-shadow: 0 0 6px var(--button-color);
+  text-shadow: 0 0 2px var(--button-color);
+
+  transition:
+    transform 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+/* Color modifiers; they come after .game-button, so they win over its cyan */
+.game-button--yellow {
+  --button-color: var(--yellow);
+}
+
+.game-button--pink {
+  --button-color: var(--pink-soft);
+}
+
+.game-button--purple {
+  --button-color: var(--purple);
+}
+
+.game-button--green {
+  --button-color: var(--green);
+}
+
+/* Toggles (music, sound) say whether they are on with aria-pressed; on means filled */
+.game__buttons button[aria-pressed='true'] {
+  background: var(--button-color);
+  color: #12002e;
+  text-shadow: none;
+}
+
+/* Hover only where there is a real pointer: on touch screens :hover sticks after a tap,
+   and the glitch animation's filter brings the iOS dark box back */
+@media (hover: hover) {
+  .game-button:hover,
+  .game__buttons button:hover {
+    transform: translateY(-2px);
+    animation: glitch-button 1.5s;
+  }
+
+  /* Plain buttons fill on hover; toggles don't, or an off toggle would look on */
+  .game-button:hover,
+  .game__buttons button:not([aria-pressed]):hover {
+    background: var(--button-color);
+    color: #12002e;
+    text-shadow: none;
+  }
+}
+
+.game-button:focus-visible,
+.game__buttons button:focus-visible {
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.game-button:focus-visible,
+.game__buttons button:not([aria-pressed]):focus-visible {
+  background: var(--button-color);
+  color: #12002e;
+  text-shadow: none;
+}
+
+/* A focused toggle keeps showing its state, so focus is an outline instead of a fill */
+.game__buttons button[aria-pressed]:focus-visible {
+  outline: 2px solid var(--button-color);
+  outline-offset: 3px;
+}
+
+@media (max-height: 520px) {
+  .game__buttons {
+    gap: 6px;
+  }
+
+  .game__buttons button {
+    padding: 0.6em 1.2em;
+  }
+}
+
+/* The court is on its side here (stage.css), so the menu is turned back upright over it */
+@media (orientation: portrait) and (max-width: 900px) {
+  .game__ui {
+    inset: auto;
+
+    top: 50%;
+    left: 50%;
+
+    width: var(--game-width);
+    height: calc(var(--game-width) * 1.6);
+
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+
+  .game__title {
+    font-size: clamp(30px, 11vw, 52px);
+  }
+
+  .game__subtitle {
+    font-size: 12px;
+  }
+
+  .game__buttons button {
+    padding: 1em 1.4em;
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game__title,
+  .game-button:hover,
+  .game__buttons button:hover {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,78 @@
+/* The page and how big the court gets: everything else sizes itself from these variables */
+
+:root {
+  /* One hundredth of the visible height: in Safari, vh ignores the toolbars and the stage
+     overflows, so dvh where the browser has it */
+  --vh: 1vh;
+
+  /* The court's width, shared with the control bars above and below it so they line up */
+  --stage-width: min(96vw, calc(80 * var(--vh) * 1.45));
+}
+
+@supports (height: 1dvh) {
+  :root {
+    --vh: 1dvh;
+  }
+}
+
+html {
+  height: 100%;
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+
+  background: radial-gradient(ellipse at 50% 30%, #2a0a5e 0, var(--bg) 70%);
+
+  color: var(--text);
+  /* One family for English and Russian, with real weights from 400 to 900 */
+  font-family: 'Tektur', system-ui, sans-serif;
+
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The whole point of fullscreen is a bigger court: the hint is hidden (bars.css), so the
+   stage's own width/height caps relax to use almost the entire screen instead of ~80%. */
+:fullscreen {
+  --stage-width: min(99vw, calc(95 * var(--vh) * 1.45));
+}
+
+@media (max-height: 520px) {
+  :root {
+    --stage-width: min(96vw, calc(92 * var(--vh) * 1.6));
+  }
+}
+
+/* A phone on its side has no height to spare above or below the court, so the controls move
+   into the margin beside it (bars.css, pause.css, now-playing.css). The court leaves a gutter
+   wide enough for the shrunk chip on both sides, so it stays centered */
+@media (max-height: 520px) and (orientation: landscape) {
+  :root {
+    --dock-gutter: calc(
+      70px + 2 * 12px + max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px))
+    );
+    --stage-width: min(calc(100vw - 2 * var(--dock-gutter)), calc(92 * var(--vh) * 1.6));
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  :root {
+    /* The rotated court keeps its real 8:5 shape, so width and height grow together. On most
+       phones the height is what binds: the court takes what's left once the controls above it
+       and the hint below (with the gaps between) are given their room. */
+    --game-width: min(98vw, calc((100 * var(--vh) - 136px) / 1.6));
+  }
+}
