@@ -8,8 +8,8 @@ Synthwave Pong with music that plays along with every rally.
 
 ## Features
 
-- **Live soundtrack** — eight synthwave songs; the music builds as the rally heats up and drops at its peak, and every hit plays a note of the song.
-- **Four backgrounds** — lasers, Memphis, outrun and a neon city, all moving to the music.
+- **Live soundtrack** — eleven synthwave songs; the music builds as the rally heats up and drops at its peak, and every hit plays a note of the song.
+- **Six backgrounds** — lasers, Memphis, outrun, a neon city, Mount Fuji and a jungle of stone guardians, all moving to the music. The last three have songs of their own, which play first whenever they come up.
 - **Opponent that plays like a person** — three difficulty levels; it misreads shots and reacts with a delay, never perfectly.
 - **Game feel** — perfect hits, Overdrive power shots, slow motion on the deciding point, fireworks when you win.
 - **Plays anywhere** — keyboard, mouse or touch, phone in either orientation, English or Russian.
