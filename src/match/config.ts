@@ -22,7 +22,7 @@ export const PADDLE = {
 } as const;
 
 export const BALL = {
-  INITIAL_SPEED: 340,
+  INITIAL_SPEED: 380,
   INITIAL_RADIUS: 8,
   /** Seconds of flight the trail shows: nine points at 60 fps, the same length at any rate. */
   TRAIL_DURATION: 0.14,
