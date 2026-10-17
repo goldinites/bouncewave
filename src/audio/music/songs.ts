@@ -612,12 +612,12 @@ const SONG_DEFS: SongDef[] = [
   },
   {
     // A minor through the Japanese in scale (A Bb D E F): a shakuhachi-like flute singing over
-    // a koto ostinato, the flat second of Bb giving it its mountain-temple ache
+    // a koto ostinato, the flat second of Bb giving it its mountain-lake ache
     title: 'Torii Gates',
     bpm: 96,
     swing: 0,
     voices: { lead: 'flute', counter: 'koto', arp: 'triangle', bass: 'sawtooth' },
-    scene: 'shrine',
+    scene: 'fuji',
     sections: [
       {
         name: 'intro',

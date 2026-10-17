@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
-import { ShrineBackground } from '@/render/backgrounds/ShrineBackground';
+import { FujiBackground } from '@/render/backgrounds/FujiBackground';
 import { fakeContext } from './helpers/fakeContext';
 
-const renderFrame = (background: ShrineBackground, isRotated: boolean) => {
+const renderFrame = (background: FujiBackground, isRotated: boolean) => {
   const { ctx, spies } = fakeContext();
   spies.createLinearGradient.mockReturnValue({ addColorStop: vi.fn() });
   spies.createRadialGradient.mockReturnValue({ addColorStop: vi.fn() });
@@ -22,21 +22,21 @@ const renderFrame = (background: ShrineBackground, isRotated: boolean) => {
   return spies;
 };
 
-describe('ShrineBackground', () => {
-  it('draws the gate, the moon and the petals in both orientations', () => {
-    const background = new ShrineBackground();
+describe('FujiBackground', () => {
+  it('draws the mountain, its reflection, the gate and the petals in both orientations', () => {
+    const background = new FujiBackground();
 
     for (const isRotated of [false, true]) {
       const spies = renderFrame(background, isRotated);
-      expect(spies.quadraticCurveTo).toHaveBeenCalled(); // the gate's upswept lintel
-      expect(spies.arc).toHaveBeenCalled(); // the moon
+      expect(spies.quadraticCurveTo).toHaveBeenCalled(); // slopes and the gate's lintel
+      expect(spies.scale).toHaveBeenCalledWith(1, expect.any(Number)); // the lake's mirror
       expect(spies.ellipse).toHaveBeenCalled(); // petals
       expect(spies.rotate).toHaveBeenCalledTimes(isRotated ? 1 : 0);
     }
   });
 
-  it('bursts a gust of petals out of the gate on a drop, which then dies away', () => {
-    const background = new ShrineBackground();
+  it('bursts a gust of petals from the branch on a drop, which then dies away', () => {
+    const background = new FujiBackground();
     const petals = () => renderFrame(background, false).ellipse.mock.calls.length;
     const before = petals();
 
@@ -48,7 +48,7 @@ describe('ShrineBackground', () => {
   });
 
   it('keeps every falling petal on screen as it advances', () => {
-    const background = new ShrineBackground();
+    const background = new FujiBackground();
     for (let i = 0; i < 600; i++) background.advance(0.05, 0, 1);
 
     const spies = renderFrame(background, false);
