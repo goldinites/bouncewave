@@ -179,13 +179,15 @@ export class EffectsDirector {
   public handle(event: MatchEvent): void {
     switch (event.type) {
       case 'matchStart':
+        // Every match is played on another backdrop, found by flicking through the channels
+        this.audio.music.enterScene(this.renderer.switchChannel());
+        this.audio.sfx.playChannelSurf();
         this.renderer.addFlash(FLASH.START);
         this.paddleFx.reset();
         this.resetTension();
         break;
 
       case 'returnToMenu':
-        this.audio.music.enterScene(this.renderer.nextBackground());
         this.paddleFx.reset();
         this.resetTension();
         break;

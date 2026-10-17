@@ -15,7 +15,7 @@ const makeRenderer = () => ({
   celebrate: vi.fn(),
   triggerVictoryEffect: vi.fn(),
   triggerCrtGlitch: vi.fn(),
-  nextBackground: vi.fn(() => 'outrun'),
+  switchChannel: vi.fn(() => 'outrun'),
   hideFinalScore: vi.fn(),
   showFinalScore: vi.fn(),
   classicMode: false,
@@ -32,6 +32,7 @@ const makeAudio = () => ({
     playFireworkPop: vi.fn(),
     playPowerShot: vi.fn(),
     playOverdriveReady: vi.fn(),
+    playChannelSurf: vi.fn(),
   },
   music: {
     setDramaLevel: vi.fn(),
@@ -97,13 +98,23 @@ describe('EffectsDirector.handle', () => {
     expect(effects.paddleGlow).toEqual([0, 0]);
   });
 
-  it('brings up the next background and its music on returnToMenu', () => {
+  it('switches the channel to another background and its music when a match starts', () => {
+    const { effects, audio, renderer } = makeDirector();
+
+    handle(effects, { type: 'matchStart' });
+
+    expect(renderer.switchChannel).toHaveBeenCalledOnce();
+    expect(audio.music.enterScene).toHaveBeenCalledExactlyOnceWith('outrun');
+    expect(audio.sfx.playChannelSurf).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the background on returnToMenu', () => {
     const { effects, audio, renderer } = makeDirector();
 
     handle(effects, { type: 'returnToMenu' });
 
-    expect(renderer.nextBackground).toHaveBeenCalledOnce();
-    expect(audio.music.enterScene).toHaveBeenCalledExactlyOnceWith('outrun');
+    expect(renderer.switchChannel).not.toHaveBeenCalled();
+    expect(audio.music.enterScene).not.toHaveBeenCalled();
   });
 
   it('shakes and beeps on a wall bounce', () => {

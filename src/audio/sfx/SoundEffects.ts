@@ -1,5 +1,6 @@
 import { Harmony } from '@/audio/music/HarmonyTimeline';
 import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
+import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { midiToFrequency } from '@/shared/math';
 
 const SFX_FREQUENCIES = {
@@ -28,6 +29,8 @@ export class SoundEffects {
   private harmonyGetter: () => Harmony | null;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
+  private noiseBuffer: AudioBuffer | null = null;
+  private noiseContext: AudioContext | null = null;
 
   /**
    * @param getIsGameplayAudible whether gameplay sounds should play right now (false behind
@@ -278,6 +281,55 @@ export class SoundEffects {
     this.echoInput = input;
     this.echoContext = ac;
     return input;
+  }
+
+  /**
+   * The channel surf at the start of a match: a crackle of static at every switch, the last
+   * one hissing away as the picture settles.
+   */
+  public playChannelSurf(): void {
+    const ac = this.getUnmutedContext();
+    if (!ac) return;
+
+    try {
+      const now = ac.currentTime;
+      const noise = this.getNoiseBuffer(ac);
+      for (let i = 0; i < CHANNEL_SURF.CHANNELS; i++) {
+        const isLast = i === CHANNEL_SURF.CHANNELS - 1;
+        const start = now + i * CHANNEL_SURF.STEP;
+        const duration = isLast ? CHANNEL_SURF.SETTLE : CHANNEL_SURF.STEP * 0.6;
+        const source = ac.createBufferSource();
+        const band = ac.createBiquadFilter();
+        const gain = ac.createGain();
+
+        source.buffer = noise;
+        band.type = 'bandpass';
+        band.frequency.value = 1800 + i * 400;
+        band.Q.value = 0.7;
+        gain.gain.setValueAtTime(isLast ? 0.05 : 0.07, start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+        source.connect(band);
+        band.connect(gain);
+        gain.connect(ac.destination);
+        source.start(start);
+        source.stop(start + duration + 0.02);
+      }
+    } catch {
+      // Audio playback fails silently if browser policy blocks it
+    }
+  }
+
+  /** Half a second of white noise, made once per audio context. */
+  private getNoiseBuffer(ac: AudioContext): AudioBuffer {
+    if (this.noiseBuffer && this.noiseContext === ac) return this.noiseBuffer;
+
+    const buffer = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.5), ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    this.noiseBuffer = buffer;
+    this.noiseContext = ac;
+    return buffer;
   }
 
   /** UI feedback: settings are only reachable from menus, so it must bypass the gameplay gate. */
