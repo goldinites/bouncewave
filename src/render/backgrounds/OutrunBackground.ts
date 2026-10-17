@@ -13,16 +13,22 @@ const SUN_RADIUS = 125;
 const SUN_BAND_COUNT = 9; // horizontal gaps sliced into the lower half of the sun
 const SUN_BAND_GROWTH = 1.18; // each gap is this much taller than the one above it
 
-// Relative x positions of the mountain peaks, picked by hand so they never align evenly
+// Relative x positions of the mountain peaks, picked by hand so they never align evenly; low
+// in the middle, a valley for the sun to set into
 const MOUNTAIN_PEAKS: readonly [x: number, height: number][] = [
-  [0.02, 46],
-  [0.16, 70],
-  [0.3, 38],
-  [0.47, 86],
-  [0.64, 44],
-  [0.8, 68],
-  [0.95, 40],
+  [0.02, 58],
+  [0.12, 88],
+  [0.24, 52],
+  [0.34, 66],
+  [0.44, 22],
+  [0.56, 26],
+  [0.66, 70],
+  [0.77, 48],
+  [0.88, 90],
+  [0.98, 56],
 ];
+// How far the sun's center sits above the horizon, in radii: enough of it shows for its gaps
+const SUN_RISE = 0.35;
 
 const GRID_ROWS = 13; // horizontal lines marching toward the viewer
 const GRID_COLS = 16; // vertical lines fanning out from the vanishing point
@@ -59,8 +65,9 @@ export class OutrunBackground implements Background {
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, layout.width, layout.height);
 
-    this.renderMountains(ctx, heat, layout);
+    // The sun sets behind the mountains, into the valley between them
     this.renderSun(ctx, sky, heat, pulse, layout);
+    this.renderMountains(ctx, heat, layout);
     this.renderGrid(ctx, time, heat, layout);
     this.renderHorizonGlow(ctx, heat, layout);
 
@@ -124,8 +131,14 @@ export class OutrunBackground implements Background {
     layout: Layout,
   ): void {
     const { width, horizonY, vanishingX } = layout;
-    const centerY = horizonY - 8;
     const radius = SUN_RADIUS * (1 + pulse * 0.08);
+    const centerY = horizonY - SUN_RADIUS * SUN_RISE;
+
+    // Nothing of the sun shows below the horizon: it is setting behind the floor
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, width, horizonY);
+    ctx.clip();
 
     const sunGradient = ctx.createLinearGradient(0, centerY - radius, 0, centerY + radius);
     sunGradient.addColorStop(0, COLORS.YELLOW);
@@ -154,17 +167,17 @@ export class OutrunBackground implements Background {
     ctx.arc(vanishingX, centerY, radius, 0, TWO_PI);
     ctx.fill();
 
-    // Slice gaps into the lower half; repainting the sky's own gradient erases the sun there
-    // without needing to clip, since outside the circle it just repaints the sky that's already
-    // there
+    // Slice gaps into the lower half by repainting the sky's own gradient over it, only as wide
+    // as the sun: the mountains are drawn afterwards, so nothing else is cut
     ctx.fillStyle = sky;
     let gapY = centerY - radius * 0.05;
     let gapHeight = radius * 0.06;
-    for (let i = 0; i < SUN_BAND_COUNT; i++) {
-      ctx.fillRect(0, gapY, width, gapHeight);
+    for (let i = 0; i < SUN_BAND_COUNT && gapY < horizonY; i++) {
+      ctx.fillRect(vanishingX - radius, gapY, radius * 2, gapHeight);
       gapY += gapHeight * (1 + SUN_BAND_GROWTH);
       gapHeight *= SUN_BAND_GROWTH;
     }
+    ctx.restore();
   }
 
   /** Perspective grid floor: verticals fanning from the vanishing point, horizontals rushing in. */
