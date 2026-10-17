@@ -93,7 +93,7 @@ describe('BackgroundRenderer', () => {
     expect(shown(1.7)).toBe(target);
   });
 
-  it('keeps a pinned background through every match, and steps the pin on request', () => {
+  it('keeps a pinned background through every match', () => {
     const scenes: SceneId[] = ['lasers', 'memphis', 'outrun'];
     const renderer = new BackgroundRenderer(
       scenes.map((scene) => fakeBackground(0.1, false, scene)),
@@ -103,11 +103,6 @@ describe('BackgroundRenderer', () => {
     expect(renderer.isPinned).toBe(true);
     expect(renderer.switchChannel(true)).toBe('memphis');
     expect(renderer.switchChannel(false)).toBe('memphis');
-
-    expect(renderer.pinNext(1)).toBe('outrun');
-    expect(renderer.pinNext(1)).toBe('lasers');
-    expect(renderer.pinNext(-1)).toBe('outrun');
-    expect(renderer.switchChannel(true)).toBe('outrun');
   });
 
   it('refuses to pin a background it does not have', () => {

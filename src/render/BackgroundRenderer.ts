@@ -145,16 +145,6 @@ export class BackgroundRenderer {
     return true;
   }
 
-  /**
-   * For developers: pins the next background in the list (`step` 1) or the one before (-1).
-   * @returns the backdrop now on screen
-   */
-  public pinNext(step: 1 | -1): SceneId {
-    const count = this.backgrounds.length;
-    this.pin(this.backgrounds[(this.backgroundIndex + step + count) % count].scene);
-    return this.scene;
-  }
-
   /** The next background off the deck, shuffling a new one when it runs out. */
   private deal(): number {
     if (this.deck.length === 0) {
