@@ -18,6 +18,8 @@ interface SettingsMenuEntry {
   clicks?: boolean;
   /** For on/off settings: shows the entry as a toggle, filled while on. */
   isOn?: (settings: UserSettings) => boolean;
+  /** Changes how a match plays, so it can be set only between matches, never from the pause. */
+  isBetweenMatches?: boolean;
   color: ButtonColor;
 }
 
@@ -28,6 +30,7 @@ const SETTINGS_MENU: SettingsMenuEntry[] = [
   {
     key: 'difficulty',
     color: 'yellow',
+    isBetweenMatches: true,
     label: (s, i18n) => `${i18n.t('diff')}: ${i18n.getDifficultyInfo(s.difficulty)[0]}`,
   },
   {
@@ -58,6 +61,8 @@ export class MenuController {
   private actions: GameMenuActions;
   /** Where the settings menu's BACK leads while it is on screen; null when it isn't. */
   private settingsBack: (() => void) | null = null;
+  /** Whether the settings menu on screen was opened from the pause. */
+  private isSettingsMidMatch = false;
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -76,7 +81,7 @@ export class MenuController {
     // A setting may also change from outside the menu (the music chip, the M key)
     this.unsubscribe = settings.subscribe(() => {
       if (this.settingsBack && this.uiManager.isMenuVisible) {
-        this.showSettingsMenu(this.settingsBack);
+        this.showSettingsMenu(this.settingsBack, this.isSettingsMidMatch);
       }
     });
   }
@@ -118,7 +123,7 @@ export class MenuController {
         {
           label: this.i18n.t('settings'),
           color: 'pink',
-          action: () => this.showSettingsMenu(() => this.showPauseMenu()),
+          action: () => this.showSettingsMenu(() => this.showPauseMenu(), true),
         },
         {
           label: this.i18n.t('menu'),
@@ -169,15 +174,21 @@ export class MenuController {
     return true;
   }
 
-  public showSettingsMenu(onBack: () => void): void {
+  /**
+   * @param isMidMatch opened from the pause: settings that change how a match plays (the
+   * difficulty) are left out, so they can't be switched halfway through one
+   */
+  public showSettingsMenu(onBack: () => void, isMidMatch = false): void {
     this.settingsBack = onBack;
+    this.isSettingsMidMatch = isMidMatch;
     const settings = this.settings.current;
+    const entries = SETTINGS_MENU.filter((entry) => !(isMidMatch && entry.isBetweenMatches));
 
     this.uiManager.showMenu(
       this.i18n.t('settings'),
-      this.i18n.getDifficultyInfo(settings.difficulty)[1],
+      isMidMatch ? '' : this.i18n.getDifficultyInfo(settings.difficulty)[1],
       [
-        ...SETTINGS_MENU.map((entry) => ({
+        ...entries.map((entry) => ({
           label: entry.label(settings, this.i18n),
           action: () => this.changeSetting(entry),
           isOn: entry.isOn?.(settings),
