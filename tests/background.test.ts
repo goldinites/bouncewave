@@ -59,7 +59,8 @@ describe('BackgroundRenderer', () => {
       vi.restoreAllMocks();
     });
 
-    it('draws the background into the layer at its scale and copies it onto the scene', () => {
+    /** Lets the layer's canvas hand out a (fake) 2D context. */
+    const withLayerContext = () => {
       const layer = fakeContext();
       const createElement = document.createElement.bind(document);
       vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
@@ -69,6 +70,11 @@ describe('BackgroundRenderer', () => {
         }
         return element;
       });
+      return layer;
+    };
+
+    it('draws the background into the layer at its scale and copies it onto the scene', () => {
+      const layer = withLayerContext();
 
       const background = fakeBackground(0.42);
       const renderer = new BackgroundRenderer([background]);
@@ -83,6 +89,17 @@ describe('BackgroundRenderer', () => {
       expect(image).toBeInstanceOf(HTMLCanvasElement);
       expect([image.width, image.height]).toEqual([COURT.WIDTH / 2, COURT.HEIGHT / 2]);
       expect(rect).toEqual([0, 0, COURT.WIDTH, COURT.HEIGHT]);
+    });
+
+    it('reallocates the layer at the same size when asked to rebuild it', () => {
+      withLayerContext();
+      const renderer = new BackgroundRenderer([fakeBackground(0.42)]);
+      renderer.setScale(0.5);
+
+      const widthSetter = vi.spyOn(HTMLCanvasElement.prototype, 'width', 'set');
+      renderer.rebuildLayer();
+
+      expect(widthSetter).toHaveBeenCalledWith(COURT.WIDTH / 2);
     });
   });
 });

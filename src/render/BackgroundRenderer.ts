@@ -60,6 +60,14 @@ export class BackgroundRenderer {
     this.layer = ctx ? { canvas, ctx } : null;
   }
 
+  /** Reallocates the layer at its current scale (iOS may have failed to the last time). */
+  public rebuildLayer(): void {
+    if (this.layerScale <= 0) return;
+    const scale = this.layerScale;
+    this.layerScale = 0;
+    this.setScale(scale);
+  }
+
   /** Switches to the next background (on every return to the menu). */
   public nextBackground(): void {
     this.backgroundIndex = (this.backgroundIndex + 1) % this.backgrounds.length;

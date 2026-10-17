@@ -52,6 +52,19 @@ describe('SpriteCache', () => {
     expect(paint).toHaveBeenCalledTimes(2);
   });
 
+  it('gives the canvases of dropped sprites their memory back at once', () => {
+    withOffscreenCanvases();
+    const cache = new SpriteCache();
+    const { ctx, spies } = fakeContext();
+
+    cache.draw(ctx, 'key', 0, 0, () => bounds, vi.fn());
+    const image = (spies.drawImage as Mock).mock.calls[0][0] as HTMLCanvasElement;
+    expect(image.width).toBeGreaterThan(0);
+
+    cache.setScale(2);
+    expect([image.width, image.height]).toEqual([0, 0]);
+  });
+
   it('draws straight onto the canvas when there is no offscreen canvas', () => {
     const cache = new SpriteCache();
     const { ctx, spies } = fakeContext();

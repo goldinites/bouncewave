@@ -42,6 +42,13 @@ export class SpriteCache {
   }
 
   public clear(): void {
+    // Zero-sized, a canvas gives its memory back at once instead of whenever GC runs: iOS caps
+    // the total canvas memory, and every resize drops all the sprites
+    for (const sprite of this.sprites.values()) {
+      if (!sprite) continue;
+      sprite.image.width = 0;
+      sprite.image.height = 0;
+    }
     this.sprites.clear();
   }
 
