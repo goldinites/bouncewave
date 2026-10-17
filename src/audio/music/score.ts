@@ -6,6 +6,7 @@ import {
   StabPatternName,
 } from '@/audio/music/patterns';
 import { Chord, parseChord, parseNote } from '@/audio/music/theory';
+import { SceneId } from '@/shared/scenes';
 
 export const STEPS_PER_BAR = 16;
 const STEPS_PER_CHORD_SLOT = 8; // chords may change on the bar or halfway through it
@@ -16,8 +17,11 @@ const STEPS_PER_CHORD_SLOT = 8; // chords may change on the bar or halfway throu
  */
 export type Tier = 'calm' | 'groove' | 'rise' | 'high';
 
-/** Synth voices a melody can be played on. */
-export type LeadVoice = 'saw' | 'square' | 'bell' | 'pluck';
+/**
+ * Synth voices a melody can be played on. Koto is a plucked string that snaps up into pitch;
+ * flute is a breathy, shakuhachi-like sine that scoops into each note.
+ */
+export type LeadVoice = 'saw' | 'square' | 'bell' | 'pluck' | 'koto' | 'flute';
 
 /**
  * One part of a song, as written.
@@ -53,6 +57,11 @@ export interface SongDef {
   /** Share of a step the off-beat 16ths are pushed late by, for a laid-back groove. */
   swing: number;
   voices: { lead: LeadVoice; counter: LeadVoice; arp: OscillatorType; bass: OscillatorType };
+  /**
+   * The backdrop this song belongs to: it plays only behind that one, and first whenever that
+   * backdrop comes up. Songs without one play behind any backdrop.
+   */
+  scene?: SceneId;
   sections: SectionDef[];
 }
 

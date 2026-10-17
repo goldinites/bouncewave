@@ -11,6 +11,7 @@ import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer'
 import { HudRenderer } from '@/render/HudRenderer';
 import { sprites } from '@/render/SpriteCache';
 import { approach, clamp } from '@/shared/math';
+import { SceneId } from '@/shared/scenes';
 
 // Lightweight scene dimming for menu and pause overlays
 const MENU_DIM = { RGB: '8, 2, 26', ALPHA: 0.6, SPEED: 8.6 } as const;
@@ -259,9 +260,17 @@ export class Renderer {
     this.background.triggerDrop();
   }
 
-  /** Switches to the other background (on every return to the menu). */
-  public nextBackground(): void {
-    this.background.nextBackground();
+  /** The backdrop on screen. */
+  public get scene(): SceneId {
+    return this.background.scene;
+  }
+
+  /**
+   * Switches to the next background (on every return to the menu).
+   * @returns the backdrop now on screen
+   */
+  public nextBackground(): SceneId {
+    return this.background.nextBackground();
   }
 
   /** Swaps the whole canvas scene for a flat monochrome 1972 look, with no flashy feedback. */

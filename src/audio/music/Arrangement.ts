@@ -67,6 +67,8 @@ const LEAD_VOLUME: Record<LeadVoice, number> = {
   square: 0.06,
   bell: 0.11,
   pluck: 0.09,
+  koto: 0.1,
+  flute: 0.085,
 };
 const COUNTER_SHARE = 0.55;
 const ARP_VOLUME = 0.045;
@@ -297,11 +299,13 @@ export class Arrangement {
       if (tom && tom !== '.') this.play.tom(tom, time, 0.35);
       const open = hit(fill.open, i);
       if (open) this.play.noise(time, 0.3, open * 0.08, 8000);
+      this.playTaiko(time, hit(fill.taiko, i), I);
       return;
     }
 
     const beat: DrumPattern = DRUM_PATTERNS[section.drums];
     this.playKick(time, hit(beat.kick, s), I);
+    this.playTaiko(time, hit(beat.taiko, s), I);
 
     const snare = hit(beat.snare, s);
     if (snare) this.play.snare(time, snare * (0.18 + 0.12 * I));
@@ -320,6 +324,10 @@ export class Arrangement {
 
   private playKick(time: number, velocity: number, intensity: number): void {
     if (velocity) this.play.kick(time, velocity * (0.4 + 0.35 * intensity));
+  }
+
+  private playTaiko(time: number, velocity: number, intensity: number): void {
+    if (velocity) this.play.taiko(time, velocity * (0.35 + 0.25 * intensity));
   }
 
   /** Extra layers that only play during the climax, on top of the full mix. */

@@ -6,6 +6,7 @@ import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
 import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
 import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
 import { clamp } from '@/shared/math';
+import { SceneId } from '@/shared/scenes';
 
 // Dark tint over the background so the court reads clearly on top of it
 const OVERLAY_TINT_RGB = '10, 2, 32';
@@ -68,9 +69,18 @@ export class BackgroundRenderer {
     this.setScale(scale);
   }
 
-  /** Switches to the next background (on every return to the menu). */
-  public nextBackground(): void {
+  /** The backdrop on screen. */
+  public get scene(): SceneId {
+    return this.backgrounds[this.backgroundIndex].scene;
+  }
+
+  /**
+   * Switches to the next background (on every return to the menu).
+   * @returns the backdrop now on screen
+   */
+  public nextBackground(): SceneId {
     this.backgroundIndex = (this.backgroundIndex + 1) % this.backgrounds.length;
+    return this.scene;
   }
 
   /** Victory burst, for every background that has one. */

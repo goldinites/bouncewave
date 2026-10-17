@@ -12,6 +12,8 @@ export interface DrumPattern {
   clap?: string;
   hat?: string;
   open?: string;
+  /** A big festival drum under the kit. */
+  taiko?: string;
 }
 
 export const DRUM_PATTERNS = {
@@ -37,6 +39,13 @@ export const DRUM_PATTERNS = {
     snare: '....X..o.o..X..o',
     hat: 'x.x.x.x.x.x.x.x.',
   },
+  // A straight beat with a taiko answering the kick, like a festival drum line
+  matsuri: {
+    kick: 'X.......X.......',
+    snare: '....X.......X...',
+    hat: '..x...x...x...x.',
+    taiko: '......x.....x.xX',
+  },
 } satisfies Record<string, DrumPattern>;
 
 export type DrumPatternName = keyof typeof DRUM_PATTERNS;
@@ -50,10 +59,13 @@ export interface DrumFill {
   snare?: string;
   tom?: string;
   open?: string;
+  taiko?: string;
 }
 
 export const DRUM_FILLS = {
   toms: { kick: 'x.......', tom: '..1.2.33', snare: 'o.......' },
+  // Taiko rolling into the next section, quiet to loud
+  taiko: { taiko: 'o.o.x.xX', open: '.......x' },
   roll: { snare: 'o.o.xxXX', kick: 'x...x...' },
   // Everything drops out for a beat, then one hit leads into the next section
   stop: { kick: 'x.......', open: '......X.' },

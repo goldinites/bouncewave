@@ -17,6 +17,7 @@ import { StepScheduler } from '@/audio/music/StepScheduler';
 import { placeAbove } from '@/audio/music/theory';
 import { GameState } from '@/match/GameState';
 import { clamp } from '@/shared/math';
+import { SceneId } from '@/shared/scenes';
 
 const HARMONY_HISTORY = 8; // scheduled chord changes kept to find what is audible now
 const TAPE_STOP_DURATION = 1.1; // s for the music to grind to a halt on defeat
@@ -27,6 +28,12 @@ const START_DELAY = 0.1; // s before the first step
 const PLAN_STEP = 8;
 const ECHO_STEPS = 3; // lead echo time, in steps
 const TONE_FILTER: Record<GameState, number> = { paused: 450, menu: 2800, play: 16000 };
+
+/** A song that plays behind any backdrop, at random: what the music opens with. */
+function pickSharedSong(): number {
+  const shared = SONGS.flatMap((song, i) => (song.scene === undefined ? [i] : []));
+  return shared[Math.floor(Math.random() * shared.length)] ?? 0;
+}
 
 /**
  * Procedural synthwave soundtrack. The game pushes its state in with `setState` every frame;
@@ -48,7 +55,7 @@ export class MusicEngine {
   private isTapeStopped = false;
 
   private currentStep = 0;
-  private readonly conductor = new Conductor(SONGS, Math.floor(Math.random() * SONGS.length));
+  private readonly conductor = new Conductor(SONGS, pickSharedSong());
   private scheduler: StepScheduler | null = null;
 
   /** Builds the audio graph and starts the scheduler; safe to call more than once. */
@@ -122,9 +129,14 @@ export class MusicEngine {
     this.isTapeStopped = false;
   }
 
-  /** Move on to another song at the next phrase boundary. */
-  public newSong(): void {
-    this.conductor.requestNewSong();
+  /**
+   * Another backdrop came up: move on to another song at the next phrase boundary, the
+   * backdrop's own one first if it has one.
+   */
+  public enterScene(scene: SceneId): void {
+    const isChanging = this.conductor.enterScene(scene);
+    // Before the first step there is nothing to finish: start the backdrop's music right away
+    if (isChanging && this.currentStep === 0) this.skipSong();
   }
 
   /** The player's skip: another song, at random, from the next bar line. */

@@ -75,6 +75,12 @@ describe('MusicEngine', () => {
     expect(notes()).toBeGreaterThan(stopped);
   });
 
+  it("opens with the backdrop's own song when it has one", () => {
+    const engine = new MusicEngine();
+    engine.enterScene('neonCity');
+    expect(engine.getSongTitle()).toBe('Shinjuku Rain');
+  });
+
   it('switches to another song when skipped', () => {
     const { engine } = track(setup());
     const before = engine.getSongTitle();

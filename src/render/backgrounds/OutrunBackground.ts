@@ -43,6 +43,7 @@ interface Layout {
 
 /** Classic outrun sunset: a banded sun over mountains and a receding neon grid floor. */
 export class OutrunBackground implements Background {
+  public readonly scene = 'outrun';
   public readonly overlayTint = 0.22;
 
   private sky: { key: string; value: CanvasGradient } | null = null;

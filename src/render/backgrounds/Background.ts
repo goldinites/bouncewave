@@ -1,4 +1,5 @@
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
+import { SceneId } from '@/shared/scenes';
 
 /** How the game feels right now; set by the renderer, read by every background. */
 export interface BackgroundMood {
@@ -25,6 +26,9 @@ export interface BackgroundFrame extends BackgroundMood {
  * BackgroundRenderer; the optional hooks are only needed by backgrounds with their own motion.
  */
 export interface Background {
+  /** Which backdrop this is, so the music can play its own song behind it. */
+  readonly scene: SceneId;
+
   /** Share of dark tint drawn over this background so the court reads clearly on top. */
   readonly overlayTint: number;
 

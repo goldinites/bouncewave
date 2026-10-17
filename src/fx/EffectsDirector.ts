@@ -185,8 +185,7 @@ export class EffectsDirector {
         break;
 
       case 'returnToMenu':
-        this.audio.music.newSong();
-        this.renderer.nextBackground();
+        this.audio.music.enterScene(this.renderer.nextBackground());
         this.paddleFx.reset();
         this.resetTension();
         break;

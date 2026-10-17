@@ -71,6 +71,8 @@ export class Game {
     );
 
     this.renderer = new Renderer(canvas);
+    // The music opens with the song of whichever backdrop comes up first
+    this.audio.music.enterScene(this.renderer.scene);
     this.showResolution();
     this.uiManager = new UIManager(this.i18n);
 

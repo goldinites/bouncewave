@@ -2,11 +2,17 @@ import { afterEach, describe, expect, it, Mock, vi } from 'vitest';
 import { COURT } from '@/match/config';
 import { Background } from '@/render/backgrounds/Background';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
+import { SceneId } from '@/shared/scenes';
 import { fakeContext } from './helpers/fakeContext';
 
 const MOOD = { laserIntensity: 1, climax: 0.2, celebration: 0.6 };
 
-const fakeBackground = (overlayTint: number, withHooks = false): Background => ({
+const fakeBackground = (
+  overlayTint: number,
+  withHooks = false,
+  scene: SceneId = 'lasers',
+): Background => ({
+  scene,
   overlayTint,
   render: vi.fn(),
   ...(withHooks ? { advance: vi.fn(), triggerDrop: vi.fn() } : {}),
@@ -33,6 +39,18 @@ describe('BackgroundRenderer', () => {
     const second = backgrounds[(first + 1) % 2];
     expect(second.render).toHaveBeenCalledTimes(1);
     expect(backgrounds[first].render).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the backdrop each switch brings up', () => {
+    const renderer = new BackgroundRenderer([
+      fakeBackground(0.1, false, 'lasers'),
+      fakeBackground(0.1, false, 'neonCity'),
+    ]);
+    const first = renderer.scene;
+    const next = renderer.nextBackground();
+
+    expect(next).not.toBe(first);
+    expect(renderer.scene).toBe(next);
   });
 
   it('tints with the active background’s own overlay', () => {
