@@ -5,6 +5,7 @@ import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
 import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
 import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
+import { ShrineBackground } from '@/render/backgrounds/ShrineBackground';
 import { clamp } from '@/shared/math';
 import { SceneId } from '@/shared/scenes';
 
@@ -17,6 +18,7 @@ const createBackgrounds = (): Background[] => [
   new MemphisBackground(),
   new OutrunBackground(),
   new NeonCityBackground(),
+  new ShrineBackground(),
 ];
 
 /**

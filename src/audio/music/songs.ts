@@ -610,6 +610,81 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  {
+    // A minor through the Japanese in scale (A Bb D E F): a shakuhachi-like flute singing over
+    // a koto ostinato, the flat second of Bb giving it its mountain-temple ache
+    title: 'Torii Gates',
+    bpm: 96,
+    swing: 0,
+    voices: { lead: 'flute', counter: 'koto', arp: 'triangle', bass: 'sawtooth' },
+    scene: 'shrine',
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Am9 | Bbmaj7 | Dm9 | E7sus4',
+        lead: `E5 - - - - - D5 Bb4 | A4 - - - - - - - | F5 - - - E5 - D5 - | E5 - - - - - - -`,
+        counter: `. . A4 . . . E5 . | . . D5 . . . Bb4 . | . . A4 . . . D5 . | . . B4 . . . A4 .`,
+        bass: 'long',
+        arp: 'sparse',
+        drums: 'none',
+        pad: 'swell',
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Am | Bb | Dm | Am | F | Bb | Dm7 | E7sus4',
+        lead: `A4 - - - C5 - E5 - | D5 - - - - - F5 - | F5 - - - E5 - D5 - | E5 - - - - - . .
+             | A4 - - - C5 - F5 - | F5 - - - D5 - Bb4 - | D5 - - - C5 - A4 - | E5 - - - D5 - B4 -`,
+        counter: `A4 . E5 . A4 . E5 . | Bb4 . F5 . Bb4 . F5 . | D5 . A5 . D5 . A5 . | A4 . E5 . A4 . E5 .
+                | F4 . C5 . F4 . C5 . | Bb4 . F5 . Bb4 . F5 . | D5 . A4 . C5 . A4 . | E4 . B4 . D5 . B4 .`,
+        bass: 'octave',
+        arp: 'broken',
+        drums: 'four',
+        fill: 'taiko',
+        pad: 'hold',
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Dm | E7sus4',
+        lead: `D5 . F5 . A5 . D6 . | E5 . A5 . B5 . D6 .`,
+        leadVoice: 'koto',
+        bass: 'eighths',
+        arp: 'up',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Am | F | Bb | E7sus4 | Am | F | Dm7 | E7sus4',
+        lead: `A5 - - - E5 - A5 - | C6 - - - A5 - F5 - | Bb5 - - - F5 - D5 - | E5 - - - - - D5 -
+             | A5 - - - C6 - B5 - | A5 - - - F5 - E5 - | D5 - - - F5 - A5 - | E5 - - - - - - -`,
+        leadVoice: 'saw',
+        counter: `A4 . E5 . A4 . E5 . | F4 . C5 . F4 . C5 . | Bb4 . F5 . Bb4 . F5 . | E4 . B4 . D5 . B4 .
+                | A4 . E5 . A4 . E5 . | F4 . C5 . F4 . C5 . | D5 . A4 . C5 . A4 . | E4 . B4 . D5 . B4 .`,
+        bass: 'drive',
+        arp: 'updown',
+        drums: 'drive',
+        fill: 'taiko',
+        pad: 'hold',
+        stabs: 'push',
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Fmaj7 | Bbmaj7 | Dm9 | E7sus4',
+        lead: `C5 - - - E5 - - - | D5 - - - A4 - - - | E5 - - - F5 - - - | E5 - - - - - - -`,
+        bass: 'long',
+        arp: 'pulse',
+        drums: 'pulse',
+        pad: 'swell',
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);
