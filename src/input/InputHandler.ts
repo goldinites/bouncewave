@@ -16,6 +16,8 @@ export interface InputHandlerCallbacks {
   onToggleFullscreen: () => void;
   onToggleMusic: () => void;
   onNextTrack: () => void;
+  /** B (Shift+B backwards): for developers, step to another background. */
+  onStepBackground: (step: 1 | -1) => void;
   /** A fresh key press or tap (not a held-key repeat), e.g. to skip a cutscene. */
   onPress: () => void;
 }
@@ -102,6 +104,12 @@ export class InputHandler {
           if (e.repeat) return;
 
           this.callbacks.onNextTrack();
+        }
+
+        if (e.code === 'KeyB') {
+          if (e.repeat) return;
+
+          this.callbacks.onStepBackground(e.shiftKey ? -1 : 1);
         }
       },
       { signal },

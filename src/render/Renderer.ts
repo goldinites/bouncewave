@@ -274,6 +274,27 @@ export class Renderer {
     return this.background.switchChannel(!this.reducedMotion.matches && !this.isClassicMode);
   }
 
+  /** Whether a developer pinned the background (?bg= or the B key in debug). */
+  public get isBackgroundPinned(): boolean {
+    return this.background.isPinned;
+  }
+
+  /**
+   * For developers: shows `scene` and keeps it, matches included.
+   * @returns false if there is no such background
+   */
+  public pinBackground(scene: SceneId): boolean {
+    return this.background.pin(scene);
+  }
+
+  /**
+   * For developers: pins the next background (`step` 1) or the one before (-1).
+   * @returns the backdrop now on screen
+   */
+  public pinNextBackground(step: 1 | -1): SceneId {
+    return this.background.pinNext(step);
+  }
+
   /** Swaps the whole canvas scene for a flat monochrome 1972 look, with no flashy feedback. */
   public setClassicMode(enabled: boolean): void {
     this.isClassicMode = enabled;

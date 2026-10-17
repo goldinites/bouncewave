@@ -15,6 +15,7 @@ import { Paddle } from '@/match/Paddle';
 import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { COLORS } from '@/shared/palette';
+import { isSceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
 import { NowPlaying } from '@/ui/NowPlaying';
 import { UIManager } from '@/ui/UIManager';
@@ -71,9 +72,12 @@ export class Game {
     );
 
     this.renderer = new Renderer(canvas);
+    // For developers: ?bg=fuji pins a background from the start, matches included
+    const pinned = new URLSearchParams(window.location.search).get('bg');
+    if (pinned && isSceneId(pinned)) this.renderer.pinBackground(pinned);
     // The music opens with the song of whichever backdrop comes up first
     this.audio.music.enterScene(this.renderer.scene);
-    this.showResolution();
+    this.showDebugDetail();
     this.uiManager = new UIManager(this.i18n);
 
     // The UI language follows the settings
@@ -92,6 +96,7 @@ export class Game {
       onToggleFullscreen: () => this.toggleFullscreen(),
       onToggleMusic: () => this.toggleMusic(),
       onNextTrack: () => this.nextTrack(),
+      onStepBackground: (step) => this.stepBackground(step),
       onPress: () => this.flow.skipFinale(),
     });
 
@@ -280,7 +285,7 @@ export class Game {
   private runFrame(timestamp: number): void {
     this.fpsMeter.tick(timestamp);
     if (this.renderer.trackFrameTime(timestamp - this.lastTimestamp)) {
-      this.showResolution();
+      this.showDebugDetail();
     }
 
     const realDt = Math.min(MAX_FRAME_DT, (timestamp - this.lastTimestamp) / 1000);
@@ -311,9 +316,22 @@ export class Game {
     this.renderer.render(frame, realDt);
   }
 
-  /** Shows the dynamic resolution in the ?debug overlay. */
-  private showResolution(): void {
-    this.fpsMeter.setDetail(`res ×${this.renderer.pixelRatio.toFixed(2)}`);
+  /** Shows the dynamic resolution and the background in the ?debug overlay. */
+  private showDebugDetail(): void {
+    const pinned = this.renderer.isBackgroundPinned ? ' (pinned)' : '';
+    this.fpsMeter.setDetail(
+      `res ×${this.renderer.pixelRatio.toFixed(2)}\nbg ${this.renderer.scene}${pinned}`,
+    );
+  }
+
+  /**
+   * For developers, only while the debug overlay is on: B pins the next background (Shift+B
+   * the one before) and brings its music in with it.
+   */
+  private stepBackground(step: 1 | -1): void {
+    if (!this.fpsMeter.isVisible || this.classicMode) return;
+    this.audio.music.enterScene(this.renderer.pinNextBackground(step));
+    this.showDebugDetail();
   }
 
   private buildMusicState(): MusicState {

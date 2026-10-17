@@ -52,6 +52,8 @@ export class BackgroundRenderer {
   /** Background indices still to come before the deck is shuffled again; the next is last. */
   private deck: number[] = [];
   private surf: Surf | null = null;
+  /** A developer pinned the background: it stays, matches included, and the deck sits idle. */
+  private _isPinned = false;
   private lastTime: number | null = null;
 
   private layer: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null = null;
@@ -103,6 +105,7 @@ export class BackgroundRenderer {
    * @returns the backdrop the match is played on
    */
   public switchChannel(isAnimated: boolean): SceneId {
+    if (this._isPinned) return this.scene;
     const count = this.backgrounds.length;
     const previous = this.backgroundIndex;
     this.backgroundIndex = this.deal();
@@ -121,6 +124,34 @@ export class BackgroundRenderer {
       channels.push(this.backgroundIndex);
       this.surf = { age: 0, channels };
     }
+    return this.scene;
+  }
+
+  /** Whether a developer pinned the background on screen. */
+  public get isPinned(): boolean {
+    return this._isPinned;
+  }
+
+  /**
+   * For developers: shows `scene` at once and keeps it, matches included.
+   * @returns false if there is no such background
+   */
+  public pin(scene: SceneId): boolean {
+    const index = this.backgrounds.findIndex((background) => background.scene === scene);
+    if (index < 0) return false;
+    this.backgroundIndex = index;
+    this._isPinned = true;
+    this.surf = null;
+    return true;
+  }
+
+  /**
+   * For developers: pins the next background in the list (`step` 1) or the one before (-1).
+   * @returns the backdrop now on screen
+   */
+  public pinNext(step: 1 | -1): SceneId {
+    const count = this.backgrounds.length;
+    this.pin(this.backgrounds[(this.backgroundIndex + step + count) % count].scene);
     return this.scene;
   }
 

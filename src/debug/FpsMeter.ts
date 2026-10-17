@@ -2,7 +2,8 @@
  * Developer-only FPS overlay.
  *
  * - Lives in its own DOM element on top of the page (never drawn on the canvas).
- * - Hidden by default. Enable with `?debug` in the URL or toggle with F3.
+ * - Hidden by default. Enable with `?debug` in the URL or toggle with F3. While it is on,
+ *   B / Shift+B step through the backgrounds (see Game).
  * - Costs almost nothing while hidden: tick() returns immediately.
  * - Also shows the last error the game caught and survived (reportError), for devices
  *   without a developer console such as iPhones.
@@ -49,6 +50,11 @@ export class FpsMeter {
 
     this.setVisible(new URLSearchParams(window.location.search).has('debug'));
     window.addEventListener('keydown', this.onKeyDown);
+  }
+
+  /** Whether the overlay is on, which also unlocks the other developer keys. */
+  public get isVisible(): boolean {
+    return this.visible;
   }
 
   /** Call once per frame with the timestamp passed by requestAnimationFrame. */

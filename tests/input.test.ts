@@ -10,6 +10,7 @@ const makeHandler = () => {
     onToggleFullscreen: vi.fn(),
     onToggleMusic: vi.fn(),
     onNextTrack: vi.fn(),
+    onStepBackground: vi.fn(),
     onPress: vi.fn(),
   };
   const canvas = document.createElement('canvas');
@@ -96,6 +97,17 @@ describe('InputHandler', () => {
 
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyN' }));
     expect(callbacks.onNextTrack).toHaveBeenCalledOnce();
+    handler.dispose();
+  });
+
+  it('steps through the backgrounds on B, backwards with Shift', () => {
+    const { handler, callbacks } = makeHandler();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', shiftKey: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', repeat: true }));
+
+    expect(vi.mocked(callbacks.onStepBackground).mock.calls).toEqual([[1], [-1]]);
     handler.dispose();
   });
 
