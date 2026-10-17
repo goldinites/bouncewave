@@ -6,7 +6,7 @@ import { COLORS } from '@/shared/palette';
 // Dusk sky down to the lake, cool at rest and hot at full climax or celebration
 const SKY_COOL = ['#07021c', '#2a0f55', '#7a2470', '#e2557a'];
 const SKY_HOT = ['#18041f', '#5c0f45', '#b8323c', '#ff7a45'];
-// The sky gradient is rebuilt only when the heat moves by a step this size
+// The sky gradient and the heat's colors are rebuilt only when the heat moves by a step this size
 const HEAT_STEPS = 40;
 
 const HORIZON = 0.66; // share of the frame's height where the lake meets the mountain
@@ -46,9 +46,24 @@ const CLOUDS = [
 ] as const;
 const CLOUD_COLOR = '#3a1a6e';
 
-// A small moon over the gate's side of the sky; its radius is a share of the frame's shorter side
-const MOON = { X: 0.78, Y: 0.17, RADIUS: 0.048 } as const;
+// A small moon high over the gate; its radius is a share of the frame's shorter side
+const MOON = { X: 0.78, Y: 0.17, RADIUS: 0.048, HALO: 2.8 } as const;
 const MOON_LIGHT = '#ffe9f8';
+
+/*
+ * The near shore on the left: a wooded hill with a five-storied pagoda on its crown, and a
+ * band of forest along the far shore under the mountain. Across the frame in shares of its
+ * width, up from the lake in shares of its shorter side.
+ */
+const HILL = { X: 0.17, HALF_WIDTH: 0.26, HEIGHT: 0.16 } as const;
+const HILL_COLOR = '#0c0424';
+const FOREST = {
+  FAR: { COUNT: 70, HEIGHT: [0.012, 0.03], COLOR: '#1c0b3e' },
+  HILL: { COUNT: 26, HEIGHT: [0.03, 0.06], COLOR: '#090219' },
+} as const;
+const PAGODA = { TIERS: 5, HEIGHT: 0.28, ROOF: 0.26, SPIRE: 0.2 } as const;
+const PAGODA_BODY = '#14051f';
+const WINDOW_LIGHT = '#ffb347';
 
 // The torii standing in the lake, off to one side so the court's middle stays clear
 const GATE = { X: 0.8, DEPTH: 0.47, SIZE: 0.24 } as const;
@@ -111,8 +126,24 @@ interface Layout {
   horizonY: number;
   /** The mountain's half-width at its foot, the unit its shape is drawn in. */
   mountain: number;
-  /** The frame's shorter side, which the gate, moon and branch are sized by. */
+  /** The frame's shorter side, which the gate, moon, hill and branch are sized by. */
   unit: number;
+}
+
+/** Every color that follows the heat, mixed once per heat step instead of every frame. */
+interface Palette {
+  mountainEdge: string;
+  snowEdge: string;
+  glints: string;
+  shoreline: string;
+  gate: string;
+}
+
+/** How the music and the match light the scene on one frame. */
+interface Glow {
+  pulse: number;
+  lights: number;
+  flash: number;
 }
 
 /** A petal, its position in shares of the frame so it fits either orientation. */
@@ -131,6 +162,14 @@ interface BurstPetal extends Petal {
   age: number;
 }
 
+/** A conifer: across the frame (a share of its width), its height and how far it stands below. */
+interface Tree {
+  x: number;
+  height: number;
+  /** For the hill's trees: how far down the slope it stands, a share of its height. */
+  sink: number;
+}
+
 const newPetal = (y = Math.random()): Petal => ({
   x: Math.random(),
   y,
@@ -140,9 +179,23 @@ const newPetal = (y = Math.random()): Petal => ({
   phase: Math.random() * TWO_PI,
 });
 
+const plantForest = (
+  count: number,
+  [low, high]: readonly [number, number],
+  from: number,
+  to: number,
+): Tree[] =>
+  Array.from({ length: count }, (_, i) => ({
+    // Evenly spread with a little jitter, so the treeline has no gaps or clumps
+    x: from + ((i + randomRange(0.1, 0.9)) / count) * (to - from),
+    height: randomRange(low, high),
+    sink: Math.random(),
+  }));
+
 /**
- * Mount Fuji at dusk: a neon-capped cone mirrored in a still lake, a small torii standing in
- * the water off to one side, a cherry branch hanging into the corner and petals on the wind.
+ * Mount Fuji at dusk: a neon-capped cone mirrored in a still lake, a five-storied pagoda on a
+ * wooded hill, forest along the far shore, a small torii standing in the water off to one side,
+ * a cherry branch hanging into the corner and petals on the wind.
  */
 export class FujiBackground implements Background {
   public readonly scene = 'fuji';
@@ -155,10 +208,20 @@ export class FujiBackground implements Background {
     y: Math.random() ** 1.6,
     phase: Math.random() * 10,
   }));
+  private readonly farForest = plantForest(FOREST.FAR.COUNT, FOREST.FAR.HEIGHT, 0, 1);
+  private readonly hillForest = plantForest(
+    FOREST.HILL.COUNT,
+    FOREST.HILL.HEIGHT,
+    HILL.X - HILL.HALF_WIDTH,
+    HILL.X + HILL.HALF_WIDTH,
+  );
   private cloudDrift = Math.random() * 100;
   private dropAge = Infinity;
   private sky: { key: string; value: CanvasGradient } | null = null;
   private slope: { key: string; value: CanvasGradient } | null = null;
+  /** The moon's halo in a unit circle, scaled out to whatever size the beat gives it. */
+  private moonHalo: CanvasGradient | null = null;
+  private palette: { step: number; colors: Palette } | null = null;
 
   public triggerDrop(): void {
     this.dropAge = 0;
@@ -190,6 +253,7 @@ export class FujiBackground implements Background {
       if (petal.x < -0.05) petal.x += 1.1;
     }
 
+    if (this.burst.length === 0) return;
     const drag = Math.exp(-BURST.DRAG * dt);
     for (const petal of this.burst) {
       petal.age += dt;
@@ -207,6 +271,8 @@ export class FujiBackground implements Background {
     const heat = Math.max(climax, celebration);
     const lights = LIGHT_INTENSITY_FLOOR + (1 - LIGHT_INTENSITY_FLOOR) * laserIntensity;
     const flash = this.dropAge < DROP_DURATION ? 1 - this.dropAge / DROP_DURATION : 0;
+    const glow: Glow = { pulse, lights, flash };
+    const colors = this.getPalette(heat);
 
     ctx.save();
     const layout = this.applyOrientation(ctx, isRotated);
@@ -215,10 +281,11 @@ export class FujiBackground implements Background {
     ctx.fillRect(0, 0, layout.width, layout.horizonY);
     this.renderStars(ctx, time, layout);
     this.renderMoon(ctx, pulse, layout);
-    this.renderMountain(ctx, pulse, heat, lights, layout, 1);
+    this.renderMountain(ctx, colors, glow, layout, 1);
     this.renderClouds(ctx, layout);
-    this.renderLake(ctx, frame, heat, lights, layout);
-    this.renderGate(ctx, pulse, heat, lights, flash, layout);
+    this.renderShore(ctx, colors, glow, layout, 1);
+    this.renderLake(ctx, frame, colors, glow, layout);
+    this.renderGate(ctx, colors, glow, heat, layout);
     this.renderBranch(ctx, layout);
     this.renderPetals(ctx, layout);
 
@@ -255,6 +322,23 @@ export class FujiBackground implements Background {
     };
   }
 
+  /** The heat's colors, mixed once per heat step. */
+  private getPalette(heat: number): Palette {
+    const step = Math.round(heat * HEAT_STEPS);
+    if (this.palette?.step === step) return this.palette.colors;
+
+    const t = step / HEAT_STEPS;
+    const colors: Palette = {
+      mountainEdge: mixHexColors(COLORS.PURPLE, COLORS.PINK, t),
+      snowEdge: mixHexColors(COLORS.CYAN, COLORS.PINK, t),
+      glints: mixHexColors(COLORS.CYAN, COLORS.PINK, t),
+      shoreline: mixHexColors(COLORS.PINK, GATE_NEON_HOT, t),
+      gate: mixHexColors(GATE_NEON_COOL, GATE_NEON_HOT, t),
+    };
+    this.palette = { step, colors };
+    return colors;
+  }
+
   /** Sky gradient down to the lake; cached per heat step and orientation. */
   private getSky(ctx: CanvasRenderingContext2D, heat: number, layout: Layout): CanvasGradient {
     const heatStep = Math.round(heat * HEAT_STEPS);
@@ -288,16 +372,23 @@ export class FujiBackground implements Background {
     const x = layout.width * MOON.X;
     const y = layout.height * MOON.Y;
     const radius = layout.unit * MOON.RADIUS;
-    const haloRadius = radius * (2.8 + pulse * 0.4);
 
-    // Halo as a gradient ring rather than shadowBlur, which re-blurs the whole disc
-    const halo = ctx.createRadialGradient(x, y, radius * 0.8, x, y, haloRadius);
-    halo.addColorStop(0, 'rgba(255, 170, 230, 0.35)');
-    halo.addColorStop(1, 'rgba(255, 170, 230, 0)');
-    ctx.fillStyle = halo;
+    // Halo as a gradient ring rather than shadowBlur, which re-blurs the whole disc; built once
+    // in a unit circle and scaled, so the beat never makes a new gradient
+    if (!this.moonHalo) {
+      this.moonHalo = ctx.createRadialGradient(0, 0, 0.8 / MOON.HALO, 0, 0, 1);
+      this.moonHalo.addColorStop(0, 'rgba(255, 170, 230, 0.35)');
+      this.moonHalo.addColorStop(1, 'rgba(255, 170, 230, 0)');
+    }
+    const haloRadius = radius * (MOON.HALO + pulse * 0.4);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(haloRadius, haloRadius);
+    ctx.fillStyle = this.moonHalo;
     ctx.beginPath();
-    ctx.arc(x, y, haloRadius, 0, TWO_PI);
+    ctx.arc(0, 0, 1, 0, TWO_PI);
     ctx.fill();
+    ctx.restore();
 
     ctx.fillStyle = MOON_LIGHT;
     ctx.beginPath();
@@ -314,13 +405,17 @@ export class FujiBackground implements Background {
     ctx.moveTo(cx - m, horizonY);
     // Concave slopes, steepening toward the top
     ctx.quadraticCurveTo(cx - 0.29 * m, horizonY - 0.235 * m, cx - FUJI.TOP * m, summitY);
-    // A slightly ragged crater rim across the flat top
+    this.traceCrater(ctx, cx, summitY, m);
+    ctx.quadraticCurveTo(cx + 0.29 * m, horizonY - 0.235 * m, cx + m, horizonY);
+    ctx.closePath();
+  }
+
+  /** A slightly ragged crater rim across the flat top, left to right. */
+  private traceCrater(ctx: CanvasRenderingContext2D, cx: number, summitY: number, m: number): void {
     ctx.lineTo(cx - 0.05 * m, summitY - 0.025 * m);
     ctx.lineTo(cx - 0.01 * m, summitY - 0.005 * m);
     ctx.lineTo(cx + 0.03 * m, summitY - 0.028 * m);
     ctx.lineTo(cx + FUJI.TOP * m, summitY);
-    ctx.quadraticCurveTo(cx + 0.29 * m, horizonY - 0.235 * m, cx + m, horizonY);
-    ctx.closePath();
   }
 
   /** Adds the snowcap to the current path: the summit down to a ragged snowline. */
@@ -330,10 +425,7 @@ export class FujiBackground implements Background {
     const summitY = horizonY - FUJI.HEIGHT * m;
 
     ctx.moveTo(cx - FUJI.TOP * m, summitY);
-    ctx.lineTo(cx - 0.05 * m, summitY - 0.025 * m);
-    ctx.lineTo(cx - 0.01 * m, summitY - 0.005 * m);
-    ctx.lineTo(cx + 0.03 * m, summitY - 0.028 * m);
-    ctx.lineTo(cx + FUJI.TOP * m, summitY);
+    this.traceCrater(ctx, cx, summitY, m);
     for (const [x, y] of SNOWLINE) {
       ctx.lineTo(cx + x * m, horizonY + y * m);
     }
@@ -346,9 +438,8 @@ export class FujiBackground implements Background {
    */
   private renderMountain(
     ctx: CanvasRenderingContext2D,
-    pulse: number,
-    heat: number,
-    lights: number,
+    colors: Palette,
+    { pulse, lights }: Glow,
     layout: Layout,
     alpha: number,
   ): void {
@@ -360,7 +451,7 @@ export class FujiBackground implements Background {
     this.traceMountain(ctx, layout);
     ctx.fillStyle = this.getSlope(ctx, layout);
     ctx.fill();
-    this.strokeNeon(ctx, mixHexColors(COLORS.PURPLE, COLORS.PINK, heat), 0.55 * alpha, 1.5);
+    this.strokeNeon(ctx, colors.mountainEdge, 0.55 * alpha, 1.5);
 
     ctx.beginPath();
     for (const [from, to] of RIDGES) {
@@ -380,7 +471,7 @@ export class FujiBackground implements Background {
     ctx.fillStyle = SNOW;
     ctx.fill();
     const snowGlow = clamp((0.6 + pulse * 0.4) * lights, 0, 1) * alpha;
-    this.strokeNeon(ctx, mixHexColors(COLORS.CYAN, COLORS.PINK, heat), snowGlow, 1.5);
+    this.strokeNeon(ctx, colors.snowEdge, snowGlow, 1.5);
     ctx.restore();
   }
 
@@ -419,44 +510,194 @@ export class FujiBackground implements Background {
     ctx.restore();
   }
 
+  /** How high the hill stands at `x` (a share of the frame's width), in pixels above the lake. */
+  private hillHeight(x: number, layout: Layout): number {
+    const t = (x - HILL.X) / HILL.HALF_WIDTH;
+    return Math.max(0, 1 - t * t) * HILL.HEIGHT * layout.unit;
+  }
+
+  /** Adds a conifer to the current path: two stacked tiers of branches on a point. */
+  private traceTree(ctx: CanvasRenderingContext2D, x: number, foot: number, height: number): void {
+    const half = height * 0.32;
+    const waist = foot - height * 0.45;
+    ctx.moveTo(x, foot - height);
+    ctx.lineTo(x + half, waist);
+    ctx.lineTo(x + half * 0.6, waist);
+    ctx.lineTo(x + half * 1.2, foot);
+    ctx.lineTo(x - half * 1.2, foot);
+    ctx.lineTo(x - half * 0.6, waist);
+    ctx.lineTo(x - half, waist);
+    ctx.closePath();
+  }
+
   /**
-   * The lake: the mountain mirrored and squashed in it, glints under it as an equalizer and
-   * dark ripples drifting across, broken by the neon line of the far shore.
+   * The near shore: forest along the far side of the lake, then the wooded hill with the
+   * pagoda among its trees. Drawn again, faintly, as the reflection (`alpha`).
+   */
+  private renderShore(
+    ctx: CanvasRenderingContext2D,
+    colors: Palette,
+    glow: Glow,
+    layout: Layout,
+    alpha: number,
+  ): void {
+    const { width, horizonY, unit } = layout;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Far forest: one path for the whole treeline
+    ctx.beginPath();
+    for (const tree of this.farForest) {
+      this.traceTree(ctx, tree.x * width, horizonY, tree.height * unit);
+    }
+    ctx.fillStyle = FOREST.FAR.COLOR;
+    ctx.fill();
+
+    // The hill, its crest traced as a smooth arch
+    const left = (HILL.X - HILL.HALF_WIDTH) * width;
+    const right = (HILL.X + HILL.HALF_WIDTH) * width;
+    const crest = horizonY - HILL.HEIGHT * unit;
+    ctx.beginPath();
+    ctx.moveTo(left, horizonY);
+    ctx.quadraticCurveTo(HILL.X * width, crest * 2 - horizonY, right, horizonY);
+    ctx.closePath();
+    ctx.fillStyle = HILL_COLOR;
+    ctx.fill();
+
+    // Trees behind the pagoda, then the pagoda, then the ones standing in front of it
+    const pagodaX = HILL.X * width;
+    const pagodaFoot = horizonY - this.hillHeight(HILL.X, layout) + 2;
+    const hillTrees = (inFront: boolean) => {
+      ctx.beginPath();
+      for (const tree of this.hillForest) {
+        const height = tree.height * unit;
+        const foot = horizonY - this.hillHeight(tree.x, layout) + tree.sink * height * 1.5;
+        const isInFront = foot > pagodaFoot + height * 0.5;
+        if (isInFront !== inFront) continue;
+        this.traceTree(ctx, tree.x * width, foot, height);
+      }
+      ctx.fillStyle = FOREST.HILL.COLOR;
+      ctx.fill();
+    };
+    hillTrees(false);
+    this.renderPagoda(ctx, pagodaX, pagodaFoot, unit * PAGODA.HEIGHT, colors, glow, alpha);
+    ctx.globalAlpha = alpha;
+    hillTrees(true);
+
+    ctx.restore();
+  }
+
+  /**
+   * A five-storied pagoda: dark bodies stacked under upswept roofs traced in neon, a spire of
+   * rings on top, a lit window on every storey.
+   */
+  private renderPagoda(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    foot: number,
+    size: number,
+    colors: Palette,
+    { pulse, lights, flash }: Glow,
+    alpha: number,
+  ): void {
+    const storey = (size * (1 - PAGODA.SPIRE)) / PAGODA.TIERS;
+    const bodyHeight = storey * 0.6;
+    const roofs: [eave: number, half: number, body: number][] = [];
+    for (let i = 0; i < PAGODA.TIERS; i++) {
+      const half = size * PAGODA.ROOF * (1 - i * 0.12); // each roof a little narrower
+      roofs.push([foot - i * storey - bodyHeight, half, half * 0.6]);
+    }
+
+    // Bodies
+    ctx.beginPath();
+    for (const [eave, , body] of roofs) {
+      ctx.rect(x - body, eave, body * 2, bodyHeight);
+    }
+    ctx.fillStyle = PAGODA_BODY;
+    ctx.fill();
+
+    // Roofs: a flat ridge, eaves sweeping out and up at the tips
+    ctx.beginPath();
+    for (const [eave, half, body] of roofs) {
+      const ridge = eave - storey * 0.4;
+      ctx.moveTo(x - body * 0.8, ridge);
+      ctx.lineTo(x + body * 0.8, ridge);
+      ctx.quadraticCurveTo(x + half * 0.7, eave - storey * 0.1, x + half, eave - storey * 0.25);
+      ctx.quadraticCurveTo(x + half * 0.6, eave + storey * 0.08, x, eave + storey * 0.05);
+      ctx.quadraticCurveTo(x - half * 0.6, eave + storey * 0.08, x - half, eave - storey * 0.25);
+      ctx.quadraticCurveTo(x - half * 0.7, eave - storey * 0.1, x - body * 0.8, ridge);
+      ctx.closePath();
+    }
+    // The spire and its rings
+    const spireFoot = roofs[PAGODA.TIERS - 1][0] - storey * 0.4;
+    const spireTop = foot - size;
+    ctx.moveTo(x, spireFoot);
+    ctx.lineTo(x, spireTop);
+    for (let k = 1; k <= 4; k++) {
+      const y = spireFoot - ((spireFoot - spireTop) * k) / 6;
+      ctx.moveTo(x - storey * 0.18, y);
+      ctx.lineTo(x + storey * 0.18, y);
+    }
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = PAGODA_BODY;
+    ctx.fill();
+    this.strokeNeon(
+      ctx,
+      colors.shoreline,
+      clamp((0.5 + pulse * 0.3) * lights + flash, 0, 1) * alpha,
+      1.2,
+    );
+
+    // A window glowing on every storey, all in one fill
+    ctx.beginPath();
+    for (const [eave, , body] of roofs) {
+      ctx.rect(x - body * 0.25, eave + bodyHeight * 0.35, body * 0.5, bodyHeight * 0.4);
+    }
+    ctx.globalAlpha = clamp((0.45 + pulse * 0.45) * lights + flash, 0, 1) * alpha;
+    ctx.fillStyle = WINDOW_LIGHT;
+    ctx.fill();
+  }
+
+  /**
+   * The lake: the mountain and the shore mirrored and squashed in it, glints under the mountain
+   * as an equalizer and dark ripples drifting across, below the neon line of the far shore.
    */
   private renderLake(
     ctx: CanvasRenderingContext2D,
-    { spectrum, time, pulse }: BackgroundFrame,
-    heat: number,
-    lights: number,
+    { spectrum, time }: BackgroundFrame,
+    colors: Palette,
+    glow: Glow,
     layout: Layout,
   ): void {
     const { width, height, horizonY, mountain: m } = layout;
+    const lakeDepth = height - horizonY;
 
     ctx.fillStyle = LAKE_COLOR;
-    ctx.fillRect(0, horizonY, width, height - horizonY);
+    ctx.fillRect(0, horizonY, width, lakeDepth);
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0, horizonY, width, height - horizonY);
+    ctx.rect(0, horizonY, width, lakeDepth);
     ctx.clip();
     ctx.translate(0, horizonY);
     ctx.scale(1, -REFLECTION.SQUASH);
     ctx.translate(0, -horizonY);
-    this.renderMountain(ctx, pulse, heat, lights, layout, REFLECTION.ALPHA);
+    this.renderMountain(ctx, colors, glow, layout, REFLECTION.ALPHA);
+    this.renderShore(ctx, colors, glow, layout, REFLECTION.ALPHA);
     ctx.restore();
 
     // Glints under the mountain: each one stretches with its analyzer bar
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = mixHexColors(COLORS.CYAN, COLORS.PINK, heat);
-    const lakeDepth = height - horizonY;
+    ctx.fillStyle = colors.glints;
     for (let k = 0; k < SPECTRUM_BARS; k++) {
-      const level = spectrum.getBarLevel(k, SPECTRUM_BARS, time);
       const y = horizonY + lakeDepth * (0.08 + 0.07 * k);
       if (y > height) break;
+      const level = spectrum.getBarLevel(k, SPECTRUM_BARS, time);
       const half = m * (0.12 + 0.3 * level) * (1 - k / SPECTRUM_BARS / 2);
       const wobble = Math.sin(time * 1.5 + k) * 4;
-      ctx.globalAlpha = (0.15 + 0.35 * level) * lights;
+      ctx.globalAlpha = (0.15 + 0.35 * level) * glow.lights;
       ctx.fillRect(width / 2 - half + wobble, y, half * 2, 1.5);
     }
     ctx.restore();
@@ -473,8 +714,8 @@ export class FujiBackground implements Background {
     ctx.stroke();
 
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.6 * lights;
-    ctx.fillStyle = mixHexColors(COLORS.PINK, GATE_NEON_HOT, heat);
+    ctx.globalAlpha = 0.6 * glow.lights;
+    ctx.fillStyle = colors.shoreline;
     ctx.fillRect(0, horizonY - 1, width, 2);
     ctx.restore();
   }
@@ -508,17 +749,15 @@ export class FujiBackground implements Background {
   /** The torii in the water and its reflection, flaring with the beat and on a drop. */
   private renderGate(
     ctx: CanvasRenderingContext2D,
-    pulse: number,
+    colors: Palette,
+    { pulse, lights, flash }: Glow,
     heat: number,
-    lights: number,
-    flash: number,
     layout: Layout,
   ): void {
     const { width, height, horizonY, unit } = layout;
     const cx = width * GATE.X;
     const base = horizonY + (height - horizonY) * GATE.DEPTH;
     const size = unit * GATE.SIZE;
-    const neon = mixHexColors(GATE_NEON_COOL, GATE_NEON_HOT, heat);
     const alpha = clamp((0.6 + pulse * 0.3 + heat * 0.2) * lights + flash, 0, 1);
 
     ctx.save();
@@ -527,14 +766,14 @@ export class FujiBackground implements Background {
     ctx.translate(0, -base);
     ctx.beginPath();
     this.traceGate(ctx, cx, base, size);
-    this.strokeNeon(ctx, neon, alpha * 0.3, 2);
+    this.strokeNeon(ctx, colors.gate, alpha * 0.3, 2);
     ctx.restore();
 
     ctx.beginPath();
     this.traceGate(ctx, cx, base, size);
     ctx.fillStyle = GATE_FILL;
     ctx.fill();
-    this.strokeNeon(ctx, neon, alpha, 2, flash);
+    this.strokeNeon(ctx, colors.gate, alpha, 2, flash);
   }
 
   /** The cherry branch hanging into the top-left corner, heavy with blossom. */
