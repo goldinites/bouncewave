@@ -6,7 +6,7 @@ import { COLORS } from '@/shared/palette';
 // Humid night sky, teal at rest and hot at full climax or celebration
 const SKY_COOL = ['#02060f', '#08243a', '#14505a'];
 const SKY_HOT = ['#14051f', '#4a0f40', '#b8324a'];
-// The sky gradient is rebuilt only when the heat moves by a step this size
+// The sky gradient and the heat's colors are rebuilt only when the heat moves by a step this size
 const HEAT_STEPS = 40;
 
 const WATER_LEVEL = 0.744; // share of the frame's height where the water's surface lies
@@ -19,6 +19,7 @@ const JADE_DIM = '#0f6b55';
 const STONE_TOP = '#0c2a2a';
 const STONE_FOOT = '#041312';
 const STONE_DARK = '#061615';
+const TOWER_STONE = '#082022';
 const MIST_RGB = '183, 155, 255';
 
 /*
@@ -34,13 +35,17 @@ const SCENE_HALF_WIDTH = 400;
 const FACE = { TOP: -288, SCALE: 0.85 } as const;
 /** The platform under the face and its steps going down into the water. */
 const PLATFORM = { HALF_WIDTH: 100, TOP_HALF_WIDTH: 86, HEIGHT: 32, STEPS: 2 } as const;
-/** Smaller guardians on towers in the mist behind: x, how far behind the waterline, size. */
+/**
+ * Smaller guardians on towers in the mist behind, near pair then far pair: x, how far behind
+ * the waterline, size, and how brightly they show through the mist.
+ */
 const TOWERS = [
   { x: -270, y: 0, scale: 0.55, dim: 0.6 },
   { x: 270, y: -4, scale: 0.6, dim: 0.6 },
   { x: -155, y: -20, scale: 0.36, dim: 0.4 },
   { x: 160, y: -24, scale: 0.38, dim: 0.4 },
 ] as const;
+const TOWER_DIMS = [0.6, 0.4] as const;
 /** Broken columns standing in the water: x, the height of their broken top, width. */
 const COLUMNS = [
   { x: -186, top: -72, width: 20 },
@@ -65,6 +70,8 @@ const HALO = {
   COUNTER_SPIN: -0.12,
 } as const;
 const SPECTRUM_BARS = 16;
+// The arcs are lit at this many brightness levels, so they go out in a few strokes, not eight
+const ARC_LEVELS = 4;
 // A light running round the halo while a rally heats up
 const RUNNING_LIGHT = { DASH: 30, GAP: 260, SPEED: 140 } as const;
 // Neon without shadowBlur: a wide faint stroke under the line itself
@@ -77,6 +84,14 @@ const LOTUSES = [
   { x: 0.65, y: 0.53, scale: 1.1 },
   { x: 0.8, y: 0.77, scale: 1 },
 ] as const;
+/** A lotus's petals, fanning up from its heart: angle and length. */
+const LOTUS_PETALS: readonly [angle: number, length: number][] = [
+  [-Math.PI / 2, 22],
+  [-2.2, 18],
+  [-0.94, 18],
+  [-2.7, 13],
+  [-0.44, 13],
+];
 const LOTUS_PINK = '#3a0a34';
 const LOTUS_PAD = '#062a22';
 
@@ -133,6 +148,8 @@ const VINE_LEAF_SPACING = 0.035; // shares of the frame's height
 
 const FIREFLY = { COUNT: 38, WANDER: 0.03, BLINK: 1.4, RADIUS: 1.6 } as const;
 const FIREFLY_COLORS = ['#d8ff6a', JADE] as const;
+// Fireflies are drawn at this many brightness levels per color, a couple of fills apiece
+const FIREFLY_LEVELS = 4;
 const CLIMAX_SPEEDUP = 2; // fireflies wander up to (1 + this)× faster
 // Victory/climax drop: the guardian's eyes and the halo flare, every leaf's rim lights up
 const DROP_DURATION = 1.2;
@@ -160,6 +177,14 @@ interface Glow {
   heat: number;
   lights: number;
   flash: number;
+}
+
+/** Every color that follows the heat, mixed once per heat step instead of every frame. */
+interface Palette {
+  leaves: string;
+  eyes: string;
+  pink: string;
+  cyan: string;
 }
 
 /** Leaves laid out once; only their sway changes from frame to frame. */
@@ -203,6 +228,67 @@ function buildLeaves(): Leaf[] {
   return leaves;
 }
 
+/** Adds a leaf to the current path: two curves from the stem to the tip, the tip drooping. */
+function traceLeaf(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  angle: number,
+  length: number,
+  widthShare: number,
+  droop: number,
+): void {
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const tipX = x + dx * length;
+  const tipY = y + dy * length + droop * length;
+  const midX = x + dx * length * 0.5;
+  const midY = y + dy * length * 0.5 + droop * length * 0.15;
+  const half = length * widthShare;
+
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(midX - dy * half, midY + dx * half, tipX, tipY);
+  ctx.quadraticCurveTo(midX + dy * half, midY - dx * half, x, y);
+}
+
+/** Strokes the current path as neon: a wide faint halo, then the line itself. */
+function strokeNeon(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  alpha: number,
+  lineWidth: number,
+  flash = 0,
+): void {
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = alpha * NEON_HALO.ALPHA;
+  ctx.lineWidth = lineWidth + NEON_HALO.WIDTH + flash * 6;
+  ctx.stroke();
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Strokes the current path as a bare line, without the halo: for what sits far off, in the
+ * mist or in the water, where a halo would cost a wide stroke and barely show.
+ */
+function strokeLine(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  alpha: number,
+  lineWidth: number,
+): void {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+  ctx.restore();
+}
+
 /**
  * A drowned city of stone guardians at night: a great face with deep, watching eyes rises from
  * dark water, a neon halo turning behind it, smaller guardians on towers in the mist, broken
@@ -220,19 +306,24 @@ export class JungleBackground implements Background {
     speed: randomRange(0.6, 1.4),
     color: Math.floor(Math.random() * FIREFLY_COLORS.length),
   }));
+  /** Each firefly's position and brightness level this frame, reused from frame to frame. */
+  private readonly fireflyFrame = new Float32Array(FIREFLY.COUNT * 3);
   private readonly stars = Array.from({ length: STAR_COUNT }, () => ({
     x: Math.random(),
     y: Math.random() ** 1.5 * 0.45,
     phase: Math.random() * 10,
   }));
+  /** Each halo arc's brightness level this frame, reused from frame to frame. */
+  private readonly arcLevels = new Uint8Array(HALO.ARCS);
   /** Seconds of wandering so far; runs faster while the rally is hot. */
   private wander = 0;
   private dropAge = Infinity;
   private sky: { key: string; value: CanvasGradient } | null = null;
   /** A one-unit mist gradient, stretched over every band. */
   private mist: CanvasGradient | null = null;
-  /** Gradients drawn in the face's own units, so one of each serves every face on screen. */
+  /** Gradients drawn in the face's own units, so one of each serves every frame. */
   private faceGradients: { stone: CanvasGradient; eyes: CanvasGradient } | null = null;
+  private palette: { step: number; colors: Palette } | null = null;
 
   public triggerDrop(): void {
     this.dropAge = 0;
@@ -250,6 +341,7 @@ export class JungleBackground implements Background {
     const lights = LIGHT_INTENSITY_FLOOR + (1 - LIGHT_INTENSITY_FLOOR) * laserIntensity;
     const flash = this.dropAge < DROP_DURATION ? 1 - this.dropAge / DROP_DURATION : 0;
     const glow: Glow = { pulse, heat, lights, flash };
+    const colors = this.getPalette(heat);
 
     ctx.save();
     const layout = this.applyOrientation(ctx, isRotated);
@@ -257,10 +349,10 @@ export class JungleBackground implements Background {
     ctx.fillStyle = this.getSky(ctx, heat, layout);
     ctx.fillRect(0, 0, layout.width, layout.waterY);
     this.renderStars(ctx, time, layout);
-    this.renderRuins(ctx, frame, glow, layout);
-    this.renderWater(ctx, frame, glow, layout);
+    this.renderRuins(ctx, frame, colors, glow, layout);
+    this.renderWater(ctx, frame, colors, glow, layout);
     this.renderFireflies(ctx, pulse, lights, flash, layout);
-    this.renderJungle(ctx, time, glow, layout);
+    this.renderJungle(ctx, time, colors, glow, layout);
 
     ctx.restore();
   }
@@ -287,6 +379,22 @@ export class JungleBackground implements Background {
       unit,
       spread: width / 2 / SCENE_HALF_WIDTH / (unit / SCENE_UNITS),
     };
+  }
+
+  /** The heat's colors, mixed once per heat step. */
+  private getPalette(heat: number): Palette {
+    const step = Math.round(heat * HEAT_STEPS);
+    if (this.palette?.step === step) return this.palette.colors;
+
+    const t = step / HEAT_STEPS;
+    const colors: Palette = {
+      leaves: mixHexColors(LEAF_FILL_COOL, LEAF_FILL_HOT, t),
+      eyes: mixHexColors(COLORS.CYAN, COLORS.PINK, t),
+      pink: mixHexColors(COLORS.PINK, '#ff4a3d', t),
+      cyan: mixHexColors(COLORS.CYAN, COLORS.PINK, t),
+    };
+    this.palette = { step, colors };
+    return colors;
   }
 
   /** Sky gradient down to the water; cached per heat step and orientation. */
@@ -323,27 +431,27 @@ export class JungleBackground implements Background {
   private renderRuins(
     ctx: CanvasRenderingContext2D,
     frame: BackgroundFrame,
+    colors: Palette,
     glow: Glow,
     layout: Layout,
   ): void {
     ctx.save();
     this.enterScene(ctx, layout);
 
-    for (const tower of TOWERS) {
-      this.renderTower(ctx, tower.x * layout.spread, tower.y, tower.scale, frame.time, tower.dim);
-    }
-    this.renderMist(ctx, -132, 120, 0.35);
-    this.renderHalo(ctx, frame, glow, 1);
+    this.renderTowers(ctx, frame.time, layout);
+    this.renderMist(ctx, layout, -132, 120, 0.35);
+    this.renderHalo(ctx, frame, colors, glow, false);
     this.renderPlatform(ctx, glow);
-    this.renderFace(ctx, FACE.TOP, FACE.SCALE, glow, 1);
+    this.renderFace(ctx, colors, glow, 1, true);
     this.renderColumns(ctx, layout, 1);
 
     ctx.restore();
   }
 
-  /** A band of mist, `top` and `height` in scene units; the one gradient is cached. */
+  /** A band of mist across the frame, `top` and `height` in scene units. */
   private renderMist(
     ctx: CanvasRenderingContext2D,
+    layout: Layout,
     top: number,
     height: number,
     alpha: number,
@@ -355,113 +463,137 @@ export class JungleBackground implements Background {
       this.mist.addColorStop(1, `rgba(${MIST_RGB}, 0)`);
     }
 
-    // The gradient runs over one unit; scaling it out to the band keeps a single cached copy
+    // The gradient runs over one unit; scaling it out to the band keeps a single cached copy.
+    // It covers the frame's width and no more
+    const halfWidth = layout.width / 2 / (layout.unit / SCENE_UNITS);
     ctx.save();
     ctx.translate(0, top);
     ctx.scale(1, height);
     ctx.globalAlpha = alpha;
     ctx.fillStyle = this.mist;
-    ctx.fillRect(-SCENE_HALF_WIDTH * 2, 0, SCENE_HALF_WIDTH * 4, 1);
-    ctx.restore();
-  }
-
-  /** A guardian on a tower in the mist: a budded spire, a face on its front. */
-  private renderTower(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    base: number,
-    scale: number,
-    time: number,
-    dim: number,
-  ): void {
-    ctx.save();
-    ctx.translate(x, base);
-    ctx.scale(scale, scale);
-
-    ctx.beginPath();
-    ctx.moveTo(-70, 0);
-    ctx.lineTo(-70, -120);
-    ctx.lineTo(-60, -120);
-    ctx.lineTo(-60, -170);
-    ctx.lineTo(-45, -170);
-    ctx.quadraticCurveTo(-50, -260, 0, -300);
-    ctx.quadraticCurveTo(50, -260, 45, -170);
-    ctx.lineTo(60, -170);
-    ctx.lineTo(60, -120);
-    ctx.lineTo(70, -120);
-    ctx.lineTo(70, 0);
-    ctx.closePath();
-    ctx.fillStyle = '#082022';
-    ctx.fill();
-    this.strokeNeon(ctx, JADE, 0.3 * dim, 2);
-
-    // Its face: a brow, the lit slits beneath it and a level mouth
-    ctx.beginPath();
-    ctx.moveTo(-38, -122);
-    ctx.lineTo(38, -122);
-    ctx.moveTo(-14, -70);
-    ctx.lineTo(14, -70);
-    this.strokeNeon(ctx, JADE, 0.35 * dim, 2.5);
-    ctx.beginPath();
-    for (const side of [-1, 1]) {
-      ctx.moveTo(side * 30, -108);
-      ctx.lineTo(side * 10, -108);
-    }
-    this.strokeNeon(ctx, COLORS.CYAN, (0.3 + 0.2 * Math.sin(time + x)) * dim, 2.5);
+    ctx.fillRect(-halfWidth, 0, halfWidth * 2, 1);
     ctx.restore();
   }
 
   /**
+   * Guardians on towers in the mist: budded spires with a face on the front. Towers that show
+   * equally bright through the mist share one path for stone, one for features, one for eyes.
+   */
+  private renderTowers(ctx: CanvasRenderingContext2D, time: number, layout: Layout): void {
+    for (const dim of TOWER_DIMS) {
+      const towers = TOWERS.filter((tower) => tower.dim === dim);
+      const place = (tower: (typeof towers)[number], x: number, y: number) =>
+        [tower.x * layout.spread + x * tower.scale, tower.y + y * tower.scale] as const;
+
+      ctx.beginPath();
+      for (const tower of towers) {
+        const at = (x: number, y: number) => place(tower, x, y);
+        ctx.moveTo(...at(-70, 0));
+        ctx.lineTo(...at(-70, -120));
+        ctx.lineTo(...at(-60, -120));
+        ctx.lineTo(...at(-60, -170));
+        ctx.lineTo(...at(-45, -170));
+        ctx.quadraticCurveTo(...at(-50, -260), ...at(0, -300));
+        ctx.quadraticCurveTo(...at(50, -260), ...at(45, -170));
+        ctx.lineTo(...at(60, -170));
+        ctx.lineTo(...at(60, -120));
+        ctx.lineTo(...at(70, -120));
+        ctx.lineTo(...at(70, 0));
+        ctx.closePath();
+      }
+      ctx.fillStyle = TOWER_STONE;
+      ctx.fill();
+      strokeNeon(ctx, JADE, 0.3 * dim, 2);
+
+      // A brow and a level mouth on each, then the lit slits of its eyes
+      ctx.beginPath();
+      for (const tower of towers) {
+        const at = (x: number, y: number) => place(tower, x, y);
+        ctx.moveTo(...at(-38, -122));
+        ctx.lineTo(...at(38, -122));
+        ctx.moveTo(...at(-14, -70));
+        ctx.lineTo(...at(14, -70));
+      }
+      strokeLine(ctx, JADE, 0.45 * dim, 2);
+      ctx.beginPath();
+      for (const tower of towers) {
+        for (const side of [-1, 1]) {
+          ctx.moveTo(...place(tower, side * 30, -108));
+          ctx.lineTo(...place(tower, side * 10, -108));
+        }
+      }
+      strokeLine(ctx, COLORS.CYAN, (0.5 + 0.2 * Math.sin(time * 0.7)) * dim, 2.5);
+    }
+  }
+
+  /**
    * The halo behind the face: two rings, a ring of ticks turning one way and arc segments the
-   * other, each arc lit by its own analyzer bar. While a rally heats up a light runs round it.
+   * other, each arc lit by its own analyzer bar, and a light running round it while a rally
+   * heats up. Its reflection keeps only the rings and the arcs, at one brightness.
    */
   private renderHalo(
     ctx: CanvasRenderingContext2D,
     { spectrum, time }: BackgroundFrame,
+    colors: Palette,
     { pulse, heat, lights, flash }: Glow,
-    alpha: number,
+    isReflection: boolean,
   ): void {
-    const pink = mixHexColors(COLORS.PINK, '#ff4a3d', heat);
-    const cyan = mixHexColors(COLORS.CYAN, COLORS.PINK, heat);
+    const alpha = isReflection ? REFLECTION.ALPHA : 1;
+    // In the water the halo is a faint ghost of itself: bare lines, no glow
+    const stroke = isReflection ? strokeLine : strokeNeon;
 
     ctx.save();
     ctx.translate(0, HALO.Y);
 
     ctx.beginPath();
     ctx.arc(0, 0, HALO.OUTER, 0, TWO_PI);
-    this.strokeNeon(ctx, pink, clamp((0.35 + pulse * 0.3) * lights + flash, 0, 1) * alpha, 1.5);
-    if (heat > 0.05) {
+    stroke(ctx, colors.pink, clamp((0.35 + pulse * 0.3) * lights + flash, 0, 1) * alpha, 1.5);
+    if (!isReflection && heat > 0.05) {
       ctx.save();
       ctx.setLineDash([RUNNING_LIGHT.DASH, RUNNING_LIGHT.GAP]);
       ctx.lineDashOffset = -time * RUNNING_LIGHT.SPEED;
       ctx.strokeStyle = COLORS.WHITE;
-      ctx.globalAlpha = heat * lights * alpha;
+      ctx.globalAlpha = heat * lights;
       ctx.lineWidth = 2.5;
       ctx.stroke();
       ctx.restore();
     }
-    ctx.beginPath();
-    ctx.arc(0, 0, HALO.INNER, 0, TWO_PI);
-    this.strokeNeon(ctx, cyan, 0.3 * lights * alpha, 1);
-
+    // The inner ring and the ticks share a color, so they go out as one stroke
     ctx.rotate(time * HALO.SPIN);
     ctx.beginPath();
-    for (let k = 0; k < HALO.TICKS; k++) {
-      const angle = (k / HALO.TICKS) * TWO_PI;
-      // Every sixth tick reaches further in
-      const inner = k % 6 ? HALO.TICK[0] : HALO.TICK[0] - 6;
-      ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
-      ctx.lineTo(Math.cos(angle) * HALO.TICK[1], Math.sin(angle) * HALO.TICK[1]);
+    ctx.moveTo(HALO.INNER, 0);
+    ctx.arc(0, 0, HALO.INNER, 0, TWO_PI);
+    if (!isReflection) {
+      for (let k = 0; k < HALO.TICKS; k++) {
+        const angle = (k / HALO.TICKS) * TWO_PI;
+        // Every sixth tick reaches further in
+        const inner = k % 6 ? HALO.TICK[0] : HALO.TICK[0] - 6;
+        ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+        ctx.lineTo(Math.cos(angle) * HALO.TICK[1], Math.sin(angle) * HALO.TICK[1]);
+      }
     }
-    this.strokeNeon(ctx, cyan, 0.35 * lights * alpha, 1);
+    stroke(ctx, colors.cyan, 0.33 * lights * alpha, 1);
 
+    // Arcs, grouped by how bright their bar makes them: one stroke per brightness level
     ctx.rotate(time * (HALO.COUNTER_SPIN - HALO.SPIN));
+    const levels = isReflection ? 1 : ARC_LEVELS;
     for (let k = 0; k < HALO.ARCS; k++) {
       const level = spectrum.getBarLevel(k * 2, SPECTRUM_BARS, time);
-      const start = (k / HALO.ARCS) * TWO_PI;
+      this.arcLevels[k] = Math.min(levels - 1, Math.floor(level * levels));
+    }
+    for (let level = 0; level < levels; level++) {
       ctx.beginPath();
-      ctx.arc(0, 0, HALO.ARC_RADIUS, start, start + HALO.ARC_LENGTH);
-      this.strokeNeon(ctx, pink, clamp((0.3 + 0.7 * level) * lights + flash, 0, 1) * alpha, 2.5);
+      let isEmpty = true;
+      for (let k = 0; k < HALO.ARCS; k++) {
+        if (this.arcLevels[k] !== level) continue;
+        const start = (k / HALO.ARCS) * TWO_PI;
+        ctx.moveTo(Math.cos(start) * HALO.ARC_RADIUS, Math.sin(start) * HALO.ARC_RADIUS);
+        ctx.arc(0, 0, HALO.ARC_RADIUS, start, start + HALO.ARC_LENGTH);
+        isEmpty = false;
+      }
+      if (isEmpty) continue;
+      const brightness = isReflection ? 0.6 : 0.3 + (0.7 * (level + 0.5)) / levels;
+      stroke(ctx, colors.pink, clamp(brightness * lights + flash, 0, 1) * alpha, 2.5);
     }
     ctx.restore();
   }
@@ -478,7 +610,7 @@ export class JungleBackground implements Background {
     ctx.closePath();
     ctx.fillStyle = STONE_DARK;
     ctx.fill();
-    this.strokeNeon(ctx, JADE_DIM, 0.8 * lights, 1);
+    strokeNeon(ctx, JADE_DIM, 0.8 * lights, 1);
 
     ctx.beginPath();
     for (let k = 1; k <= STEPS; k++) {
@@ -487,7 +619,7 @@ export class JungleBackground implements Background {
       ctx.moveTo(-half, y);
       ctx.lineTo(half, y);
     }
-    this.strokeNeon(ctx, JADE, (0.25 + pulse * 0.4) * lights, 1.2);
+    strokeNeon(ctx, JADE, (0.25 + pulse * 0.4) * lights, 1.2);
   }
 
   /** Gradients in the face's own units: stone darkening toward the jaw, the glow of its eyes. */
@@ -504,26 +636,8 @@ export class JungleBackground implements Background {
     return this.faceGradients;
   }
 
-  /**
-   * The guardian: a tiered crown over a long block of a head, a brow jutting out over deep
-   * sockets, lit slits watching from inside them, a long straight nose and hard, pressed lips.
-   * Drawn in its own units (200 wide, 300 tall from the crown's tip), `top` and `scale` place it.
-   */
-  private renderFace(
-    ctx: CanvasRenderingContext2D,
-    top: number,
-    scale: number,
-    { pulse, heat, lights, flash }: Glow,
-    alpha: number,
-  ): void {
-    const { stone, eyes } = this.getFaceGradients(ctx);
-    const edge = 0.5 * lights * alpha;
-
-    ctx.save();
-    ctx.translate(0, top);
-    ctx.scale(scale, scale);
-
-    ctx.beginPath();
+  /** Adds the guardian's head to the current path: tiered crown, block of a head, long earlobes. */
+  private traceHead(ctx: CanvasRenderingContext2D): void {
     ctx.moveTo(-100, 88);
     ctx.lineTo(-90, 58);
     ctx.lineTo(-70, 58);
@@ -541,7 +655,6 @@ export class JungleBackground implements Background {
     ctx.lineTo(-74, 300);
     ctx.lineTo(-96, 262);
     ctx.closePath();
-    // Long earlobes
     for (const side of [-1, 1]) {
       ctx.moveTo(side * 99, 126);
       ctx.lineTo(side * 116, 136);
@@ -550,69 +663,117 @@ export class JungleBackground implements Background {
       ctx.lineTo(side * 98, 236);
       ctx.closePath();
     }
+  }
+
+  /**
+   * The guardian: a tiered crown over a long block of a head, a brow jutting out over deep
+   * sockets, lit slits watching from inside them, a long straight nose and hard, pressed lips.
+   * Drawn in its own units (200 wide, 300 tall from the crown's tip). The reflection leaves
+   * out the stonework, the nose and the mouth: the ripples would hide them anyway.
+   */
+  private renderFace(
+    ctx: CanvasRenderingContext2D,
+    colors: Palette,
+    { pulse, lights, flash }: Glow,
+    alpha: number,
+    isDetailed: boolean,
+  ): void {
+    const { stone, eyes } = this.getFaceGradients(ctx);
+    const edge = 0.5 * lights * alpha;
+
+    ctx.save();
+    ctx.translate(0, FACE.TOP);
+    ctx.scale(FACE.SCALE, FACE.SCALE);
+
+    // The reflection is a faint ghost: bare lines, no glow
+    const stroke = isDetailed ? strokeNeon : strokeLine;
+
+    ctx.beginPath();
+    this.traceHead(ctx);
     ctx.globalAlpha = alpha;
     ctx.fillStyle = stone;
     ctx.fill();
-    this.strokeNeon(ctx, JADE, edge, 1.5);
+    stroke(ctx, JADE, edge, 1.5);
 
-    // The courses of stone it is built from
-    ctx.beginPath();
-    for (const [y, half] of [
-      [88, 98],
-      [176, 98],
-      [226, 97],
-      [266, 92],
-    ]) {
-      ctx.moveTo(-half, y);
-      ctx.lineTo(half, y);
-    }
-    for (const [x, from, to] of [
-      [-58, 88, 118],
-      [62, 88, 118],
-      [-80, 176, 226],
-      [72, 226, 266],
-      [-44, 266, 300],
-      [36, 266, 300],
-    ]) {
-      ctx.moveTo(x, from);
-      ctx.lineTo(x, to);
-    }
-    ctx.strokeStyle = WATER_COLOR;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.8 * alpha;
-    ctx.stroke();
+    if (isDetailed) {
+      // The courses of stone it is built from
+      ctx.beginPath();
+      for (const [y, half] of [
+        [88, 98],
+        [176, 98],
+        [226, 97],
+        [266, 92],
+      ]) {
+        ctx.moveTo(-half, y);
+        ctx.lineTo(half, y);
+      }
+      for (const [x, from, to] of [
+        [-58, 88, 118],
+        [62, 88, 118],
+        [-80, 176, 226],
+        [72, 226, 266],
+        [-44, 266, 300],
+        [36, 266, 300],
+      ]) {
+        ctx.moveTo(x, from);
+        ctx.lineTo(x, to);
+      }
+      ctx.strokeStyle = WATER_COLOR;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.8 * alpha;
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
 
-    // Deep sockets in the shadow of a brow that juts out like a ledge
-    ctx.globalAlpha = alpha;
-    ctx.beginPath();
-    for (const side of [-1, 1]) {
-      ctx.moveTo(side * 72, 132);
-      ctx.lineTo(side * 14, 132);
-      ctx.lineTo(side * 18, 166);
-      ctx.lineTo(side * 66, 166);
-      ctx.closePath();
+      // Deep sockets in the shadow of the brow
+      ctx.beginPath();
+      for (const side of [-1, 1]) {
+        ctx.moveTo(side * 72, 132);
+        ctx.lineTo(side * 14, 132);
+        ctx.lineTo(side * 18, 166);
+        ctx.lineTo(side * 66, 166);
+        ctx.closePath();
+      }
+      ctx.fillStyle = '#010706';
+      ctx.fill();
+
+      // A long, straight nose widening to a flat base
+      ctx.beginPath();
+      this.traceNose(ctx);
+      ctx.fillStyle = '#0d2e2c';
+      ctx.fill();
     }
-    ctx.fillStyle = '#010706';
-    ctx.fill();
+
+    // The brow, jutting out like a ledge
     ctx.beginPath();
-    ctx.moveTo(-86, 116);
-    ctx.lineTo(86, 116);
-    ctx.lineTo(80, 134);
-    ctx.lineTo(-80, 134);
-    ctx.closePath();
+    this.traceBrow(ctx);
     ctx.fillStyle = '#0f3331';
     ctx.fill();
-    this.strokeNeon(ctx, JADE, edge * 1.1, 1.5);
+
+    // Brow, nose and lips share one stroke: a hard level line for a mouth, its corners pulled
+    // down, and a short jutting lower lip
+    if (isDetailed) {
+      this.traceNose(ctx);
+      ctx.moveTo(-38, 247);
+      ctx.lineTo(-32, 240);
+      ctx.lineTo(32, 240);
+      ctx.lineTo(38, 247);
+      ctx.moveTo(-18, 252);
+      ctx.lineTo(18, 252);
+      ctx.moveTo(-46, 284);
+      ctx.lineTo(46, 284);
+    }
+    stroke(ctx, JADE, edge, 1.5);
 
     // Lit slits deep in the sockets, widening a little on the beat and flaring on a drop
-    const eyeColor = mixHexColors(COLORS.CYAN, COLORS.PINK, heat);
     const eyeGlow = clamp((0.55 + 0.45 * pulse) * lights + flash, 0, 1) * alpha;
     const open = 2 + pulse * 3 + flash * 4;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = eyeGlow;
-    ctx.fillStyle = eyes;
-    ctx.fillRect(-90, 110, 180, 80);
+    if (isDetailed) {
+      ctx.fillStyle = eyes;
+      ctx.fillRect(-90, 110, 180, 80);
+    }
     ctx.beginPath();
     for (const side of [-1, 1]) {
       ctx.moveTo(side * 60, 150);
@@ -620,13 +781,25 @@ export class JungleBackground implements Background {
       ctx.lineTo(side * 24, 150 + open / 2);
       ctx.closePath();
     }
-    ctx.fillStyle = eyeColor;
+    ctx.fillStyle = colors.eyes;
     ctx.fill();
     ctx.restore();
-    this.strokeNeon(ctx, eyeColor, eyeGlow, 1);
+    if (isDetailed) strokeNeon(ctx, colors.eyes, eyeGlow, 1);
 
-    // A long, straight nose widening to a flat base
-    ctx.beginPath();
+    ctx.restore();
+  }
+
+  /** Adds the brow to the current path. */
+  private traceBrow(ctx: CanvasRenderingContext2D): void {
+    ctx.moveTo(-86, 116);
+    ctx.lineTo(86, 116);
+    ctx.lineTo(80, 134);
+    ctx.lineTo(-80, 134);
+    ctx.closePath();
+  }
+
+  /** Adds the nose to the current path. */
+  private traceNose(ctx: CanvasRenderingContext2D): void {
     ctx.moveTo(-7, 134);
     ctx.lineTo(7, 134);
     ctx.lineTo(17, 206);
@@ -634,24 +807,6 @@ export class JungleBackground implements Background {
     ctx.lineTo(-10, 214);
     ctx.lineTo(-17, 206);
     ctx.closePath();
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#0d2e2c';
-    ctx.fill();
-    this.strokeNeon(ctx, JADE, edge * 0.8, 1.2);
-
-    // Pressed lips: a hard level line, the corners pulled down, a short jutting lower lip
-    ctx.beginPath();
-    ctx.moveTo(-38, 247);
-    ctx.lineTo(-32, 240);
-    ctx.lineTo(32, 240);
-    ctx.lineTo(38, 247);
-    ctx.moveTo(-18, 252);
-    ctx.lineTo(18, 252);
-    ctx.moveTo(-46, 284);
-    ctx.lineTo(46, 284);
-    this.strokeNeon(ctx, JADE, edge * 0.9, 1.8);
-
-    ctx.restore();
   }
 
   /** Broken columns standing in the water, their tops snapped off. */
@@ -671,7 +826,8 @@ export class JungleBackground implements Background {
     ctx.fillStyle = STONE_FOOT;
     ctx.fill();
     ctx.globalAlpha = 1;
-    this.strokeNeon(ctx, JADE, 0.35 * alpha, 1.2);
+    // Columns in the water are bare lines; only the ones standing in the air glow
+    (alpha < 1 ? strokeLine : strokeNeon)(ctx, JADE, 0.35 * alpha, 1.2);
   }
 
   /**
@@ -681,6 +837,7 @@ export class JungleBackground implements Background {
   private renderWater(
     ctx: CanvasRenderingContext2D,
     frame: BackgroundFrame,
+    colors: Palette,
     glow: Glow,
     layout: Layout,
   ): void {
@@ -697,8 +854,8 @@ export class JungleBackground implements Background {
     ctx.clip();
     this.enterScene(ctx, layout);
     ctx.scale(1, -REFLECTION.SQUASH);
-    this.renderHalo(ctx, frame, glow, REFLECTION.ALPHA);
-    this.renderFace(ctx, FACE.TOP, FACE.SCALE, glow, REFLECTION.ALPHA * 0.6);
+    this.renderHalo(ctx, frame, colors, glow, true);
+    this.renderFace(ctx, colors, glow, REFLECTION.ALPHA * 0.6, false);
     this.renderColumns(ctx, layout, REFLECTION.ALPHA);
     ctx.restore();
 
@@ -720,56 +877,51 @@ export class JungleBackground implements Background {
     ctx.fillRect(0, waterY - 1, width, 2);
     ctx.restore();
 
-    ctx.save();
-    const scale = layout.unit / SCENE_UNITS;
-    for (const lotus of LOTUSES) {
-      const bob = Math.sin(time + lotus.x * 10) * 2;
-      this.renderLotus(
-        ctx,
-        lotus.x * width,
-        waterY + lotus.y * depth + bob,
-        lotus.scale * scale,
-        glow,
-      );
-    }
-    ctx.restore();
+    this.renderLotuses(ctx, time, glow, layout);
   }
 
-  /** A lotus on its pad, its petals glowing with the beat. */
-  private renderLotus(
+  /** Lotuses on their pads, every pad in one path and every flower in another. */
+  private renderLotuses(
     ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    scale: number,
+    time: number,
     { pulse, lights, flash }: Glow,
+    layout: Layout,
   ): void {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(scale, scale);
+    const { width, height, waterY, unit } = layout;
+    const depth = height - waterY;
+    const base = unit / SCENE_UNITS;
+    const placed = (lotus: (typeof LOTUSES)[number]) => ({
+      x: lotus.x * width,
+      y: waterY + lotus.y * depth + Math.sin(time + lotus.x * 10) * 2,
+      s: lotus.scale * base,
+    });
 
     ctx.beginPath();
-    ctx.ellipse(0, 4, 26, 6, 0, 0, TWO_PI);
+    for (const lotus of LOTUSES) {
+      const { x, y, s } = placed(lotus);
+      ctx.moveTo(x + 26 * s, y + 4 * s);
+      ctx.ellipse(x, y + 4 * s, 26 * s, 6 * s, 0, 0, TWO_PI);
+    }
     ctx.fillStyle = LOTUS_PAD;
     ctx.fill();
-    this.strokeNeon(ctx, JADE, 0.4 * lights, 1);
+    strokeLine(ctx, JADE, 0.5 * lights, 1);
 
     ctx.beginPath();
-    for (const [angle, length] of [
-      [-Math.PI / 2, 22],
-      [-2.2, 18],
-      [-0.94, 18],
-      [-2.7, 13],
-      [-0.44, 13],
-    ]) {
-      this.traceLeaf(ctx, 0, 2, angle, length, 0.35, 0);
+    for (const lotus of LOTUSES) {
+      const { x, y, s } = placed(lotus);
+      for (const [angle, length] of LOTUS_PETALS) {
+        traceLeaf(ctx, x, y + 2 * s, angle, length * s, 0.35, 0);
+      }
     }
     ctx.fillStyle = LOTUS_PINK;
     ctx.fill();
-    this.strokeNeon(ctx, COLORS.PINK, clamp((0.5 + 0.4 * pulse) * lights + flash, 0, 1), 1.2);
-    ctx.restore();
+    strokeNeon(ctx, COLORS.PINK, clamp((0.5 + 0.4 * pulse) * lights + flash, 0, 1), 1.2);
   }
 
-  /** Fireflies wandering on slow loops, blinking on and off; a drop lights them all at once. */
+  /**
+   * Fireflies wandering on slow loops, blinking on and off; a drop lights them all at once.
+   * Grouped by color and a few brightness levels, so a frame is a handful of fills.
+   */
   private renderFireflies(
     ctx: CanvasRenderingContext2D,
     pulse: number,
@@ -779,25 +931,50 @@ export class JungleBackground implements Background {
   ): void {
     const { width, height } = layout;
     const t = this.wander;
+    const positions = this.fireflyFrame;
+
+    this.fireflies.forEach((fly, i) => {
+      const blink = Math.max(0, Math.sin(t * FIREFLY.BLINK * fly.speed + fly.phase)) ** 3;
+      const glow = clamp((blink + pulse * 0.3) * lights + flash, 0, 1);
+      positions[i * 3] =
+        (fly.x + Math.sin(t * 0.4 * fly.speed + fly.phase) * FIREFLY.WANDER) * width;
+      positions[i * 3 + 1] =
+        (fly.y + Math.sin(t * 0.55 * fly.speed + fly.phase * 1.7) * FIREFLY.WANDER) * height;
+      // Level 0 is dark enough to skip
+      positions[i * 3 + 2] = Math.round(glow * FIREFLY_LEVELS);
+    });
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    for (const fly of this.fireflies) {
-      const x = (fly.x + Math.sin(t * 0.4 * fly.speed + fly.phase) * FIREFLY.WANDER) * width;
-      const y =
-        (fly.y + Math.sin(t * 0.55 * fly.speed + fly.phase * 1.7) * FIREFLY.WANDER) * height;
-      const blink = Math.max(0, Math.sin(t * FIREFLY.BLINK * fly.speed + fly.phase)) ** 3;
-      const glow = clamp((blink + pulse * 0.3) * lights + flash, 0, 1);
-      if (glow < 0.03) continue;
+    FIREFLY_COLORS.forEach((color, colorIndex) => {
+      ctx.fillStyle = color;
+      for (let level = 1; level <= FIREFLY_LEVELS; level++) {
+        const glow = level / FIREFLY_LEVELS;
+        ctx.beginPath();
+        let isEmpty = true;
+        this.fireflies.forEach((fly, i) => {
+          if (fly.color !== colorIndex || positions[i * 3 + 2] !== level) return;
+          const x = positions[i * 3];
+          const y = positions[i * 3 + 1];
+          ctx.moveTo(x + FIREFLY.RADIUS * 3.5, y);
+          ctx.arc(x, y, FIREFLY.RADIUS * 3.5, 0, TWO_PI);
+          isEmpty = false;
+        });
+        if (isEmpty) continue;
+        ctx.globalAlpha = glow * 0.25;
+        ctx.fill();
 
-      ctx.fillStyle = FIREFLY_COLORS[fly.color];
-      ctx.globalAlpha = glow * 0.25;
-      ctx.beginPath();
-      ctx.arc(x, y, FIREFLY.RADIUS * 3.5, 0, TWO_PI);
-      ctx.fill();
-      ctx.globalAlpha = glow;
-      ctx.fillRect(x - FIREFLY.RADIUS / 2, y - FIREFLY.RADIUS / 2, FIREFLY.RADIUS, FIREFLY.RADIUS);
-    }
+        // The bright core of each, in the same group
+        ctx.beginPath();
+        this.fireflies.forEach((fly, i) => {
+          if (fly.color !== colorIndex || positions[i * 3 + 2] !== level) return;
+          const r = FIREFLY.RADIUS / 2;
+          ctx.rect(positions[i * 3] - r, positions[i * 3 + 1] - r, r * 2, r * 2);
+        });
+        ctx.globalAlpha = glow;
+        ctx.fill();
+      }
+    });
     ctx.restore();
   }
 
@@ -805,17 +982,18 @@ export class JungleBackground implements Background {
   private renderJungle(
     ctx: CanvasRenderingContext2D,
     time: number,
+    colors: Palette,
     { pulse, heat, lights, flash }: Glow,
     layout: Layout,
   ): void {
     const { width, height, unit } = layout;
-    const fill = mixHexColors(LEAF_FILL_COOL, LEAF_FILL_HOT, heat);
+    const fill = colors.leaves;
     const sway = (phase: number) =>
       Math.sin(time * SWAY.RATE + phase) * SWAY.ANGLE * (1 + heat * SWAY.CLIMAX) +
       pulse * SWAY.PULSE;
+    const vineSwing = (i: number) => sway(i * 1.9) * VINES[i].length * height * 0.6;
 
-    // Vines: one stroke for the lot, their little leaves join the leaf paths below
-    const vineLeaves: [x: number, y: number, angle: number][] = [];
+    // Vines: one stroke for the lot
     ctx.save();
     ctx.strokeStyle = fill;
     ctx.lineWidth = 2.5;
@@ -823,14 +1001,9 @@ export class JungleBackground implements Background {
     VINES.forEach((vine, i) => {
       const x = vine.x * width;
       const bottom = vine.length * height;
-      const swing = sway(i * 1.9) * bottom * 0.6;
+      const swing = vineSwing(i);
       ctx.moveTo(x, 0);
       ctx.quadraticCurveTo(x + swing * 0.5, bottom * 0.5, x + swing, bottom);
-      for (let y = VINE_LEAF_SPACING; y < vine.length; y += VINE_LEAF_SPACING) {
-        const t = y / vine.length;
-        const side = Math.round(y / VINE_LEAF_SPACING) % 2 ? 1 : -1;
-        vineLeaves.push([x + swing * t * t, y * height, Math.PI / 2 + side * 0.9]);
-      }
     });
     ctx.stroke();
 
@@ -856,11 +1029,13 @@ export class JungleBackground implements Background {
     ctx.stroke();
     ctx.restore();
 
+    // Every leaf of one rim color in one path; the vines' small leaves go with the jade ones
+    const alpha = clamp((0.35 + pulse * 0.2) * lights + flash, 0, 1);
     [JADE, COLORS.PINK].forEach((rim, rimIndex) => {
       ctx.beginPath();
       for (const leaf of this.leaves) {
         if (leaf.rim !== rimIndex) continue;
-        this.traceLeaf(
+        traceLeaf(
           ctx,
           leaf.x * width,
           leaf.y * height,
@@ -871,60 +1046,25 @@ export class JungleBackground implements Background {
         );
       }
       if (rimIndex === 0) {
-        for (const [x, y, angle] of vineLeaves) {
-          this.traceLeaf(ctx, x, y, angle, unit * 0.025, 0.4, 0);
-        }
+        VINES.forEach((vine, i) => {
+          const swing = vineSwing(i);
+          for (let y = VINE_LEAF_SPACING; y < vine.length; y += VINE_LEAF_SPACING) {
+            const t = y / vine.length;
+            const side = Math.round(y / VINE_LEAF_SPACING) % 2 ? 1 : -1;
+            const x = vine.x * width + swing * t * t;
+            traceLeaf(ctx, x, y * height, Math.PI / 2 + side * 0.9, unit * 0.025, 0.4, 0);
+          }
+        });
       }
       ctx.fillStyle = fill;
       ctx.fill();
-      const alpha = clamp((0.35 + pulse * 0.2) * lights + flash, 0, 1);
-      this.strokeNeon(ctx, heat > 0.5 ? COLORS.PINK : rim, alpha, 1.2, flash);
+      // A bare rim keeps the big leaves cheap; their glow comes in only with a drop's flare
+      const color = heat > 0.5 ? COLORS.PINK : rim;
+      if (flash > 0) {
+        strokeNeon(ctx, color, alpha, 1.2, flash);
+      } else {
+        strokeLine(ctx, color, alpha, 1.5);
+      }
     });
-  }
-
-  /**
-   * Adds a leaf to the current path: two curves from the stem to the tip, the tip pulled down
-   * by `droop` (a share of the length) so long fronds arch over.
-   */
-  private traceLeaf(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    angle: number,
-    length: number,
-    widthShare: number,
-    droop: number,
-  ): void {
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
-    const tipX = x + dx * length;
-    const tipY = y + dy * length + droop * length;
-    const midX = x + dx * length * 0.5;
-    const midY = y + dy * length * 0.5 + droop * length * 0.15;
-    const half = length * widthShare;
-
-    ctx.moveTo(x, y);
-    ctx.quadraticCurveTo(midX - dy * half, midY + dx * half, tipX, tipY);
-    ctx.quadraticCurveTo(midX + dy * half, midY - dx * half, x, y);
-  }
-
-  /** Strokes the current path as neon: a wide faint halo, then the line itself. */
-  private strokeNeon(
-    ctx: CanvasRenderingContext2D,
-    color: string,
-    alpha: number,
-    lineWidth: number,
-    flash = 0,
-  ): void {
-    ctx.save();
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = color;
-    ctx.globalAlpha = alpha * NEON_HALO.ALPHA;
-    ctx.lineWidth = lineWidth + NEON_HALO.WIDTH + flash * 6;
-    ctx.stroke();
-    ctx.globalAlpha = alpha;
-    ctx.lineWidth = lineWidth;
-    ctx.stroke();
-    ctx.restore();
   }
 }

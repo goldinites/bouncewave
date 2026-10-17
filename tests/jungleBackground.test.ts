@@ -45,7 +45,7 @@ describe('JungleBackground', () => {
 
   it('lights every firefly at once on a drop, then lets them blink again', () => {
     const background = new JungleBackground();
-    const lit = () => renderFrame(background, false, 0, 0).fillRect.mock.calls.length;
+    const lit = () => renderFrame(background, false, 0, 0).rect.mock.calls.length;
 
     background.triggerDrop();
     const during = lit();
