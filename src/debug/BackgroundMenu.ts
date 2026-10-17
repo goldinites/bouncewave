@@ -20,8 +20,8 @@ export class BackgroundMenu {
     this.el.setAttribute('aria-label', 'Backgrounds (debug)');
     Object.assign(this.el.style, {
       position: 'fixed',
-      top: 'calc(6px + env(safe-area-inset-top, 0px))',
-      right: 'calc(6px + env(safe-area-inset-right, 0px))',
+      top: 'calc(60px + env(safe-area-inset-top, 0px))',
+      left: 'calc(6px + env(safe-area-inset-right, 0px))',
       zIndex: '9999',
       display: 'none',
       flexDirection: 'column',

@@ -19,6 +19,9 @@ const HEARTBEAT = [
   { delay: 0.17, volume: 0.11 },
 ];
 
+// The channel surf's last channel starts this far flat and glides up onto its note
+const TUNE_IN_FLAT = 0.94;
+
 // Shared echo used by the victory sting
 const ECHO = { TIME: 0.28, FEEDBACK: 0.35, WET: 0.5 } as const;
 
@@ -29,8 +32,6 @@ export class SoundEffects {
   private harmonyGetter: () => Harmony | null;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
-  private noiseBuffer: AudioBuffer | null = null;
-  private noiseContext: AudioContext | null = null;
 
   /**
    * @param getIsGameplayAudible whether gameplay sounds should play right now (false behind
@@ -284,8 +285,9 @@ export class SoundEffects {
   }
 
   /**
-   * The channel surf at the start of a match: a crackle of static at every switch, the last
-   * one hissing away as the picture settles.
+   * The channel surf at the start of a match: a synth blip at every switch, climbing the chord
+   * the music is playing like a retro set's channel-up button, then the last channel tunes in,
+   * gliding up onto the top note and ringing out through the echo.
    */
   public playChannelSurf(): void {
     const ac = this.getUnmutedContext();
@@ -293,43 +295,46 @@ export class SoundEffects {
 
     try {
       const now = ac.currentTime;
-      const noise = this.getNoiseBuffer(ac);
-      for (let i = 0; i < CHANNEL_SURF.CHANNELS; i++) {
-        const isLast = i === CHANNEL_SURF.CHANNELS - 1;
+      const harmony = this.harmonyGetter();
+      const last = CHANNEL_SURF.CHANNELS - 1;
+
+      for (let i = 0; i < last; i++) {
         const start = now + i * CHANNEL_SURF.STEP;
-        const duration = isLast ? CHANNEL_SURF.SETTLE : CHANNEL_SURF.STEP * 0.6;
-        const source = ac.createBufferSource();
-        const band = ac.createBiquadFilter();
-        const gain = ac.createGain();
-
-        source.buffer = noise;
-        band.type = 'bandpass';
-        band.frequency.value = 1800 + i * 400;
-        band.Q.value = 0.7;
-        gain.gain.setValueAtTime(isLast ? 0.05 : 0.07, start);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-
-        source.connect(band);
-        band.connect(gain);
-        gain.connect(ac.destination);
-        source.start(start);
-        source.stop(start + duration + 0.02);
+        const frequency = midiToFrequency(getRallyNote(harmony, i + 1));
+        // A click of the button, then the blip itself
+        this.tone(ac, 2400, start, 0.012, 'triangle', 0.03, 0.001, null);
+        this.tone(
+          ac,
+          frequency,
+          start + 0.005,
+          CHANNEL_SURF.STEP * 0.7,
+          'square',
+          0.04,
+          0.004,
+          null,
+        );
       }
+
+      const start = now + last * CHANNEL_SURF.STEP;
+      const frequency = midiToFrequency(getRallyNote(harmony, CHANNEL_SURF.CHANNELS));
+      const echo = this.getEchoInput(ac);
+      this.tone(ac, 2400, start, 0.012, 'triangle', 0.03, 0.001, null);
+      // Tuning in: from a little flat up onto the note, the way a dial finds the station
+      this.tone(
+        ac,
+        frequency * TUNE_IN_FLAT,
+        start,
+        0.5,
+        'triangle',
+        0.06,
+        0.01,
+        echo,
+        1 / TUNE_IN_FLAT,
+      );
+      this.tone(ac, frequency * 2, start + 0.06, 0.4, 'sine', 0.025, 0.02, echo);
     } catch {
       // Audio playback fails silently if browser policy blocks it
     }
-  }
-
-  /** Half a second of white noise, made once per audio context. */
-  private getNoiseBuffer(ac: AudioContext): AudioBuffer {
-    if (this.noiseBuffer && this.noiseContext === ac) return this.noiseBuffer;
-
-    const buffer = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.5), ac.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-    this.noiseBuffer = buffer;
-    this.noiseContext = ac;
-    return buffer;
   }
 
   /** UI feedback: settings are only reachable from menus, so it must bypass the gameplay gate. */
