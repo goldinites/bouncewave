@@ -37,6 +37,8 @@ const MAX_PIXEL_RATIO = 2;
 // The background is drawn at this share of the scene's resolution (about half the pixels), but
 // never below one canvas pixel per CSS pixel unless the scene itself is
 const BACKGROUND_RESOLUTION = 0.7;
+// The offscreen canvases are rebuilt once the canvas has kept its size this long
+const RESIZE_SETTLE_MS = 500;
 
 // CSS effects on the stage at the end of a match; their animations live in main.css
 const STAGE_CLASSES = {
@@ -76,6 +78,9 @@ export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private scale = 1;
   private resizeObserver: ResizeObserver;
+  /** Set by the ResizeObserver; the canvas is refitted on the next frame, at most once. */
+  private needsFit = false;
+  private settleTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly resolution = new AdaptiveResolution(
     Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO),
   );
@@ -133,7 +138,16 @@ export class Renderer {
     this.vignetteGradient.addColorStop(0, `rgba(${VIGNETTE.RGB}, 0)`);
     this.vignetteGradient.addColorStop(1, `rgba(${VIGNETTE.RGB}, 1)`);
 
-    this.resizeObserver = new ResizeObserver(() => this.fitToDisplay());
+    // Refitting reallocates the background layer and every sprite. An iPhone turning around
+    // reports several sizes in a row, and iOS caps the memory all canvases share: after a few
+    // quick turns an allocation fails, and drawing into or from that canvas silently does nothing
+    // (no background or court, the picture smears) until the next resize. So the canvas is
+    // refitted at most once a frame, and the offscreen canvases are built anew once it settles
+    this.resizeObserver = new ResizeObserver(() => {
+      this.needsFit = true;
+      clearTimeout(this.settleTimer);
+      this.settleTimer = setTimeout(() => this.rebuildOffscreen(), RESIZE_SETTLE_MS);
+    });
     this.resizeObserver.observe(this.canvas);
 
     this.fitToDisplay();
@@ -141,14 +155,23 @@ export class Renderer {
 
   public fitToDisplay(): void {
     const ratio = this.resolution.pixelRatio;
+    const width = Math.round(this.canvas.clientWidth * ratio);
+    const height = Math.round(this.canvas.clientHeight * ratio);
 
-    this.canvas.width = Math.round(this.canvas.clientWidth * ratio);
-    this.canvas.height = Math.round(this.canvas.clientHeight * ratio);
+    // Assigning a size reallocates the canvas even when it is the same one
+    if (this.canvas.width !== width) this.canvas.width = width;
+    if (this.canvas.height !== height) this.canvas.height = height;
 
     this.scale = this.canvas.width / COURT.WIDTH;
 
     const backgroundRatio = Math.max(Math.min(ratio, 1), ratio * BACKGROUND_RESOLUTION);
     this.background.setScale((this.scale * backgroundRatio) / ratio);
+  }
+
+  /** Reallocates the background layer and the sprites, in case iOS failed to during a resize. */
+  private rebuildOffscreen(): void {
+    sprites.clear();
+    this.background.rebuildLayer();
   }
 
   /** Canvas pixels per CSS pixel, lowered while frames are slow. */
@@ -290,6 +313,11 @@ export class Renderer {
     const { gameState, isDemo, paddles, ball, particles, serveTime, isRotated } = frame;
     const gameTime = frame.time;
     const ctx = this.ctx;
+
+    if (this.needsFit) {
+      this.needsFit = false;
+      this.fitToDisplay();
+    }
 
     // A canvas laid out at no size (hidden, or caught mid-layout) has nothing to draw on, and a
     // zero scale would size the sprites' glow margins at infinity, so their canvases at zero
@@ -452,6 +480,7 @@ export class Renderer {
 
   public dispose(): void {
     this.resizeObserver.disconnect();
+    clearTimeout(this.settleTimer);
 
     this.stageEffectId++;
     this.stage?.classList.remove(STAGE_CLASSES.CRT_GLITCH, STAGE_CLASSES.VICTORY_BURST);
