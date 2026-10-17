@@ -37,6 +37,16 @@ describe('JungleBackground', () => {
     }
   });
 
+  it('draws the temple in its forest behind the guardian, its shrine lit', () => {
+    const background = new JungleBackground();
+    const spies = renderFrame(background, false);
+
+    // The pyramid's seven walls, the shrine's door and its light are all filled rectangles
+    expect(spies.fillRect.mock.calls.length).toBeGreaterThan(10);
+    // Leaves, vines and roots of the forest and the temple
+    expect(spies.quadraticCurveTo.mock.calls.length).toBeGreaterThan(500);
+  });
+
   it('runs a light round the halo only while a rally heats up', () => {
     const background = new JungleBackground();
     expect(renderFrame(background, false).setLineDash).not.toHaveBeenCalled();

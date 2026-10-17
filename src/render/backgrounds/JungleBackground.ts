@@ -1,5 +1,6 @@
 import { COURT } from '@/match/config';
 import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
+import { drawJungleTemple, SHRINE_DOOR } from '@/render/backgrounds/jungleTemple';
 import { clamp, mixHexColors, randomRange, TWO_PI } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
@@ -19,7 +20,6 @@ const JADE_DIM = '#0f6b55';
 const STONE_TOP = '#0c2a2a';
 const STONE_FOOT = '#041312';
 const STONE_DARK = '#061615';
-const TOWER_STONE = '#082022';
 const MIST_RGB = '183, 155, 255';
 
 /*
@@ -35,17 +35,9 @@ const SCENE_HALF_WIDTH = 400;
 const FACE = { TOP: -288, SCALE: 0.85 } as const;
 /** The platform under the face and its steps going down into the water. */
 const PLATFORM = { HALF_WIDTH: 100, TOP_HALF_WIDTH: 86, HEIGHT: 32, STEPS: 2 } as const;
-/**
- * Smaller guardians on towers in the mist behind, near pair then far pair: x, how far behind
- * the waterline, size, and how brightly they show through the mist.
- */
-const TOWERS = [
-  { x: -270, y: 0, scale: 0.55, dim: 0.6 },
-  { x: 270, y: -4, scale: 0.6, dim: 0.6 },
-  { x: -155, y: -20, scale: 0.36, dim: 0.4 },
-  { x: 160, y: -24, scale: 0.38, dim: 0.4 },
-] as const;
-const TOWER_DIMS = [0.6, 0.4] as const;
+// The temple and the forest mirrored in the water, faint under the ripples
+const BACKDROP_REFLECTION = 0.14;
+const DOOR_LIGHT = 'rgb(255, 179, 71)';
 /** Broken columns standing in the water: x, the height of their broken top, width. */
 const COLUMNS = [
   { x: -186, top: -72, width: 20 },
@@ -290,9 +282,10 @@ function strokeLine(
 }
 
 /**
- * A drowned city of stone guardians at night: a great face with deep, watching eyes rises from
- * dark water, a neon halo turning behind it, smaller guardians on towers in the mist, broken
- * columns and lotuses all mirrored below — framed by palms, hanging vines and fireflies.
+ * A stone guardian before a temple lost in the jungle at night: a great face with deep,
+ * watching eyes rises from dark water, a neon halo turning behind it, and behind that an
+ * ancient stepped pyramid grown over by the forest, its shrine lit. Broken columns and lotuses
+ * stand in the water and everything is mirrored below — framed by palms, vines and fireflies.
  */
 export class JungleBackground implements Background {
   public readonly scene = 'jungle';
@@ -323,6 +316,12 @@ export class JungleBackground implements Background {
   private mist: CanvasGradient | null = null;
   /** Gradients drawn in the face's own units, so one of each serves every frame. */
   private faceGradients: { stone: CanvasGradient; eyes: CanvasGradient } | null = null;
+  /**
+   * The forest and the temple, which never move, drawn once at the frame's size and
+   * resolution and copied in every frame; null where a canvas can't be had (it is then drawn
+   * straight onto the frame).
+   */
+  private backdrop: { key: string; canvas: HTMLCanvasElement } | null = null;
   private palette: { step: number; colors: Palette } | null = null;
 
   public triggerDrop(): void {
@@ -427,7 +426,10 @@ export class JungleBackground implements Background {
     ctx.scale(scale, scale);
   }
 
-  /** The ruins above the water: towers in the mist, the halo, the platform and the face. */
+  /**
+   * The ruins above the water: the temple in its forest, the light in its shrine, then the
+   * halo, the platform and the face in front.
+   */
   private renderRuins(
     ctx: CanvasRenderingContext2D,
     frame: BackgroundFrame,
@@ -435,16 +437,77 @@ export class JungleBackground implements Background {
     glow: Glow,
     layout: Layout,
   ): void {
+    this.renderBackdrop(ctx, layout);
+
     ctx.save();
     this.enterScene(ctx, layout);
 
-    this.renderTowers(ctx, frame.time, layout);
-    this.renderMist(ctx, layout, -132, 120, 0.35);
+    this.renderShrineLight(ctx, glow);
+    this.renderMist(ctx, layout, -132, 120, 0.1);
     this.renderHalo(ctx, frame, colors, glow, false);
     this.renderPlatform(ctx, glow);
     this.renderFace(ctx, colors, glow, 1, true);
     this.renderColumns(ctx, layout, 1);
 
+    ctx.restore();
+  }
+
+  /**
+   * The forest and the temple: copied in from their cached picture, which is drawn again only
+   * when the frame's size or resolution changes.
+   */
+  private renderBackdrop(ctx: CanvasRenderingContext2D, layout: Layout): void {
+    const canvas = this.getBackdrop(ctx, layout);
+    if (canvas) {
+      ctx.drawImage(canvas, 0, 0, layout.width, layout.waterY);
+      return;
+    }
+    ctx.save();
+    this.enterScene(ctx, layout);
+    drawJungleTemple(ctx, this.sceneHalfWidth(layout));
+    ctx.restore();
+  }
+
+  /** The backdrop's cached picture at the frame's current size and resolution, if any. */
+  private getBackdrop(ctx: CanvasRenderingContext2D, layout: Layout): HTMLCanvasElement | null {
+    // Pixels per frame unit, whichever way the frame is turned
+    const transform = ctx.getTransform?.();
+    const scale = transform ? Math.hypot(transform.a, transform.b) : 1;
+    const key = `${layout.width}|${layout.waterY}|${scale.toFixed(3)}`;
+    if (this.backdrop?.key === key) return this.backdrop.canvas;
+
+    const canvas = this.backdrop?.canvas ?? document.createElement('canvas');
+    canvas.width = Math.max(1, Math.ceil(layout.width * scale));
+    canvas.height = Math.max(1, Math.ceil(layout.waterY * scale));
+    const cache = canvas.getContext('2d');
+    if (!cache) {
+      this.backdrop = null;
+      return null;
+    }
+
+    cache.scale(scale, scale);
+    this.enterScene(cache, layout);
+    drawJungleTemple(cache, this.sceneHalfWidth(layout));
+    this.backdrop = { key, canvas };
+    return canvas;
+  }
+
+  /** How far the frame reaches either side of the middle, in scene units. */
+  private sceneHalfWidth(layout: Layout): number {
+    return layout.width / 2 / (layout.unit / SCENE_UNITS);
+  }
+
+  /** The shrine's doorway on top of the temple, lit from inside, brightening on the beat. */
+  private renderShrineLight(ctx: CanvasRenderingContext2D, { pulse, lights, flash }: Glow): void {
+    const { x, y, width, height } = SHRINE_DOOR;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = clamp((0.5 + 0.4 * pulse) * lights + flash, 0, 1);
+    ctx.fillStyle = DOOR_LIGHT;
+    ctx.fillRect(x, y, width, height);
+    // A faint spill of light over the stone around it
+    ctx.globalAlpha *= 0.25;
+    ctx.fillRect(x - width * 0.6, y - height * 0.3, width * 2.2, height * 1.5);
     ctx.restore();
   }
 
@@ -465,7 +528,7 @@ export class JungleBackground implements Background {
 
     // The gradient runs over one unit; scaling it out to the band keeps a single cached copy.
     // It covers the frame's width and no more
-    const halfWidth = layout.width / 2 / (layout.unit / SCENE_UNITS);
+    const halfWidth = this.sceneHalfWidth(layout);
     ctx.save();
     ctx.translate(0, top);
     ctx.scale(1, height);
@@ -473,57 +536,6 @@ export class JungleBackground implements Background {
     ctx.fillStyle = this.mist;
     ctx.fillRect(-halfWidth, 0, halfWidth * 2, 1);
     ctx.restore();
-  }
-
-  /**
-   * Guardians on towers in the mist: budded spires with a face on the front. Towers that show
-   * equally bright through the mist share one path for stone, one for features, one for eyes.
-   */
-  private renderTowers(ctx: CanvasRenderingContext2D, time: number, layout: Layout): void {
-    for (const dim of TOWER_DIMS) {
-      const towers = TOWERS.filter((tower) => tower.dim === dim);
-      const place = (tower: (typeof towers)[number], x: number, y: number) =>
-        [tower.x * layout.spread + x * tower.scale, tower.y + y * tower.scale] as const;
-
-      ctx.beginPath();
-      for (const tower of towers) {
-        const at = (x: number, y: number) => place(tower, x, y);
-        ctx.moveTo(...at(-70, 0));
-        ctx.lineTo(...at(-70, -120));
-        ctx.lineTo(...at(-60, -120));
-        ctx.lineTo(...at(-60, -170));
-        ctx.lineTo(...at(-45, -170));
-        ctx.quadraticCurveTo(...at(-50, -260), ...at(0, -300));
-        ctx.quadraticCurveTo(...at(50, -260), ...at(45, -170));
-        ctx.lineTo(...at(60, -170));
-        ctx.lineTo(...at(60, -120));
-        ctx.lineTo(...at(70, -120));
-        ctx.lineTo(...at(70, 0));
-        ctx.closePath();
-      }
-      ctx.fillStyle = TOWER_STONE;
-      ctx.fill();
-      strokeNeon(ctx, JADE, 0.3 * dim, 2);
-
-      // A brow and a level mouth on each, then the lit slits of its eyes
-      ctx.beginPath();
-      for (const tower of towers) {
-        const at = (x: number, y: number) => place(tower, x, y);
-        ctx.moveTo(...at(-38, -122));
-        ctx.lineTo(...at(38, -122));
-        ctx.moveTo(...at(-14, -70));
-        ctx.lineTo(...at(14, -70));
-      }
-      strokeLine(ctx, JADE, 0.45 * dim, 2);
-      ctx.beginPath();
-      for (const tower of towers) {
-        for (const side of [-1, 1]) {
-          ctx.moveTo(...place(tower, side * 30, -108));
-          ctx.lineTo(...place(tower, side * 10, -108));
-        }
-      }
-      strokeLine(ctx, COLORS.CYAN, (0.5 + 0.2 * Math.sin(time * 0.7)) * dim, 2.5);
-    }
   }
 
   /**
@@ -852,6 +864,16 @@ export class JungleBackground implements Background {
     ctx.beginPath();
     ctx.rect(0, waterY, width, depth);
     ctx.clip();
+    // The forest and the temple, mirrored from their cached picture in one copy
+    const backdrop = this.backdrop?.canvas;
+    if (backdrop) {
+      ctx.save();
+      ctx.translate(0, waterY);
+      ctx.scale(1, -REFLECTION.SQUASH);
+      ctx.globalAlpha = BACKDROP_REFLECTION;
+      ctx.drawImage(backdrop, 0, -waterY, width, waterY);
+      ctx.restore();
+    }
     this.enterScene(ctx, layout);
     ctx.scale(1, -REFLECTION.SQUASH);
     this.renderHalo(ctx, frame, colors, glow, true);
