@@ -685,6 +685,77 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  {
+    // E minor bent toward a pelog scale (E F G B C): gamelan bells interlocking over a rolling
+    // jungle groove, a muted pluck answering them on the off-beats
+    title: 'Jade Temple',
+    bpm: 108,
+    swing: 0,
+    voices: { lead: 'bell', counter: 'pluck', arp: 'triangle', bass: 'sawtooth' },
+    scene: 'jungle',
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Em9 | Fmaj7 | Am9 | Bsus4',
+        lead: `B4 . . . E5 . . . | C5 . . . E5 . . . | B4 . . . C5 . . . | B4 . . . E5 . . .`,
+        bass: 'long',
+        arp: 'sparse',
+        drums: 'none',
+        pad: 'swell',
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Em | Fmaj7 | C | Bsus4 | Em | Fmaj7 | Am7 | Bsus4',
+        lead: `E5 . G5 . B5 . G5 F5 | F5 . E5 . C5 . E5 . | E5 . G5 . C6 . B5 G5 | B5 - - - E5 - - -
+             | G5 . E5 . B4 . C5 B4 | C5 . F5 . A5 . G5 F5 | E5 . C5 . G5 . F5 E5 | F#5 - - - B4 - - -`,
+        counter: `. E4 . G4 . E4 . B4 | . F4 . A4 . F4 . C5 | . G4 . C5 . G4 . E5 | . F#4 . B4 . F#4 . E4`,
+        bass: 'gallop',
+        arp: 'cascade',
+        drums: 'tribal',
+        fill: 'toms',
+        pad: 'hold',
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Am | Bsus4',
+        lead: `A4 . C5 . E5 . A5 . | B4 . E5 . F#5 . B5 .`,
+        bass: 'eighths',
+        arp: 'up',
+        drums: 'drive',
+        fill: 'taiko',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Em | C | Fmaj7 | Bsus4 | Em | C | Am7 | Bsus4',
+        lead: `B5 - - - G5 - E5 - | G5 - - - E5 - C5 - | A5 - - - C6 - A5 - | B5 - - - F#5 - E5 -
+             | E5 - - - G5 - B5 - | C6 - - - G5 - E5 - | A5 - - - E5 - G5 - | F#5 - - - - - - -`,
+        leadVoice: 'saw',
+        counter: `. B4 . E5 . G5 . E5 | . C5 . E5 . G5 . E5 | . C5 . F5 . A5 . F5 | . B4 . E5 . F#5 . E5`,
+        bass: 'drive',
+        arp: 'updown',
+        drums: 'tribal',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Cmaj7 | Bsus4 | Am9 | Bsus4',
+        lead: `E5 . . . G5 . . . | E5 . . . B4 . . . | C5 . . . E5 . . . | F#5 . . . B4 . . .`,
+        bass: 'long',
+        arp: 'pulse',
+        drums: 'pulse',
+        pad: 'swell',
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);

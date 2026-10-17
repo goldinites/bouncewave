@@ -2,6 +2,7 @@ import { COURT } from '@/match/config';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { Background, BackgroundMood } from '@/render/backgrounds/Background';
 import { FujiBackground } from '@/render/backgrounds/FujiBackground';
+import { JungleBackground } from '@/render/backgrounds/JungleBackground';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
 import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
@@ -19,6 +20,7 @@ const createBackgrounds = (): Background[] => [
   new OutrunBackground(),
   new NeonCityBackground(),
   new FujiBackground(),
+  new JungleBackground(),
 ];
 
 /**

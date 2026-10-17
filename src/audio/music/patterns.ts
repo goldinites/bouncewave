@@ -39,6 +39,13 @@ export const DRUM_PATTERNS = {
     snare: '....X..o.o..X..o',
     hat: 'x.x.x.x.x.x.x.x.',
   },
+  // A rolling jungle groove: an off-kilter kick, a busy shaker and a deep drum answering it
+  tribal: {
+    kick: 'X.....x...X..x..',
+    snare: '....x.......x...',
+    hat: 'x.xx.xx.x.xx.xx.',
+    taiko: '..x.....x.x.....',
+  },
   // A straight beat with a taiko answering the kick, like a festival drum line
   matsuri: {
     kick: 'X.......X.......',
