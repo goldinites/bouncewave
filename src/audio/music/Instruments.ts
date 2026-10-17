@@ -8,7 +8,19 @@ const SUPERSAW_DETUNE_CENTS = [-12, 12];
 const VIBRATO = { RATE: 5.5, DEPTH_CENTS: 14, DELAY: 0.25, MIN_DURATION: 0.45 } as const;
 // FM bell: a sine modulated at an inharmonic ratio, its brightness dying away quickly
 const BELL = { RATIO: 3.5, INDEX: 2.2, BRIGHTNESS_DECAY: 0.5, MIN_RING: 1.2 } as const;
+// Koto: the string is plucked a little flat and snaps up into pitch, then rings out
+const KOTO = { SNAP_CENTS: -70, SNAP_TIME: 0.04, MIN_RING: 0.5, RING_SHARE: 1.6 } as const;
+// Shakuhachi-like flute: breath on the attack, a scoop up into the note, slow wide vibrato
+const FLUTE = {
+  ATTACK: 0.06,
+  SCOOP_CENTS: -45,
+  SCOOP_TIME: 0.12,
+  BREATH: 0.35,
+  VIBRATO_RATE: 4.5,
+  VIBRATO_CENTS: 22,
+} as const;
 const TOM_PITCHES: Record<string, number> = { '1': 220, '2': 160, '3': 115 };
+const TAIKO_PITCH = 78; // Hz: deep enough to read as a big drum, high enough for phone speakers
 
 /** One-shot synth voices, each scheduled at an exact audio-clock time. */
 export class Instruments {
@@ -73,6 +85,12 @@ export class Instruments {
         return;
       case 'pluck':
         this.note('sawtooth', midiNote, time, duration, volume, destination, filterCutoff * 1.4);
+        return;
+      case 'koto':
+        this.koto(midiNote, time, duration, volume, destination, filterCutoff);
+        return;
+      case 'flute':
+        this.flute(midiNote, time, duration, volume, destination);
         return;
       case 'saw':
       case 'square':
@@ -174,6 +192,116 @@ export class Instruments {
     modulator.start(time);
     carrier.stop(time + ring + 0.05);
     modulator.stop(time + ring + 0.05);
+  }
+
+  /** Plucked koto string: a bright snap that bends up into the note and rings past it. */
+  private koto(
+    midiNote: number,
+    time: number,
+    duration: number,
+    volume: number,
+    destination: AudioNode,
+    filterCutoff: number,
+  ): void {
+    const ring = Math.max(KOTO.MIN_RING, duration * KOTO.RING_SHARE);
+    const osc = this.ac.createOscillator();
+    const filter = this.ac.createBiquadFilter();
+    const gain = this.ac.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.value = midiToFrequency(midiNote);
+    osc.detune.setValueAtTime(KOTO.SNAP_CENTS, time);
+    osc.detune.exponentialRampToValueAtTime(-1, time + KOTO.SNAP_TIME);
+    osc.detune.linearRampToValueAtTime(0, time + KOTO.SNAP_TIME + 0.01);
+
+    // A resonant peak gives the string its nasal twang as the brightness dies away
+    filter.Q.value = 4;
+    filter.frequency.setValueAtTime(filterCutoff * 1.8, time);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(300, filterCutoff * 0.25), time + ring);
+
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(volume, time + 0.004);
+    gain.gain.exponentialRampToValueAtTime(volume * 0.3, time + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + ring);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(destination);
+    osc.start(time);
+    osc.stop(time + ring + 0.05);
+  }
+
+  /**
+   * Breathy flute: a sine with a touch of its octave, scooping up into the note through a puff
+   * of band-passed breath, a wide vibrato swelling on held notes.
+   */
+  private flute(
+    midiNote: number,
+    time: number,
+    duration: number,
+    volume: number,
+    destination: AudioNode,
+  ): void {
+    const frequency = midiToFrequency(midiNote);
+    const end = time + duration;
+    const attack = Math.min(FLUTE.ATTACK, duration * 0.3);
+    const release = Math.min(0.15, duration * 0.3);
+    const gain = this.ac.createGain();
+
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(volume, time + attack);
+    gain.gain.setValueAtTime(volume, end - release);
+    gain.gain.exponentialRampToValueAtTime(0.0001, end);
+    gain.connect(destination);
+
+    const oscillators = [
+      { type: 'sine' as const, ratio: 1, level: 1 },
+      { type: 'triangle' as const, ratio: 2, level: 0.18 },
+    ].map(({ type, ratio, level }) => {
+      const osc = this.ac.createOscillator();
+      const partial = this.ac.createGain();
+      osc.type = type;
+      osc.frequency.value = frequency * ratio;
+      osc.detune.setValueAtTime(FLUTE.SCOOP_CENTS, time);
+      osc.detune.linearRampToValueAtTime(0, time + Math.min(FLUTE.SCOOP_TIME, duration * 0.4));
+      partial.gain.value = level;
+      osc.connect(partial);
+      partial.connect(gain);
+      osc.start(time);
+      osc.stop(end + 0.05);
+      return osc;
+    });
+
+    if (duration >= VIBRATO.MIN_DURATION) {
+      const lfo = this.ac.createOscillator();
+      const depth = this.ac.createGain();
+      lfo.frequency.value = FLUTE.VIBRATO_RATE;
+      depth.gain.setValueAtTime(0, time);
+      depth.gain.setValueAtTime(0, time + VIBRATO.DELAY);
+      depth.gain.linearRampToValueAtTime(FLUTE.VIBRATO_CENTS, end);
+      lfo.connect(depth);
+      oscillators.forEach((osc) => depth.connect(osc.detune));
+      lfo.start(time);
+      lfo.stop(end + 0.05);
+    }
+
+    // The breath: noise around the note, loudest on the attack, a whisper under the rest
+    const breath = this.ac.createBufferSource();
+    const band = this.ac.createBiquadFilter();
+    const breathGain = this.ac.createGain();
+    breath.buffer = this.graph.noiseBuffer;
+    breath.loop = true;
+    band.type = 'bandpass';
+    band.frequency.value = frequency * 2;
+    band.Q.value = 1.5;
+    breathGain.gain.setValueAtTime(volume * FLUTE.BREATH, time);
+    breathGain.gain.exponentialRampToValueAtTime(volume * FLUTE.BREATH * 0.15, time + attack * 3);
+    breathGain.gain.exponentialRampToValueAtTime(0.0001, end);
+    breath.connect(band);
+    band.connect(breathGain);
+    breathGain.connect(destination);
+    breath.start(time);
+    breath.stop(end + 0.05);
   }
 
   /**
@@ -317,6 +445,25 @@ export class Instruments {
     gain.connect(this.graph.bus);
     osc.start(time);
     osc.stop(time + 0.35);
+  }
+
+  /** Taiko: a deep, slowly dropping drum body under the slap of the stick on its skin. */
+  public taiko(time: number, volume: number): void {
+    const osc = this.ac.createOscillator();
+    const gain = this.ac.createGain();
+
+    osc.frequency.setValueAtTime(TAIKO_PITCH * 1.4, time);
+    osc.frequency.exponentialRampToValueAtTime(TAIKO_PITCH, time + 0.06);
+    osc.frequency.exponentialRampToValueAtTime(TAIKO_PITCH * 0.8, time + 0.6);
+    gain.gain.setValueAtTime(volume, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.65);
+
+    osc.connect(gain);
+    gain.connect(this.graph.bus);
+    osc.start(time);
+    osc.stop(time + 0.7);
+
+    this.noise(time, 0.04, volume * 0.35, 1800);
   }
 
   /** Noise swept up through a band-pass, swelling until `time + duration`. */

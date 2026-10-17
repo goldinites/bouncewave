@@ -48,6 +48,7 @@ const OSD_COLORS = {
 
 /** 80s/90s Memphis design on a VHS screen: drifting shapes, dot grid, scan bar, OSD text. */
 export class MemphisBackground implements Background {
+  public readonly scene = 'memphis';
   public readonly overlayTint = 0.3;
   private readonly shapes: MemphisShape[];
 

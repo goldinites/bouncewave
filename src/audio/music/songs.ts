@@ -537,6 +537,79 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  {
+    // D minor after midnight in the rain: shamisen-like koto riffs over a half-time beat, a
+    // breathy flute low underneath and taiko rolling into every section
+    title: 'Shinjuku Rain',
+    bpm: 92,
+    swing: 0.06,
+    voices: { lead: 'koto', counter: 'flute', arp: 'triangle', bass: 'sawtooth' },
+    scene: 'neonCity',
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Dm9 | Bbmaj7 | Gm9 | A7sus4 A7',
+        counter: `D5 - - - - - C5 A4 | F5 - - - D5 - - - | G5 - - - - - F5 D5 | E5 - - - C#5 - - -`,
+        bass: 'long',
+        arp: 'sparse',
+        drums: 'none',
+        pad: 'swell',
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Dm | Bb | C | Am | Dm | Bb | Gm7 | A7',
+        lead: `D5 . F5 . A5 G5 F5 . | D5 . F5 . Bb4 - - . | G4 . C5 . E5 - D5 C5 | A4 - - - E4 - G4 -
+             | D5 . F5 . A5 G5 F5 . | F5 . G5 . F5 . D5 . | G5 . F5 . D5 . Eb5 D5 | E5 - - - C#5 - A4 -`,
+        counter: `A4 - - - - - - - | F4 - - - - - - - | G4 - - - - - - - | E4 - - - - - - -
+                | A4 - - - - - - - | F4 - - - - - - - | D4 - - - - - - - | E4 - - - - - - -`,
+        bass: 'sync',
+        arp: 'pulse',
+        drums: 'halftime',
+        fill: 'taiko',
+        pad: 'hold',
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Gm | A7sus4 A7',
+        lead: `G4 . Bb4 . D5 . G5 . | A4 . D5 . C#5 . E5 .`,
+        bass: 'eighths',
+        arp: 'up',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Dm | Bb | F | C | Dm | Bb | Gm7 | A7',
+        lead: `D6 - - - A5 - G5 F5 | F5 - - - D5 - F5 - | A5 - - - C6 - A5 - | G5 - - - E5 - D5 -
+             | D6 - - - A5 - C6 - | D6 - - - Bb5 - A5 G5 | Bb5 - - - G5 - F5 - | E5 - - - C#5 - - -`,
+        leadVoice: 'saw',
+        counter: `A4 - - - - - - - | D5 - - - - - - - | C5 - - - - - - - | E5 - - - - - - -
+                | F5 - - - - - - - | D5 - - - - - - - | D5 - - - - - - - | C#5 - - - - - - -`,
+        bass: 'octave',
+        arp: 'broken',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        stabs: 'offbeat',
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Bbmaj7 | Am7 | Gm9 | A7sus4 A7',
+        lead: `D5 . . . F5 . . . | E5 . . . C5 . . . | D5 . . . Bb4 . . . | A4 . . . C#5 . . .`,
+        bass: 'long',
+        arp: 'pulse',
+        drums: 'pulse',
+        pad: 'swell',
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);

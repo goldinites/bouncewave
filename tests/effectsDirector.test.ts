@@ -15,7 +15,7 @@ const makeRenderer = () => ({
   celebrate: vi.fn(),
   triggerVictoryEffect: vi.fn(),
   triggerCrtGlitch: vi.fn(),
-  nextBackground: vi.fn(),
+  nextBackground: vi.fn(() => 'outrun'),
   hideFinalScore: vi.fn(),
   showFinalScore: vi.fn(),
   classicMode: false,
@@ -40,7 +40,7 @@ const makeAudio = () => ({
     duck: vi.fn(),
     tapeStop: vi.fn(),
     recover: vi.fn(),
-    newSong: vi.fn(),
+    enterScene: vi.fn(),
     resetClimax: vi.fn(),
   },
 });
@@ -97,13 +97,13 @@ describe('EffectsDirector.handle', () => {
     expect(effects.paddleGlow).toEqual([0, 0]);
   });
 
-  it('starts a new song and the next background on returnToMenu', () => {
+  it('brings up the next background and its music on returnToMenu', () => {
     const { effects, audio, renderer } = makeDirector();
 
     handle(effects, { type: 'returnToMenu' });
 
-    expect(audio.music.newSong).toHaveBeenCalledOnce();
     expect(renderer.nextBackground).toHaveBeenCalledOnce();
+    expect(audio.music.enterScene).toHaveBeenCalledExactlyOnceWith('outrun');
   });
 
   it('shakes and beeps on a wall bounce', () => {

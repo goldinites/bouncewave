@@ -46,6 +46,7 @@ const TOP_ROW_COLORS = Array.from(
 const VIGNETTE_STRETCH = (COURT.WIDTH * 0.5) / (COURT.HEIGHT * 0.4);
 
 export class LaserBackground implements Background {
+  public readonly scene = 'lasers';
   public readonly overlayTint = 0.15;
 
   /** Gradients that never change, built on first use. */

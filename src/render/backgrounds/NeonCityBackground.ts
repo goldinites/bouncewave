@@ -208,6 +208,7 @@ function buildSkyline(layer: SkylineLayer): Skyline {
  * across the wet street below.
  */
 export class NeonCityBackground implements Background {
+  public readonly scene = 'neonCity';
   public readonly overlayTint = 0.2;
 
   private readonly skylines = LAYERS.map(buildSkyline);

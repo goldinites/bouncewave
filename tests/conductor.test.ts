@@ -27,6 +27,12 @@ const def = (title: string): SongDef => ({
 
 const SONGS = [compileSong(def('One')), compileSong(def('Two'))];
 const THREE = [...SONGS, compileSong(def('Three'))];
+// Two shared songs, then one that belongs to the city and one to the lasers
+const WITH_SCENES = [
+  ...SONGS,
+  compileSong({ ...def('City'), scene: 'neonCity' }),
+  compileSong({ ...def('Lasers'), scene: 'lasers' }),
+];
 
 /** Plays `bars` bars wanting `tier`; returns the section name of every bar played. */
 const play = (conductor: Conductor, tier: Tier, bars: number): string[] =>
@@ -119,5 +125,48 @@ describe('Conductor', () => {
     conductor.skip('groove');
     conductor.skip('groove');
     expect(conductor.upcomingSong.title).toBe('Three');
+  });
+
+  describe('with songs that belong to a backdrop', () => {
+    it("plays the backdrop's own song first, at the next phrase boundary", () => {
+      const conductor = new Conductor(WITH_SCENES, 0, 'groove');
+      expect(conductor.enterScene('neonCity')).toBe(true);
+      play(conductor, 'calm', 2);
+      expect(conductor.song.title).toBe('City');
+    });
+
+    it('keeps the backdrop’s own song if it is already playing', () => {
+      const conductor = new Conductor(WITH_SCENES, 2, 'groove');
+      expect(conductor.enterScene('neonCity')).toBe(false);
+      play(conductor, 'calm', 4);
+      expect(conductor.song.title).toBe('City');
+    });
+
+    it('never picks another backdrop’s song, at random or on a skip', () => {
+      for (const roll of [0, 0.3, 0.6, 0.99]) {
+        const conductor = new Conductor(WITH_SCENES, 2, 'groove', () => roll);
+        conductor.enterScene('outrun');
+        play(conductor, 'calm', 2);
+        expect(['One', 'Two']).toContain(conductor.song.title);
+
+        conductor.skip('groove');
+        conductor.advance();
+        expect(['One', 'Two']).toContain(conductor.song.title);
+      }
+    });
+
+    it('moves on to the shared songs after the backdrop’s own one', () => {
+      const titles = new Set<string>();
+      for (const roll of [0, 0.5, 0.99]) {
+        const conductor = new Conductor(WITH_SCENES, 0, 'groove', () => roll);
+        conductor.enterScene('neonCity');
+        conductor.skip('groove'); // takes the music to the city's own song
+        conductor.advance();
+        conductor.skip('groove');
+        conductor.advance();
+        titles.add(conductor.song.title);
+      }
+      expect(titles).toEqual(new Set(['One', 'Two']));
+    });
   });
 });

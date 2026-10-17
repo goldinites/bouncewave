@@ -1,5 +1,6 @@
 import { chordAt, Section, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { Chord } from '@/audio/music/theory';
+import { SceneId } from '@/shared/scenes';
 
 // A song plays at least this many bars before the conductor moves on, at the end of a
 // section and never in the middle of a climax
@@ -39,6 +40,10 @@ export class Conductor {
   private isSongChangeRequested = false;
   /** Where a skip goes; it overrides every plan until the bar line takes the music there. */
   private skipTarget: Position | null = null;
+  /** The backdrop on screen; songs that belong to another one never play. */
+  private scene: SceneId | null = null;
+  /** The backdrop's own song, waiting to be the next one picked. */
+  private queuedSong: number | null = null;
   private readonly random: () => number;
   /** How many times each tier was entered, to take turns between a song's sections of it. */
   private readonly turns = new Map<Tier, number>();
@@ -88,6 +93,23 @@ export class Conductor {
   /** Move on to another song at the next phrase boundary. */
   public requestNewSong(): void {
     this.isSongChangeRequested = true;
+  }
+
+  /**
+   * Another backdrop came up: move on to another song at the next phrase boundary — the
+   * backdrop's own one if it has one — unless that song is already playing.
+   * @returns whether the song is going to change
+   */
+  public enterScene(scene: SceneId): boolean {
+    this.scene = scene;
+    const own = this.songs.findIndex((song) => song.scene === scene);
+    if (own >= 0 && own === this.position.songIndex) {
+      this.queuedSong = null;
+      return false;
+    }
+    this.queuedSong = own >= 0 ? own : null;
+    this.requestNewSong();
+    return true;
   }
 
   /**
@@ -164,12 +186,21 @@ export class Conductor {
   }
 
   /**
-   * Any song but the one playing, at random — and, when a skip is already on its way, not that
-   * one either, so every press of skip brings a new title.
+   * The backdrop's own song if it is waiting; otherwise any song but the one playing, at random
+   * — and, when a skip is already on its way, not that one either, so every press of skip
+   * brings a new title. Songs that belong to another backdrop are left out.
    */
   private pickOtherSong(): number {
+    if (this.queuedSong !== null) {
+      const queued = this.queuedSong;
+      this.queuedSong = null;
+      return queued;
+    }
+
     const excluded = new Set([this.position.songIndex, this.skipTarget?.songIndex]);
-    const candidates = this.songs.flatMap((_, i) => (excluded.has(i) ? [] : [i]));
+    const candidates = this.songs.flatMap((song, i) =>
+      excluded.has(i) || (song.scene !== undefined && song.scene !== this.scene) ? [] : [i],
+    );
     if (candidates.length === 0) return this.position.songIndex;
     return candidates[Math.floor(this.random() * candidates.length)];
   }
