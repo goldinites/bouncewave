@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nManager } from '@/i18n/I18nManager';
-import { NOW_PLAYING_IDLE_MS, NowPlaying } from '@/ui/NowPlaying';
+import { NOW_PLAYING_IDLE_MS, NOW_PLAYING_REVEAL_MS, NowPlaying } from '@/ui/NowPlaying';
 
 const setup = () => {
   const actions = { onToggle: vi.fn(), onNext: vi.fn() };
@@ -84,6 +84,23 @@ describe('NowPlaying', () => {
 
       nowPlaying.update('Chrome Heart', false);
       expect(isIdle()).toBe(false);
+    });
+
+    it('opens the title out for a while after a skip', () => {
+      setup();
+      const isRevealed = () => byId('nowPlaying').classList.contains('now-playing--reveal');
+
+      byId('nextTrack').click();
+      expect(isRevealed()).toBe(true);
+
+      // Another skip starts the count again
+      vi.advanceTimersByTime(NOW_PLAYING_REVEAL_MS - 1);
+      byId('nextTrack').click();
+      vi.advanceTimersByTime(NOW_PLAYING_REVEAL_MS - 1);
+      expect(isRevealed()).toBe(true);
+
+      vi.advanceTimersByTime(1);
+      expect(isRevealed()).toBe(false);
     });
 
     it('stays awake while a pointer rests on it', () => {

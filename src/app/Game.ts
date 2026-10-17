@@ -46,8 +46,8 @@ export class Game {
   private readonly titleTaps: TitleTaps | null;
 
   /**
-   * The classic-mode easter egg: `?classic` in the URL turns it on; the Konami code, or five
-   * quick taps on the menu's title, toggles it.
+   * The classic-mode easter egg: the Konami code, or on a phone five quick taps on the menu's
+   * title, toggles it.
    */
   private classicMode = false;
 
@@ -134,13 +134,14 @@ export class Game {
     });
 
     this.konamiCode = new KonamiCode(() => this.setClassicMode(!this.classicMode));
+    // Taps are the phone's way in; a mouse has the Konami code's keyboard to hand
     const title = document.getElementById('gameTitle');
-    this.titleTaps = title
-      ? new TitleTaps(title, () => this.setClassicMode(!this.classicMode))
-      : null;
-    this.setClassicMode(new URLSearchParams(window.location.search).has('classic'));
+    this.titleTaps =
+      title && window.matchMedia('(pointer: coarse)').matches
+        ? new TitleTaps(title, () => this.setClassicMode(!this.classicMode))
+        : null;
 
-    // Errors outside the game loop (input and button handlers): shown in the ?fps overlay
+    // Errors outside the game loop (input and button handlers): shown in the ?debug overlay
     window.addEventListener(
       'error',
       (event) => this.fpsMeter.reportError(event.error ?? event.message),
@@ -308,7 +309,7 @@ export class Game {
     this.renderer.render(frame, realDt);
   }
 
-  /** Shows the dynamic resolution in the ?fps overlay. */
+  /** Shows the dynamic resolution in the ?debug overlay. */
   private showResolution(): void {
     this.fpsMeter.setDetail(`res ×${this.renderer.pixelRatio.toFixed(2)}`);
   }

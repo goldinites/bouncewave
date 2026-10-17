@@ -4,8 +4,11 @@ import { getRequiredElement } from '@/ui/dom';
 const TITLE_ENTER_CLASS = 'now-playing__title--enter';
 const CLASSIC_CLASS = 'now-playing--classic';
 const IDLE_CLASS = 'now-playing--idle';
+const REVEAL_CLASS = 'now-playing--reveal';
 // Left alone this long, the chip fades back so it doesn't compete with the court
 export const NOW_PLAYING_IDLE_MS = 5000;
+// After a skip, how long a phone on its side (where the chip has no room for the title) shows it
+export const NOW_PLAYING_REVEAL_MS = 3000;
 
 export interface NowPlayingActions {
   onToggle: () => void;
@@ -25,6 +28,7 @@ export class NowPlaying {
   /** What the chip last showed, so a frame that changes nothing leaves the DOM alone. */
   private shown: string | null = null;
   private idleTimer: number | null = null;
+  private revealTimer: number | null = null;
   private isHovered = false;
   private readonly listeners = new AbortController();
 
@@ -43,6 +47,7 @@ export class NowPlaying {
     this.next.onclick = () => {
       actions.onNext();
       this.next.blur();
+      this.reveal();
     };
 
     const { signal } = this.listeners;
@@ -77,6 +82,16 @@ export class NowPlaying {
       if (this.isHovered) return;
       this.chip.classList.add(IDLE_CLASS);
     }, NOW_PLAYING_IDLE_MS);
+  }
+
+  /** Opens the title out for a few seconds; only a phone on its side, which folds it away, shows it. */
+  private reveal(): void {
+    this.chip.classList.add(REVEAL_CLASS);
+    if (this.revealTimer !== null) window.clearTimeout(this.revealTimer);
+    this.revealTimer = window.setTimeout(() => {
+      this.revealTimer = null;
+      this.chip.classList.remove(REVEAL_CLASS);
+    }, NOW_PLAYING_REVEAL_MS);
   }
 
   /**
@@ -116,5 +131,6 @@ export class NowPlaying {
     this.next.onclick = null;
     this.listeners.abort();
     if (this.idleTimer !== null) window.clearTimeout(this.idleTimer);
+    if (this.revealTimer !== null) window.clearTimeout(this.revealTimer);
   }
 }

@@ -3,8 +3,8 @@ const TAPS_TO_UNLOCK = 5;
 const TAP_GAP_MS = 500;
 
 /**
- * The touch way into the classic mode, for a phone with no keyboard for the Konami code and,
- * installed as an app, no address bar for `?classic`: five quick taps on the menu's title.
+ * The touch way into the classic mode, for a phone with no keyboard for the Konami code:
+ * five quick taps on the menu's title.
  */
 export class TitleTaps {
   private count = 0;

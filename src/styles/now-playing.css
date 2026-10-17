@@ -186,13 +186,26 @@
 
 /* A phone on its side: in the narrow margin beside the court, shrunk to the record and the skip */
 @media (max-height: 520px) and (orientation: landscape) {
-  /* The buttons keep their aria-labels, so the title can go entirely */
-  .now-playing__title {
-    display: none;
+  .now-playing__toggle {
+    gap: 0;
+    padding: 0 8px;
   }
 
-  .now-playing__toggle {
-    padding: 0 8px;
+  /* The buttons keep their aria-labels, so the title folds away entirely */
+  .now-playing__title {
+    max-width: 0;
+    transition:
+      max-width 0.35s ease-in,
+      margin-left 0.35s ease-in;
+  }
+
+  /* A skip opens it out over the court's corner for a few seconds, to name the new song */
+  .now-playing--reveal .now-playing__title {
+    max-width: 180px;
+    margin-left: 8px;
+    transition:
+      max-width 0.35s ease-out,
+      margin-left 0.35s ease-out;
   }
 }
 
@@ -211,5 +224,9 @@
   .now-playing__record,
   .now-playing__title--enter {
     animation: none !important;
+  }
+
+  .now-playing__title {
+    transition: none !important;
   }
 }
