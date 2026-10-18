@@ -76,7 +76,11 @@ Rules that keep it clean:
   or the CPU) and whether it has Overdrive. Never branch on "paddle 0 is the player" in the
   match; ask the lineup.
 
-Known hard-coded assumptions the roadmap's stage 0 removes: one ball, global `PADDLE` sizes. Outside the match the left side is still taken to be the player
+- The rules say how many balls are in play (`rules.balls`); the match keeps them
+  (`flow.balls`, the first is `deps.ball`) and the first ball out ends the point for all of
+  them. Draw every ball in `frame.balls`; the camera and the drama follow `flow.leadBall`.
+
+Known hard-coded assumptions the roadmap's stage 0 removes: global `PADDLE` sizes. Outside the match the left side is still taken to be the player
 (whose win the finale and menus show, whose Overdrive meter is drawn).
 
 ## Extension points that exist today

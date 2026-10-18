@@ -9,7 +9,7 @@ import { OVERDRIVE } from '@/match/Overdrive';
 import { Paddle } from '@/match/Paddle';
 import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 
-const FIRST_TO_3: MatchRules = { winningScore: 3, overdrive: true };
+const FIRST_TO_3: MatchRules = { winningScore: 3, overdrive: true, balls: 1 };
 const NO_OVERDRIVE: MatchRules = { ...STANDARD_RULES, overdrive: false };
 
 const setup = () => {

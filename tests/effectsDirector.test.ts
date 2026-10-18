@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AudioEngine } from '@/audio/AudioEngine';
 import { EffectsDirector } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
-import { Ball } from '@/match/Ball';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import type { Renderer } from '@/render/Renderer';
@@ -58,7 +57,6 @@ const makeDirector = () => {
     new Paddle(0, 34, COLORS.CYAN),
     new Paddle(1, 750, COLORS.PINK),
   ];
-  const ball = new Ball();
   const translate = (key: 'win' | 'lose') => (key === 'win' ? 'YOU WIN' : 'YOU LOSE');
 
   const effects = new EffectsDirector({
@@ -66,11 +64,10 @@ const makeDirector = () => {
     audio: audio as unknown as AudioEngine,
     particles,
     paddles,
-    ball,
     translate,
   });
 
-  return { effects, renderer, audio, particles, paddles, ball };
+  return { effects, renderer, audio, particles, paddles };
 };
 
 const handle = (effects: EffectsDirector, event: MatchEvent) => effects.handle(event);

@@ -58,6 +58,9 @@ export interface RenderFrame {
   paddles: readonly Paddle[];
   /** Points each side has won. */
   scores: Scores;
+  /** Every ball on court. */
+  balls: readonly Ball[];
+  /** The one the camera closes in on: the ball about to decide the point. */
   ball: Ball;
   particles: ParticleSystem;
   analyser: AnalyserNode | null;
@@ -417,10 +420,11 @@ export class Renderer {
       EntityRenderer.renderOverdriveMeter(ctx, player, charge, gameTime);
     }
 
-    // Ball
-    // A power shot burns as hot as the full rally climax
-    const ballHeat = Math.max(frame.climax, ball.isPowerShot ? 1 : 0);
-    EntityRenderer.renderBall(ctx, ball, frame.rally, gameTime, serveTime, ballHeat);
+    // Balls; a power shot burns as hot as the full rally climax
+    for (const each of frame.balls) {
+      const ballHeat = Math.max(frame.climax, each.isPowerShot ? 1 : 0);
+      EntityRenderer.renderBall(ctx, each, frame.rally, gameTime, serveTime, ballHeat);
+    }
 
     // Particles and shockwaves
     EntityRenderer.renderParticles(ctx, particles.particles);
@@ -467,7 +471,7 @@ export class Renderer {
    * particles, shake, zoom or vignette — just the court, the paddles, the ball and the score.
    */
   private renderClassic(frame: RenderFrame, realDt: number): void {
-    const { isDemo, paddles, ball, serveTime, isRotated } = frame;
+    const { isDemo, paddles, serveTime, isRotated } = frame;
     const ctx = this.ctx;
 
     ctx.fillStyle = '#000000';
@@ -494,7 +498,7 @@ export class Renderer {
       const player = playerPaddle(paddles);
       EntityRenderer.renderOverdriveMeter(ctx, player, frame.overdriveCharge, frame.time, true);
     }
-    EntityRenderer.renderClassicBall(ctx, ball);
+    frame.balls.forEach((each) => EntityRenderer.renderClassicBall(ctx, each));
 
     if (this.finalSign) {
       FinalScoreRenderer.render(ctx, this.finalSign, this.finalSignAge, isRotated, true);
