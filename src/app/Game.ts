@@ -175,7 +175,7 @@ export class Game {
     this.statsRecorder = new StatsRecorder({
       profile: this.profile,
       match: this.flow,
-      getDifficulty: () => this.settings.current.difficulty,
+      getDifficulty: () => this.flow.difficulty,
     });
 
     // The effects hear each event before the menus do
@@ -408,17 +408,19 @@ export class Game {
   }
 
   private buildMusicState(): MusicState {
+    // In a match, the match's level (a challenge sets its own); behind the menus, the chosen one
+    const difficulty = this.flow.isDemo ? this.settings.current.difficulty : this.flow.difficulty;
     return {
       gameState: this.flow.gameState,
       serveTime: this.flow.serveTime,
       // The music builds with the fastest ball on court
       ballSpeed: Math.max(...this.flow.balls.map((b) => b.speed)),
-      maxBallSpeed: DIFFICULTY_CONFIGS[this.settings.current.difficulty].maxSpeed,
+      maxBallSpeed: DIFFICULTY_CONFIGS[difficulty].maxSpeed,
       rally: this.flow.rally,
       scores: [...this.flow.scores],
-      winningScore: this.flow.rules.winningScore,
+      winningScores: this.flow.rules.winningScores,
       isMuted: this.settings.current.musicMuted || this.classicMode,
-      difficulty: this.settings.current.difficulty,
+      difficulty,
     };
   }
 

@@ -80,7 +80,7 @@ describe('the balls on court', () => {
     flow.returnToMenu();
     expect(flow.balls).toHaveLength(1);
 
-    flow.startMatch({ ...TWO_BALLS, winningScore: 1 });
+    flow.startMatch({ ...TWO_BALLS, winningScores: [1, 1] });
     finishServe();
     place(flow.balls[0], -BALL.OUT_OF_BOUNDS_OFFSET - 1, -10);
     flow.update(0.001);

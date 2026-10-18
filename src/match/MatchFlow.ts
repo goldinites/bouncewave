@@ -11,6 +11,7 @@ import {
   PlayerInput,
 } from '@/match/PaddleController';
 import { OVERDRIVE, Overdrive } from '@/match/Overdrive';
+import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Physics, PhysicsEvent } from '@/match/Physics';
 import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
@@ -71,6 +72,8 @@ export interface Participant {
   readonly controller: PaddleController;
   /** Whether the paddle charges Overdrive, when the match's rules have it on. */
   readonly overdrive: boolean;
+  /** The paddle they play with; the standard one when left out. */
+  readonly paddle?: PaddleSpec;
 }
 
 /** Who plays a match: a participant for each of its paddles, in the same order. */
@@ -82,6 +85,7 @@ export interface MatchFlowDeps {
   /** The match's first ball; the rules may put more on court alongside it. */
   ball: Ball;
   input: PlayerInput;
+  /** The level a match is played at unless it is started at its own (a challenge's). */
   getDifficulty: () => DifficultyLevel;
   /** Called synchronously, in order, for everything that happens. */
   onEvent: (event: MatchEvent) => void;
@@ -114,6 +118,10 @@ export class MatchFlow {
   private readonly _scores: [number, number] = [0, 0];
   /** The rules of the match being played (or last played); set by startMatch. */
   private _rules: MatchRules = STANDARD_RULES;
+  /** The level the match being played (or just finished) is at; null in the demo. */
+  private matchDifficulty: DifficultyLevel | null = null;
+  /** Seconds left on the match clock; null without one, or in the demo. */
+  private _timeLeft: number | null = null;
   private readonly paddles: readonly Paddle[];
   /** Every ball on court: the first is the one given, the rest the rules' extra balls. */
   private readonly _balls: Ball[];
@@ -184,6 +192,19 @@ export class MatchFlow {
     return this._rules;
   }
 
+  /**
+   * The level the match being played (or just finished) is at: how fast the ball gets and how
+   * well the CPU plays. Before the first match, the chosen one.
+   */
+  public get difficulty(): DifficultyLevel {
+    return this.matchDifficulty ?? this.getDifficulty();
+  }
+
+  /** Seconds left on the match clock; null when the match has none (and in the demo). */
+  public get timeLeft(): number | null {
+    return this._timeLeft;
+  }
+
   /** Both sides are one point from winning under the match's rules. */
   public get isDecidingPoint(): boolean {
     return isDecidingPoint(this._scores, this._rules);
@@ -223,15 +244,21 @@ export class MatchFlow {
   }
 
   /**
-   * The usual match: the player at the left side's first paddle, the CPU at the chosen
+   * The usual match: the player at the left side's first paddle, the CPU at the match's
    * difficulty on every other.
+   * @param paddles what each side plays with, [left, right]; the standard paddle by default
    */
-  public playerVsCpu(): Lineup {
-    return this.paddles.map((_, i) =>
-      i === this.playerIndex
-        ? { controller: new HumanController(this.input), overdrive: true }
-        : { controller: new AiPaddleController(this.random, this.getDifficulty), overdrive: false },
-    );
+  public playerVsCpu(
+    paddles: readonly [PaddleSpec, PaddleSpec] = [STANDARD_PADDLE, STANDARD_PADDLE],
+  ): Lineup {
+    return this.paddles.map(({ side }, i) => ({
+      controller:
+        i === this.playerIndex
+          ? new HumanController(this.input)
+          : new AiPaddleController(this.random, () => this.difficulty),
+      overdrive: i === this.playerIndex,
+      paddle: paddles[side],
+    }));
   }
 
   /** Whether a person plays this paddle (an index into the match's paddles) in this match. */
@@ -251,8 +278,10 @@ export class MatchFlow {
   }
 
   public startAttract(): void {
-    this.lineup = this.demoLineup;
+    this.useLineup(this.demoLineup);
     this.useBalls(1);
+    this.matchDifficulty = null;
+    this._timeLeft = null;
     this._phase = 'attract';
     this.serve(1, SERVE_DELAY.DEMO);
   }
@@ -260,13 +289,21 @@ export class MatchFlow {
   /**
    * @param rules what wins the match and which mechanics are on; a standard match by default
    * @param lineup who plays it; the player against the CPU by default
+   * @param difficulty how fast the ball gets and how well the CPU plays; the chosen level by
+   * default
    */
-  public startMatch(rules: MatchRules = STANDARD_RULES, lineup: Lineup = this.playerVsCpu()): void {
+  public startMatch(
+    rules: MatchRules = STANDARD_RULES,
+    lineup: Lineup = this.playerVsCpu(),
+    difficulty: DifficultyLevel = this.getDifficulty(),
+  ): void {
     if (lineup.length !== this.paddles.length) {
       throw new Error('A lineup needs a participant for every paddle');
     }
     this._rules = rules;
-    this.lineup = lineup;
+    this.matchDifficulty = difficulty;
+    this._timeLeft = rules.timeLimit;
+    this.useLineup(lineup);
     this.useBalls(rules.balls);
     this.emit({ type: 'matchStart' });
     this.resetScores();
@@ -320,7 +357,17 @@ export class MatchFlow {
       return;
     }
 
-    const difficulty = DIFFICULTY_CONFIGS[this.getDifficulty()];
+    // The clock runs through serves and rallies alike: a lost point costs the time of the serve
+    if (this._timeLeft !== null && this._phase !== 'attract') {
+      this._timeLeft = Math.max(0, this._timeLeft - dt);
+      if (this._timeLeft === 0) {
+        this.endOnTime();
+        return;
+      }
+    }
+
+    // The demo plays at the chosen level, also right after a challenge at its own
+    const difficulty = DIFFICULTY_CONFIGS[this.isDemo ? this.getDifficulty() : this.difficulty];
     this.updatePaddles(dt);
 
     if (this._serveTime > 0) {
@@ -381,6 +428,12 @@ export class MatchFlow {
       }
     }
     return pick;
+  }
+
+  /** Hands the paddles to `lineup`, each made the paddle its participant plays with. */
+  private useLineup(lineup: Lineup): void {
+    this.lineup = lineup;
+    lineup.forEach(({ paddle }, i) => this.paddles[i].useSpec(paddle ?? STANDARD_PADDLE));
   }
 
   /** Puts `count` balls on court: the match's first ball and as many new ones as it takes. */
@@ -453,13 +506,23 @@ export class MatchFlow {
     this.lineup.forEach(({ controller }, i) => controller.onPoint(this.paddles[i], scorer));
     this.emit({ type: 'score', scoringPlayerIndex: scorer, y, isDemo: false });
 
-    if (this._scores[scorer] >= this._rules.winningScore) {
+    if (this._scores[scorer] >= this._rules.winningScores[scorer]) {
       this.beginFinale(scorer, y);
       return;
     }
 
     this._phase = 'serving';
     this.serve(nextServe, SERVE_DELAY.NORMAL);
+  }
+
+  /**
+   * The match clock has run out: the match ends where it stands, mid-rally or not. The side
+   * ahead wins; on a level score the player loses (with no player, the right side wins).
+   */
+  private endOnTime(): void {
+    const [left, right] = this._scores;
+    const winner: Side = left === right ? otherSide(this.playerSide ?? 0) : left > right ? 0 : 1;
+    this.beginFinale(winner, this.leadBall.y);
   }
 
   private beginFinale(winner: Side, ballY: number): void {
@@ -474,7 +537,7 @@ export class MatchFlow {
   private finishFinale(): void {
     const winner = this.finaleWinner;
     this._phase = 'attract';
-    this.lineup = this.demoLineup;
+    this.useLineup(this.demoLineup);
     this.useBalls(1);
 
     this.emit({ type: 'gameOver', winnerIndex: winner, scores: [...this._scores] });

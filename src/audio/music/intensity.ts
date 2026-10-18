@@ -3,6 +3,7 @@ import { getRallyHeat, getSpeedHeat } from '@/match/heat';
 import { GameState } from '@/match/GameState';
 import { DifficultyLevel } from '@/match/difficulty';
 import { STANDARD_RULES } from '@/match/rules';
+import { Scores } from '@/match/side';
 import { clamp } from '@/shared/math';
 
 // Per sequencer step (~0.13 s), how quickly intensity follows the rally climax
@@ -20,8 +21,8 @@ export interface MusicState {
   maxBallSpeed: number;
   rally: number;
   scores: [number, number];
-  /** Points that win the match being played. */
-  winningScore: number;
+  /** Points that win the match being played, for each side. */
+  winningScores: Scores;
   isMuted: boolean;
   difficulty: DifficultyLevel;
 }
@@ -33,7 +34,7 @@ export const INITIAL_MUSIC_STATE: MusicState = {
   maxBallSpeed: 1,
   rally: 0,
   scores: [0, 0],
-  winningScore: STANDARD_RULES.winningScore,
+  winningScores: STANDARD_RULES.winningScores,
   isMuted: false,
   difficulty: DifficultyLevel.NORMAL,
 };
@@ -45,7 +46,8 @@ const RALLY_BASE_INTENSITY = 0.25;
 const RALLY_INTENSITY_RANGE = 0.65;
 const SPEED_WEIGHT = 0.7;
 const RALLY_WEIGHT = 0.3;
-// Late in the match: either side has this share of the points that win it (6 of 10, 2 of 3)
+// Late in the match: either side has this share of the points that win it for that side
+// (6 of 10, 2 of 3)
 const LATE_MATCH_SHARE = 0.6;
 const LATE_MATCH_BONUS = 0.1;
 // Per sequencer step; intensity drifts slowly so the arrangement never lurches
@@ -69,7 +71,9 @@ export function getTargetIntensity(state: MusicState, current: number): number {
       const heat =
         getSpeedHeat(state.ballSpeed, state.maxBallSpeed) * SPEED_WEIGHT +
         getRallyHeat(state.rally) * RALLY_WEIGHT;
-      const isLate = Math.max(...state.scores) >= LATE_MATCH_SHARE * state.winningScore;
+      const isLate = state.scores.some(
+        (score, side) => score >= LATE_MATCH_SHARE * state.winningScores[side],
+      );
       const lateMatch = isLate ? LATE_MATCH_BONUS : 0;
       return RALLY_BASE_INTENSITY + RALLY_INTENSITY_RANGE * clamp(heat, 0, 1) + lateMatch;
     }

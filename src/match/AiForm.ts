@@ -4,7 +4,6 @@ import {
   DIFFICULTY_LEVELS,
   DifficultyLevel,
 } from '@/match/difficulty';
-import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 import { clamp, lerp } from '@/shared/math';
 
 // Pressure on the CPU: its lead in points, plus this much per point of the current streak
@@ -45,14 +44,14 @@ export class AiForm {
   /**
    * Call on every serve of a real match, after the score has changed.
    * @param scores [player, CPU]
-   * @param rules the match's, which say when the deciding point comes
+   * @param isDecidingPoint the next point decides the match, by the match's rules
    */
   public update(
     scores: readonly [number, number],
     adaptivity: number,
-    rules: MatchRules = STANDARD_RULES,
+    isDecidingPoint = false,
   ): void {
-    if (isDecidingPoint(scores, rules)) return;
+    if (isDecidingPoint) return;
 
     const lead = scores[1] - scores[0];
     const streakPressure = Math.sign(this.streak) * Math.max(0, Math.abs(this.streak) - 1);

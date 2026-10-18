@@ -85,7 +85,7 @@ describe('AiForm', () => {
     settle(form, [4, 8], 0.4);
     const before = form.shift;
 
-    form.update([WINNING_SCORE - 1, WINNING_SCORE - 1], 0.4);
+    form.update([WINNING_SCORE - 1, WINNING_SCORE - 1], 0.4, true);
     expect(form.shift).toBe(before);
   });
 

@@ -1,9 +1,13 @@
+import { ChallengeId } from '@/match/challenges';
 import { DifficultyLevel } from '@/match/difficulty';
 import { ModeId } from '@/match/modes';
 import { BackgroundChoice } from '@/shared/scenes';
 export type Language = 'en' | 'ru';
 
 export type DifficultyDescription = [name: string, description: string];
+
+/** A challenge's name, and what it takes to pass it. */
+export type ChallengeDescription = [name: string, goal: string];
 
 export interface TranslationSchema {
   play: string;
@@ -63,6 +67,8 @@ export interface TranslationSchema {
   backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
   d: Record<DifficultyLevel, DifficultyDescription>;
+  /** Name and goal of every challenge, by challenge. */
+  challenges: Record<ChallengeId, ChallengeDescription>;
 }
 
 export const TRANSLATIONS: Record<Language, TranslationSchema> = {
@@ -123,6 +129,17 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       [DifficultyLevel.HARD]: ['HARD', 'vs CPU: fast and accurate'],
       [DifficultyLevel.INSANE]: ['INSANE', 'vs CPU: barely makes mistakes'],
     },
+    challenges: {
+      warmUp: ['WARM-UP', 'Win the match'],
+      blitz: ['BLITZ', 'Win in two minutes: first to 5, or ahead when time is up'],
+      longRally: ['LONG RALLY', 'Keep a rally going for 20 hits within a minute'],
+      shutout: ['SHUTOUT', 'Win without losing a point'],
+      twoBalls: ['TWO BALLS', 'Win with two balls in play'],
+      survival: ['SURVIVAL', 'Score 15 points before you lose three lives'],
+      giant: ['GIANT', 'Win against a CPU with a paddle half as long again'],
+      overload: ['OVERLOAD', 'Win with 5 Overdrive shots'],
+      insanity: ['INSANITY', 'Win on Insane'],
+    },
   },
   ru: {
     play: 'ИГРАТЬ',
@@ -180,6 +197,17 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       [DifficultyLevel.NORMAL]: ['СРЕДНЯЯ', 'Против CPU: сбалансированный соперник'],
       [DifficultyLevel.HARD]: ['СЛОЖНАЯ', 'Против CPU: быстрый и точный'],
       [DifficultyLevel.INSANE]: ['БЕЗУМИЕ', 'Против CPU: почти не ошибается'],
+    },
+    challenges: {
+      warmUp: ['РАЗМИНКА', 'Выиграй матч'],
+      blitz: ['БЛИЦ', 'Выиграй за две минуты: до 5 очков или по счёту в конце'],
+      longRally: ['ДОЛГИЙ РОЗЫГРЫШ', 'Розыгрыш в 20 ударов за минуту'],
+      shutout: ['ВСУХУЮ', 'Выиграй, не пропустив ни одного очка'],
+      twoBalls: ['ДВА МЯЧА', 'Выиграй, когда в игре два мяча'],
+      survival: ['ВЫЖИВАНИЕ', 'Набери 15 очков, пока не кончились три жизни'],
+      giant: ['ВЕЛИКАН', 'Выиграй у CPU с ракеткой в полтора раза длиннее'],
+      overload: ['ПЕРЕГРУЗКА', 'Выиграй, сделав 5 ударов Overdrive'],
+      insanity: ['БЕЗУМИЕ', 'Выиграй на безумной сложности'],
     },
   },
 };

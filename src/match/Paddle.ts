@@ -15,11 +15,10 @@ export class Paddle {
   public velocity: number = 0;
   /** The side of the court it plays on; its points are that side's. */
   public readonly side: Side;
-  /** Its size and how it hits. */
-  public readonly spec: PaddleSpec;
+  private _spec: PaddleSpec;
   /** Range of its center, so the whole paddle stays clear of the walls. */
-  private readonly minY: number;
-  private readonly maxY: number;
+  private minY = 0;
+  private maxY = 0;
   /** Where the paddle stood when the current simulation step began. */
   private previousY: number;
   /** Where to draw the paddle this frame, between two simulation steps (see `interpolate`). */
@@ -28,15 +27,33 @@ export class Paddle {
   /** @param spec what it is like to play with; the standard paddle when left out */
   constructor(side: Side, x: number, color: string, spec: PaddleSpec = STANDARD_PADDLE) {
     this.side = side;
-    this.spec = spec;
-    this.minY = PADDLE.TOP_MARGIN + spec.height / 2;
-    this.maxY = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - spec.height / 2;
+    this._spec = spec;
     this.x = x;
     this.y = COURT.HEIGHT / 2;
     this.targetY = COURT.HEIGHT / 2;
     this.previousY = this.y;
     this.drawY = this.y;
     this.color = color;
+    this.useSpec(spec);
+  }
+
+  /** Its size and how it hits. */
+  public get spec(): PaddleSpec {
+    return this._spec;
+  }
+
+  /**
+   * Makes it another paddle (whoever plays the next match brings their own). It keeps the edge
+   * of the court it stands at, so a wider right paddle grows toward the middle, and stays clear
+   * of the walls.
+   */
+  public useSpec(spec: PaddleSpec): void {
+    if (this.side === 1) this.x += this._spec.width - spec.width;
+    this._spec = spec;
+    this.minY = PADDLE.TOP_MARGIN + spec.height / 2;
+    this.maxY = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - spec.height / 2;
+    this.setTargetY(this.targetY);
+    this.y = clamp(this.y, this.minY, this.maxY);
   }
 
   public resetPosition(): void {

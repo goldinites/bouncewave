@@ -3,7 +3,7 @@ import { AiForm } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
 import { AiSkill, DEMO_AI_SKILL, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
-import { MatchRules } from '@/match/rules';
+import { isDecidingPoint, MatchRules } from '@/match/rules';
 import { Scores, Side } from '@/match/side';
 
 /** Anything that can steer the player's paddle (keyboard, pointer, touch). */
@@ -90,7 +90,9 @@ export class AiPaddleController implements PaddleController {
     // AiForm reads the score as [opponent, CPU]
     const [left, right] = scores;
     const fromCpuSide: [number, number] = paddle.side === 1 ? [left, right] : [right, left];
-    this.form.update(fromCpuSide, DIFFICULTY_CONFIGS[level].adaptivity, rules);
+    // The deciding point is read from the real sides: each may have its own winning score
+    const isDeciding = isDecidingPoint(scores, rules);
+    this.form.update(fromCpuSide, DIFFICULTY_CONFIGS[level].adaptivity, isDeciding);
     this._skill = this.form.skillFor(level);
   }
 
