@@ -205,27 +205,36 @@
   gap: 8px;
 }
 
-/* The choice's name small over its value, so a long one (NEON CITY) still fits a phone */
-.screen-buttons .option-row__value {
+/* The choice's name and value on one line, a size up from the buttons' text. No button: the
+   arrows step it, this only shows it, in the row's color with the buttons' glow */
+.option-row__value {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.2em;
+  justify-content: center;
+  gap: 0.5em;
 
   flex: 1;
   min-width: 0;
-  padding-inline: 0.5em;
+  padding: 0.4em 0.3em;
+  border-radius: 8px;
+
+  color: var(--button-color, var(--cyan));
+  font-size: clamp(13px, 2.4vw, 18px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  text-shadow: 0 0 3px var(--button-color, var(--cyan));
 }
 
+/* Reached by the keyboard, the choice is outlined like a focused toggle */
+.option-row__value:focus-visible {
+  outline: 2px solid var(--button-color, var(--cyan));
+  outline-offset: 2px;
+}
+
+/* The name a little dimmer than the value it names */
 .option-row__name {
-  font-size: 0.7em;
-  letter-spacing: 0.14em;
-  white-space: nowrap;
   opacity: 0.75;
-}
-
-.option-row__current {
-  white-space: nowrap;
 }
 
 .screen-buttons .option-row__arrow {
@@ -278,13 +287,6 @@
   .screen-buttons button {
     padding: 0.6em 1.2em;
   }
-
-  /* Short of height but not of width (a phone on its side): name and value share a line */
-  .screen-buttons .option-row__value {
-    flex-direction: row;
-    justify-content: center;
-    gap: 0.6em;
-  }
 }
 
 /* The court is on its side here (stage.css), so the menu is turned back upright over it */
@@ -313,6 +315,10 @@
   .screen-buttons button {
     padding: 1em 1.4em;
     font-size: 15px;
+  }
+
+  .option-row__value {
+    font-size: 17px;
   }
 }
 

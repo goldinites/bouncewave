@@ -35,10 +35,10 @@ const Chevron = ({ isBack }: { isBack?: boolean }) => (
 );
 
 /**
- * The quick match's setup: a row per choice, its name over its value between an arrow back and
- * an arrow on
- * (pressing the value itself steps it on, the left and right keys step it either way), then
- * START and BACK. The arrows are for pointers and fingers; the keyboard has the keys instead.
+ * The quick match's setup: a row per choice, its name and value between an arrow back and
+ * an arrow on, then START and BACK. Only the arrows step a choice: the value is no button, just
+ * what is chosen. The keyboard walks onto the value instead (up and down, as through a menu),
+ * and its left and right keys step it either way; the arrows are for pointers and fingers.
  */
 export function QuickMatchSetup({
   options,
@@ -59,7 +59,7 @@ export function QuickMatchSetup({
           (direction < 0 ? option.onPrevious : option.onNext)();
         };
         return (
-          <div key={option.id} class="option-row">
+          <div key={option.id} class={`option-row game-button--${option.color}`}>
             <MenuButton
               color={option.color}
               class="option-row__arrow"
@@ -69,16 +69,18 @@ export function QuickMatchSetup({
             >
               <Chevron isBack />
             </MenuButton>
-            <MenuButton
-              color={option.color}
+            <div
               class="option-row__value"
-              label={`${option.name}: ${option.value}`}
-              onClick={option.onNext}
+              role="spinbutton"
+              tabIndex={0}
+              data-menu-item
+              aria-label={option.name}
+              aria-valuetext={option.value}
               onKeyDown={step}
             >
-              <span class="option-row__name">{option.name}</span>
+              <span class="option-row__name">{option.name}:</span>
               <span class="option-row__current">{option.value}</span>
-            </MenuButton>
+            </div>
             <MenuButton
               color={option.color}
               class="option-row__arrow"

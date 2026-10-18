@@ -130,7 +130,8 @@ its screen. The quick match is the model: a setup screen whose choices are setti
 
 **A screen.** A Preact component in `ui/screens/` (`.tsx`), taking its texts ready to show and
 its actions as props, shown with `uiManager.showScreen(title, subtitle, h(Screen, props))`. The
-menu keys walk its buttons like a menu's (skipping the disabled ones); `MenuController.open(back,
+menu keys walk its buttons like a menu's (skipping the disabled ones and those with
+`tabIndex` -1), and any other element it marks `data-menu-item` (a quick match choice); `MenuController.open(back,
 redraw)` gives Esc its way back and redraws the screen when a setting changes. Lay its buttons
 out in a `.screen-buttons` column (`MenuButton`), as a menu's are.
 

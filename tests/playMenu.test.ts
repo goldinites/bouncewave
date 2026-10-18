@@ -89,25 +89,30 @@ describe('the PLAY menu and the setup, as screens', () => {
     };
   };
 
-  it('puts each choice between an arrow back and an arrow on, kept off the keyboard', () => {
+  it('shows each choice as its name and value, between arrows kept off the keyboard', () => {
     render(h(QuickMatchSetup, setupProps().props));
 
     const buttons = screen.getAllByRole('button');
     expect(buttons.map((b) => b.getAttribute('aria-label') ?? b.textContent)).toEqual([
       'Previous',
-      'POINTS: 5',
       'Next',
       'START',
       'BACK',
     ]);
-    expect(buttons.map((b) => b.tabIndex)).toEqual([-1, 0, -1, 0, 0]);
+    expect(buttons.map((b) => b.tabIndex)).toEqual([-1, -1, 0, 0]);
     expect(buttons[0].className).toBe('game-button game-button--pink option-row__arrow');
+
+    // The value itself is no button: the keyboard reaches it, and reads it out as a spin button
+    const value = screen.getByRole('spinbutton', { name: 'POINTS' });
+    expect(value.getAttribute('aria-valuetext')).toBe('5');
+    expect(value.tabIndex).toBe(0);
+    expect(value.textContent).toBe('POINTS:5');
   });
 
-  it('steps a choice back or on by its arrows, its value and the left and right keys', () => {
+  it('steps a choice back or on by its arrows and the left and right keys, not by its value', () => {
     const { option, props } = setupProps();
     render(h(QuickMatchSetup, props));
-    const value = screen.getByRole('button', { name: 'POINTS: 5' });
+    const value = screen.getByRole('spinbutton', { name: 'POINTS' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
@@ -117,7 +122,7 @@ describe('the PLAY menu and the setup, as screens', () => {
     fireEvent.keyDown(value, { code: 'ArrowDown' }); // the menu's, not the choice's
 
     expect(option.onPrevious).toHaveBeenCalledTimes(2);
-    expect(option.onNext).toHaveBeenCalledTimes(3);
+    expect(option.onNext).toHaveBeenCalledTimes(2);
   });
 
   it('starts or goes back', () => {
@@ -164,8 +169,20 @@ describe('the PLAY menu and the setup, in the menus', () => {
       ...document.querySelectorAll<HTMLButtonElement>('#gameScreen button'),
     ];
     // The buttons the keyboard walks: on the setup, the values without their arrows
-    const keyButtons = () => screenButtons().filter((b) => b.tabIndex >= 0);
-    const labels = () => keyButtons().map((b) => b.getAttribute('aria-label') ?? b.textContent);
+    // What the keyboard walks: on the setup, the choices' values without their arrows
+    const keyButtons = () =>
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          '#gameScreen button, #gameScreen [data-menu-item]',
+        ),
+      ].filter((item) => item.tabIndex >= 0);
+    // A choice reads "NAME: value", as a screen reader would put it
+    const labels = () =>
+      keyButtons().map((item) =>
+        item.getAttribute('role') === 'spinbutton'
+          ? `${item.getAttribute('aria-label')}: ${item.getAttribute('aria-valuetext')}`
+          : item.textContent,
+      );
     const arrows = (label: 'Previous' | 'Next') =>
       screenButtons().filter((b) => b.getAttribute('aria-label') === label);
     const title = () => document.getElementById('gameTitle')?.textContent;
@@ -199,7 +216,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
   });
 
   it('sets up the quick match: background, difficulty and points, as last chosen', () => {
-    const { menu, screenButtons, keyButtons, labels, title, subtitle, store } = setup();
+    const { menu, screenButtons, arrows, labels, title, subtitle, store } = setup();
     menu.showPlayMenu();
     screenButtons()[1].click(); // quick match
 
@@ -213,9 +230,9 @@ describe('the PLAY menu and the setup, in the menus', () => {
       'BACK',
     ]);
 
-    keyButtons()[0].click();
-    keyButtons()[1].click();
-    keyButtons()[2].click();
+    arrows('Next')[0].click();
+    arrows('Next')[1].click();
+    arrows('Next')[2].click();
     expect(store.current).toMatchObject({
       matchBackground: SCENES[0],
       difficulty: getDefaultSettings().difficulty + 1,
@@ -278,14 +295,18 @@ describe('the PLAY menu and the setup, in the menus', () => {
   });
 
   it('keeps the focus on a choice as it steps, and moves it on between screens', () => {
-    const { menu, menuButtons, screenButtons, keyButtons, arrows, press } = setup();
+    const { menu, menuButtons, screenButtons, keyButtons, arrows, labels, press } = setup();
     menu.showPlayMenu();
     screenButtons()[1].focus();
     screenButtons()[1].click(); // quick match
     expect(document.activeElement).toBe(keyButtons()[0]);
 
     press('ArrowDown');
-    keyButtons()[1].click(); // difficulty, redrawing the setup
+    // Difficulty: the right key steps it on, redrawing the setup around the focus
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'ArrowRight', bubbles: true }),
+    );
+    expect(labels()[1]).toBe('DIFFICULTY: HARD');
     expect(document.activeElement).toBe(keyButtons()[1]);
     arrows('Next')[1].click(); // its arrow leaves the focus on the value
     expect(document.activeElement).toBe(keyButtons()[1]);

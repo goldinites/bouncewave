@@ -73,15 +73,17 @@ export class UIManager {
   }
 
   /**
-   * The buttons of whatever is on show, a menu's or a screen's (only one has any), but those
-   * switched off and those kept out of the keyboard's way (a choice's arrows, which the left and
-   * right keys stand in for): the keys walk past them.
+   * What the menu keys walk on whatever is on show, a menu's or a screen's (only one has any):
+   * its buttons and the other items a screen marks `data-menu-item` (a quick match choice), but
+   * not the buttons switched off, nor those kept out of the keyboard's way (a choice's arrows,
+   * which the left and right keys stand in for).
    */
-  private get buttons(): HTMLButtonElement[] {
+  private get buttons(): HTMLElement[] {
+    const selector = 'button, [data-menu-item]';
     return [
-      ...this.buttonsContainer.querySelectorAll('button'),
-      ...this.screenElement.querySelectorAll('button'),
-    ].filter((button) => !button.disabled && button.tabIndex >= 0);
+      ...this.buttonsContainer.querySelectorAll<HTMLElement>(selector),
+      ...this.screenElement.querySelectorAll<HTMLElement>(selector),
+    ].filter((item) => !(item instanceof HTMLButtonElement && item.disabled) && item.tabIndex >= 0);
   }
 
   /** Whether the keyboard focus is on a menu's or a screen's button. */
@@ -97,7 +99,7 @@ export class UIManager {
     const buttons = this.buttons;
     if (buttons.length === 0) return;
 
-    const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const current = buttons.indexOf(document.activeElement as HTMLElement);
     const move = e.code === 'Enter' && current < 0 ? 'first' : MENU_KEYS[e.code];
     if (!move) return;
 

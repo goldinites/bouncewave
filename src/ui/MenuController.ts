@@ -221,6 +221,12 @@ export class MenuController {
           action: () => this.actions.onResumeGame(),
         },
         {
+          // The same match again from 0:0, set up as it was
+          label: this.i18n.t('restart'),
+          color: 'yellow',
+          action: () => this.actions.onStartGame(),
+        },
+        {
           label: this.i18n.t('settings'),
           color: 'pink',
           action: () => this.showSettingsMenu(() => this.showPauseMenu()),

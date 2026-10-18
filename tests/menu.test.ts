@@ -80,6 +80,7 @@ describe('settings menu', () => {
     menu.showPauseMenu();
     expect(classes()).toEqual([
       'game-button',
+      'game-button game-button--yellow',
       'game-button game-button--pink',
       'game-button game-button--purple',
     ]);
@@ -121,7 +122,7 @@ describe('settings menu', () => {
 
   it('walks the menu with the arrow keys, wrapping around at either end', () => {
     const { menu, buttons } = setup();
-    menu.showPauseMenu(); // resume, settings, menu
+    menu.showPauseMenu(); // resume, restart, settings, menu
     const press = (code: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code }));
     const focused = () => buttons().indexOf(document.activeElement as HTMLButtonElement);
 
@@ -129,15 +130,16 @@ describe('settings menu', () => {
     expect(focused()).toBe(0); // from outside the menu, the first button
     press('ArrowDown');
     press('KeyS');
-    expect(focused()).toBe(2);
+    press('ArrowDown');
+    expect(focused()).toBe(3);
     press('ArrowDown');
     expect(focused()).toBe(0);
     press('ArrowUp');
-    expect(focused()).toBe(2);
+    expect(focused()).toBe(3);
     press('Home');
     expect(focused()).toBe(0);
     press('End');
-    expect(focused()).toBe(2);
+    expect(focused()).toBe(3);
   });
 
   it('puts Enter on the first button when nothing in the menu is focused yet', () => {
@@ -174,7 +176,7 @@ describe('settings menu', () => {
   it('opens the same settings from the pause', () => {
     const { menu, buttons } = setup();
     menu.showPauseMenu();
-    buttons()[1].click(); // settings
+    buttons()[2].click(); // settings
 
     const labels = () => buttons().map((b) => b.textContent);
     expect(labels()).toEqual(['MUSIC: OFF', 'SOUND EFFECTS: ON', 'LANGUAGE: ENGLISH', 'BACK']);

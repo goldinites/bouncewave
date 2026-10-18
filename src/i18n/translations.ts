@@ -10,6 +10,7 @@ export interface TranslationSchema {
   settings: string;
   again: string;
   resume: string;
+  restart: string;
   menu: string;
   back: string;
   diff: string;
@@ -55,6 +56,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     settings: 'SETTINGS',
     again: 'PLAY AGAIN',
     resume: 'RESUME',
+    restart: 'RESTART',
     menu: 'MAIN MENU',
     back: 'BACK',
     diff: 'DIFFICULTY',
@@ -100,6 +102,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     settings: 'НАСТРОЙКИ',
     again: 'ИГРАТЬ СНОВА',
     resume: 'ПРОДОЛЖИТЬ',
+    restart: 'ЗАНОВО',
     menu: 'В МЕНЮ',
     back: 'НАЗАД',
     diff: 'СЛОЖНОСТЬ',

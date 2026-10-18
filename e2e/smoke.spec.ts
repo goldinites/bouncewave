@@ -24,6 +24,9 @@ const button = (page: Page, name: string | RegExp) =>
 
 const menu = (page: Page) => page.locator('#gameUI');
 
+/** A quick match choice, by its name; its value is its aria-valuetext. */
+const choice = (page: Page, name: string) => page.getByRole('spinbutton', { name, exact: true });
+
 /** Fails unless `locator` sits wholly on the court: the menus never need scrolling. */
 const expectOnCourt = async (page: Page, locator: Locator) => {
   const [box, court] = await Promise.all([
@@ -92,11 +95,11 @@ test('sets up a quick match, its background coming up behind the menu', async ({
 
   await button(page, 'PLAY').click();
   await button(page, 'QUICK MATCH').click();
-  // The arrows step a choice either way; the value itself steps it on
+  // The arrows step a choice either way
   await button(page, 'Next').first().click();
-  await expect(button(page, 'BACKGROUND: LASERS')).toBeVisible();
+  await expect(choice(page, 'BACKGROUND')).toHaveAttribute('aria-valuetext', 'LASERS');
   await button(page, 'Previous').last().click();
-  await expect(button(page, 'POINTS: 3')).toBeVisible();
+  await expect(choice(page, 'POINTS')).toHaveAttribute('aria-valuetext', '3');
   await expectOnCourt(page, button(page, 'BACK'));
   // The rows, arrows and all, fit across the court too
   await expectOnCourt(page, button(page, 'Previous').first());
@@ -129,3 +132,18 @@ for (const scene of SCENES) {
     await page.waitForTimeout(SETTLE_MS);
   });
 }
+
+test('restarts a match from the pause', async ({ page, isMobile }) => {
+  const pause = page.locator('#pauseButton');
+  await page.goto('');
+
+  await button(page, 'PLAY').click();
+  await button(page, 'QUICK MATCH').click();
+  await button(page, 'START').click();
+  await page.waitForTimeout(SETTLE_MS);
+
+  await (isMobile ? pause.click() : page.keyboard.press('Escape'));
+  await button(page, 'RESTART').click();
+  await expect(menu(page)).toHaveClass(/game__ui--hidden/);
+  await page.waitForTimeout(SETTLE_MS);
+});
