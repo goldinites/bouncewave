@@ -1,24 +1,24 @@
 name: Build and deploy
 
-# Pull requests and pushes to main run the checks; only a published release (not a prerelease)
-# deploys to GitHub Pages
+# Every pull request and every push to main runs the checks; only a release tag (v1.2.3) deploys
+# to GitHub Pages. A manual run started from a tag redeploys that release
 on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request:
-  release:
-    types:
-      - released
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-# Deploys queue up and never cancel each other; a newer push to a branch or pull request
-# replaces the run still checking the previous one
+# Deploys queue up and never cancel each other; a newer push to a pull request replaces the run
+# still checking the previous one
 concurrency:
-  group: ${{ github.event_name == 'release' && 'pages' || format('checks-{0}', github.ref) }}
-  cancel-in-progress: ${{ github.event_name != 'release' }}
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -37,6 +37,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The tag and package.json must name the same version, so a release never ships under the wrong number
+      - name: Check release version
+        if: github.ref_type == 'tag'
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
       # A failing check stops the deploy, so a broken build never reaches Pages
       - name: Check formatting
         run: npm run format:check
@@ -51,13 +61,13 @@ jobs:
         run: npm run build
 
       - name: Upload artifact
-        if: github.event_name == 'release'
+        if: github.ref_type == 'tag'
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
 
   deploy:
-    if: github.event_name == 'release'
+    if: github.ref_type == 'tag'
 
     # Only this job may publish to Pages
     permissions:
