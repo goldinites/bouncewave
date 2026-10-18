@@ -1,21 +1,24 @@
 name: Build and deploy
 
-# Every pull request runs the checks; only main (or a manual run) deploys to GitHub Pages
+# Pull requests and pushes to main run the checks; only a published release (not a prerelease)
+# deploys to GitHub Pages
 on:
   push:
     branches:
       - main
   pull_request:
-  workflow_dispatch:
+  release:
+    types:
+      - released
 
 permissions:
   contents: read
 
-# Deploys queue up and never cancel each other; a newer push to a pull request replaces the run
-# still checking the previous one
+# Deploys queue up and never cancel each other; a newer push to a branch or pull request
+# replaces the run still checking the previous one
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'pages' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.event_name == 'release' && 'pages' || format('checks-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
 
 jobs:
   build:
@@ -48,13 +51,13 @@ jobs:
         run: npm run build
 
       - name: Upload artifact
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'release'
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'release'
 
     # Only this job may publish to Pages
     permissions:
