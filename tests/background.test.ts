@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, Mock, vi } from 'vitest';
 import { COURT } from '@/match/config';
+import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { Background } from '@/render/backgrounds/Background';
+import { MysteryBackground } from '@/render/backgrounds/MysteryBackground';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import { SceneId } from '@/shared/scenes';
 import { fakeContext } from './helpers/fakeContext';
@@ -204,5 +206,73 @@ describe('BackgroundRenderer', () => {
 
       expect(widthSetter).toHaveBeenCalledWith(COURT.WIDTH / 2);
     });
+  });
+});
+
+describe('the unknown channel (random picked)', () => {
+  const setup = () => {
+    const backgrounds = (['lasers', 'memphis', 'outrun'] as SceneId[]).map((scene) =>
+      fakeBackground(0.1, false, scene),
+    );
+    const renderer = new BackgroundRenderer(backgrounds);
+    const drawn = () => backgrounds.filter((b) => vi.mocked(b.render).mock.calls.length > 0);
+    // A context that hands out gradients, which the unknown channel paints its sky with
+    const draw = (time: number) => {
+      const { ctx, spies } = fakeContext();
+      (spies.createLinearGradient as Mock).mockReturnValue(spies);
+      renderer.render(ctx, null, time, 0, false, MOOD);
+    };
+    return { renderer, backgrounds, drawn, draw };
+  };
+
+  it('stands in for the background until a real one is switched to', () => {
+    const { renderer, backgrounds, drawn, draw } = setup();
+    renderer.showMystery();
+    expect(renderer.isShowingMystery).toBe(true);
+    draw(0);
+    expect(drawn()).toEqual([]);
+
+    // Dealt at random for the match: a real backdrop, the unknown channel gone
+    const scene = renderer.switchChannel(false);
+    draw(0.016);
+    expect(renderer.isShowingMystery).toBe(false);
+    expect(drawn().map((b) => b.scene)).toEqual([scene]);
+    expect(backgrounds.map((b) => b.scene)).toContain(scene);
+  });
+
+  it('gives way to the chosen background even when that one was on screen before', () => {
+    const { renderer } = setup();
+    const scene = renderer.scene;
+    renderer.choose(scene);
+    renderer.showMystery();
+
+    expect(renderer.switchChannel(false)).toBe(scene);
+    expect(renderer.isShowingMystery).toBe(false);
+  });
+
+  it('does not cover a developer’s pinned background', () => {
+    const { renderer } = setup();
+    renderer.pin('memphis');
+    renderer.showMystery();
+    expect(renderer.isShowingMystery).toBe(false);
+  });
+
+  it('draws in both orientations, with and without the glitch', () => {
+    const mystery = new MysteryBackground();
+    for (const isRotated of [false, true]) {
+      for (const time of [0.05, 1.5]) {
+        const { ctx, spies } = fakeContext();
+        (spies.createLinearGradient as Mock).mockReturnValue(spies);
+        mystery.render({
+          ...MOOD,
+          ctx: ctx as unknown as CanvasRenderingContext2D,
+          spectrum: new AudioSpectrum(),
+          pulse: 0.5,
+          time,
+          isRotated,
+        });
+        expect(spies.arc).toHaveBeenCalled();
+      }
+    }
   });
 });

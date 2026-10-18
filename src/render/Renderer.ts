@@ -287,6 +287,16 @@ export class Renderer {
     );
   }
 
+  /** Puts the unknown channel in place of the background until the next switchChannel. */
+  public showMystery(): void {
+    this.background.showMystery();
+  }
+
+  /** Whether the unknown channel stands in for the background right now. */
+  public get isShowingMystery(): boolean {
+    return this.background.isShowingMystery;
+  }
+
   /** The player's choice of background, which every switchChannel goes to from now on. */
   public chooseBackground(choice: BackgroundChoice): void {
     this.background.choose(choice === 'random' ? null : choice);
