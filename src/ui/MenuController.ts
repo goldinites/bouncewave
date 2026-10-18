@@ -171,7 +171,7 @@ export class MenuController {
           action: () => this.showPlayMenu(),
         },
         {
-          // Local multiplayer comes in stage 2; until then it is on the menu, switched off
+          // Local multiplayer comes in stage 3; until then it is on the menu, switched off
           label: this.i18n.t('multiplayer'),
           color: 'green',
           disabled: true,

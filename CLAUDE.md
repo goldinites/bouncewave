@@ -61,7 +61,7 @@ Rules that keep it clean (the first two are enforced by `tests/architecture.test
   `prefers-reduced-motion`; everything works on a phone in either orientation (`isRotated`: the
   stage is turned in CSS on a portrait phone).
 - Outside the match the left side is still taken to be the player (whose win the finale and
-  menus show, whose Overdrive meter is drawn), until local multiplayer (2.2).
+  menus show, whose Overdrive meter is drawn), until local multiplayer (3.2).
 
 ## Code style
 

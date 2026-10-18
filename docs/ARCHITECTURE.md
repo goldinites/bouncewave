@@ -45,7 +45,7 @@ The rules that matter most are checked by `tests/architecture.test.ts`: `match/`
 `match/` and `shared/`, and `shared/` imports nothing from the project.
 
 Known coupling to undo: `fx/` drives the `Renderer` directly (shake, flash, stage effects) and
-`render/` reads the particle types from `fx/`. Roadmap step 3.2 (rendering in layers) removes the
+`render/` reads the particle types from `fx/`. Roadmap step 4.2 (rendering in layers) removes the
 loop.
 
 ## One frame
@@ -153,8 +153,8 @@ A new kind of player (a replay, a remote player) is a new `PaddleController`.
 the menus. It never changes the match.
 
 **Planned, not there yet** (see the roadmap): modifiers that hook into the simulation and add a
-drawing layer (3.3), a back stack for the screens and the old menus moved onto Preact (3.1), a versioned player profile
-(1.4), dialogue through Ink (6.1).
+drawing layer (4.3), a back stack for the screens and the old menus moved onto Preact (4.1), a versioned player profile
+(1.4), dialogue through Ink (7.1).
 
 ## Rules of thumb
 
@@ -166,6 +166,6 @@ drawing layer (3.3), a back stack for the screens and the old menus moved onto P
 - Every new string exists in both languages; every new screen effect honours
   `prefers-reduced-motion`; everything works on a phone in either orientation.
 - Outside the match the left side is still taken to be the player: whose win the finale and the
-  menus show, whose Overdrive meter is drawn. Local multiplayer (2.2) changes that.
+  menus show, whose Overdrive meter is drawn. Local multiplayer (3.2) changes that.
 - If a feature needs `Game.ts`, `MatchFlow.ts`, `RenderFrame` and `EffectsDirector` changed all at
   once, a building block is missing: add it first, then the feature.

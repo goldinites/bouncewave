@@ -57,7 +57,7 @@ export interface TranslationSchema {
   /** Wiping the statistics: the button, and what it asks before it does. */
   resetStats: string;
   resetStatsConfirm: string;
-  /** Local multiplayer, on the main menu before it is playable (stage 2). */
+  /** Local multiplayer, on the main menu before it is playable (stage 3). */
   multiplayer: string;
   /** Every backdrop's name, and random's, by choice. */
   backgrounds: Record<BackgroundChoice, string>;
