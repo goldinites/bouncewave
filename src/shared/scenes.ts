@@ -6,3 +6,16 @@ export type SceneId = (typeof SCENES)[number];
 
 export const isSceneId = (value: string): value is SceneId =>
   (SCENES as readonly string[]).includes(value);
+
+/** The backdrop the player picks for a quick match: one of them, or a different one each time. */
+export type BackgroundChoice = SceneId | 'random';
+
+/** Every choice, in the order picking steps through them: random first, then the backdrops. */
+export const BACKGROUND_CHOICES: readonly BackgroundChoice[] = ['random', ...SCENES];
+
+export const isBackgroundChoice = (value: unknown): value is BackgroundChoice =>
+  (BACKGROUND_CHOICES as readonly unknown[]).includes(value);
+
+/** The next choice in the list, wrapping around. */
+export const nextBackgroundChoice = (choice: BackgroundChoice): BackgroundChoice =>
+  BACKGROUND_CHOICES[(BACKGROUND_CHOICES.indexOf(choice) + 1) % BACKGROUND_CHOICES.length];

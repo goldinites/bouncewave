@@ -2,15 +2,17 @@ import { h } from 'preact';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { MatchEvent } from '@/match/MatchFlow';
-import { DEFAULT_MODE, MODE_IDS, ModeId } from '@/match/modes';
+import { MODE_IDS, ModeId, MODES } from '@/match/modes';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
-import { ModeSelect } from '@/ui/screens/ModeSelect';
+import { PlayMenu } from '@/ui/screens/PlayMenu';
+import { QuickMatchSetup } from '@/ui/screens/QuickMatchSetup';
 import { ButtonColor, UIManager } from '@/ui/UIManager';
 
 export interface GameMenuActions {
-  onStartGame: (mode: ModeId) => void;
+  /** Starts a quick match, as the player last set it up (the settings keep the setup). */
+  onStartGame: () => void;
   onResumeGame: () => void;
   onReturnToMainMenu: () => void;
   onUnlockAudio: () => void;
@@ -23,27 +25,20 @@ interface SettingsMenuEntry {
   clicks?: boolean;
   /** For on/off settings: shows the entry as a toggle, filled while on. */
   isOn?: (settings: UserSettings) => boolean;
-  /** Changes how a match plays, so it can be set only between matches, never from the pause. */
-  isBetweenMatches?: boolean;
   color: ButtonColor;
 }
 
-/** Each mode's card color on the mode screen; a new mode needs one. */
+/** Each mode's button color in the PLAY menu; a new mode needs one. */
 const MODE_COLORS: Record<ModeId, ButtonColor> = {
-  standard: 'cyan',
-  quick: 'yellow',
+  story: 'pink',
+  challenges: 'purple',
+  quick: 'cyan',
 };
 
 const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 'on');
 
 /** The settings menu, top to bottom; picking an entry switches its setting to the next value. */
 const SETTINGS_MENU: SettingsMenuEntry[] = [
-  {
-    key: 'difficulty',
-    color: 'yellow',
-    isBetweenMatches: true,
-    label: (s, i18n) => `${i18n.t('diff')}: ${i18n.getDifficultyInfo(s.difficulty)[0]}`,
-  },
   {
     key: 'musicMuted',
     color: 'pink',
@@ -64,20 +59,38 @@ const SETTINGS_MENU: SettingsMenuEntry[] = [
   },
 ];
 
+/**
+ * The quick match's choices, top to bottom; picking one steps it to its next value. They are
+ * kept with the settings, so the next quick match is set up as the last one was.
+ */
+const QUICK_MATCH_SETUP: SettingsMenuEntry[] = [
+  {
+    key: 'matchBackground',
+    color: 'green',
+    label: (s, i18n) => `${i18n.t('background')}: ${i18n.getBackgroundName(s.matchBackground)}`,
+  },
+  {
+    key: 'difficulty',
+    color: 'yellow',
+    label: (s, i18n) => `${i18n.t('diff')}: ${i18n.getDifficultyInfo(s.difficulty)[0]}`,
+  },
+  {
+    key: 'matchPoints',
+    color: 'pink',
+    label: (s, i18n) => `${i18n.t('points')}: ${s.matchPoints}`,
+  },
+];
+
 export class MenuController {
   private uiManager: UIManager;
   private i18n: I18nManager;
   private sfx: SoundEffects;
   private settings: SettingsStore;
   private actions: GameMenuActions;
-  /** Where the settings menu's BACK leads while it is on screen; null when it isn't. */
-  private settingsBack: (() => void) | null = null;
-  /** Where Esc leads from what is on screen (the settings, the mode screen); null for none. */
+  /** Where Esc leads from what is on screen (the settings, the PLAY menu, the setup). */
   private back: (() => void) | null = null;
-  /** The mode of the match last started, which PLAY AGAIN starts again. */
-  private mode: ModeId = DEFAULT_MODE;
-  /** Whether the settings menu on screen was opened from the pause. */
-  private isSettingsMidMatch = false;
+  /** Shows what is on screen again, when it shows settings that may change; null otherwise. */
+  private redraw: (() => void) | null = null;
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -95,9 +108,7 @@ export class MenuController {
 
     // A setting may also change from outside the menu (the music chip, the M key)
     this.unsubscribe = settings.subscribe(() => {
-      if (this.settingsBack && this.uiManager.isMenuVisible) {
-        this.showSettingsMenu(this.settingsBack, this.isSettingsMidMatch);
-      }
+      if (this.redraw && this.uiManager.isMenuVisible) this.redraw();
     });
   }
 
@@ -106,9 +117,9 @@ export class MenuController {
   }
 
   /** Forgets where BACK and Esc led: called by every menu and screen as it opens. */
-  private open(back: (() => void) | null = null, settingsBack: (() => void) | null = null): void {
+  private open(back: (() => void) | null = null, redraw: (() => void) | null = null): void {
     this.back = back;
-    this.settingsBack = settingsBack;
+    this.redraw = redraw;
   }
 
   public showMainMenu(): void {
@@ -119,7 +130,7 @@ export class MenuController {
       [
         {
           label: this.i18n.t('play'),
-          action: () => this.showModeSelect(),
+          action: () => this.showPlayMenu(),
         },
         {
           label: this.i18n.t('settings'),
@@ -131,29 +142,57 @@ export class MenuController {
     );
   }
 
-  /** The mode screen, from PLAY: a card per mode, picking one starts its match. */
-  public showModeSelect(): void {
+  /** The PLAY menu: a button per mode, those not playable yet switched off. */
+  public showPlayMenu(): void {
     const back = () => this.showMainMenu();
     this.open(back);
     this.uiManager.showScreen(
       this.i18n.t('mode'),
       '',
-      h(ModeSelect, {
-        modes: MODE_IDS.map((id) => {
-          const [name, description] = this.i18n.getModeInfo(id);
-          return { id, name, description, color: MODE_COLORS[id] };
-        }),
+      h(PlayMenu, {
+        modes: MODE_IDS.map((id) => ({
+          id,
+          name: this.i18n.getModeName(id),
+          color: MODE_COLORS[id],
+          isPlayable: MODES[id].isPlayable,
+        })),
         backLabel: this.i18n.t('back'),
-        onPick: (mode) => this.startGame(mode),
+        onPick: (mode) => this.pickMode(mode),
         onBack: back,
       }),
       this.actions.onUnlockAudio,
     );
   }
 
-  private startGame(mode: ModeId): void {
-    this.mode = mode;
-    this.actions.onStartGame(mode);
+  private pickMode(mode: ModeId): void {
+    if (mode === 'quick') this.showQuickMatchSetup();
+  }
+
+  /**
+   * The quick match's setup: backdrop, difficulty and length, as last chosen; START plays it.
+   * The difficulty's description stands under the title, as it did in the settings.
+   */
+  public showQuickMatchSetup(): void {
+    const back = () => this.showPlayMenu();
+    this.open(back, () => this.showQuickMatchSetup());
+    const settings = this.settings.current;
+    this.uiManager.showScreen(
+      this.i18n.getModeName('quick'),
+      this.i18n.getDifficultyInfo(settings.difficulty)[1],
+      h(QuickMatchSetup, {
+        options: QUICK_MATCH_SETUP.map((entry) => ({
+          id: entry.key,
+          label: entry.label(settings, this.i18n),
+          color: entry.color,
+          onCycle: () => this.changeSetting(entry),
+        })),
+        startLabel: this.i18n.t('start'),
+        backLabel: this.i18n.t('back'),
+        onStart: () => this.actions.onStartGame(),
+        onBack: back,
+      }),
+      this.actions.onUnlockAudio,
+    );
   }
 
   public showPauseMenu(): void {
@@ -169,7 +208,7 @@ export class MenuController {
         {
           label: this.i18n.t('settings'),
           color: 'pink',
-          action: () => this.showSettingsMenu(() => this.showPauseMenu(), true),
+          action: () => this.showSettingsMenu(() => this.showPauseMenu()),
         },
         {
           label: this.i18n.t('menu'),
@@ -204,7 +243,7 @@ export class MenuController {
       [
         {
           label: this.i18n.t('again'),
-          action: () => this.startGame(this.mode),
+          action: () => this.actions.onStartGame(),
         },
         {
           label: this.i18n.t('settings'),
@@ -222,8 +261,8 @@ export class MenuController {
   }
 
   /**
-   * Esc in the settings menu or the mode screen: back to where it was opened from, as its BACK
-   * button does.
+   * Esc in the settings, the PLAY menu or the quick match's setup: back to where it was opened
+   * from, as its BACK button does.
    * @returns whether it went back (false anywhere else)
    */
   public goBack(): boolean {
@@ -233,20 +272,18 @@ export class MenuController {
   }
 
   /**
-   * @param isMidMatch opened from the pause: settings that change how a match plays (the
-   * difficulty) are left out, so they can't be switched halfway through one
+   * The settings: music, sound and language. Nothing in them changes how a match plays (that is
+   * the quick match's setup), so they open from the pause too.
    */
-  public showSettingsMenu(onBack: () => void, isMidMatch = false): void {
-    this.open(onBack, onBack);
-    this.isSettingsMidMatch = isMidMatch;
+  public showSettingsMenu(onBack: () => void): void {
+    this.open(onBack, () => this.showSettingsMenu(onBack));
     const settings = this.settings.current;
-    const entries = SETTINGS_MENU.filter((entry) => !(isMidMatch && entry.isBetweenMatches));
 
     this.uiManager.showMenu(
       this.i18n.t('settings'),
-      isMidMatch ? '' : this.i18n.getDifficultyInfo(settings.difficulty)[1],
+      '',
       [
-        ...entries.map((entry) => ({
+        ...SETTINGS_MENU.map((entry) => ({
           label: entry.label(settings, this.i18n),
           action: () => this.changeSetting(entry),
           isOn: entry.isOn?.(settings),
@@ -258,7 +295,7 @@ export class MenuController {
     );
   }
 
-  /** Switches one setting; the subscription redraws the settings menu to show it. */
+  /** Switches one setting; the subscription redraws the menu or screen to show it. */
   private changeSetting(entry: SettingsMenuEntry): void {
     this.settings.cycle(entry.key);
     if (entry.clicks) {

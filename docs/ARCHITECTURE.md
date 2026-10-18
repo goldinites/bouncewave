@@ -30,7 +30,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | ---------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
 | `shared/`              | palette, math, fonts, scene ids, `EventBus`                           | nothing in the project                              |
 | `match/`               | rules, simulation, AI, paddles, balls, sides                          | `match/`, `shared/`                                 |
-| `settings/`            | the player's settings, their storage                                  | `match/` (difficulty), `i18n/` (language)           |
+| `settings/`            | the player's settings and quick-match setup, their storage            | `match/`, `i18n/` (language), `shared/`             |
 | `i18n/`                | texts in every language                                               | `match/` (difficulty, modes)                        |
 | `input/`               | keyboard, pointer, touch, portrait rotation                           | `match/`, `shared/`                                 |
 | `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |
@@ -100,16 +100,20 @@ Each of these works without editing the code that is already there, beyond one r
 
 **A background.** A class implementing `Background` (`render/backgrounds/Background.ts`), added to
 `createBackgrounds()` (`render/BackgroundRenderer.ts`), its id added to `SCENES`
-(`shared/scenes.ts`). Draw for both orientations (`isRotated`); read `laserIntensity` through a
-floor so play stays lit; warm the palette with the heat (`climax`, `celebration`). Run
+(`shared/scenes.ts`) and its name in both languages (`backgrounds` in `i18n/translations.ts`);
+the quick match's setup offers it from then on. Draw for both orientations (`isRotated`); read
+`laserIntensity` through a floor so play stays lit; warm the palette with the heat (`climax`,
+`celebration`). Run
 `npm run test:visual -- --update-snapshots` for its new baselines, and look at them.
 
 **A song.** An entry in `SONG_DEFS` (`audio/music/songs.ts`); its `scene` ties it to a background,
 which then plays it first.
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
-(`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), and its texts
-in both languages (`i18n/translations.ts`). The compiler insists on all of them.
+(`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), or in
+`QUICK_MATCH_SETUP` if it sets up the match rather than the game, and its texts in both
+languages (`i18n/translations.ts`). The compiler insists on all of them. Saved settings
+from before it get its default.
 
 **A kind of paddle.** A `PaddleSpec`: trade-offs as multipliers against `STANDARD_PADDLE` (one
 strength, one weakness), given to `new Paddle(side, x, color, spec)`.
@@ -118,14 +122,17 @@ strength, one weakness), given to `new Paddle(side, x, color, spec)`.
 `flow.startMatch(rules)`; read the winning score and the deciding point from the rules
 (`flow.rules`, `flow.isDecidingPoint`), never from `WINNING_SCORE`.
 
-**A game mode.** An entry in `MODES` (`match/modes.ts`) with its rules, and its name and
-description in both languages (`modes` in `i18n/translations.ts`) and its card color
-(`MODE_COLORS` in `ui/MenuController.ts`). The mode screen lists it, and
-`Game.start(mode)` plays it.
+**A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
+in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/MenuController.ts`).
+The PLAY menu lists it, switched off until `isPlayable`; `MenuController.pickMode` opens
+its screen. The quick match is the model: a setup screen whose choices are settings, and
+`Game.start` building its `MatchRules` from them (`quickMatchRules`).
 
 **A screen.** A Preact component in `ui/screens/` (`.tsx`), taking its texts ready to show and
 its actions as props, shown with `uiManager.showScreen(title, subtitle, h(Screen, props))`. The
-menu keys walk its buttons like a menu's; give Esc a way back through `MenuController.goBack`.
+menu keys walk its buttons like a menu's (skipping the disabled ones); `MenuController.open(back,
+redraw)` gives Esc its way back and redraws the screen when a setting changes. Lay its buttons
+out in a `.screen-buttons` column (`MenuButton`), as a menu's are.
 
 **A different line-up.** `flow.startMatch(rules, lineup)` with a participant per paddle: two
 `HumanController`s for two players, an `AiPaddleController` with a difficulty for each CPU.

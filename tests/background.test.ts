@@ -105,6 +105,33 @@ describe('BackgroundRenderer', () => {
     expect(renderer.switchChannel(false)).toBe('memphis');
   });
 
+  it('switches to the background the player chose, every match, until they choose random', () => {
+    const scenes: SceneId[] = ['lasers', 'memphis', 'outrun'];
+    const renderer = new BackgroundRenderer(
+      scenes.map((scene) => fakeBackground(0.1, false, scene)),
+    );
+
+    renderer.choose('outrun');
+    expect(renderer.switchChannel(true)).toBe('outrun');
+    // Already on it: no surf, it stays
+    expect(renderer.switchChannel(true)).toBe('outrun');
+    expect(renderer.switchChannel(false)).toBe('outrun');
+
+    renderer.choose(null);
+    expect(renderer.switchChannel(false)).not.toBe('outrun');
+  });
+
+  it('gives way to a developer’s pin over the player’s choice', () => {
+    const renderer = new BackgroundRenderer([
+      fakeBackground(0.1, false, 'lasers'),
+      fakeBackground(0.1, false, 'memphis'),
+    ]);
+
+    renderer.pin('memphis');
+    renderer.choose('lasers');
+    expect(renderer.switchChannel(false)).toBe('memphis');
+  });
+
   it('refuses to pin a background it does not have', () => {
     const renderer = new BackgroundRenderer([fakeBackground(0.1, false, 'lasers')]);
     expect(renderer.pin('jungle')).toBe(false);

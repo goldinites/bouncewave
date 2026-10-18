@@ -1,10 +1,9 @@
 import { DifficultyLevel } from '@/match/difficulty';
-import { ModeId, MODES } from '@/match/modes';
+import { ModeId } from '@/match/modes';
+import { BackgroundChoice } from '@/shared/scenes';
 export type Language = 'en' | 'ru';
 
 export type DifficultyDescription = [name: string, description: string];
-
-export type ModeDescription = [name: string, description: string];
 
 export interface TranslationSchema {
   play: string;
@@ -33,10 +32,16 @@ export interface TranslationSchema {
   /** Controls and rules under the court, as HTML: a row of keycaps, then a line of rules. */
   hintK: string;
   hintT: string;
-  /** The mode screen's title. */
+  /** The PLAY menu's title. */
   mode: string;
-  /** Name and description of every game mode, by mode. */
-  modes: Record<ModeId, ModeDescription>;
+  /** Every game mode's name, by mode. */
+  modes: Record<ModeId, string>;
+  /** The quick match's setup: its title is the mode's name; its options and start button. */
+  background: string;
+  points: string;
+  start: string;
+  /** Every backdrop's name, and random's, by choice. */
+  backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
   d: Record<DifficultyLevel, DifficultyDescription>;
 }
@@ -66,9 +71,18 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Esc</kbd> pause</span><span><kbd>F</kbd> fullscreen</span><span><kbd>M</kbd> music</span><span><kbd>N</kbd> next track</span></span><span class="game-hint__rules">Paddle center = perfect shot · 3&nbsp;in&nbsp;a&nbsp;row&nbsp;=&nbsp;Overdrive</span>`,
     hintT: `<span class="game-hint__keys">Drag your finger to move the paddle</span><span class="game-hint__rules">Paddle center = perfect shot · 3&nbsp;in&nbsp;a&nbsp;row&nbsp;=&nbsp;Overdrive</span>`,
     mode: 'GAME MODE',
-    modes: {
-      standard: ['STANDARD MATCH', `First to ${MODES.standard.rules.winningScore} against the CPU`],
-      quick: ['QUICK MATCH', `First to ${MODES.quick.rules.winningScore} against the CPU`],
+    modes: { story: 'STORY', challenges: 'CHALLENGE', quick: 'QUICK MATCH' },
+    background: 'BACKGROUND',
+    points: 'POINTS TO WIN',
+    start: 'START',
+    backgrounds: {
+      random: 'RANDOM',
+      lasers: 'LASERS',
+      memphis: 'MEMPHIS',
+      outrun: 'OUTRUN',
+      neonCity: 'NEON CITY',
+      fuji: 'FUJI',
+      jungle: 'JUNGLE',
     },
     d: {
       [DifficultyLevel.NORMAL]: ['NORMAL', 'vs CPU: a balanced opponent'],
@@ -100,9 +114,18 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> ракетка</span><span><kbd>Esc</kbd> пауза</span><span><kbd>F</kbd> полный экран</span><span><kbd>M</kbd> музыка</span><span><kbd>N</kbd> следующий трек</span></span><span class="game-hint__rules">Центр ракетки — идеальный удар · 3&nbsp;подряд&nbsp;—&nbsp;Overdrive</span>`,
     hintT: `<span class="game-hint__keys">Двигайте ракетку пальцем</span><span class="game-hint__rules">Центр ракетки — идеальный удар · 3&nbsp;подряд&nbsp;—&nbsp;Overdrive</span>`,
     mode: 'РЕЖИМ ИГРЫ',
-    modes: {
-      standard: ['ОБЫЧНЫЙ МАТЧ', `Против CPU до ${MODES.standard.rules.winningScore} очков`],
-      quick: ['БЫСТРЫЙ МАТЧ', `Против CPU до ${MODES.quick.rules.winningScore} очков`],
+    modes: { story: 'СЮЖЕТ', challenges: 'ИСПЫТАНИЕ', quick: 'БЫСТРЫЙ МАТЧ' },
+    background: 'ФОН',
+    points: 'ОЧКОВ ДО ПОБЕДЫ',
+    start: 'НАЧАТЬ',
+    backgrounds: {
+      random: 'СЛУЧАЙНЫЙ',
+      lasers: 'ЛАЗЕРНЫЙ',
+      memphis: 'МЕМФИС',
+      outrun: 'АУТРАН',
+      neonCity: 'ГОРОД',
+      fuji: 'ФУДЗИ',
+      jungle: 'ДЖУНГЛИ',
     },
     d: {
       [DifficultyLevel.NORMAL]: ['СРЕДНЯЯ', 'Против CPU: сбалансированный соперник'],

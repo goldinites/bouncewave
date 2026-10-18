@@ -13,13 +13,13 @@ import { Ball } from '@/match/Ball';
 import { COURT, PADDLE } from '@/match/config';
 import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
-import { ModeId, MODES } from '@/match/modes';
+import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
 import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
-import { isSceneId, SceneId } from '@/shared/scenes';
+import { BackgroundChoice, isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
 import { NowPlaying } from '@/ui/NowPlaying';
 import { UIManager } from '@/ui/UIManager';
@@ -72,7 +72,7 @@ export class Game {
   private isRunning = false;
   private animationFrameId: number | null = null;
   private readonly listeners = new AbortController();
-  private readonly unsubscribeLanguage: () => void;
+  private readonly unsubscribeSettings: () => void;
 
   constructor(canvas: HTMLCanvasElement) {
     this.i18n = new I18nManager(this.settings.current.language);
@@ -88,6 +88,10 @@ export class Game {
     );
 
     this.renderer = new Renderer(canvas);
+    // The game opens on the background the player chose for their matches, if they chose one
+    const choice = this.settings.current.matchBackground;
+    this.renderer.chooseBackground(choice);
+    if (choice !== 'random') this.renderer.switchChannel(false);
     // For developers: ?bg=fuji pins a background from the start, matches included, and the
     // debug overlay comes with a menu of them all
     const pinned = new URLSearchParams(window.location.search).get('bg');
@@ -99,8 +103,14 @@ export class Game {
     this.showDebugDetail();
     this.uiManager = new UIManager(this.i18n);
 
-    // The UI language follows the settings
-    this.unsubscribeLanguage = this.settings.subscribe(({ language }) => {
+    // The UI language follows the settings, and the background behind the menus the choice of
+    // one for the quick match, so the player sees what they are picking
+    let background = choice;
+    this.unsubscribeSettings = this.settings.subscribe(({ language, matchBackground }) => {
+      if (matchBackground !== background) {
+        background = matchBackground;
+        this.previewBackground(matchBackground);
+      }
       if (language === this.i18n.language) return;
       this.i18n.language = language;
       this.uiManager.updateTexts();
@@ -140,7 +150,7 @@ export class Game {
       this.audio.sfx,
       this.settings,
       {
-        onStartGame: (mode) => this.start(mode),
+        onStartGame: () => this.start(),
         onResumeGame: () => this.resume(),
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
@@ -242,8 +252,9 @@ export class Game {
     request.catch((error: unknown) => this.fpsMeter.reportError(error));
   }
 
-  public start(mode: ModeId): void {
-    this.flow.startMatch(MODES[mode].rules);
+  /** Starts a quick match, set up as the player last chose (the settings keep it). */
+  public start(): void {
+    this.flow.startMatch(quickMatchRules(this.settings.current.matchPoints));
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
   }
@@ -335,6 +346,18 @@ export class Game {
     this.backgroundMenu.setCurrent(this.renderer.scene);
   }
 
+  /**
+   * The quick match's background was picked: from now on matches are played on it, and it comes
+   * up behind the menu at once, its song with it (random leaves the one on screen).
+   */
+  private previewBackground(choice: BackgroundChoice): void {
+    this.renderer.chooseBackground(choice);
+    if (choice === 'random' || this.flow.phase !== 'attract') return;
+    this.audio.music.enterScene(this.renderer.switchChannel());
+    this.audio.sfx.playChannelSurf();
+    this.showDebugDetail();
+  }
+
   /** For developers, from the debug menu: pins a background, its music coming in with it. */
   private pickBackground(scene: SceneId): void {
     this.renderer.pinBackground(scene);
@@ -392,7 +415,7 @@ export class Game {
 
     this.listeners.abort();
     this.matchEvents.clear();
-    this.unsubscribeLanguage();
+    this.unsubscribeSettings();
     this.menuController.dispose();
     this.nowPlaying.dispose();
     this.konamiCode.dispose();

@@ -72,12 +72,15 @@ export class UIManager {
     });
   }
 
-  /** The buttons of whatever is on show: a menu's or a screen's (only one has any). */
+  /**
+   * The buttons of whatever is on show, a menu's or a screen's (only one has any), but those
+   * switched off: the keys walk past them, as the focus can't land on them.
+   */
   private get buttons(): HTMLButtonElement[] {
     return [
       ...this.buttonsContainer.querySelectorAll('button'),
       ...this.screenElement.querySelectorAll('button'),
-    ];
+    ].filter((button) => !button.disabled);
   }
 
   /** Whether the keyboard focus is on a menu's or a screen's button. */
@@ -157,9 +160,10 @@ export class UIManager {
   }
 
   /**
-   * Shows a Preact screen under the title in place of a menu's buttons. Shown again, the same
-   * screen is updated in place, so the focus stays where it was; coming from a menu, the focus
-   * moves to the screen's first button if it was in the menu.
+   * Shows a Preact screen under the title in place of a menu's buttons. Shown again (same
+   * title), the screen is updated in place, so the focus stays where it was; coming from a menu
+   * or another screen, the focus moves to the first button that can be pressed, if it was in
+   * the menu.
    */
   public showScreen(
     title: string,
@@ -168,7 +172,8 @@ export class UIManager {
     onAnyClick?: () => void,
   ): void {
     const hadFocus = this.hasFocus;
-    const wasOnScreen = this.screenElement.contains(document.activeElement);
+    const isSameScreen =
+      this.screenElement.hasChildNodes() && this.titleElement.textContent === title;
 
     this.titleElement.textContent = title;
     this.subtitleElement.textContent = subtitle;
@@ -176,7 +181,9 @@ export class UIManager {
     this.onScreenClick = onAnyClick ?? null;
     render(screen, this.screenElement);
 
-    if (hadFocus && !wasOnScreen) this.screenElement.querySelector('button')?.focus();
+    if (hadFocus && !isSameScreen) {
+      this.screenElement.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+    }
     this.reveal();
   }
 

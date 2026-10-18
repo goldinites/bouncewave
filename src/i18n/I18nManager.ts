@@ -1,12 +1,12 @@
 import {
   DifficultyDescription,
   Language,
-  ModeDescription,
   TRANSLATIONS,
   TranslationSchema,
 } from '@/i18n/translations';
 import { DifficultyLevel } from '@/match/difficulty';
 import { ModeId } from '@/match/modes';
+import { BackgroundChoice } from '@/shared/scenes';
 
 export class I18nManager {
   private currentLanguage: Language = 'en';
@@ -34,7 +34,11 @@ export class I18nManager {
     return TRANSLATIONS[this.currentLanguage].d[level];
   }
 
-  public getModeInfo(mode: ModeId): ModeDescription {
+  public getModeName(mode: ModeId): string {
     return TRANSLATIONS[this.currentLanguage].modes[mode];
+  }
+
+  public getBackgroundName(choice: BackgroundChoice): string {
+    return TRANSLATIONS[this.currentLanguage].backgrounds[choice];
   }
 }

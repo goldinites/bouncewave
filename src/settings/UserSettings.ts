@@ -1,8 +1,16 @@
 import { isLanguage, Language, nextLanguage } from '@/i18n/translations';
 import { DifficultyLevel, isDifficultyLevel, nextDifficulty } from '@/match/difficulty';
+import { DEFAULT_MATCH_POINTS, isMatchPoints, MatchPoints, nextMatchPoints } from '@/match/modes';
+import { BackgroundChoice, isBackgroundChoice, nextBackgroundChoice } from '@/shared/scenes';
 
+/**
+ * Everything the player chose that outlasts a visit: the settings proper, and the quick match
+ * as last set up (its difficulty, length and backdrop).
+ */
 export interface UserSettings {
   difficulty: DifficultyLevel;
+  matchPoints: MatchPoints;
+  matchBackground: BackgroundChoice;
   soundMuted: boolean;
   musicMuted: boolean;
   language: Language;
@@ -32,6 +40,18 @@ export const SETTINGS: { [K in keyof UserSettings]: SettingDefinition<UserSettin
     defaultValue: DifficultyLevel.NORMAL,
     isValid: isDifficultyLevel,
     next: nextDifficulty,
+  },
+  matchPoints: {
+    storageKey: 'p',
+    defaultValue: DEFAULT_MATCH_POINTS,
+    isValid: isMatchPoints,
+    next: nextMatchPoints,
+  },
+  matchBackground: {
+    storageKey: 'b',
+    defaultValue: 'random',
+    isValid: isBackgroundChoice,
+    next: nextBackgroundChoice,
   },
   soundMuted: { storageKey: 'm', defaultValue: false, isValid: isBoolean, next: toggle },
   musicMuted: { storageKey: 'u', defaultValue: false, isValid: isBoolean, next: toggle },

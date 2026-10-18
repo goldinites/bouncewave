@@ -14,6 +14,8 @@ const memory = (initial: UserSettings) => {
 
 const DEFAULTS: UserSettings = {
   difficulty: DifficultyLevel.NORMAL,
+  matchPoints: 5,
+  matchBackground: 'random',
   soundMuted: false,
   musicMuted: false,
   language: 'en',
