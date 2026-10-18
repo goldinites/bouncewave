@@ -134,7 +134,7 @@ describe('Game', () => {
 
   it('switches every text outside the menus to the language picked', () => {
     buttons()[1].click(); // settings
-    buttons()[2].click(); // language
+    document.querySelector<HTMLButtonElement>('#gameScreen [aria-label="Next"]')!.click(); // language
 
     expect(document.documentElement.lang).toBe('ru');
     expect($('#pauseButton').getAttribute('aria-label')).toBe('Пауза');

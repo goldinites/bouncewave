@@ -37,6 +37,8 @@ export class UIManager {
   private buttonsContainer: HTMLElement;
   /** Where a Preact screen renders, under the title in place of the buttons. */
   private screenElement: HTMLElement;
+  /** Which screen is on show (as showScreen was told), to tell it redrawn from another. */
+  private screenId: string | null = null;
   /** Runs before any click on the screen on show, as `onAnyClick` does for menu buttons. */
   private onScreenClick: (() => void) | null = null;
   private hintElement: HTMLElement;
@@ -163,8 +165,8 @@ export class UIManager {
   }
 
   /**
-   * Shows a Preact screen under the title in place of a menu's buttons. Shown again (same
-   * title), the screen is updated in place, so the focus stays where it was; coming from a menu
+   * Shows a Preact screen under the title in place of a menu's buttons. Shown again (same `id`,
+   * by default its title), the screen is updated in place, so the focus stays where it was; coming from a menu
    * or another screen, the focus moves to the first button that can be pressed, if it was in
    * the menu.
    */
@@ -173,10 +175,11 @@ export class UIManager {
     subtitle: string,
     screen: ComponentChild,
     onAnyClick?: () => void,
+    id: string = title,
   ): void {
     const hadFocus = this.hasFocus;
-    const isSameScreen =
-      this.screenElement.hasChildNodes() && this.titleElement.textContent === title;
+    const isSameScreen = this.screenElement.hasChildNodes() && this.screenId === id;
+    this.screenId = id;
 
     this.titleElement.textContent = title;
     this.subtitleElement.textContent = subtitle;
@@ -192,6 +195,7 @@ export class UIManager {
 
   /** Takes the Preact screen down (its components unmount), leaving the place to a menu. */
   private closeScreen(): void {
+    this.screenId = null;
     this.onScreenClick = null;
     render(null, this.screenElement);
   }

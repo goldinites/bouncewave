@@ -149,7 +149,8 @@
 }
 
 /* Toggles (music, sound) say whether they are on with aria-pressed; on means filled */
-.game__buttons button[aria-pressed='true'] {
+.game__buttons button[aria-pressed='true'],
+.screen-buttons button[aria-pressed='true'] {
   background: var(--button-color);
   color: #12002e;
   text-shadow: none;
@@ -166,7 +167,8 @@
 
   /* Plain buttons fill on hover; toggles don't, or an off toggle would look on */
   .game-button:not(:disabled):hover,
-  .game__buttons button:not([aria-pressed]):hover {
+  .game__buttons button:not([aria-pressed]):hover,
+  .screen-buttons button:not([aria-pressed]):hover {
     background: var(--button-color);
     color: #12002e;
     text-shadow: none;
@@ -180,14 +182,16 @@
 }
 
 .game-button:focus-visible,
-.game__buttons button:not([aria-pressed]):focus-visible {
+.game__buttons button:not([aria-pressed]):focus-visible,
+.screen-buttons button:not([aria-pressed]):focus-visible {
   background: var(--button-color);
   color: #12002e;
   text-shadow: none;
 }
 
 /* A focused toggle keeps showing its state, so focus is an outline instead of a fill */
-.game__buttons button[aria-pressed]:focus-visible {
+.game__buttons button[aria-pressed]:focus-visible,
+.screen-buttons button[aria-pressed]:focus-visible {
   outline: 2px solid var(--button-color);
   outline-offset: 3px;
 }

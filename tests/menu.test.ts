@@ -6,6 +6,12 @@ import { getDefaultSettings } from '@/settings/UserSettings';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
 
+/** What an item says: a button its text, a choice its name and value. */
+const text = (item: Element) =>
+  item.getAttribute('role') === 'spinbutton'
+    ? `${item.getAttribute('aria-label')}: ${item.getAttribute('aria-valuetext')}`
+    : item.textContent;
+
 // Each one listens for keys on the window until disposed
 const managers: UIManager[] = [];
 const makeUIManager = (i18n: I18nManager) => {
@@ -28,7 +34,13 @@ const setup = () => {
     onUnlockAudio: vi.fn(),
   };
   const menu = new MenuController(makeUIManager(i18n), i18n, sfx, store, actions);
-  const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('#gameButtons button')];
+  // What the keyboard walks, in a menu or a screen (the settings): buttons, and a choice's value
+  const buttons = () =>
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '#gameButtons button, #gameScreen button, #gameScreen [data-menu-item]',
+      ),
+    ].filter((item) => item.tabIndex >= 0);
   return { menu, buttons, store };
 };
 
@@ -73,9 +85,10 @@ describe('settings menu', () => {
     expect(classes()).toEqual([
       'game-button game-button--pink', // music
       'game-button game-button--purple', // sound
-      'game-button game-button--green', // language
+      'option-row__value', // language: a choice, its row green
       'game-button', // back, default cyan
     ]);
+    expect(buttons()[2].closest('.option-row')?.className).toBe('option-row game-button--green');
 
     menu.showPauseMenu();
     expect(classes()).toEqual([
@@ -84,6 +97,22 @@ describe('settings menu', () => {
       'game-button game-button--pink',
       'game-button game-button--purple',
     ]);
+  });
+
+  it('steps the language either way by its arrows, the focus staying on it', () => {
+    const { menu, buttons, store } = setup();
+    menu.showSettingsMenu(() => {});
+    const arrow = (label: string) =>
+      document.querySelector<HTMLButtonElement>(`#gameScreen [aria-label="${label}"]`)!;
+
+    buttons()[2].focus();
+    arrow('Next').click();
+    expect(store.current.language).toBe('ru');
+    // Redrawn (in the game, retitled in the new language), still the same screen
+    expect(document.activeElement).toBe(buttons()[2]);
+
+    buttons()[2].dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowLeft', bubbles: true }));
+    expect(store.current.language).toBe('en');
   });
 
   it('redraws an open settings menu when the music is toggled from outside it', () => {
@@ -178,7 +207,7 @@ describe('settings menu', () => {
     menu.showPauseMenu();
     buttons()[2].click(); // settings
 
-    const labels = () => buttons().map((b) => b.textContent);
+    const labels = () => buttons().map((b) => text(b));
     expect(labels()).toEqual(['MUSIC: OFF', 'SOUND EFFECTS: ON', 'LANGUAGE: ENGLISH', 'BACK']);
 
     // Switching a setting redraws the menu where it is
@@ -190,9 +219,7 @@ describe('settings menu', () => {
     const { menu, buttons } = setup();
     menu.showMainMenu();
     buttons()[1].click(); // settings
-    expect(buttons().map((b) => b.textContent)).not.toContainEqual(
-      expect.stringMatching(/^DIFFICULTY/),
-    );
+    expect(buttons().map((b) => text(b))).not.toContainEqual(expect.stringMatching(/^DIFFICULTY/));
   });
 
   it('names the pause button in the current language', () => {

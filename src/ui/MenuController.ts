@@ -7,7 +7,9 @@ import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
 import { PlayMenu } from '@/ui/screens/PlayMenu';
+import { Choice } from '@/ui/screens/OptionRow';
 import { QuickMatchSetup } from '@/ui/screens/QuickMatchSetup';
+import { SettingsScreen } from '@/ui/screens/SettingsScreen';
 import { ButtonColor, UIManager } from '@/ui/UIManager';
 
 export interface GameMenuActions {
@@ -18,15 +20,27 @@ export interface GameMenuActions {
   onUnlockAudio: () => void;
 }
 
-interface SettingsMenuEntry {
+/** An on/off setting: a toggle, filled while on; picking it switches it. */
+interface ToggleEntry {
+  kind: 'toggle';
   key: keyof UserSettings;
   label: (settings: UserSettings, i18n: I18nManager) => string;
+  isOn: (settings: UserSettings) => boolean;
   /** Play the menu click after the change, e.g. to let the player hear sound is back on. */
   clicks?: boolean;
-  /** For on/off settings: shows the entry as a toggle, filled while on. */
-  isOn?: (settings: UserSettings) => boolean;
   color: ButtonColor;
 }
+
+/** A setting picked from a list: its name and value between arrows that step it either way. */
+interface ChoiceEntry {
+  kind: 'choice';
+  key: keyof UserSettings;
+  name: (i18n: I18nManager) => string;
+  value: (settings: UserSettings, i18n: I18nManager) => string;
+  color: ButtonColor;
+}
+
+type SettingsMenuEntry = ToggleEntry | ChoiceEntry;
 
 /** Each mode's button color in the PLAY menu; a new mode needs one. */
 const MODE_COLORS: Record<ModeId, ButtonColor> = {
@@ -37,15 +51,17 @@ const MODE_COLORS: Record<ModeId, ButtonColor> = {
 
 const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 'on');
 
-/** The settings menu, top to bottom; picking an entry switches its setting to the next value. */
+/** The settings menu, top to bottom. */
 const SETTINGS_MENU: SettingsMenuEntry[] = [
   {
+    kind: 'toggle',
     key: 'musicMuted',
     color: 'pink',
     label: (s, i18n) => `${i18n.t('music')}: ${onOff(i18n, s.musicMuted)}`,
     isOn: (s) => !s.musicMuted,
   },
   {
+    kind: 'toggle',
     key: 'soundMuted',
     color: 'purple',
     label: (s, i18n) => `${i18n.t('sound')}: ${onOff(i18n, s.soundMuted)}`,
@@ -53,38 +69,35 @@ const SETTINGS_MENU: SettingsMenuEntry[] = [
     isOn: (s) => !s.soundMuted,
   },
   {
+    kind: 'choice',
     key: 'language',
     color: 'green',
-    label: (_, i18n) => `${i18n.t('lang')}: ${i18n.t('lang_name')}`,
+    name: (i18n) => i18n.t('lang'),
+    value: (_, i18n) => i18n.t('lang_name'),
   },
 ];
 
-/** A choice of the quick match's setup: a setting, shown as its name over its value. */
-interface SetupEntry {
-  key: keyof UserSettings;
-  name: (i18n: I18nManager) => string;
-  value: (settings: UserSettings, i18n: I18nManager) => string;
-  color: ButtonColor;
-}
-
 /**
- * The quick match's choices, top to bottom; picking one steps it to its next value. They are
- * kept with the settings, so the next quick match is set up as the last one was.
+ * The quick match's choices, top to bottom. They are kept with the settings, so the next quick
+ * match is set up as the last one was.
  */
-const QUICK_MATCH_SETUP: SetupEntry[] = [
+const QUICK_MATCH_SETUP: ChoiceEntry[] = [
   {
+    kind: 'choice',
     key: 'matchBackground',
     color: 'green',
     name: (i18n) => i18n.t('background'),
     value: (s, i18n) => i18n.getBackgroundName(s.matchBackground),
   },
   {
+    kind: 'choice',
     key: 'difficulty',
     color: 'yellow',
     name: (i18n) => i18n.t('diff'),
     value: (s, i18n) => i18n.getDifficultyInfo(s.difficulty)[0],
   },
   {
+    kind: 'choice',
     key: 'matchPoints',
     color: 'pink',
     name: (i18n) => i18n.t('points'),
@@ -172,6 +185,7 @@ export class MenuController {
         onBack: back,
       }),
       this.actions.onUnlockAudio,
+      'play',
     );
   }
 
@@ -191,14 +205,7 @@ export class MenuController {
       this.i18n.getModeName('quick'),
       this.i18n.getDifficultyInfo(settings.difficulty)[1],
       h(QuickMatchSetup, {
-        options: QUICK_MATCH_SETUP.map((entry) => ({
-          id: entry.key,
-          name: entry.name(this.i18n),
-          value: entry.value(settings, this.i18n),
-          color: entry.color,
-          onNext: () => this.changeSetting(entry, 1),
-          onPrevious: () => this.changeSetting(entry, -1),
-        })),
+        options: QUICK_MATCH_SETUP.map((entry) => this.choiceOf(entry, settings)),
         previousLabel: this.i18n.t('previousChoice'),
         nextLabel: this.i18n.t('nextChoice'),
         startLabel: this.i18n.t('start'),
@@ -207,6 +214,7 @@ export class MenuController {
         onBack: back,
       }),
       this.actions.onUnlockAudio,
+      'quickMatch',
     );
   }
 
@@ -300,24 +308,49 @@ export class MenuController {
     this.open(onBack, () => this.showSettingsMenu(onBack));
     const settings = this.settings.current;
 
-    this.uiManager.showMenu(
+    this.uiManager.showScreen(
       this.i18n.t('settings'),
       '',
-      [
-        ...SETTINGS_MENU.map((entry) => ({
-          label: entry.label(settings, this.i18n),
-          action: () => this.changeSetting(entry),
-          isOn: entry.isOn?.(settings),
-          color: entry.color,
-        })),
-        { label: this.i18n.t('back'), action: onBack },
-      ],
+      h(SettingsScreen, {
+        items: SETTINGS_MENU.map((entry) =>
+          entry.kind === 'toggle'
+            ? {
+                kind: 'toggle' as const,
+                id: entry.key,
+                label: entry.label(settings, this.i18n),
+                color: entry.color,
+                isOn: entry.isOn(settings),
+                onToggle: () => this.changeSetting(entry),
+              }
+            : { kind: 'choice' as const, ...this.choiceOf(entry, settings) },
+        ),
+        previousLabel: this.i18n.t('previousChoice'),
+        nextLabel: this.i18n.t('nextChoice'),
+        backLabel: this.i18n.t('back'),
+        onBack,
+      }),
       this.actions.onUnlockAudio,
+      'settings',
     );
   }
 
+  /** A choice as its row shows it, its arrows stepping the setting either way. */
+  private choiceOf(entry: ChoiceEntry, settings: UserSettings): Choice {
+    return {
+      id: entry.key,
+      name: entry.name(this.i18n),
+      value: entry.value(settings, this.i18n),
+      color: entry.color,
+      onNext: () => this.changeSetting(entry, 1),
+      onPrevious: () => this.changeSetting(entry, -1),
+    };
+  }
+
   /** Switches one setting; the subscription redraws the menu or screen to show it. */
-  private changeSetting(entry: Pick<SettingsMenuEntry, 'key' | 'clicks'>, step: 1 | -1 = 1): void {
+  private changeSetting(
+    entry: { key: keyof UserSettings; clicks?: boolean },
+    step: 1 | -1 = 1,
+  ): void {
     this.settings.cycle(entry.key, step);
     if (entry.clicks) {
       // Only audible when sound is on

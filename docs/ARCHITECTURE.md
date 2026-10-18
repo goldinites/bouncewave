@@ -111,7 +111,8 @@ which then plays it first.
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
 (`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), or in
-`QUICK_MATCH_SETUP` if it sets up the match rather than the game, and its texts in both
+`QUICK_MATCH_SETUP` if it sets up the match rather than the game (a `toggle` for on/off, a
+`choice` stepped by arrows for one from a list), and its texts in both
 languages (`i18n/translations.ts`). The compiler insists on all of them. Saved settings
 from before it get its default.
 

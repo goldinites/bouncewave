@@ -13,6 +13,8 @@ export interface MenuButtonProps {
    * the focus off the button the keyboard was on.
    */
   isOffKeyboard?: boolean;
+  /** Makes it a toggle, drawn filled while on; plain buttons leave it out. */
+  pressed?: boolean;
   /** Its name for screen readers, when what it shows is no name (an arrow). */
   label?: string;
   onClick: () => void;
@@ -26,6 +28,7 @@ export function MenuButton({
   disabled,
   class: extra,
   isOffKeyboard,
+  pressed,
   label,
   onClick,
   onKeyDown,
@@ -40,6 +43,7 @@ export function MenuButton({
       tabIndex={isOffKeyboard ? -1 : undefined}
       onMouseDown={isOffKeyboard ? (event) => event.preventDefault() : undefined}
       aria-label={label}
+      aria-pressed={pressed}
       onClick={onClick}
       onKeyDown={onKeyDown}
     >

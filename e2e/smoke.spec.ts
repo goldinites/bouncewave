@@ -118,8 +118,8 @@ test('opens the settings, switches the language and comes back', async ({ page }
   await expect(button(page, /^SOUND EFFECTS/)).toBeVisible();
   await expect(button(page, /^DIFFICULTY/)).toHaveCount(0);
 
-  await button(page, /^LANGUAGE/).click();
-  await expect(button(page, /^ЯЗЫК/)).toBeVisible();
+  await button(page, 'Next').click(); // the language's arrow
+  await expect(choice(page, 'ЯЗЫК')).toHaveAttribute('aria-valuetext', 'РУССКИЙ');
   await button(page, 'НАЗАД').click();
   await expect(button(page, 'ИГРАТЬ')).toBeVisible();
 });
