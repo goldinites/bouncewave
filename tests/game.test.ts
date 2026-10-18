@@ -15,6 +15,11 @@ const labels = () => buttons().map((button) => button.textContent);
 const isMenuOpen = () => !$('#gameUI').classList.contains('game__ui--hidden');
 const isPauseButtonShown = () => !$('#pauseButton').classList.contains('game-pause--hidden');
 const press = (code: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code }));
+/** PLAY, then the first mode on the mode screen. */
+const play = () => {
+  buttons()[0].click();
+  $<HTMLButtonElement>('#gameScreen .mode-card').click();
+};
 
 describe('Game', () => {
   let game: Game;
@@ -48,8 +53,19 @@ describe('Game', () => {
     expect(isPauseButtonShown()).toBe(false);
   });
 
-  it('starts a match from PLAY, and pauses and resumes it with Esc', () => {
+  it('opens the mode screen from PLAY, and goes back to the main menu on Esc', () => {
     buttons()[0].click();
+    expect($('#gameTitle').textContent).toBe('GAME MODE');
+    expect(isMenuOpen()).toBe(true);
+
+    press('Escape');
+    expect($('#gameTitle').textContent).toBe('BOUNCEWAVE');
+    expect(labels()).toEqual(['PLAY', 'SETTINGS']);
+    expect($('#gameScreen').childElementCount).toBe(0);
+  });
+
+  it('starts a match from PLAY, and pauses and resumes it with Esc', () => {
+    play();
     expect(isMenuOpen()).toBe(false);
     expect(isPauseButtonShown()).toBe(true);
 
@@ -62,7 +78,7 @@ describe('Game', () => {
   });
 
   it('steps back from the settings to the pause menu on Esc', () => {
-    buttons()[0].click(); // play
+    play();
     press('Escape'); // pause
     buttons()[1].click(); // settings
     expect($('#gameTitle').textContent).toBe('SETTINGS');
@@ -82,7 +98,7 @@ describe('Game', () => {
   });
 
   it('stops answering the keyboard once disposed', () => {
-    buttons()[0].click();
+    play();
     game.dispose();
 
     press('Escape');

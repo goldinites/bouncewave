@@ -13,6 +13,7 @@ import { Ball } from '@/match/Ball';
 import { COURT, PADDLE } from '@/match/config';
 import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { ModeId, MODES } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
 import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
@@ -139,7 +140,7 @@ export class Game {
       this.audio.sfx,
       this.settings,
       {
-        onStartGame: () => this.start(),
+        onStartGame: (mode) => this.start(mode),
         onResumeGame: () => this.resume(),
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
@@ -241,8 +242,8 @@ export class Game {
     request.catch((error: unknown) => this.fpsMeter.reportError(error));
   }
 
-  public start(): void {
-    this.flow.startMatch();
+  public start(mode: ModeId): void {
+    this.flow.startMatch(MODES[mode].rules);
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
   }

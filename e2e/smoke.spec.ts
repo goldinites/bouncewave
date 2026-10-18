@@ -42,6 +42,7 @@ test('starts a match, pauses, resumes and goes back to the menu', async ({ page,
   await page.goto('');
 
   await button(page, 'PLAY').click();
+  await button(page, /^STANDARD MATCH/).click();
   await expect(menu(page)).toHaveClass(/game__ui--hidden/);
   if (isMobile) await expect(pause).toBeVisible();
   await page.waitForTimeout(SETTLE_MS);
@@ -54,6 +55,28 @@ test('starts a match, pauses, resumes and goes back to the menu', async ({ page,
 
   await pauseMatch();
   await button(page, 'MAIN MENU').click();
+  await expect(button(page, 'PLAY')).toBeVisible();
+});
+
+test('lists the modes behind PLAY and comes back from them', async ({ page }) => {
+  await page.goto('');
+
+  await button(page, 'PLAY').click();
+  const card = button(page, /^STANDARD MATCH/);
+  await expect(card).toBeVisible();
+  // The card fits on the court in every orientation (on a portrait phone both are turned)
+  const [box, court] = await Promise.all([
+    card.boundingBox(),
+    page.locator('#gameStage').boundingBox(),
+  ]);
+  expect(box).not.toBeNull();
+  expect(court).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(court!.x);
+  expect(box!.y).toBeGreaterThanOrEqual(court!.y);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(court!.x + court!.width);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(court!.y + court!.height);
+
+  await button(page, 'BACK').click();
   await expect(button(page, 'PLAY')).toBeVisible();
 });
 

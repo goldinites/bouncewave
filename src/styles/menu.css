@@ -40,6 +40,17 @@
   margin-bottom: auto;
 }
 
+/* A menu's buttons and a Preact screen take turns under the title; the one not on show is
+   gone, so the buttons may be the last thing showing and keep the column centered */
+.game__buttons {
+  margin-bottom: auto;
+}
+
+.game__buttons:empty,
+.game__screen:empty {
+  display: none;
+}
+
 .game__ui--hidden {
   visibility: hidden;
   opacity: 0;
@@ -174,6 +185,45 @@
   outline-offset: 3px;
 }
 
+/* A set width, so a screen's content can size itself against the court and not its own text */
+.game__screen {
+  width: min(100%, 400px);
+}
+
+/* The mode screen: a column of cards, each a mode's name over a line on what it is */
+.mode-select {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  margin-top: 6px;
+}
+
+.mode-select__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+
+  width: 100%;
+}
+
+.mode-card__description {
+  font-size: 0.8em;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+
 @media (max-height: 520px) {
   /* The court is sized by the screen's height here, so the title is too: sized by the width
      it pushed the five settings buttons past the bottom of the court */
@@ -191,8 +241,15 @@
     margin-top: 0;
   }
 
-  .game__buttons button {
+  .game__buttons button,
+  .mode-select .game-button {
     padding: 0.6em 1.2em;
+  }
+
+  .mode-select,
+  .mode-select__list {
+    gap: 6px;
+    margin-top: 0;
   }
 }
 
@@ -218,9 +275,14 @@
     font-size: 12px;
   }
 
-  .game__buttons button {
+  .game__buttons button,
+  .mode-select .game-button {
     padding: 1em 1.4em;
     font-size: 15px;
+  }
+
+  .game__screen {
+    width: 80%;
   }
 }
 
