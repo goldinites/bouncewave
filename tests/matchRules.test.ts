@@ -9,7 +9,7 @@ import { OVERDRIVE } from '@/match/Overdrive';
 import { Paddle } from '@/match/Paddle';
 import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 
-const FIRST_TO_3: MatchRules = { winningScore: 3, overdrive: true, balls: 1 };
+const FIRST_TO_3: MatchRules = { ...STANDARD_RULES, winningScores: [3, 3] };
 const NO_OVERDRIVE: MatchRules = { ...STANDARD_RULES, overdrive: false };
 
 const setup = () => {
@@ -57,7 +57,7 @@ const setup = () => {
 
 describe('MatchRules', () => {
   it('makes the standard match first to 10', () => {
-    expect(STANDARD_RULES.winningScore).toBe(WINNING_SCORE);
+    expect(STANDARD_RULES.winningScores).toEqual([WINNING_SCORE, WINNING_SCORE]);
     expect(STANDARD_RULES.overdrive).toBe(true);
   });
 
@@ -127,7 +127,7 @@ describe('the deciding point under other rules', () => {
       const form = new AiForm();
       form.onPoint(1);
       form.onPoint(1);
-      form.update([2, 2], 0.4, rules);
+      form.update([2, 2], 0.4, isDecidingPoint([2, 2], rules ?? STANDARD_RULES));
       return form.shift;
     };
 

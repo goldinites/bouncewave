@@ -1,9 +1,11 @@
 import {
+  ChallengeDescription,
   DifficultyDescription,
   Language,
   TRANSLATIONS,
   TranslationSchema,
 } from '@/i18n/translations';
+import { ChallengeId } from '@/match/challenges';
 import { DifficultyLevel } from '@/match/difficulty';
 import { ModeId } from '@/match/modes';
 import { BackgroundChoice } from '@/shared/scenes';
@@ -32,6 +34,10 @@ export class I18nManager {
 
   public getDifficultyInfo(level: DifficultyLevel): DifficultyDescription {
     return TRANSLATIONS[this.currentLanguage].d[level];
+  }
+
+  public getChallengeInfo(challenge: ChallengeId): ChallengeDescription {
+    return TRANSLATIONS[this.currentLanguage].challenges[challenge];
   }
 
   public getModeName(mode: ModeId): string {

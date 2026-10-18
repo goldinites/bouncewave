@@ -73,10 +73,10 @@ simulation's randomness is injected, the same seed and inputs replay the same ma
 
 | Question                             | Answer                                                                     |
 | ------------------------------------ | -------------------------------------------------------------------------- |
-| What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score, Overdrive, balls                 |
+| What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score by side, clock, Overdrive, balls  |
 | Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)       |
 | What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed |
-| Who plays a paddle                   | the `Lineup`: a `PaddleController` and an Overdrive flag per paddle        |
+| Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle      |
 | How the ball moves and bounces       | `Physics.step`, one ball at a time                                         |
 | How the AI plays                     | `AiController` (reading, aiming, nerves) and `AiForm` (form by score)      |
 
@@ -125,11 +125,18 @@ from before it get its default.
 `profile.update`.
 
 **A kind of paddle.** A `PaddleSpec`: trade-offs as multipliers against `STANDARD_PADDLE` (one
-strength, one weakness), given to `new Paddle(side, x, color, spec)`.
+strength, one weakness), brought to a match by its participant in the `Lineup` (`paddle`, or
+`flow.playerVsCpu([left, right])`); the paddle takes it on (`useSpec`) for that match.
 
 **A set of rules (the core of a mode).** A `MatchRules` value, started with
-`flow.startMatch(rules)`; read the winning score and the deciding point from the rules
-(`flow.rules`, `flow.isDecidingPoint`), never from `WINNING_SCORE`.
+`flow.startMatch(rules, lineup, difficulty)`; read the winning scores (each side its own), the
+clock (`flow.timeLeft`) and the deciding point from the match (`flow.rules`,
+`flow.isDecidingPoint`), never from `WINNING_SCORE`, and its level from `flow.difficulty`, not
+the settings.
+
+**A challenge.** An entry in `CHALLENGES` (`match/challenges.ts`): rules, difficulty, both
+paddles and a goal; its name and goal in both languages (`challenges` in
+`i18n/translations.ts`). The list is in the order they open.
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
 in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/MenuController.ts`).

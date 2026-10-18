@@ -1,4 +1,4 @@
-import { MatchRules, STANDARD_RULES } from '@/match/rules';
+import { firstTo, MatchRules, STANDARD_RULES } from '@/match/rules';
 
 /** What a game mode is, as the PLAY menu lists it. Its name lives in the translations. */
 export interface GameMode {
@@ -33,5 +33,5 @@ export const isMatchPoints = (value: unknown): value is MatchPoints =>
 
 /** A quick match: everything as in the standard rules but its length, which the player sets. */
 export function quickMatchRules(points: MatchPoints): MatchRules {
-  return { ...STANDARD_RULES, winningScore: points };
+  return { ...STANDARD_RULES, winningScores: firstTo(points) };
 }

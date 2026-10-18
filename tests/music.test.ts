@@ -51,7 +51,7 @@ describe('music intensity', () => {
 
   it('counts late in the match by the points that win it', () => {
     const intensity = (scores: [number, number], winningScore: number) =>
-      getTargetIntensity(playing({ scores, winningScore }), 0);
+      getTargetIntensity(playing({ scores, winningScores: [winningScore, winningScore] }), 0);
 
     // A standard match, to 10: from 6 points on
     expect(intensity([5, 3], 10)).toBeCloseTo(intensity([0, 0], 10));
