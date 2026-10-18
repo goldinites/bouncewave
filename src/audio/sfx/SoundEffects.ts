@@ -1,5 +1,6 @@
 import { Harmony } from '@/audio/music/HarmonyTimeline';
 import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
+import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { midiToFrequency } from '@/shared/math';
 
 const SFX_FREQUENCIES = {
@@ -17,6 +18,9 @@ const HEARTBEAT = [
   { delay: 0, volume: 0.16 },
   { delay: 0.17, volume: 0.11 },
 ];
+
+// The channel surf's last channel starts this far flat and glides up onto its note
+const TUNE_IN_FLAT = 0.94;
 
 // Shared echo used by the victory sting
 const ECHO = { TIME: 0.28, FEEDBACK: 0.35, WET: 0.5 } as const;
@@ -278,6 +282,59 @@ export class SoundEffects {
     this.echoInput = input;
     this.echoContext = ac;
     return input;
+  }
+
+  /**
+   * The channel surf at the start of a match: a synth blip at every switch, climbing the chord
+   * the music is playing like a retro set's channel-up button, then the last channel tunes in,
+   * gliding up onto the top note and ringing out through the echo.
+   */
+  public playChannelSurf(): void {
+    const ac = this.getUnmutedContext();
+    if (!ac) return;
+
+    try {
+      const now = ac.currentTime;
+      const harmony = this.harmonyGetter();
+      const last = CHANNEL_SURF.CHANNELS - 1;
+
+      for (let i = 0; i < last; i++) {
+        const start = now + i * CHANNEL_SURF.STEP;
+        const frequency = midiToFrequency(getRallyNote(harmony, i + 1));
+        // A click of the button, then the blip itself
+        this.tone(ac, 2400, start, 0.012, 'triangle', 0.03, 0.001, null);
+        this.tone(
+          ac,
+          frequency,
+          start + 0.005,
+          CHANNEL_SURF.STEP * 0.7,
+          'square',
+          0.04,
+          0.004,
+          null,
+        );
+      }
+
+      const start = now + last * CHANNEL_SURF.STEP;
+      const frequency = midiToFrequency(getRallyNote(harmony, CHANNEL_SURF.CHANNELS));
+      const echo = this.getEchoInput(ac);
+      this.tone(ac, 2400, start, 0.012, 'triangle', 0.03, 0.001, null);
+      // Tuning in: from a little flat up onto the note, the way a dial finds the station
+      this.tone(
+        ac,
+        frequency * TUNE_IN_FLAT,
+        start,
+        0.5,
+        'triangle',
+        0.06,
+        0.01,
+        echo,
+        1 / TUNE_IN_FLAT,
+      );
+      this.tone(ac, frequency * 2, start + 0.06, 0.4, 'sine', 0.025, 0.02, echo);
+    } catch {
+      // Audio playback fails silently if browser policy blocks it
+    }
   }
 
   /** UI feedback: settings are only reachable from menus, so it must bypass the gameplay gate. */

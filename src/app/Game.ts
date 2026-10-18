@@ -1,5 +1,6 @@
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
+import { BackgroundMenu } from '@/debug/BackgroundMenu';
 import { FpsMeter } from '@/debug/FpsMeter';
 import { KonamiCode } from '@/easterEgg/KonamiCode';
 import { TitleTaps } from '@/easterEgg/TitleTaps';
@@ -15,6 +16,7 @@ import { Paddle } from '@/match/Paddle';
 import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { COLORS } from '@/shared/palette';
+import { isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
 import { NowPlaying } from '@/ui/NowPlaying';
 import { UIManager } from '@/ui/UIManager';
@@ -41,7 +43,10 @@ export class Game {
   private readonly particles = new ParticleSystem();
   private readonly flow: MatchFlow;
   private readonly effects: EffectsDirector;
-  private readonly fpsMeter = new FpsMeter();
+  private readonly fpsMeter: FpsMeter;
+  private readonly backgroundMenu: BackgroundMenu;
+  /** The background the debug overlay last showed, to notice when the next match changes it. */
+  private debugScene: SceneId | null = null;
   private readonly konamiCode: KonamiCode;
   private readonly titleTaps: TitleTaps | null;
 
@@ -71,9 +76,15 @@ export class Game {
     );
 
     this.renderer = new Renderer(canvas);
+    // For developers: ?bg=fuji pins a background from the start, matches included, and the
+    // debug overlay comes with a menu of them all
+    const pinned = new URLSearchParams(window.location.search).get('bg');
+    if (pinned && isSceneId(pinned)) this.renderer.pinBackground(pinned);
+    this.backgroundMenu = new BackgroundMenu((scene) => this.pickBackground(scene));
+    this.fpsMeter = new FpsMeter((isVisible) => this.backgroundMenu.setVisible(isVisible));
     // The music opens with the song of whichever backdrop comes up first
     this.audio.music.enterScene(this.renderer.scene);
-    this.showResolution();
+    this.showDebugDetail();
     this.uiManager = new UIManager(this.i18n);
 
     // The UI language follows the settings
@@ -279,8 +290,11 @@ export class Game {
 
   private runFrame(timestamp: number): void {
     this.fpsMeter.tick(timestamp);
-    if (this.renderer.trackFrameTime(timestamp - this.lastTimestamp)) {
-      this.showResolution();
+    if (
+      this.renderer.trackFrameTime(timestamp - this.lastTimestamp) ||
+      this.renderer.scene !== this.debugScene
+    ) {
+      this.showDebugDetail();
     }
 
     const realDt = Math.min(MAX_FRAME_DT, (timestamp - this.lastTimestamp) / 1000);
@@ -311,9 +325,18 @@ export class Game {
     this.renderer.render(frame, realDt);
   }
 
-  /** Shows the dynamic resolution in the ?debug overlay. */
-  private showResolution(): void {
+  /** Shows the dynamic resolution and the background in the ?debug overlay and its menu. */
+  private showDebugDetail(): void {
+    this.debugScene = this.renderer.scene;
     this.fpsMeter.setDetail(`res ×${this.renderer.pixelRatio.toFixed(2)}`);
+    this.backgroundMenu.setCurrent(this.renderer.scene);
+  }
+
+  /** For developers, from the debug menu: pins a background, its music coming in with it. */
+  private pickBackground(scene: SceneId): void {
+    this.renderer.pinBackground(scene);
+    this.audio.music.enterScene(scene);
+    this.showDebugDetail();
   }
 
   private buildMusicState(): MusicState {
@@ -369,5 +392,6 @@ export class Game {
     this.renderer.dispose();
     this.audio.dispose();
     this.fpsMeter.dispose();
+    this.backgroundMenu.dispose();
   }
 }

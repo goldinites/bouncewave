@@ -7,11 +7,24 @@ import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
 import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
 import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
+import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp } from '@/shared/math';
 import { SceneId } from '@/shared/scenes';
 
 // Dark tint over the background so the court reads clearly on top of it
 const OVERLAY_TINT_RGB = '10, 2, 32';
+
+// Static while the channels flick past: bright bands torn across the picture, which rolls
+// a little at every switch
+const STATIC = { BANDS: 14, BAND_HEIGHT: [2, 14], ROLL: 28, DIM: 0.35 } as const;
+const STATIC_COLORS = ['rgb(255, 255, 255)', 'rgb(25, 240, 255)', 'rgb(255, 43, 214)'] as const;
+
+interface Surf {
+  /** Seconds since it began. */
+  age: number;
+  /** Background indices shown in turn, the last one the one that stays. */
+  channels: number[];
+}
 
 /** Every background the game rotates through; add new ones here. */
 const createBackgrounds = (): Background[] => [
@@ -35,14 +48,21 @@ export class BackgroundRenderer {
   private readonly spectrum = new AudioSpectrum();
   private readonly backgrounds: Background[];
   private backgroundIndex: number;
+  private readonly random: () => number;
+  /** Background indices still to come before the deck is shuffled again; the next is last. */
+  private deck: number[] = [];
+  private surf: Surf | null = null;
+  /** A developer pinned the background: it stays, matches included, and the deck sits idle. */
+  private _isPinned = false;
   private lastTime: number | null = null;
 
   private layer: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null = null;
   private layerScale = 0;
 
-  constructor(backgrounds: Background[] = createBackgrounds()) {
+  constructor(backgrounds: Background[] = createBackgrounds(), random: () => number = Math.random) {
     this.backgrounds = backgrounds;
-    this.backgroundIndex = Math.floor(Math.random() * backgrounds.length);
+    this.random = random;
+    this.backgroundIndex = Math.floor(random() * backgrounds.length);
   }
 
   /**
@@ -79,12 +99,67 @@ export class BackgroundRenderer {
   }
 
   /**
-   * Switches to the next background (on every return to the menu).
-   * @returns the backdrop now on screen
+   * Switches to another background (at the start of every match), dealt from a shuffled deck:
+   * every one comes up once before any comes up again, and never the same one twice running.
+   * @param isAnimated flick through a few channels in static first; off, it just cuts over
+   * @returns the backdrop the match is played on
    */
-  public nextBackground(): SceneId {
-    this.backgroundIndex = (this.backgroundIndex + 1) % this.backgrounds.length;
+  public switchChannel(isAnimated: boolean): SceneId {
+    if (this._isPinned) return this.scene;
+    const count = this.backgrounds.length;
+    const previous = this.backgroundIndex;
+    this.backgroundIndex = this.deal();
+
+    if (isAnimated && count > 1) {
+      // Channels flicking past, each unlike the one before, ending on the match's own
+      const channels: number[] = [];
+      let last = previous;
+      for (let i = 1; i < CHANNEL_SURF.CHANNELS; i++) {
+        let next = Math.floor(this.random() * (count - 1));
+        if (next >= last) next++;
+        channels.push(next);
+        last = next;
+      }
+      if (last === this.backgroundIndex) channels.pop();
+      channels.push(this.backgroundIndex);
+      this.surf = { age: 0, channels };
+    }
     return this.scene;
+  }
+
+  /** Whether a developer pinned the background on screen. */
+  public get isPinned(): boolean {
+    return this._isPinned;
+  }
+
+  /**
+   * For developers: shows `scene` at once and keeps it, matches included.
+   * @returns false if there is no such background
+   */
+  public pin(scene: SceneId): boolean {
+    const index = this.backgrounds.findIndex((background) => background.scene === scene);
+    if (index < 0) return false;
+    this.backgroundIndex = index;
+    this._isPinned = true;
+    this.surf = null;
+    return true;
+  }
+
+  /** The next background off the deck, shuffling a new one when it runs out. */
+  private deal(): number {
+    if (this.deck.length === 0) {
+      this.deck = this.backgrounds.map((_, i) => i);
+      for (let i = this.deck.length - 1; i > 0; i--) {
+        const j = Math.floor(this.random() * (i + 1));
+        [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+      }
+      // Where one deck meets the next, the one on screen doesn't come straight back
+      const top = this.deck.length - 1;
+      if (top > 0 && this.deck[top] === this.backgroundIndex) {
+        [this.deck[0], this.deck[top]] = [this.deck[top], this.deck[0]];
+      }
+    }
+    return this.deck.pop() ?? this.backgroundIndex;
   }
 
   /** Victory burst, for every background that has one. */
@@ -117,14 +192,70 @@ export class BackgroundRenderer {
       target.globalCompositeOperation = 'source-over';
     }
 
-    const background = this.backgrounds[this.backgroundIndex];
+    const surf = this.advanceSurf(dt);
+    const background = this.backgrounds[surf?.channel ?? this.backgroundIndex];
+
+    // At each switch the picture rolls down a little and settles, as an old set's would
+    const roll = surf?.roll ?? 0;
+    if (roll > 0) {
+      target.fillStyle = '#000';
+      target.fillRect(0, 0, COURT.WIDTH, roll);
+      target.save();
+      target.translate(0, roll);
+    }
     background.render({ ...mood, ctx: target, spectrum: this.spectrum, pulse, time, isRotated });
+    if (roll > 0) target.restore();
 
     target.fillStyle = `rgba(${OVERLAY_TINT_RGB}, ${background.overlayTint})`;
     target.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+    if (surf) this.renderStatic(target, surf.noise);
 
     if (layer) {
       ctx.drawImage(layer.canvas, 0, 0, COURT.WIDTH, COURT.HEIGHT);
     }
+  }
+
+  /**
+   * Moves the channel surf on by `dt`.
+   * @returns what it shows this frame (which channel, how much static, how far rolled), or
+   *   null once it is over
+   */
+  private advanceSurf(dt: number): { channel: number; noise: number; roll: number } | null {
+    const surf = this.surf;
+    if (!surf) return null;
+
+    surf.age += dt;
+    const { STEP, SETTLE } = CHANNEL_SURF;
+    const last = surf.channels.length - 1;
+    if (surf.age >= last * STEP + SETTLE) {
+      this.surf = null;
+      return null;
+    }
+
+    const step = Math.min(last, Math.floor(surf.age / STEP));
+    // Static flares at every switch and fades through the step; on the last one it fades for good
+    const sinceSwitch = surf.age - step * STEP;
+    const fade = step < last ? sinceSwitch / STEP : sinceSwitch / SETTLE;
+    const noise = (1 - fade) * (step < last ? 1 : 0.8);
+    return { channel: surf.channels[step], noise, roll: (1 - fade) ** 2 * STATIC.ROLL };
+  }
+
+  /** Static over the picture: a dim veil and bright bands torn across it, new every frame. */
+  private renderStatic(ctx: CanvasRenderingContext2D, noise: number): void {
+    if (noise <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = noise * STATIC.DIM;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+
+    const [low, high] = STATIC.BAND_HEIGHT;
+    for (let i = 0; i < STATIC.BANDS; i++) {
+      ctx.globalAlpha = noise * (0.2 + 0.5 * this.random());
+      ctx.fillStyle = STATIC_COLORS[i % STATIC_COLORS.length];
+      const height = low + this.random() * (high - low);
+      ctx.fillRect(0, this.random() * COURT.HEIGHT, COURT.WIDTH, height);
+    }
+    ctx.restore();
   }
 }

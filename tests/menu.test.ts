@@ -173,6 +173,26 @@ describe('settings menu', () => {
     expect(menu.goBack()).toBe(false);
   });
 
+  it('leaves the difficulty out of the settings opened from the pause', () => {
+    const { menu, buttons } = setup();
+    menu.showPauseMenu();
+    buttons()[1].click(); // settings
+
+    const labels = () => buttons().map((b) => b.textContent);
+    expect(labels()).toEqual(['MUSIC: OFF', 'SOUND EFFECTS: ON', 'LANGUAGE: ENGLISH', 'BACK']);
+
+    // Switching a setting redraws the menu, still without the difficulty
+    buttons()[0].click();
+    expect(labels()).toEqual(['MUSIC: ON', 'SOUND EFFECTS: ON', 'LANGUAGE: ENGLISH', 'BACK']);
+  });
+
+  it('offers the difficulty between matches', () => {
+    const { menu, buttons } = setup();
+    menu.showMainMenu();
+    buttons()[1].click(); // settings
+    expect(buttons()[0].textContent).toMatch(/^DIFFICULTY/);
+  });
+
   it('names the pause button in the current language', () => {
     const { store } = setup();
     const label = () => document.getElementById('pauseButton')?.getAttribute('aria-label');

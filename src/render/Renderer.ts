@@ -266,11 +266,20 @@ export class Renderer {
   }
 
   /**
-   * Switches to the next background (on every return to the menu).
-   * @returns the backdrop now on screen
+   * Switches to another background at the start of a match, flicking through a few channels
+   * in static first (a plain cut with reduced motion).
+   * @returns the backdrop the match is played on
    */
-  public nextBackground(): SceneId {
-    return this.background.nextBackground();
+  public switchChannel(): SceneId {
+    return this.background.switchChannel(!this.reducedMotion.matches && !this.isClassicMode);
+  }
+
+  /**
+   * For developers: shows `scene` and keeps it, matches included.
+   * @returns false if there is no such background
+   */
+  public pinBackground(scene: SceneId): boolean {
+    return this.background.pin(scene);
   }
 
   /** Swaps the whole canvas scene for a flat monochrome 1972 look, with no flashy feedback. */

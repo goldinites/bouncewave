@@ -33,12 +33,24 @@ describe('SoundEffects', () => {
     expect(frequencies(calls)[0]).toBeCloseTo(midiToFrequency(getRallyNote(harmony, 3)));
   });
 
+  it('climbs the chord the music is on as the channels flick past', () => {
+    const { sfx, calls, harmony } = setup();
+
+    sfx.playChannelSurf();
+    // Each blip follows its button click; the blips walk up the chord like a rally does
+    const blips = frequencies(calls).filter((frequency) => frequency !== 2400);
+    for (let i = 0; i < 4; i++) {
+      expect(blips[i]).toBeCloseTo(midiToFrequency(getRallyNote(harmony, i + 1)));
+    }
+  });
+
   it('stays silent with sound effects off', () => {
     const { sfx, oscillators } = setup({ muted: true });
 
     sfx.playPaddleHit(1);
     sfx.playVictory();
     sfx.playSettingsClick();
+    sfx.playChannelSurf();
     expect(oscillators()).toBe(0);
   });
 

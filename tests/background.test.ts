@@ -33,7 +33,7 @@ describe('BackgroundRenderer', () => {
     const first = backgrounds.findIndex((b) => vi.mocked(b.render).mock.calls.length === 1);
     expect(first).toBeGreaterThanOrEqual(0);
 
-    renderer.nextBackground();
+    renderer.switchChannel(false);
     draw(renderer, 0.016);
 
     const second = backgrounds[(first + 1) % 2];
@@ -47,10 +47,68 @@ describe('BackgroundRenderer', () => {
       fakeBackground(0.1, false, 'neonCity'),
     ]);
     const first = renderer.scene;
-    const next = renderer.nextBackground();
+    const next = renderer.switchChannel(false);
 
     expect(next).not.toBe(first);
     expect(renderer.scene).toBe(next);
+  });
+
+  it('deals every background once before any comes round again, never one twice running', () => {
+    const scenes: SceneId[] = ['lasers', 'memphis', 'outrun', 'neonCity', 'fuji', 'jungle'];
+    const renderer = new BackgroundRenderer(
+      scenes.map((scene) => fakeBackground(0.1, false, scene)),
+    );
+
+    let previous = renderer.scene;
+    for (let deck = 0; deck < 20; deck++) {
+      const dealt = new Set<SceneId>();
+      for (let i = 0; i < scenes.length; i++) {
+        const scene = renderer.switchChannel(false);
+        expect(scene).not.toBe(previous);
+        dealt.add(scene);
+        previous = scene;
+      }
+      expect(dealt.size).toBe(scenes.length);
+    }
+  });
+
+  it('flicks through other channels in static before settling on the match’s own', () => {
+    const backgrounds = (['lasers', 'memphis', 'outrun', 'neonCity'] as SceneId[]).map((scene) =>
+      fakeBackground(0.1, false, scene),
+    );
+    const renderer = new BackgroundRenderer(backgrounds);
+    const target = renderer.switchChannel(true);
+    const shown = (time: number) => {
+      backgrounds.forEach((b) => vi.mocked(b.render).mockClear());
+      draw(renderer, time);
+      return backgrounds.find((b) => vi.mocked(b.render).mock.calls.length > 0)!.scene;
+    };
+
+    // Each frame shows one channel; over the surf more than one comes by
+    const seen = new Set<SceneId>();
+    for (let t = 0; t < 1.5; t += 0.05) seen.add(shown(t));
+    expect(seen.size).toBeGreaterThan(1);
+    // Once it is over, only the match's own is left
+    expect(shown(1.6)).toBe(target);
+    expect(shown(1.7)).toBe(target);
+  });
+
+  it('keeps a pinned background through every match', () => {
+    const scenes: SceneId[] = ['lasers', 'memphis', 'outrun'];
+    const renderer = new BackgroundRenderer(
+      scenes.map((scene) => fakeBackground(0.1, false, scene)),
+    );
+
+    expect(renderer.pin('memphis')).toBe(true);
+    expect(renderer.isPinned).toBe(true);
+    expect(renderer.switchChannel(true)).toBe('memphis');
+    expect(renderer.switchChannel(false)).toBe('memphis');
+  });
+
+  it('refuses to pin a background it does not have', () => {
+    const renderer = new BackgroundRenderer([fakeBackground(0.1, false, 'lasers')]);
+    expect(renderer.pin('jungle')).toBe(false);
+    expect(renderer.isPinned).toBe(false);
   });
 
   it('tints with the active background’s own overlay', () => {

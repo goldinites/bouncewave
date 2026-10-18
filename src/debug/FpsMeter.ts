@@ -2,7 +2,8 @@
  * Developer-only FPS overlay.
  *
  * - Lives in its own DOM element on top of the page (never drawn on the canvas).
- * - Hidden by default. Enable with `?debug` in the URL or toggle with F3.
+ * - Hidden by default. Enable with `?debug` in the URL or toggle with F3; the other developer
+ *   tools (the background menu) show and hide with it.
  * - Costs almost nothing while hidden: tick() returns immediately.
  * - Also shows the last error the game caught and survived (reportError), for devices
  *   without a developer console such as iPhones.
@@ -25,8 +26,11 @@ export class FpsMeter {
   private errorCount = 0;
   private lastError = '';
   private visible = false;
+  private readonly onVisibilityChange: (isVisible: boolean) => void;
 
-  constructor() {
+  /** @param onVisibilityChange told whenever the overlay is shown or hidden, at once included */
+  constructor(onVisibilityChange: (isVisible: boolean) => void = () => {}) {
+    this.onVisibilityChange = onVisibilityChange;
     this.el = document.createElement('div');
     this.el.setAttribute('aria-hidden', 'true');
     Object.assign(this.el.style, {
@@ -120,6 +124,7 @@ export class FpsMeter {
   private setVisible(value: boolean): void {
     this.visible = value;
     this.el.style.display = value ? 'block' : 'none';
+    this.onVisibilityChange(value);
 
     // Start measuring from scratch every time the overlay is switched on or off.
     this.head = 0;
