@@ -28,6 +28,8 @@ export interface MenuItem {
   color?: ButtonColor;
   /** Makes the item a toggle, drawn filled while on; plain buttons leave it out. */
   isOn?: boolean;
+  /** Shown, but can't be pressed (something still to come). */
+  disabled?: boolean;
 }
 
 export class UIManager {
@@ -145,6 +147,7 @@ export class UIManager {
         btn.classList.add(`game-button--${item.color}`);
       }
       btn.textContent = item.label;
+      btn.disabled = item.disabled ?? false;
       if (item.isOn !== undefined) {
         btn.setAttribute('aria-pressed', String(item.isOn));
       }

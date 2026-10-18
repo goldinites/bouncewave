@@ -16,6 +16,8 @@ import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
 import { ProfileStore } from '@/profile/ProfileStore';
+import { getEmptyStatistics } from '@/profile/Statistics';
+import { StatsRecorder } from '@/profile/StatsRecorder';
 import { StoragePersistence } from '@/profile/StoragePersistence';
 import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
@@ -39,6 +41,8 @@ export class Game {
   private readonly settings = new SettingsStore(this.profile.settings);
   /** Asks the browser to keep the profile once a match has been played. */
   private readonly storagePersistence = new StoragePersistence();
+  /** Counts the player's finished matches into the profile. */
+  private readonly statsRecorder: StatsRecorder;
   private readonly i18n: I18nManager;
   private readonly audio: AudioEngine;
   private readonly renderer: Renderer;
@@ -161,11 +165,22 @@ export class Game {
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
       },
+      {
+        get: () => this.profile.current.stats,
+        reset: () => this.profile.update({ stats: getEmptyStatistics() }),
+      },
     );
+
+    this.statsRecorder = new StatsRecorder({
+      profile: this.profile,
+      match: this.flow,
+      getDifficulty: () => this.settings.current.difficulty,
+    });
 
     // The effects hear each event before the menus do
     this.effects.listenTo(this.matchEvents);
     this.menuController.listenTo(this.matchEvents);
+    this.statsRecorder.listenTo(this.matchEvents);
     this.storagePersistence.listenTo(this.matchEvents);
 
     this.nowPlaying = new NowPlaying(this.i18n, {

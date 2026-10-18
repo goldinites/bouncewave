@@ -261,6 +261,73 @@
   stroke-linejoin: round;
 }
 
+/* The statistics: label and value rows in sections, side by side where the court is wide */
+.stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  width: min(100%, 640px);
+  margin-bottom: auto;
+}
+
+.stats__sections {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 32px;
+
+  width: 100%;
+}
+
+.stats__section {
+  flex: 1 1 200px;
+  max-width: 300px;
+}
+
+.stats__heading {
+  margin: 0 0 4px;
+
+  color: var(--pink-soft);
+  font-size: clamp(10px, 1.6vw, 13px);
+  letter-spacing: 0.14em;
+  text-align: left;
+}
+
+.stats__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  margin: 0;
+}
+
+.stats__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+
+  font-size: clamp(11px, 1.8vw, 14px);
+  letter-spacing: 0.08em;
+}
+
+.stats__row dt {
+  color: var(--cyan);
+  opacity: 0.8;
+}
+
+.stats__row dd {
+  margin: 0;
+
+  color: var(--white);
+  font-weight: 700;
+}
+
+.stats .screen-buttons {
+  min-width: clamp(170px, 38%, 280px);
+}
+
 /* A button that can't be pressed yet (a mode still to come): dimmed, no glow, no reaction */
 .game-button:disabled {
   opacity: 0.35;
@@ -290,6 +357,19 @@
   .game__buttons button,
   .screen-buttons button {
     padding: 0.6em 1.2em;
+  }
+
+  /* Short of height: the sections side by side, the rows tighter */
+  .stats {
+    gap: 8px;
+  }
+
+  .stats__sections {
+    gap: 4px 24px;
+  }
+
+  .stats__rows {
+    gap: 1px;
   }
 }
 

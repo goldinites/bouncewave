@@ -161,5 +161,19 @@ test('brings settings saved before the profile into it', async ({ page }) => {
   await button(page, 'БЫСТРЫЙ МАТЧ').click();
   await expect(choice(page, 'ОЧКИ')).toHaveAttribute('aria-valuetext', '7');
   const profile = await page.evaluate(() => localStorage.getItem('bouncewave_profile'));
-  expect(JSON.parse(profile ?? '{}')).toMatchObject({ version: 1 });
+  expect(JSON.parse(profile ?? '{}')).toMatchObject({ version: 2 });
+});
+
+test('shows the statistics on the court, and comes back', async ({ page }) => {
+  await page.goto('');
+
+  await button(page, 'STATISTICS').click();
+  await expect(page.locator('#gameScreen .stats__row').first()).toBeVisible();
+  // From the title to BACK, on the court in every orientation
+  await expectOnCourt(page, page.locator('#gameTitle'));
+  await expectOnCourt(page, page.locator('#gameScreen .stats__row').last());
+  await expectOnCourt(page, button(page, 'BACK'));
+
+  await button(page, 'BACK').click();
+  await expect(button(page, 'PLAY')).toBeVisible();
 });

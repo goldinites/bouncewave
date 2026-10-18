@@ -59,7 +59,7 @@ describe('Game', () => {
   it('opens on the main menu, with the title the page shows', () => {
     expect(isMenuOpen()).toBe(true);
     expect($('#gameTitle').textContent).toBe('BOUNCEWAVE');
-    expect(labels()).toEqual(['PLAY', 'SETTINGS']);
+    expect(labels()).toEqual(['PLAY', 'MULTIPLAYER', 'STATISTICS', 'SETTINGS']);
     expect(isPauseButtonShown()).toBe(false);
   });
 
@@ -74,7 +74,7 @@ describe('Game', () => {
     expect($('#gameTitle').textContent).toBe('GAME MODE');
     press('Escape');
     expect($('#gameTitle').textContent).toBe('BOUNCEWAVE');
-    expect(labels()).toEqual(['PLAY', 'SETTINGS']);
+    expect(labels()).toEqual(['PLAY', 'MULTIPLAYER', 'STATISTICS', 'SETTINGS']);
     expect($('#gameScreen').childElementCount).toBe(0);
   });
 
@@ -133,7 +133,7 @@ describe('Game', () => {
   });
 
   it('switches every text outside the menus to the language picked', () => {
-    buttons()[1].click(); // settings
+    buttons()[3].click(); // settings
     document.querySelector<HTMLButtonElement>('#gameScreen [aria-label="Next"]')!.click(); // language
 
     expect(document.documentElement.lang).toBe('ru');

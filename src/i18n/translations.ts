@@ -44,6 +44,21 @@ export interface TranslationSchema {
   /** The arrows either side of a quick match choice, for screen readers. */
   previousChoice: string;
   nextChoice: string;
+  /** The statistics screen: its title (and the main menu's button), and its rows. */
+  stats: string;
+  statPlayed: string;
+  statWon: string;
+  statStreak: string;
+  statBestStreak: string;
+  statRally: string;
+  statPerfect: string;
+  statPower: string;
+  statByDifficulty: string;
+  /** Wiping the statistics: the button, and what it asks before it does. */
+  resetStats: string;
+  resetStatsConfirm: string;
+  /** Local multiplayer, on the main menu before it is playable (stage 2). */
+  multiplayer: string;
   /** Every backdrop's name, and random's, by choice. */
   backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
@@ -82,6 +97,18 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     start: 'START',
     previousChoice: 'Previous',
     nextChoice: 'Next',
+    stats: 'STATISTICS',
+    statPlayed: 'MATCHES',
+    statWon: 'WINS',
+    statStreak: 'WIN STREAK',
+    statBestStreak: 'BEST STREAK',
+    statRally: 'LONGEST RALLY',
+    statPerfect: 'PERFECT HITS',
+    statPower: 'OVERDRIVE SHOTS',
+    statByDifficulty: 'WINS BY DIFFICULTY',
+    resetStats: 'RESET',
+    resetStatsConfirm: 'SURE? RESET',
+    multiplayer: 'MULTIPLAYER',
     backgrounds: {
       random: 'RANDOM',
       lasers: 'LASERS',
@@ -128,6 +155,18 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     start: 'НАЧАТЬ',
     previousChoice: 'Предыдущий вариант',
     nextChoice: 'Следующий вариант',
+    stats: 'СТАТИСТИКА',
+    statPlayed: 'МАТЧИ',
+    statWon: 'ПОБЕДЫ',
+    statStreak: 'СЕРИЯ ПОБЕД',
+    statBestStreak: 'ЛУЧШАЯ СЕРИЯ',
+    statRally: 'ДЛИННЕЙШИЙ РОЗЫГРЫШ',
+    statPerfect: 'ИДЕАЛЬНЫЕ УДАРЫ',
+    statPower: 'УДАРЫ OVERDRIVE',
+    statByDifficulty: 'ПОБЕДЫ ПО СЛОЖНОСТИ',
+    resetStats: 'СБРОСИТЬ',
+    resetStatsConfirm: 'ТОЧНО СБРОСИТЬ?',
+    multiplayer: 'МУЛЬТИПЛЕЕР',
     backgrounds: {
       random: 'СЛУЧАЙНЫЙ',
       lasers: 'ЛАЗЕРНЫЙ',

@@ -1,5 +1,6 @@
 import * as v from 'valibot';
 import { getDefaultProfile, Profile, PROFILE_VERSION, profileSchema } from '@/profile/Profile';
+import { getEmptyStatistics } from '@/profile/Statistics';
 import { UserSettings } from '@/settings/UserSettings';
 
 /** Where the game kept its settings before there was a profile (up to 1.2): version 0. */
@@ -30,6 +31,8 @@ const MIGRATIONS: ((saved: Record<string, unknown>) => Record<string, unknown>)[
       Object.entries(LEGACY_KEYS).map(([name, short]) => [name, saved[short]]),
     ),
   }),
+  // 1 → 2: statistics begin, from nothing
+  (saved) => ({ ...saved, version: 2, stats: getEmptyStatistics() }),
 ];
 
 /** The saved data's version: whatever lacks one predates profiles. */
