@@ -10,6 +10,8 @@ import { ParticleSystem } from '@/fx/ParticleSystem';
 import { I18nManager } from '@/i18n/I18nManager';
 import { InputHandler } from '@/input/InputHandler';
 import { Ball } from '@/match/Ball';
+import { ChallengeJudge, ChallengeVerdict } from '@/match/ChallengeJudge';
+import { ChallengeId, CHALLENGES, isChallengeId } from '@/match/challenges';
 import { COURT, PADDLE } from '@/match/config';
 import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
@@ -43,6 +45,12 @@ export class Game {
   private readonly storagePersistence = new StoragePersistence();
   /** Counts the player's finished matches into the profile. */
   private readonly statsRecorder: StatsRecorder;
+  /** Says whether each finished attempt at a challenge passed. */
+  private readonly challengeJudge: ChallengeJudge;
+  /** The challenge the matches started are attempts at; null for the quick match. */
+  private challenge: ChallengeId | null = null;
+  /** How the last attempt at a challenge went, for the debug overlay until its screen (2.3). */
+  private lastVerdict: ChallengeVerdict | null = null;
   private readonly i18n: I18nManager;
   private readonly audio: AudioEngine;
   private readonly renderer: Renderer;
@@ -106,6 +114,10 @@ export class Game {
     // debug overlay comes with a menu of them all
     const pinned = new URLSearchParams(window.location.search).get('bg');
     if (pinned && isSceneId(pinned)) this.renderer.pinBackground(pinned);
+    // ?challenge=survival makes every match an attempt at that challenge, until the challenge
+    // screens (2.3) start them; the debug overlay shows how the last attempt went
+    const challenge = new URLSearchParams(window.location.search).get('challenge');
+    if (isChallengeId(challenge)) this.challenge = challenge;
     this.backgroundMenu = new BackgroundMenu((scene) => this.pickBackground(scene));
     this.fpsMeter = new FpsMeter((isVisible) => this.backgroundMenu.setVisible(isVisible));
     // The music opens with the song of whichever backdrop comes up first
@@ -176,12 +188,22 @@ export class Game {
       profile: this.profile,
       match: this.flow,
       getDifficulty: () => this.flow.difficulty,
+      isCounted: () => this.challenge === null,
+    });
+
+    this.challengeJudge = new ChallengeJudge({
+      match: this.flow,
+      onVerdict: (verdict) => {
+        this.lastVerdict = verdict;
+        this.showDebugDetail();
+      },
     });
 
     // The effects hear each event before the menus do
     this.effects.listenTo(this.matchEvents);
     this.menuController.listenTo(this.matchEvents);
     this.statsRecorder.listenTo(this.matchEvents);
+    this.challengeJudge.listenTo(this.matchEvents);
     this.storagePersistence.listenTo(this.matchEvents);
 
     this.nowPlaying = new NowPlaying(this.i18n, {
@@ -275,9 +297,19 @@ export class Game {
     request.catch((error: unknown) => this.fpsMeter.reportError(error));
   }
 
-  /** Starts a quick match, set up as the player last chose (the settings keep it). */
+  /**
+   * Starts a match: the challenge being played, or else a quick match set up as the player last
+   * chose (the settings keep it). Restart and play again start the same.
+   */
   public start(): void {
-    this.flow.startMatch(quickMatchRules(this.settings.current.matchPoints));
+    this.challengeJudge.judge(this.challenge);
+    if (this.challenge) {
+      // A challenge is set up in advance: its own rules, paddles and level
+      const { rules, paddles, difficulty } = CHALLENGES[this.challenge];
+      this.flow.startMatch(rules, this.flow.playerVsCpu(paddles), difficulty);
+    } else {
+      this.flow.startMatch(quickMatchRules(this.settings.current.matchPoints));
+    }
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
   }
@@ -362,10 +394,17 @@ export class Game {
     this.renderer.render(frame, realDt);
   }
 
-  /** Shows the dynamic resolution and the background in the ?debug overlay and its menu. */
+  /**
+   * Shows the dynamic resolution, the last challenge verdict and the background in the ?debug
+   * overlay and its menu.
+   */
   private showDebugDetail(): void {
     this.debugScene = this.renderer.scene;
-    this.fpsMeter.setDetail(`res ×${this.renderer.pixelRatio.toFixed(2)}`);
+    const verdict = this.lastVerdict;
+    const attempt = verdict
+      ? ` · ${verdict.challenge} ${verdict.isPassed ? 'passed' : 'failed'} ${verdict.progress}/${verdict.target}`
+      : '';
+    this.fpsMeter.setDetail(`res ×${this.renderer.pixelRatio.toFixed(2)}${attempt}`);
     this.backgroundMenu.setCurrent(this.renderer.scene);
   }
 

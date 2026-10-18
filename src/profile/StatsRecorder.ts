@@ -14,6 +14,11 @@ export interface StatsRecorderDeps {
   };
   /** The CPU's difficulty in the match starting. */
   getDifficulty: () => DifficultyLevel;
+  /**
+   * Whether the match starting goes into the statistics: a quick match does, a challenge
+   * doesn't. Every match does when left out.
+   */
+  isCounted?: () => boolean;
 }
 
 /**
@@ -39,8 +44,9 @@ export class StatsRecorder {
     switch (event.type) {
       case 'matchStart': {
         const side = this.deps.match.playerSide;
+        const isCounted = this.deps.isCounted?.() ?? true;
         this.current =
-          side === null
+          side === null || !isCounted
             ? null
             : {
                 side,

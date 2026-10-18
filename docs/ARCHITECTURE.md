@@ -71,14 +71,14 @@ simulation's randomness is injected, the same seed and inputs replay the same ma
 
 `MatchFlow` runs a match; its pieces each answer one question:
 
-| Question                             | Answer                                                                     |
-| ------------------------------------ | -------------------------------------------------------------------------- |
-| What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score by side, clock, Overdrive, balls  |
-| Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)       |
-| What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed |
-| Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle      |
-| How the ball moves and bounces       | `Physics.step`, one ball at a time                                         |
-| How the AI plays                     | `AiController` (reading, aiming, nerves) and `AiForm` (form by score)      |
+| Question                             | Answer                                                                                          |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score by side, clock, rally goal, CPU ramp, Overdrive, balls |
+| Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)                            |
+| What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed                      |
+| Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle                           |
+| How the ball moves and bounces       | `Physics.step`, one ball at a time                                                              |
+| How the AI plays                     | `AiController` (reading, aiming, nerves) and `AiForm` (form by score)                           |
 
 Points belong to sides and are kept by the match (`flow.scores`). The first ball out wins the
 point and ends it for every ball. The demo behind the menus is a match with its own lineup of two
@@ -136,7 +136,11 @@ the settings.
 
 **A challenge.** An entry in `CHALLENGES` (`match/challenges.ts`): rules, difficulty, both
 paddles and a goal; its name and goal in both languages (`challenges` in
-`i18n/translations.ts`). The list is in the order they open.
+`i18n/translations.ts`). The list is in the order they open. A new kind of goal is a case in
+`ChallengeGoal` and in `ChallengeJudge` (`match/ChallengeJudge.ts`), which counts what goals need
+from the match's events and gives a verdict on every finished attempt; it never changes the
+match. `Game.start` plays the current challenge (`?challenge=<id>` for developers); challenges stay
+out of the statistics (`StatsRecorder`'s `isCounted`).
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
 in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/MenuController.ts`).

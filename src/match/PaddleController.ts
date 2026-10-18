@@ -1,10 +1,11 @@
 import { AiController, ShotThreat, SHOT_THREAT } from '@/match/AiController';
-import { AiForm } from '@/match/AiForm';
+import { AiForm, skillAt } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
 import { AiSkill, DEMO_AI_SKILL, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
+import { cpuRank } from '@/match/ramp';
 import { isDecidingPoint, MatchRules } from '@/match/rules';
-import { Scores, Side } from '@/match/side';
+import { otherSide, Scores, Side } from '@/match/side';
 
 /** Anything that can steer the player's paddle (keyboard, pointer, touch). */
 export interface PlayerInput {
@@ -52,7 +53,8 @@ export class HumanController implements PaddleController {
 /**
  * The AI playing a paddle. Without a difficulty it plays the demo behind the menus at its own
  * level; given one, it is the CPU of a match: that level, in whatever form the score has put it
- * (see AiForm), picked afresh on every serve.
+ * (see AiForm), picked afresh on every serve. Under rules with a `cpuRamp` it has no form: it
+ * plays as strong as its opponent's points have made it.
  */
 export class AiPaddleController implements PaddleController {
   private readonly ai: AiController;
@@ -87,6 +89,13 @@ export class AiPaddleController implements PaddleController {
     }
 
     const level = this.getDifficulty();
+    // A ramping CPU plays at the strength the opponent's points have given it, with no form
+    if (rules.cpuRamp) {
+      const opponentPoints = scores[otherSide(paddle.side)];
+      this._skill = skillAt(cpuRank(level, rules.cpuRamp, opponentPoints));
+      return;
+    }
+
     // AiForm reads the score as [opponent, CPU]
     const [left, right] = scores;
     const fromCpuSide: [number, number] = paddle.side === 1 ? [left, right] : [right, left];

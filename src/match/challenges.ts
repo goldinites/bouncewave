@@ -31,8 +31,10 @@ export interface Challenge {
 
 const STANDARD_PADDLES = [STANDARD_PADDLE, STANDARD_PADDLE] as const;
 
-// Survival: the CPU's three winning points are the player's lives
-const SURVIVAL = { POINTS: 15, LIVES: 3 } as const;
+// Survival: the CPU's three winning points are the player's lives. The CPU starts at the
+// challenge's level (Normal, rank 0) and gains a fifth of a level per point the player wins:
+// Insane at 10, and on the last points the ball quickens past Insane's
+const SURVIVAL = { POINTS: 15, LIVES: 3, RAMP: { perPoint: 0.2, maxRank: 2.8 } } as const;
 // Giant: the CPU's paddle is this much longer than the standard one
 const GIANT_HEIGHT = 1.5;
 
@@ -55,9 +57,9 @@ export const CHALLENGES = {
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
   },
-  // Points don't end this one, only the clock
+  // Points don't end this one: the clock does, or the rally of 20 that passes it
   longRally: {
-    rules: { ...STANDARD_RULES, winningScores: firstTo(Infinity), timeLimit: 60 },
+    rules: { ...STANDARD_RULES, winningScores: firstTo(Infinity), timeLimit: 60, rallyGoal: 20 },
     difficulty: DifficultyLevel.NORMAL,
     paddles: STANDARD_PADDLES,
     goal: { type: 'rally', hits: 20 },
@@ -74,9 +76,12 @@ export const CHALLENGES = {
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
   },
-  // The CPU growing stronger with every point comes with step 2.2
   survival: {
-    rules: { ...STANDARD_RULES, winningScores: [SURVIVAL.POINTS, SURVIVAL.LIVES] },
+    rules: {
+      ...STANDARD_RULES,
+      winningScores: [SURVIVAL.POINTS, SURVIVAL.LIVES],
+      cpuRamp: SURVIVAL.RAMP,
+    },
     difficulty: DifficultyLevel.NORMAL,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
@@ -108,3 +113,6 @@ export type ChallengeId = keyof typeof CHALLENGES;
 
 /** Every challenge, in the order they open. */
 export const CHALLENGE_IDS = Object.keys(CHALLENGES) as ChallengeId[];
+
+export const isChallengeId = (value: unknown): value is ChallengeId =>
+  (CHALLENGE_IDS as readonly unknown[]).includes(value);
