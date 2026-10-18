@@ -18,7 +18,8 @@ const REFLECTION = { SQUASH: 0.6, ALPHA: 0.35 } as const;
 const FUJI = { HALF_WIDTH: 0.425, HEIGHT: 0.665, TOP: 0.1 } as const;
 const MOUNTAIN_TOP = '#2d1460';
 const MOUNTAIN_FOOT = '#120630';
-const SNOW = 'rgba(255, 220, 245, 0.85)';
+// Moonlit lavender rather than white: the summit stands over the net, where the white ball flies
+const SNOW = 'rgba(190, 160, 235, 0.62)';
 /** The snowline's ragged foot, left to right, as (x, y) in mountain units below the summit. */
 const SNOWLINE: readonly [x: number, y: number][] = [
   [0.21, -0.48],
@@ -46,9 +47,13 @@ const CLOUDS = [
 ] as const;
 const CLOUD_COLOR = '#3a1a6e';
 
-// A small moon high over the gate; its radius is a share of the frame's shorter side
-const MOON = { X: 0.78, Y: 0.17, RADIUS: 0.048, HALO: 2.8 } as const;
-const MOON_LIGHT = '#ffe9f8';
+/*
+ * A small crescent moon high over the gate; its radius is a share of the frame's shorter side,
+ * SHADOW how far the shadow's disc sits to the right, in radii. A crescent in dusky pink, so a
+ * glance at it never mistakes it for the ball, a white disc of its own
+ */
+const MOON = { X: 0.78, Y: 0.17, RADIUS: 0.048, HALO: 2.8, SHADOW: 0.55 } as const;
+const MOON_LIGHT = '#f2a6d8';
 
 /*
  * The near shore on the left: a wooded hill with a five-storied pagoda on its crown, and a
@@ -367,7 +372,7 @@ export class FujiBackground implements Background {
     ctx.globalAlpha = 1;
   }
 
-  /** A small moon high over the gate, its halo breathing with the beat. */
+  /** A small crescent moon high over the gate, its halo breathing with the beat. */
   private renderMoon(ctx: CanvasRenderingContext2D, pulse: number, layout: Layout): void {
     const x = layout.width * MOON.X;
     const y = layout.height * MOON.Y;
@@ -377,7 +382,7 @@ export class FujiBackground implements Background {
     // in a unit circle and scaled, so the beat never makes a new gradient
     if (!this.moonHalo) {
       this.moonHalo = ctx.createRadialGradient(0, 0, 0.8 / MOON.HALO, 0, 0, 1);
-      this.moonHalo.addColorStop(0, 'rgba(255, 170, 230, 0.35)');
+      this.moonHalo.addColorStop(0, 'rgba(255, 170, 230, 0.22)');
       this.moonHalo.addColorStop(1, 'rgba(255, 170, 230, 0)');
     }
     const haloRadius = radius * (MOON.HALO + pulse * 0.4);
@@ -390,9 +395,13 @@ export class FujiBackground implements Background {
     ctx.fill();
     ctx.restore();
 
+    // Lit edge on the left round to where the shadow's disc cuts it, then back along that disc
+    const shadow = radius * MOON.SHADOW;
+    const horn = Math.atan2(Math.sqrt(radius ** 2 - (shadow / 2) ** 2), shadow / 2);
     ctx.fillStyle = MOON_LIGHT;
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, TWO_PI);
+    ctx.arc(x, y, radius, horn, -horn);
+    ctx.arc(x + shadow, y, radius, Math.PI + horn, Math.PI - horn, true);
     ctx.fill();
   }
 
