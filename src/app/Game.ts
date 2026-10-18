@@ -39,7 +39,7 @@ export class Game {
   private readonly menuController: MenuController;
   private readonly nowPlaying: NowPlaying;
 
-  private readonly paddles: [Paddle, Paddle];
+  private readonly paddles: readonly Paddle[];
   private readonly ball = new Ball();
   private readonly particles = new ParticleSystem();
   private readonly flow: MatchFlow;
@@ -352,7 +352,7 @@ export class Game {
       ballSpeed: this.ball.speed,
       maxBallSpeed: DIFFICULTY_CONFIGS[this.settings.current.difficulty].maxSpeed,
       rally: this.flow.rally,
-      scores: [this.paddles[0].score, this.paddles[1].score],
+      scores: [...this.flow.scores],
       isMuted: this.settings.current.musicMuted || this.classicMode,
       difficulty: this.settings.current.difficulty,
     };
@@ -363,6 +363,7 @@ export class Game {
       gameState: this.flow.gameState,
       isDemo: this.flow.isDemo,
       paddles: this.paddles,
+      scores: this.flow.scores,
       ball: this.ball,
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),

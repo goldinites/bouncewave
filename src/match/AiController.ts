@@ -158,7 +158,7 @@ export class AiController {
    * @param threat how much harder than usual the shot is to read (a perfect hit, a power shot)
    */
   public readShot(paddle: Paddle, skill: AiSkill, threat: ShotThreat = SHOT_THREAT.NORMAL): void {
-    const read = this.reads[paddle.index];
+    const read = this.reads[paddle.side];
     read.reactIn = skill.reaction + threat.extraReaction;
     read.misjudgment = (this.random() - 0.5) * threat.misjudgmentScale;
     read.misread = null;
@@ -183,8 +183,8 @@ export class AiController {
     dt: number,
     opponent: Paddle,
   ): number {
-    const read = this.reads[paddle.index];
-    const isMovingTowardPaddle = paddle.index === 1 ? ball.vx > 0 : ball.vx < 0;
+    const read = this.reads[paddle.side];
+    const isMovingTowardPaddle = paddle.side === 1 ? ball.vx > 0 : ball.vx < 0;
     if (!isMovingTowardPaddle) {
       // Back to the middle, fidgeting a little while it waits
       if (skill.nerves > 0 && this.glance(read, dt)) {
@@ -199,7 +199,7 @@ export class AiController {
     }
 
     const faceX =
-      paddle.index === 1 ? paddle.x - ball.radius : paddle.x + PADDLE.WIDTH + ball.radius;
+      paddle.side === 1 ? paddle.x - ball.radius : paddle.x + PADDLE.WIDTH + ball.radius;
     const arrival = predictArrival(faceX, ball.x, ball.y, ball.vx, ball.vy, ball.radius);
 
     // The shot is read once, as soon as the AI reacts: the more walls it has to bounce off from
@@ -277,8 +277,8 @@ export class AiController {
    * @returns the hit offset to play, signed
    */
   private pickAngle(paddle: Paddle, opponent: Paddle, contactY: number, size: number): number {
-    const direction = paddle.index === 0 ? 1 : -1;
-    const opponentFaceX = paddle.index === 0 ? opponent.x : opponent.x + PADDLE.WIDTH;
+    const direction = paddle.side === 0 ? 1 : -1;
+    const opponentFaceX = paddle.side === 0 ? opponent.x : opponent.x + PADDLE.WIDTH;
     const landing = (offset: number) => {
       const angle = Physics.getBounceAngle(offset);
       return predictArrival(

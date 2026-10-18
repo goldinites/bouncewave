@@ -12,14 +12,20 @@ const SPARK_SPEED_MAX = 100;
  * while it moves. Presentation only; the paddles themselves are never changed.
  */
 export class PaddleEffects {
-  private readonly _glow: [number, number] = [0, 0];
+  private readonly _glow: number[];
 
-  /** Hit glow of each paddle in [0, 1]. */
-  public get glow(): readonly [number, number] {
+  /** @param paddleCount how many paddles are on the court */
+  constructor(paddleCount: number) {
+    this._glow = new Array<number>(paddleCount).fill(0);
+  }
+
+  /** Hit glow of each paddle in [0, 1], in the order of the match's paddles. */
+  public get glow(): readonly number[] {
     return this._glow;
   }
 
-  public onHit(paddleIndex: 0 | 1): void {
+  /** @param paddleIndex the paddle's place in the match's list */
+  public onHit(paddleIndex: number): void {
     this._glow[paddleIndex] = 1;
   }
 
@@ -29,14 +35,14 @@ export class PaddleEffects {
 
   public update(
     dt: number,
-    paddles: [Paddle, Paddle],
+    paddles: readonly Paddle[],
     particles: ParticleSystem,
     rally: number,
   ): void {
-    for (const paddle of paddles) {
-      this._glow[paddle.index] = Math.max(0, this._glow[paddle.index] - dt * GLOW_DECAY);
+    paddles.forEach((paddle, i) => {
+      this._glow[i] = Math.max(0, this._glow[i] - dt * GLOW_DECAY);
       this.emitSparks(dt, paddle, particles, rally);
-    }
+    });
   }
 
   /** Occasionally sheds a spark; more often while moving fast or deep into a rally. */
@@ -46,10 +52,10 @@ export class PaddleEffects {
     const sparkChance = dt * (6 + Math.min(rally, 20) * 1.2) * movementMultiplier;
 
     if (Math.random() < sparkChance) {
-      const direction = paddle.index === 0 ? 1 : -1;
+      const direction = paddle.side === 0 ? 1 : -1;
 
       particles.addParticle({
-        x: paddle.index === 0 ? paddle.x + PADDLE.WIDTH : paddle.x,
+        x: paddle.side === 0 ? paddle.x + PADDLE.WIDTH : paddle.x,
         y: paddle.y + (Math.random() - 0.5) * PADDLE.HEIGHT,
         vx: direction * randomRange(SPARK_SPEED_MIN, SPARK_SPEED_MAX),
         vy: (Math.random() - 0.5) * 50,

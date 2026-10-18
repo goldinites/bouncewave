@@ -68,13 +68,15 @@ Rules that keep it clean:
   match. Read the winning score and the deciding point from the rules, never from
   `WINNING_SCORE`.
 
-- Who plays each side is the match's `Lineup` (`MatchFlow.ts`): a `PaddleController` per side
-  (`match/PaddleController.ts`: `HumanController`, `AiPaddleController` for the demo or the
-  CPU) and whether that side has Overdrive. Never branch on "paddle 0 is the player" in the
+- The court has any number of paddles, each playing for a `side` (`match/side.ts`: 0 left,
+  1 right; at least one a side). Points belong to the side and are kept by the match
+  (`flow.scores`), never by a paddle. A `paddleIndex` is a paddle's place in the match's list.
+- Who plays each paddle is the match's `Lineup` (`MatchFlow.ts`): a `PaddleController` per
+  paddle (`match/PaddleController.ts`: `HumanController`, `AiPaddleController` for the demo
+  or the CPU) and whether it has Overdrive. Never branch on "paddle 0 is the player" in the
   match; ask the lineup.
 
-Known hard-coded assumptions the roadmap's stage 0 removes: one ball, exactly one paddle a
-side, global `PADDLE` sizes. Outside the match the left side is still taken to be the player
+Known hard-coded assumptions the roadmap's stage 0 removes: one ball, global `PADDLE` sizes. Outside the match the left side is still taken to be the player
 (whose win the finale and menus show, whose Overdrive meter is drawn).
 
 ## Extension points that exist today

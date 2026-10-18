@@ -1,4 +1,5 @@
 import { COURT, PADDLE } from '@/match/config';
+import { Side } from '@/match/side';
 import { approach, clamp, lerp } from '@/shared/math';
 
 const PADDLE_SMOOTH_FACTOR = 27.4; // 1/s toward the target
@@ -11,18 +12,18 @@ export class Paddle {
   public x: number;
   public y: number;
   public targetY: number;
-  public score: number = 0;
   public readonly color: string;
   /** Smoothed vertical speed in px/s (positive = moving down). */
   public velocity: number = 0;
-  public readonly index: 0 | 1;
+  /** The side of the court it plays on; its points are that side's. */
+  public readonly side: Side;
   /** Where the paddle stood when the current simulation step began. */
   private previousY: number;
   /** Where to draw the paddle this frame, between two simulation steps (see `interpolate`). */
   public drawY: number;
 
-  constructor(index: 0 | 1, x: number, color: string) {
-    this.index = index;
+  constructor(side: Side, x: number, color: string) {
+    this.side = side;
     this.x = x;
     this.y = COURT.HEIGHT / 2;
     this.targetY = COURT.HEIGHT / 2;
@@ -48,11 +49,6 @@ export class Paddle {
   /** Sets the position to draw at: `alpha` of the way from the step's start to where it is now. */
   public interpolate(alpha: number): void {
     this.drawY = lerp(this.previousY, this.y, alpha);
-  }
-
-  public resetScore(): void {
-    this.score = 0;
-    this.resetPosition();
   }
 
   /** Aims the paddle at `y`, kept within the court. */

@@ -2,6 +2,7 @@ import { Ball } from '@/match/Ball';
 import { COURT, PADDLE, BALL } from '@/match/config';
 import { DifficultyConfig } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
+import { Side } from '@/match/side';
 import { clamp } from '@/shared/math';
 
 // Hit offset is normalized to [-1, 1] from paddle center to edge
@@ -33,14 +34,15 @@ export type PhysicsEvent =
   | { type: 'wallBounce'; x: number; y: number }
   | {
       type: 'paddleHit';
-      paddleIndex: 0 | 1;
+      /** Which of the paddles hit it (an index into the list `step` was given). */
+      paddleIndex: number;
       isPerfect: boolean;
       x: number;
       y: number;
       /** Ball speed right after the hit (acceleration applied). */
       speed: number;
     }
-  | { type: 'score'; scoringPlayerIndex: 0 | 1; y: number };
+  | { type: 'score'; scoringPlayerIndex: Side; y: number };
 
 /**
  * Ball movement and collisions only. It changes the ball, and nothing else: effects, sound,
@@ -53,7 +55,7 @@ export class Physics {
    */
   public static step(
     ball: Ball,
-    paddles: [Paddle, Paddle],
+    paddles: readonly Paddle[],
     difficultyConfig: DifficultyConfig,
     dt: number,
   ): PhysicsEvent[] {
@@ -88,16 +90,16 @@ export class Physics {
       }
 
       // Paddle collisions
-      for (const i of [0, 1] as const) {
+      for (let i = 0; i < paddles.length; i++) {
         const paddle = paddles[i];
-        const isCollidingX =
-          i === 0
-            ? ball.vx < 0 &&
-              ball.x - ball.radius <= paddle.x + PADDLE.WIDTH &&
-              ball.x + ball.radius >= paddle.x
-            : ball.vx > 0 &&
-              ball.x + ball.radius >= paddle.x &&
-              ball.x - ball.radius <= paddle.x + PADDLE.WIDTH;
+        const isLeft = paddle.side === 0;
+        const isCollidingX = isLeft
+          ? ball.vx < 0 &&
+            ball.x - ball.radius <= paddle.x + PADDLE.WIDTH &&
+            ball.x + ball.radius >= paddle.x
+          : ball.vx > 0 &&
+            ball.x + ball.radius >= paddle.x &&
+            ball.x - ball.radius <= paddle.x + PADDLE.WIDTH;
 
         const isCollidingY = Math.abs(ball.y - paddle.y) <= PADDLE.HEIGHT / 2 + ball.radius * 0.8;
 
@@ -116,7 +118,7 @@ export class Physics {
             -BOUNCE.MAX_ANGLE,
             BOUNCE.MAX_ANGLE,
           );
-          const direction = i === 0 ? 1 : -1;
+          const direction = isLeft ? 1 : -1;
 
           ball.speed = Math.min(
             ball.speed * (1 + difficultyConfig.acceleration),
@@ -130,7 +132,7 @@ export class Physics {
           }
           ball.vx = direction * Math.cos(bounceAngle) * ball.speed;
           ball.vy = Math.sin(bounceAngle) * ball.speed;
-          ball.x = i === 0 ? paddle.x + PADDLE.WIDTH + ball.radius : paddle.x - ball.radius;
+          ball.x = isLeft ? paddle.x + PADDLE.WIDTH + ball.radius : paddle.x - ball.radius;
 
           events.push({
             type: 'paddleHit',

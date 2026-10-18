@@ -54,14 +54,17 @@ describe('MatchFlow', () => {
   });
 
   it('starts a match: resets scores, serves, then puts the ball in play', () => {
-    const { flow, paddles, types, finishServe } = setup();
-    paddles[0].score = 4;
+    const { flow, types, clear, finishServe, scoreFor } = setup();
+    // A point won in an earlier match
+    flow.startMatch();
+    scoreFor(0);
+    clear();
 
     flow.startMatch();
     expect(flow.isDemo).toBe(false);
 
     expect(types()).toEqual(['matchStart', 'serve']);
-    expect(paddles[0].score).toBe(0);
+    expect(flow.scores[0]).toBe(0);
     expect(flow.phase).toBe('serving');
     expect(flow.serveTime).toBeCloseTo(SERVE_DELAY.START);
     expect(flow.isBallLive).toBe(false);
@@ -90,13 +93,13 @@ describe('MatchFlow', () => {
   });
 
   it('counts a point, then serves again', () => {
-    const { flow, paddles, events, clear, scoreFor } = setup();
+    const { flow, events, clear, scoreFor } = setup();
     flow.startMatch();
     clear();
 
     scoreFor(1);
 
-    expect(paddles[1].score).toBe(1);
+    expect(flow.scores[1]).toBe(1);
     expect(events[0]).toMatchObject({ type: 'score', scoringPlayerIndex: 1, isDemo: false });
     expect(events[1].type).toBe('serve');
     expect(flow.phase).toBe('serving');
@@ -104,13 +107,13 @@ describe('MatchFlow', () => {
   });
 
   it('never changes the score in the demo', () => {
-    const { flow, paddles, events, clear, scoreFor } = setup();
+    const { flow, events, clear, scoreFor } = setup();
     flow.startAttract();
     clear();
 
     scoreFor(0);
 
-    expect(paddles[0].score).toBe(0);
+    expect(flow.scores[0]).toBe(0);
     expect(events[0]).toMatchObject({ type: 'score', isDemo: true });
     expect(flow.phase).toBe('attract');
   });
@@ -133,9 +136,9 @@ describe('MatchFlow', () => {
   });
 
   it('runs the finale after the winning point, then returns to the demo', () => {
-    const { flow, paddles, events, clear, scoreFor } = setup();
+    const { flow, events, clear, scoreFor } = setup();
     flow.startMatch();
-    paddles[0].score = WINNING_SCORE - 1;
+    for (let point = 1; point < WINNING_SCORE; point++) scoreFor(0);
     clear();
 
     scoreFor(0);
@@ -154,14 +157,13 @@ describe('MatchFlow', () => {
 
     expect(events[0]).toMatchObject({ type: 'gameOver', winnerIndex: 0 });
     expect(flow.phase).toBe('attract');
-    expect(paddles[0].score).toBe(WINNING_SCORE); // kept for the game-over menu
+    expect(flow.scores[0]).toBe(WINNING_SCORE); // kept for the game-over menu
   });
 
   it('lets the finale be skipped only after its key moment', () => {
-    const { flow, paddles, types, clear, scoreFor } = setup();
+    const { flow, types, clear, scoreFor } = setup();
     flow.startMatch();
-    paddles[1].score = WINNING_SCORE - 1;
-    scoreFor(1);
+    for (let point = 0; point < WINNING_SCORE; point++) scoreFor(1);
     clear();
 
     expect(flow.skipFinale()).toBe(false);
@@ -173,10 +175,9 @@ describe('MatchFlow', () => {
   });
 
   it('uses the shorter finale for a defeat', () => {
-    const { flow, paddles, types, clear, scoreFor } = setup();
+    const { flow, types, clear, scoreFor } = setup();
     flow.startMatch();
-    paddles[1].score = WINNING_SCORE - 1;
-    scoreFor(1);
+    for (let point = 0; point < WINNING_SCORE; point++) scoreFor(1);
     clear();
 
     flow.update(FINALE.LOSS_DURATION - 0.05);
@@ -187,10 +188,10 @@ describe('MatchFlow', () => {
   });
 
   it('returns to the menu from a paused match', () => {
-    const { flow, paddles, types, clear, finishServe } = setup();
+    const { flow, types, clear, finishServe, scoreFor } = setup();
     flow.startMatch();
+    for (let point = 0; point < 3; point++) scoreFor(0);
     finishServe();
-    paddles[0].score = 3;
     flow.pause();
     clear();
 
@@ -198,6 +199,6 @@ describe('MatchFlow', () => {
 
     expect(types()).toEqual(['returnToMenu', 'serve']);
     expect(flow.phase).toBe('attract');
-    expect(paddles[0].score).toBe(0);
+    expect(flow.scores[0]).toBe(0);
   });
 });

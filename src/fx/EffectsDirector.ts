@@ -8,6 +8,7 @@ import { Ball } from '@/match/Ball';
 import { COURT, BALL } from '@/match/config';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
+import { Side } from '@/match/side';
 import { Renderer } from '@/render/Renderer';
 import { COLORS } from '@/shared/palette';
 
@@ -75,7 +76,7 @@ export interface EffectsDirectorDeps {
   renderer: Renderer;
   audio: AudioEngine;
   particles: ParticleSystem;
-  paddles: [Paddle, Paddle];
+  paddles: readonly Paddle[];
   ball: Ball;
   translate: (key: 'win' | 'lose') => string;
 }
@@ -88,13 +89,13 @@ export interface EffectsDirectorDeps {
 export class EffectsDirector {
   private readonly drama = new MatchPointDrama();
   private readonly climax = new RallyClimax();
-  private readonly paddleFx = new PaddleEffects();
+  private readonly paddleFx: PaddleEffects;
   private fireworks: VictoryFireworks | null = null;
 
   private readonly renderer: Renderer;
   private readonly audio: AudioEngine;
   private readonly particles: ParticleSystem;
-  private readonly paddles: [Paddle, Paddle];
+  private readonly paddles: readonly Paddle[];
   private readonly ball: Ball;
   private readonly translate: EffectsDirectorDeps['translate'];
 
@@ -103,6 +104,7 @@ export class EffectsDirector {
     this.audio = deps.audio;
     this.particles = deps.particles;
     this.paddles = deps.paddles;
+    this.paddleFx = new PaddleEffects(deps.paddles.length);
     this.ball = deps.ball;
     this.translate = deps.translate;
   }
@@ -128,15 +130,21 @@ export class EffectsDirector {
   }
 
   /** Hit glow of each paddle in [0, 1]. */
-  public get paddleGlow(): readonly [number, number] {
+  public get paddleGlow(): readonly number[] {
     return this.paddleFx.glow;
+  }
+
+  /** A side's color: its first paddle's. */
+  private colorOf(side: Side): string {
+    return this.paddles.find((p) => p.side === side)!.color;
   }
 
   /** Runs on the wall clock before the simulation step, which may be slowed by it. */
   public beforeSimulation(realDt: number, flow: MatchFlow): void {
     if (flow.phase === 'finale') return;
 
-    if (this.drama.update(realDt, flow.isMatchActive, this.ball, this.paddles, flow.rules)) {
+    const { isMatchActive, scores, rules } = flow;
+    if (this.drama.update(realDt, isMatchActive, this.ball, this.paddles, scores, rules)) {
       this.audio.sfx.playHeartbeat();
     }
     this.audio.music.setDramaLevel(this.drama.level);
@@ -240,7 +248,7 @@ export class EffectsDirector {
     if (hit.isPowerShot) {
       this.onPowerShot(hit);
     } else {
-      this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, hit.paddleIndex);
+      this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, paddle.side);
     }
 
     if (hit.chargedOverdrive) {
@@ -264,7 +272,7 @@ export class EffectsDirector {
   private onScore(score: Extract<MatchEvent, { type: 'score' }>): void {
     const burstX =
       score.scoringPlayerIndex === 0 ? COURT.WIDTH - BURST.SCORE_INSET : BURST.SCORE_INSET;
-    const color = this.paddles[score.scoringPlayerIndex].color;
+    const color = this.colorOf(score.scoringPlayerIndex);
 
     this.particles.burst(burstX, score.y, color, BURST.SCORE_COUNT, BURST.SCORE_SPEED);
     this.particles.shockwave(burstX, score.y, color, SHOCKWAVE_SPEED.SCORE);
@@ -294,7 +302,7 @@ export class EffectsDirector {
       // are drawn there, and the shots' pop sound would otherwise still play on every frame)
       if (!this.renderer.classicMode) {
         this.fireworks = new VictoryFireworks(1, finale.ballY, [
-          this.paddles[0].color,
+          this.colorOf(0),
           COLORS.WHITE,
           COLORS.YELLOW,
         ]);
@@ -313,7 +321,7 @@ export class EffectsDirector {
     this.renderer.showFinalScore({
       scores: finale.scores,
       label: this.translate(playerWon ? 'win' : 'lose'),
-      color: this.paddles[finale.winnerIndex].color,
+      color: this.colorOf(finale.winnerIndex),
       isWin: playerWon,
     });
   }
