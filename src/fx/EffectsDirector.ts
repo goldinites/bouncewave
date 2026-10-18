@@ -10,6 +10,7 @@ import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import { Side } from '@/match/side';
 import { Renderer } from '@/render/Renderer';
+import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
 
 // Screen shake per event (px); a paddle hit shakes
@@ -177,6 +178,14 @@ export class EffectsDirector {
     }
 
     this.particles.update(dt);
+  }
+
+  /**
+   * Reacts to everything the match reports from now on.
+   * @returns a function that stops it
+   */
+  public listenTo(events: EventBus<MatchEvent>): () => void {
+    return events.subscribe((event) => this.handle(event));
   }
 
   public handle(event: MatchEvent): void {

@@ -16,6 +16,7 @@ import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
+import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
 import { isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
@@ -43,6 +44,13 @@ export class Game {
   private readonly ball = new Ball();
   private readonly particles = new ParticleSystem();
   private readonly flow: MatchFlow;
+  /**
+   * Everything the match reports, for whoever reacts to it (the effects, the menus). A listener
+   * that fails is reported in the debug overlay; the match and the other listeners go on.
+   */
+  private readonly matchEvents = new EventBus<MatchEvent>((error) =>
+    this.fpsMeter.reportError(error),
+  );
   /** Cuts frame times into the match's fixed simulation steps. */
   private readonly simulation = new FixedStep();
   private readonly effects: EffectsDirector;
@@ -122,7 +130,7 @@ export class Game {
       ball: this.ball,
       input: this.inputHandler,
       getDifficulty: () => this.settings.current.difficulty,
-      onEvent: (event) => this.onMatchEvent(event),
+      onEvent: (event) => this.matchEvents.emit(event),
     });
 
     this.menuController = new MenuController(
@@ -137,6 +145,10 @@ export class Game {
         onUnlockAudio: () => this.unlockAudio(),
       },
     );
+
+    // The effects hear each event before the menus do
+    this.effects.listenTo(this.matchEvents);
+    this.menuController.listenTo(this.matchEvents);
 
     this.nowPlaying = new NowPlaying(this.i18n, {
       onToggle: () => this.toggleMusic(),
@@ -262,21 +274,6 @@ export class Game {
     this.uiManager.setPauseButtonVisibility(true);
   }
 
-  private onMatchEvent(event: MatchEvent): void {
-    // Effects are presentation only: if one fails (e.g. the browser rejects an audio change),
-    // the match and its menus must still go on
-    try {
-      this.effects.handle(event);
-    } catch (error) {
-      this.fpsMeter.reportError(error);
-    }
-
-    if (event.type === 'gameOver') {
-      this.uiManager.setPauseButtonVisibility(false);
-      this.menuController.showGameOverMenu(event.winnerIndex, event.scores);
-    }
-  }
-
   private gameLoop(timestamp: number): void {
     if (!this.isRunning) return;
 
@@ -392,6 +389,7 @@ export class Game {
     }
 
     this.listeners.abort();
+    this.matchEvents.clear();
     this.unsubscribeLanguage();
     this.menuController.dispose();
     this.nowPlaying.dispose();

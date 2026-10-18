@@ -30,8 +30,8 @@ backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts
 
 ## Architecture
 
-`src/app/Game.ts` is the composition root and the frame loop: it builds everything, routes match
-events and builds the per-frame `RenderFrame` and `MusicState`.
+`src/app/Game.ts` is the composition root and the frame loop: it builds everything, connects the
+listeners to the match's events and builds the per-frame `RenderFrame` and `MusicState`.
 
 | Directory       | Owns                                                                                                                                                                |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -83,6 +83,11 @@ Rules that keep it clean:
 - Every paddle carries a `PaddleSpec` (`match/PaddleSpec.ts`: size, perfect zone, power, spin,
   speed; `STANDARD_PADDLE` by default) as `paddle.spec`. Read a paddle's size and hitting from
   its spec, never from the global `PADDLE` (which only lays out the court).
+
+- Match events go out on `Game`'s `matchEvents` (`shared/EventBus.ts`): to react to the match,
+  give the class a `listenTo(events)` that subscribes (`subscribe`, or `on(type)`), and call it
+  where `Game` wires the effects and the menus. A listener that throws is reported, the rest
+  still hear the event.
 
 Outside the match the left side is still taken to be the player (whose win the finale and
 menus show, whose Overdrive meter is drawn).

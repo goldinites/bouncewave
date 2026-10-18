@@ -1,7 +1,9 @@
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
+import { MatchEvent } from '@/match/MatchFlow';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
+import { EventBus } from '@/shared/EventBus';
 import { ButtonColor, UIManager } from '@/ui/UIManager';
 
 export interface GameMenuActions {
@@ -133,6 +135,17 @@ export class MenuController {
       ],
       this.actions.onUnlockAudio,
     );
+  }
+
+  /**
+   * Opens the game-over menu (and puts the pause button away) whenever a match ends.
+   * @returns a function that stops it
+   */
+  public listenTo(events: EventBus<MatchEvent>): () => void {
+    return events.on('gameOver', ({ winnerIndex, scores }) => {
+      this.uiManager.setPauseButtonVisibility(false);
+      this.showGameOverMenu(winnerIndex, scores);
+    });
   }
 
   public showGameOverMenu(winnerIndex: number, scores: [number, number]): void {
