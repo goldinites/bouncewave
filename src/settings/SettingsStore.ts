@@ -1,7 +1,6 @@
-import { SettingsStorage } from '@/settings/SettingsStorage';
 import { SETTINGS, UserSettings } from '@/settings/UserSettings';
 
-/** Where settings are kept between visits. */
+/** Where settings are kept between visits: the profile's settings (ProfileStore.settings). */
 export interface SettingsPersistence {
   load(): UserSettings;
   save(settings: UserSettings): void;
@@ -18,7 +17,7 @@ export class SettingsStore {
   private readonly persistence: SettingsPersistence;
   private readonly listeners = new Set<SettingsListener>();
 
-  constructor(persistence: SettingsPersistence = SettingsStorage) {
+  constructor(persistence: SettingsPersistence) {
     this.persistence = persistence;
     this.settings = persistence.load();
   }

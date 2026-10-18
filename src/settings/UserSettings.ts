@@ -19,8 +19,6 @@ export interface UserSettings {
 
 /** Everything the game needs to know about one setting, apart from how the menu shows it. */
 export interface SettingDefinition<T> {
-  /** Key in the saved data; kept short and never renamed, so saved settings survive updates. */
-  storageKey: string;
   defaultValue: T;
   /** Whether a saved value can be used as is; anything else falls back to the default. */
   isValid(value: unknown): value is T;
@@ -42,30 +40,28 @@ const through = <T>(list: readonly T[]) => ({
 
 /**
  * Every setting, described once. To add one, add a field to UserSettings and an entry here
- * (the compiler insists on both); saving, loading and cycling then work on their own.
+ * (the compiler insists on both); saving, loading (profile/), checking a saved value and
+ * cycling then work on their own.
  */
 export const SETTINGS: { [K in keyof UserSettings]: SettingDefinition<UserSettings[K]> } = {
   difficulty: {
-    storageKey: 'd',
     defaultValue: DifficultyLevel.NORMAL,
     isValid: isDifficultyLevel,
     ...through(DIFFICULTY_LEVELS),
   },
   matchPoints: {
-    storageKey: 'p',
     defaultValue: DEFAULT_MATCH_POINTS,
     isValid: isMatchPoints,
     ...through(MATCH_POINTS),
   },
   matchBackground: {
-    storageKey: 'b',
     defaultValue: 'random',
     isValid: isBackgroundChoice,
     ...through(BACKGROUND_CHOICES),
   },
-  soundMuted: { storageKey: 'm', defaultValue: false, isValid: isBoolean, ...onOff },
-  musicMuted: { storageKey: 'u', defaultValue: false, isValid: isBoolean, ...onOff },
-  language: { storageKey: 'l', defaultValue: 'en', isValid: isLanguage, ...through(LANGUAGES) },
+  soundMuted: { defaultValue: false, isValid: isBoolean, ...onOff },
+  musicMuted: { defaultValue: false, isValid: isBoolean, ...onOff },
+  language: { defaultValue: 'en', isValid: isLanguage, ...through(LANGUAGES) },
 };
 
 export const SETTING_KEYS = Object.keys(SETTINGS) as (keyof UserSettings)[];

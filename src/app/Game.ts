@@ -15,6 +15,8 @@ import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
+import { ProfileStore } from '@/profile/ProfileStore';
+import { StoragePersistence } from '@/profile/StoragePersistence';
 import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { EventBus } from '@/shared/EventBus';
@@ -32,7 +34,11 @@ const MAX_FRAME_DT = 0.033;
  * (EffectsDirector), input, audio, rendering and the DOM menus together.
  */
 export class Game {
-  private readonly settings = new SettingsStore();
+  /** Everything saved between visits; the settings are its first part. */
+  private readonly profile = new ProfileStore();
+  private readonly settings = new SettingsStore(this.profile.settings);
+  /** Asks the browser to keep the profile once a match has been played. */
+  private readonly storagePersistence = new StoragePersistence();
   private readonly i18n: I18nManager;
   private readonly audio: AudioEngine;
   private readonly renderer: Renderer;
@@ -160,6 +166,7 @@ export class Game {
     // The effects hear each event before the menus do
     this.effects.listenTo(this.matchEvents);
     this.menuController.listenTo(this.matchEvents);
+    this.storagePersistence.listenTo(this.matchEvents);
 
     this.nowPlaying = new NowPlaying(this.i18n, {
       onToggle: () => this.toggleMusic(),
