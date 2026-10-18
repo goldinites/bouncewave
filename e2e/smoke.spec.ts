@@ -62,11 +62,13 @@ test('lists the modes behind PLAY and comes back from them', async ({ page }) =>
   await page.goto('');
 
   await button(page, 'PLAY').click();
-  const card = button(page, /^STANDARD MATCH/);
-  await expect(card).toBeVisible();
-  // The card fits on the court in every orientation (on a portrait phone both are turned)
+  await expect(button(page, /^STANDARD MATCH/)).toBeVisible();
+  await expect(button(page, /^QUICK MATCH/)).toBeVisible();
+  const back = button(page, 'BACK');
+  // Every card down to BACK fits on the court in every orientation (on a portrait phone both
+  // are turned), with no scrolling
   const [box, court] = await Promise.all([
-    card.boundingBox(),
+    back.boundingBox(),
     page.locator('#gameStage').boundingBox(),
   ]);
   expect(box).not.toBeNull();
@@ -100,3 +102,12 @@ for (const scene of SCENES) {
     await page.waitForTimeout(SETTLE_MS);
   });
 }
+
+test('plays a quick match', async ({ page }) => {
+  await page.goto('');
+
+  await button(page, 'PLAY').click();
+  await button(page, /^QUICK MATCH/).click();
+  await expect(menu(page)).toHaveClass(/game__ui--hidden/);
+  await page.waitForTimeout(SETTLE_MS);
+});

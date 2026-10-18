@@ -12,6 +12,8 @@ export interface GameMode {
  */
 export const MODES = {
   standard: { rules: STANDARD_RULES },
+  // A match for a spare minute: everything as in the standard one but the length
+  quick: { rules: { ...STANDARD_RULES, winningScore: 3 } },
 } as const satisfies Record<string, GameMode>;
 
 export type ModeId = keyof typeof MODES;

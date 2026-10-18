@@ -31,7 +31,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | `shared/`              | palette, math, fonts, scene ids, `EventBus`                           | nothing in the project                              |
 | `match/`               | rules, simulation, AI, paddles, balls, sides                          | `match/`, `shared/`                                 |
 | `settings/`            | the player's settings, their storage                                  | `match/` (difficulty), `i18n/` (language)           |
-| `i18n/`                | texts in every language                                               | `match/` (difficulty, standard rules)               |
+| `i18n/`                | texts in every language                                               | `match/` (difficulty, modes)                        |
 | `input/`               | keyboard, pointer, touch, portrait rotation                           | `match/`, `shared/`                                 |
 | `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |
 | `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `fx/` (particle types), `shared/`         |
@@ -119,7 +119,8 @@ strength, one weakness), given to `new Paddle(side, x, color, spec)`.
 (`flow.rules`, `flow.isDecidingPoint`), never from `WINNING_SCORE`.
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`) with its rules, and its name and
-description in both languages (`modes` in `i18n/translations.ts`). The mode screen lists it, and
+description in both languages (`modes` in `i18n/translations.ts`) and its card color
+(`MODE_COLORS` in `ui/MenuController.ts`). The mode screen lists it, and
 `Game.start(mode)` plays it.
 
 **A screen.** A Preact component in `ui/screens/` (`.tsx`), taking its texts ready to show and

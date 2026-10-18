@@ -351,6 +351,7 @@ export class Game {
       maxBallSpeed: DIFFICULTY_CONFIGS[this.settings.current.difficulty].maxSpeed,
       rally: this.flow.rally,
       scores: [...this.flow.scores],
+      winningScore: this.flow.rules.winningScore,
       isMuted: this.settings.current.musicMuted || this.classicMode,
       difficulty: this.settings.current.difficulty,
     };

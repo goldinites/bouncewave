@@ -49,6 +49,18 @@ describe('music intensity', () => {
     expect(late - early).toBeCloseTo(0.1);
   });
 
+  it('counts late in the match by the points that win it', () => {
+    const intensity = (scores: [number, number], winningScore: number) =>
+      getTargetIntensity(playing({ scores, winningScore }), 0);
+
+    // A standard match, to 10: from 6 points on
+    expect(intensity([5, 3], 10)).toBeCloseTo(intensity([0, 0], 10));
+    expect(intensity([6, 3], 10)).toBeGreaterThan(intensity([5, 3], 10));
+    // A quick match, to 3: from 2 points on
+    expect(intensity([1, 1], 3)).toBeCloseTo(intensity([0, 0], 3));
+    expect(intensity([2, 1], 3)).toBeGreaterThan(intensity([1, 1], 3));
+  });
+
   it('drifts toward the target, and a climax pulls it toward full faster', () => {
     const drift = stepIntensity(0.3, 0.5, 0, 'play');
     const climax = stepIntensity(0.3, 0.5, 1, 'play');

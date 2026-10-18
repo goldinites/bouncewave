@@ -28,6 +28,12 @@ interface SettingsMenuEntry {
   color: ButtonColor;
 }
 
+/** Each mode's card color on the mode screen; a new mode needs one. */
+const MODE_COLORS: Record<ModeId, ButtonColor> = {
+  standard: 'cyan',
+  quick: 'yellow',
+};
+
 const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 'on');
 
 /** The settings menu, top to bottom; picking an entry switches its setting to the next value. */
@@ -135,7 +141,7 @@ export class MenuController {
       h(ModeSelect, {
         modes: MODE_IDS.map((id) => {
           const [name, description] = this.i18n.getModeInfo(id);
-          return { id, name, description };
+          return { id, name, description, color: MODE_COLORS[id] };
         }),
         backLabel: this.i18n.t('back'),
         onPick: (mode) => this.startGame(mode),

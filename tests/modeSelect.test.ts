@@ -26,6 +26,10 @@ describe('modes', () => {
   it('plays the standard match as it has always been played', () => {
     expect(MODES.standard.rules).toBe(STANDARD_RULES);
   });
+
+  it('plays the quick match to 3, otherwise as the standard one', () => {
+    expect(MODES.quick.rules).toEqual({ ...STANDARD_RULES, winningScore: 3 });
+  });
 });
 
 describe('the mode screen', () => {
@@ -33,7 +37,18 @@ describe('the mode screen', () => {
 
   const props = () => ({
     modes: [
-      { id: 'standard' as const, name: 'STANDARD MATCH', description: 'First to 10' },
+      {
+        id: 'standard' as const,
+        name: 'STANDARD MATCH',
+        description: 'First to 10',
+        color: 'cyan' as const,
+      },
+      {
+        id: 'quick' as const,
+        name: 'QUICK MATCH',
+        description: 'First to 3',
+        color: 'yellow' as const,
+      },
     ] as const,
     backLabel: 'BACK',
     onPick: vi.fn(),
@@ -44,15 +59,29 @@ describe('the mode screen', () => {
     render(h(ModeSelect, props()));
 
     const buttons = screen.getAllByRole('button');
-    expect(buttons.map((b) => b.textContent)).toEqual(['STANDARD MATCHFirst to 10', 'BACK']);
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      'STANDARD MATCHFirst to 10',
+      'QUICK MATCHFirst to 3',
+      'BACK',
+    ]);
+  });
+
+  it("colors each card by its mode's color", () => {
+    render(h(ModeSelect, props()));
+
+    expect(screen.getAllByRole('button').map((b) => b.className)).toEqual([
+      'game-button mode-card',
+      'game-button game-button--yellow mode-card',
+      'game-button',
+    ]);
   });
 
   it('starts the mode picked, and goes back from BACK', () => {
     const p = props();
     render(h(ModeSelect, p));
 
-    fireEvent.click(screen.getByRole('button', { name: /STANDARD MATCH/ }));
-    expect(p.onPick).toHaveBeenCalledWith('standard');
+    fireEvent.click(screen.getByRole('button', { name: /QUICK MATCH/ }));
+    expect(p.onPick).toHaveBeenCalledWith('quick');
     fireEvent.click(screen.getByRole('button', { name: 'BACK' }));
     expect(p.onBack).toHaveBeenCalledOnce();
   });
@@ -120,6 +149,18 @@ describe('the mode screen in the menus', () => {
     menuButtons()[0].click(); // play again
     expect(actions.onStartGame).toHaveBeenCalledTimes(2);
     expect(actions.onStartGame).toHaveBeenLastCalledWith('standard');
+  });
+
+  it('plays a quick match again after a quick match', () => {
+    const { menu, actions, screenButtons, menuButtons } = setup();
+    menu.showModeSelect();
+
+    screenButtons()[MODE_IDS.indexOf('quick')].click();
+    expect(actions.onStartGame).toHaveBeenLastCalledWith('quick');
+
+    menu.showGameOverMenu(1, [1, 3]);
+    menuButtons()[0].click(); // play again
+    expect(actions.onStartGame).toHaveBeenLastCalledWith('quick');
   });
 
   it('goes back to the main menu from BACK and from Esc', () => {
