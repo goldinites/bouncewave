@@ -15,10 +15,20 @@ const labels = () => buttons().map((button) => button.textContent);
 const isMenuOpen = () => !$('#gameUI').classList.contains('game__ui--hidden');
 const isPauseButtonShown = () => !$('#pauseButton').classList.contains('game-pause--hidden');
 const press = (code: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code }));
-/** PLAY, then the first mode on the mode screen. */
+const screenButton = (label: string) =>
+  [...document.querySelectorAll<HTMLButtonElement>('#gameScreen button')].find(
+    (button) => (button.getAttribute('aria-label') ?? button.textContent) === label,
+  )!;
+/** The value a quick match choice shows, by its name. */
+const choice = (name: string) =>
+  document
+    .querySelector(`[role="spinbutton"][aria-label="${name}"]`)
+    ?.getAttribute('aria-valuetext');
+/** PLAY, QUICK MATCH, then START as it is set up. */
 const play = () => {
   buttons()[0].click();
-  $<HTMLButtonElement>('#gameScreen .mode-card').click();
+  screenButton('QUICK MATCH').click();
+  screenButton('START').click();
 };
 
 describe('Game', () => {
@@ -53,11 +63,15 @@ describe('Game', () => {
     expect(isPauseButtonShown()).toBe(false);
   });
 
-  it('opens the mode screen from PLAY, and goes back to the main menu on Esc', () => {
+  it('opens the modes from PLAY, and steps back through them on Esc', () => {
     buttons()[0].click();
     expect($('#gameTitle').textContent).toBe('GAME MODE');
+    screenButton('QUICK MATCH').click();
+    expect($('#gameTitle').textContent).toBe('QUICK MATCH');
     expect(isMenuOpen()).toBe(true);
 
+    press('Escape');
+    expect($('#gameTitle').textContent).toBe('GAME MODE');
     press('Escape');
     expect($('#gameTitle').textContent).toBe('BOUNCEWAVE');
     expect(labels()).toEqual(['PLAY', 'SETTINGS']);
@@ -80,7 +94,7 @@ describe('Game', () => {
   it('steps back from the settings to the pause menu on Esc', () => {
     play();
     press('Escape'); // pause
-    buttons()[1].click(); // settings
+    buttons()[2].click(); // settings
     expect($('#gameTitle').textContent).toBe('SETTINGS');
 
     press('Escape');
@@ -88,9 +102,39 @@ describe('Game', () => {
     expect(isMenuOpen()).toBe(true);
   });
 
+  it('keeps the quick match set up as it was left for the next visit', () => {
+    buttons()[0].click();
+    screenButton('QUICK MATCH').click();
+    const nextArrows = () => document.querySelectorAll<HTMLButtonElement>('[aria-label="Next"]');
+    nextArrows()[2].click(); // points
+    nextArrows()[0].click(); // background
+    expect(choice('POINTS')).toBe('7');
+    game.dispose();
+
+    document.body.innerHTML = BODY;
+    game = new Game($<HTMLCanvasElement>('#gameCanvas'));
+    game.init();
+    buttons()[0].click();
+    screenButton('QUICK MATCH').click();
+    expect(choice('POINTS')).toBe('7');
+    expect(choice('BACKGROUND')).toBe('LASERS');
+  });
+
+  it('restarts the match from the pause', () => {
+    play();
+    press('Escape'); // pause
+    expect(labels()).toEqual(['RESUME', 'RESTART', 'SETTINGS', 'MAIN MENU']);
+
+    buttons()[1].click(); // restart
+    expect(isMenuOpen()).toBe(false);
+    expect(isPauseButtonShown()).toBe(true);
+    press('Escape');
+    expect($('#gameTitle').textContent).toBe('PAUSED');
+  });
+
   it('switches every text outside the menus to the language picked', () => {
     buttons()[1].click(); // settings
-    buttons()[3].click(); // language
+    document.querySelector<HTMLButtonElement>('#gameScreen [aria-label="Next"]')!.click(); // language
 
     expect(document.documentElement.lang).toBe('ru');
     expect($('#pauseButton').getAttribute('aria-label')).toBe('Пауза');

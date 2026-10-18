@@ -1,4 +1,4 @@
-import { expect, Page, test } from '@playwright/test';
+import { expect, Locator, Page, test } from '@playwright/test';
 import { SCENES } from '../src/shared/scenes';
 
 /** Long enough for the game to draw a few dozen frames, including a background's first ones. */
@@ -24,6 +24,23 @@ const button = (page: Page, name: string | RegExp) =>
 
 const menu = (page: Page) => page.locator('#gameUI');
 
+/** A quick match choice, by its name; its value is its aria-valuetext. */
+const choice = (page: Page, name: string) => page.getByRole('spinbutton', { name, exact: true });
+
+/** Fails unless `locator` sits wholly on the court: the menus never need scrolling. */
+const expectOnCourt = async (page: Page, locator: Locator) => {
+  const [box, court] = await Promise.all([
+    locator.boundingBox(),
+    page.locator('#gameStage').boundingBox(),
+  ]);
+  expect(box).not.toBeNull();
+  expect(court).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(court!.x);
+  expect(box!.y).toBeGreaterThanOrEqual(court!.y);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(court!.x + court!.width);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(court!.y + court!.height);
+};
+
 test('opens on the main menu with the court drawn behind it', async ({ page }) => {
   await page.goto('');
 
@@ -42,7 +59,8 @@ test('starts a match, pauses, resumes and goes back to the menu', async ({ page,
   await page.goto('');
 
   await button(page, 'PLAY').click();
-  await button(page, /^STANDARD MATCH/).click();
+  await button(page, 'QUICK MATCH').click();
+  await button(page, 'START').click();
   await expect(menu(page)).toHaveClass(/game__ui--hidden/);
   if (isMobile) await expect(pause).toBeVisible();
   await page.waitForTimeout(SETTLE_MS);
@@ -58,36 +76,50 @@ test('starts a match, pauses, resumes and goes back to the menu', async ({ page,
   await expect(button(page, 'PLAY')).toBeVisible();
 });
 
-test('lists the modes behind PLAY and comes back from them', async ({ page }) => {
+test('lists the modes behind PLAY, the ones still to come switched off', async ({ page }) => {
   await page.goto('');
 
   await button(page, 'PLAY').click();
-  const card = button(page, /^STANDARD MATCH/);
-  await expect(card).toBeVisible();
-  // The card fits on the court in every orientation (on a portrait phone both are turned)
-  const [box, court] = await Promise.all([
-    card.boundingBox(),
-    page.locator('#gameStage').boundingBox(),
-  ]);
-  expect(box).not.toBeNull();
-  expect(court).not.toBeNull();
-  expect(box!.x).toBeGreaterThanOrEqual(court!.x);
-  expect(box!.y).toBeGreaterThanOrEqual(court!.y);
-  expect(box!.x + box!.width).toBeLessThanOrEqual(court!.x + court!.width);
-  expect(box!.y + box!.height).toBeLessThanOrEqual(court!.y + court!.height);
+  await expect(button(page, 'STORY')).toBeDisabled();
+  await expect(button(page, 'CHALLENGE')).toBeDisabled();
+  await expect(button(page, 'QUICK MATCH')).toBeEnabled();
+  // Down to BACK, on the court in every orientation (on a portrait phone both are turned)
+  await expectOnCourt(page, button(page, 'BACK'));
 
   await button(page, 'BACK').click();
   await expect(button(page, 'PLAY')).toBeVisible();
+});
+
+test('sets up a quick match, its background coming up behind the menu', async ({ page }) => {
+  await page.goto('');
+
+  await button(page, 'PLAY').click();
+  await button(page, 'QUICK MATCH').click();
+  // The arrows step a choice either way
+  await button(page, 'Next').first().click();
+  await expect(choice(page, 'BACKGROUND')).toHaveAttribute('aria-valuetext', 'LASERS');
+  await button(page, 'Previous').last().click();
+  await expect(choice(page, 'POINTS')).toHaveAttribute('aria-valuetext', '3');
+  await expectOnCourt(page, button(page, 'BACK'));
+  // The rows, arrows and all, fit across the court too
+  await expectOnCourt(page, button(page, 'Previous').first());
+  await expectOnCourt(page, button(page, 'Next').first());
+  await page.waitForTimeout(SETTLE_MS);
+
+  await button(page, 'START').click();
+  await expect(menu(page)).toHaveClass(/game__ui--hidden/);
+  await page.waitForTimeout(SETTLE_MS);
 });
 
 test('opens the settings, switches the language and comes back', async ({ page }) => {
   await page.goto('');
 
   await button(page, 'SETTINGS').click();
-  await expect(button(page, /^DIFFICULTY/)).toBeVisible();
+  await expect(button(page, /^SOUND EFFECTS/)).toBeVisible();
+  await expect(button(page, /^DIFFICULTY/)).toHaveCount(0);
 
-  await button(page, /^LANGUAGE/).click();
-  await expect(button(page, /^ЯЗЫК/)).toBeVisible();
+  await button(page, 'Next').click(); // the language's arrow
+  await expect(choice(page, 'ЯЗЫК')).toHaveAttribute('aria-valuetext', 'РУССКИЙ');
   await button(page, 'НАЗАД').click();
   await expect(button(page, 'ИГРАТЬ')).toBeVisible();
 });
@@ -100,3 +132,18 @@ for (const scene of SCENES) {
     await page.waitForTimeout(SETTLE_MS);
   });
 }
+
+test('restarts a match from the pause', async ({ page, isMobile }) => {
+  const pause = page.locator('#pauseButton');
+  await page.goto('');
+
+  await button(page, 'PLAY').click();
+  await button(page, 'QUICK MATCH').click();
+  await button(page, 'START').click();
+  await page.waitForTimeout(SETTLE_MS);
+
+  await (isMobile ? pause.click() : page.keyboard.press('Escape'));
+  await button(page, 'RESTART').click();
+  await expect(menu(page)).toHaveClass(/game__ui--hidden/);
+  await page.waitForTimeout(SETTLE_MS);
+});

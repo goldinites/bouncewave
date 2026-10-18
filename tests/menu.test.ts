@@ -6,6 +6,12 @@ import { getDefaultSettings } from '@/settings/UserSettings';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
 
+/** What an item says: a button its text, a choice its name and value. */
+const text = (item: Element) =>
+  item.getAttribute('role') === 'spinbutton'
+    ? `${item.getAttribute('aria-label')}: ${item.getAttribute('aria-valuetext')}`
+    : item.textContent;
+
 // Each one listens for keys on the window until disposed
 const managers: UIManager[] = [];
 const makeUIManager = (i18n: I18nManager) => {
@@ -28,7 +34,13 @@ const setup = () => {
     onUnlockAudio: vi.fn(),
   };
   const menu = new MenuController(makeUIManager(i18n), i18n, sfx, store, actions);
-  const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('#gameButtons button')];
+  // What the keyboard walks, in a menu or a screen (the settings): buttons, and a choice's value
+  const buttons = () =>
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '#gameButtons button, #gameScreen button, #gameScreen [data-menu-item]',
+      ),
+    ].filter((item) => item.tabIndex >= 0);
   return { menu, buttons, store };
 };
 
@@ -47,9 +59,8 @@ describe('settings menu', () => {
     const { menu, buttons } = setup();
     menu.showSettingsMenu(() => {});
 
-    // difficulty, music (muted), sound (on), language, back
+    // music (muted), sound (on), language, back
     expect(buttons().map((b) => b.getAttribute('aria-pressed'))).toEqual([
-      null,
       'false',
       'true',
       null,
@@ -61,9 +72,9 @@ describe('settings menu', () => {
     const { menu, buttons } = setup();
     menu.showSettingsMenu(() => {});
 
-    buttons()[1].click(); // music back on
-    expect(buttons()[1].getAttribute('aria-pressed')).toBe('true');
-    expect(buttons()[1].textContent).toBe('MUSIC: ON');
+    buttons()[0].click(); // music back on
+    expect(buttons()[0].getAttribute('aria-pressed')).toBe('true');
+    expect(buttons()[0].textContent).toBe('MUSIC: ON');
   });
 
   it('colors each button by what it does', () => {
@@ -72,19 +83,36 @@ describe('settings menu', () => {
 
     menu.showSettingsMenu(() => {});
     expect(classes()).toEqual([
-      'game-button game-button--yellow', // difficulty
       'game-button game-button--pink', // music
       'game-button game-button--purple', // sound
-      'game-button game-button--green', // language
+      'option-row__value', // language: a choice, its row green
       'game-button', // back, default cyan
     ]);
+    expect(buttons()[2].closest('.option-row')?.className).toBe('option-row game-button--green');
 
     menu.showPauseMenu();
     expect(classes()).toEqual([
       'game-button',
+      'game-button game-button--yellow',
       'game-button game-button--pink',
       'game-button game-button--purple',
     ]);
+  });
+
+  it('steps the language either way by its arrows, the focus staying on it', () => {
+    const { menu, buttons, store } = setup();
+    menu.showSettingsMenu(() => {});
+    const arrow = (label: string) =>
+      document.querySelector<HTMLButtonElement>(`#gameScreen [aria-label="${label}"]`)!;
+
+    buttons()[2].focus();
+    arrow('Next').click();
+    expect(store.current.language).toBe('ru');
+    // Redrawn (in the game, retitled in the new language), still the same screen
+    expect(document.activeElement).toBe(buttons()[2]);
+
+    buttons()[2].dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowLeft', bubbles: true }));
+    expect(store.current.language).toBe('en');
   });
 
   it('redraws an open settings menu when the music is toggled from outside it', () => {
@@ -92,24 +120,24 @@ describe('settings menu', () => {
     menu.showSettingsMenu(() => {});
 
     store.cycle('musicMuted');
-    expect(buttons()[1].textContent).toBe('MUSIC: ON');
+    expect(buttons()[0].textContent).toBe('MUSIC: ON');
   });
 
   it('keeps the keyboard focus on the setting that was just changed', () => {
     const { menu, buttons } = setup();
     menu.showSettingsMenu(() => {});
 
-    buttons()[2].focus();
-    buttons()[2].click(); // sound, redrawing the whole menu
-    expect(document.activeElement).toBe(buttons()[2]);
+    buttons()[1].focus();
+    buttons()[1].click(); // sound, redrawing the whole menu
+    expect(document.activeElement).toBe(buttons()[1]);
   });
 
   it('moves the focus to the first button of the menu it leads to', () => {
     const { menu, buttons } = setup();
     menu.showSettingsMenu(() => menu.showMainMenu());
 
-    buttons()[4].focus();
-    buttons()[4].click(); // back
+    buttons()[3].focus();
+    buttons()[3].click(); // back
     expect(document.activeElement).toBe(buttons()[0]);
   });
 
@@ -123,7 +151,7 @@ describe('settings menu', () => {
 
   it('walks the menu with the arrow keys, wrapping around at either end', () => {
     const { menu, buttons } = setup();
-    menu.showPauseMenu(); // resume, settings, menu
+    menu.showPauseMenu(); // resume, restart, settings, menu
     const press = (code: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code }));
     const focused = () => buttons().indexOf(document.activeElement as HTMLButtonElement);
 
@@ -131,15 +159,16 @@ describe('settings menu', () => {
     expect(focused()).toBe(0); // from outside the menu, the first button
     press('ArrowDown');
     press('KeyS');
-    expect(focused()).toBe(2);
+    press('ArrowDown');
+    expect(focused()).toBe(3);
     press('ArrowDown');
     expect(focused()).toBe(0);
     press('ArrowUp');
-    expect(focused()).toBe(2);
+    expect(focused()).toBe(3);
     press('Home');
     expect(focused()).toBe(0);
     press('End');
-    expect(focused()).toBe(2);
+    expect(focused()).toBe(3);
   });
 
   it('puts Enter on the first button when nothing in the menu is focused yet', () => {
@@ -173,24 +202,24 @@ describe('settings menu', () => {
     expect(menu.goBack()).toBe(false);
   });
 
-  it('leaves the difficulty out of the settings opened from the pause', () => {
+  it('opens the same settings from the pause', () => {
     const { menu, buttons } = setup();
     menu.showPauseMenu();
-    buttons()[1].click(); // settings
+    buttons()[2].click(); // settings
 
-    const labels = () => buttons().map((b) => b.textContent);
+    const labels = () => buttons().map((b) => text(b));
     expect(labels()).toEqual(['MUSIC: OFF', 'SOUND EFFECTS: ON', 'LANGUAGE: ENGLISH', 'BACK']);
 
-    // Switching a setting redraws the menu, still without the difficulty
+    // Switching a setting redraws the menu where it is
     buttons()[0].click();
     expect(labels()).toEqual(['MUSIC: ON', 'SOUND EFFECTS: ON', 'LANGUAGE: ENGLISH', 'BACK']);
   });
 
-  it('offers the difficulty between matches', () => {
+  it('leaves the difficulty to the quick match, out of the settings', () => {
     const { menu, buttons } = setup();
     menu.showMainMenu();
     buttons()[1].click(); // settings
-    expect(buttons()[0].textContent).toMatch(/^DIFFICULTY/);
+    expect(buttons().map((b) => text(b))).not.toContainEqual(expect.stringMatching(/^DIFFICULTY/));
   });
 
   it('names the pause button in the current language', () => {
@@ -211,6 +240,6 @@ describe('settings menu', () => {
 
     store.cycle('musicMuted');
     expect(document.getElementById('gameUI')?.classList.contains('game__ui--hidden')).toBe(true);
-    expect(buttons()[1].textContent).toBe('MUSIC: OFF');
+    expect(buttons()[0].textContent).toBe('MUSIC: OFF');
   });
 });

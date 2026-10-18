@@ -46,6 +46,8 @@ describe('SettingsStorage', () => {
     const settings = SettingsStorage.load();
     expect(settings).toEqual({
       difficulty: DifficultyLevel.NORMAL,
+      matchPoints: 5,
+      matchBackground: 'random',
       soundMuted: false,
       musicMuted: false,
       language: 'en',
@@ -55,6 +57,8 @@ describe('SettingsStorage', () => {
   it('saves and reloads settings correctly', () => {
     SettingsStorage.save({
       difficulty: DifficultyLevel.HARD,
+      matchPoints: 7,
+      matchBackground: 'fuji',
       soundMuted: true,
       musicMuted: true,
       language: 'ru',
@@ -63,6 +67,8 @@ describe('SettingsStorage', () => {
     const loaded = SettingsStorage.load();
     expect(loaded).toEqual({
       difficulty: DifficultyLevel.HARD,
+      matchPoints: 7,
+      matchBackground: 'fuji',
       soundMuted: true,
       musicMuted: true,
       language: 'ru',
@@ -89,12 +95,16 @@ describe('SettingsStorage', () => {
   it('keeps the saved format, so settings from older versions still load', () => {
     SettingsStorage.save({
       difficulty: DifficultyLevel.HARD,
+      matchPoints: 7,
+      matchBackground: 'fuji',
       soundMuted: true,
       musicMuted: false,
       language: 'ru',
     });
     expect(JSON.parse(mockStorage.getItem(LOCAL_STORAGE_KEY)!)).toEqual({
       d: 2,
+      p: 7,
+      b: 'fuji',
       m: true,
       u: false,
       l: 'ru',
@@ -105,10 +115,22 @@ describe('SettingsStorage', () => {
     mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ d: 'x', m: true, l: 'ru' }));
     expect(SettingsStorage.load()).toEqual({
       difficulty: DifficultyLevel.NORMAL,
+      matchPoints: 5,
+      matchBackground: 'random',
       soundMuted: true,
       musicMuted: false,
       language: 'ru',
     });
+  });
+
+  it('sets up the quick match as before for players whose settings predate it', () => {
+    mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ d: 2, m: false, u: true, l: 'ru' }));
+    expect(SettingsStorage.load()).toMatchObject({ matchPoints: 5, matchBackground: 'random' });
+  });
+
+  it('rejects a quick match length or backdrop that does not exist', () => {
+    mockStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ p: 10, b: 'moon' }));
+    expect(SettingsStorage.load()).toMatchObject({ matchPoints: 5, matchBackground: 'random' });
   });
 
   it('rejects a stored difficulty that is in range but not a level', () => {

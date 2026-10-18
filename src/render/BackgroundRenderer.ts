@@ -54,6 +54,8 @@ export class BackgroundRenderer {
   private surf: Surf | null = null;
   /** A developer pinned the background: it stays, matches included, and the deck sits idle. */
   private _isPinned = false;
+  /** The background the player chose for their matches; null deals one from the deck. */
+  private chosen: number | null = null;
   private lastTime: number | null = null;
 
   private layer: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null = null;
@@ -99,8 +101,18 @@ export class BackgroundRenderer {
   }
 
   /**
-   * Switches to another background (at the start of every match), dealt from a shuffled deck:
-   * every one comes up once before any comes up again, and never the same one twice running.
+   * The player's choice of background for their matches, which switchChannel goes to from then
+   * on; null for a different one each time.
+   */
+  public choose(scene: SceneId | null): void {
+    const index = this.backgrounds.findIndex((background) => background.scene === scene);
+    this.chosen = index < 0 ? null : index;
+  }
+
+  /**
+   * Switches to another background (at the start of every match): the one the player chose, or
+   * else one dealt from a shuffled deck, where every one comes up once before any comes up
+   * again, and never the same one twice running. Already on the chosen one, it stays.
    * @param isAnimated flick through a few channels in static first; off, it just cuts over
    * @returns the backdrop the match is played on
    */
@@ -108,7 +120,8 @@ export class BackgroundRenderer {
     if (this._isPinned) return this.scene;
     const count = this.backgrounds.length;
     const previous = this.backgroundIndex;
-    this.backgroundIndex = this.deal();
+    if (this.chosen === previous) return this.scene;
+    this.backgroundIndex = this.chosen ?? this.deal();
 
     if (isAnimated && count > 1) {
       // Channels flicking past, each unlike the one before, ending on the match's own

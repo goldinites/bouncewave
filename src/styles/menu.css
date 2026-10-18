@@ -40,14 +40,19 @@
   margin-bottom: auto;
 }
 
-/* A menu's buttons and a Preact screen take turns under the title; the one not on show is
-   gone, so the buttons may be the last thing showing and keep the column centered */
-.game__buttons {
+/* A menu's buttons and a Preact screen take turns under the title. The screen's box steps aside,
+   so what it renders sits in the column as a menu's buttons do; whichever is showing is the
+   last thing there and keeps the column centered */
+.game__screen {
+  display: contents;
+}
+
+.game__buttons,
+.screen-buttons {
   margin-bottom: auto;
 }
 
-.game__buttons:empty,
-.game__screen:empty {
+.game__buttons:empty {
   display: none;
 }
 
@@ -86,7 +91,9 @@
   display: none;
 }
 
-.game__buttons {
+/* A Preact screen's column of buttons is laid out as a menu's */
+.game__buttons,
+.screen-buttons {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -142,7 +149,8 @@
 }
 
 /* Toggles (music, sound) say whether they are on with aria-pressed; on means filled */
-.game__buttons button[aria-pressed='true'] {
+.game__buttons button[aria-pressed='true'],
+.screen-buttons button[aria-pressed='true'] {
   background: var(--button-color);
   color: #12002e;
   text-shadow: none;
@@ -151,15 +159,16 @@
 /* Hover only where there is a real pointer: on touch screens :hover sticks after a tap,
    and the glitch animation's filter brings the iOS dark box back */
 @media (hover: hover) {
-  .game-button:hover,
+  .game-button:not(:disabled):hover,
   .game__buttons button:hover {
     transform: translateY(-2px);
     animation: glitch-button 1.5s;
   }
 
   /* Plain buttons fill on hover; toggles don't, or an off toggle would look on */
-  .game-button:hover,
-  .game__buttons button:not([aria-pressed]):hover {
+  .game-button:not(:disabled):hover,
+  .game__buttons button:not([aria-pressed]):hover,
+  .screen-buttons button:not([aria-pressed]):hover {
     background: var(--button-color);
     color: #12002e;
     text-shadow: none;
@@ -173,55 +182,91 @@
 }
 
 .game-button:focus-visible,
-.game__buttons button:not([aria-pressed]):focus-visible {
+.game__buttons button:not([aria-pressed]):focus-visible,
+.screen-buttons button:not([aria-pressed]):focus-visible {
   background: var(--button-color);
   color: #12002e;
   text-shadow: none;
 }
 
 /* A focused toggle keeps showing its state, so focus is an outline instead of a fill */
-.game__buttons button[aria-pressed]:focus-visible {
+.game__buttons button[aria-pressed]:focus-visible,
+.screen-buttons button[aria-pressed]:focus-visible {
   outline: 2px solid var(--button-color);
   outline-offset: 3px;
 }
 
-/* A set width, so a screen's content can size itself against the court and not its own text */
-.game__screen {
-  width: min(100%, 400px);
+/* A choice of the quick match's setup: its value between an arrow back and an arrow on, the
+   row as wide as the buttons under it */
+/* The setup's column takes the court's width up to a limit, so a choice's value fits between
+   its arrows on a phone too */
+.screen-buttons--wide {
+  width: min(100%, 380px);
 }
 
-/* The mode screen: a column of cards, each a mode's name over a line on what it is */
-.mode-select {
+.option-row {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-
-  margin-top: 6px;
+  gap: 8px;
 }
 
-.mode-select__list {
+/* The choice's name and value on one line, a size up from the buttons' text. No button: the
+   arrows step it, this only shows it, in the row's color with the buttons' glow */
+.option-row__value {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
 
-  margin: 0;
+  flex: 1;
+  min-width: 0;
+  padding: 0.4em 0.3em;
+  border-radius: 8px;
+
+  color: var(--button-color, var(--cyan));
+  font-size: clamp(13px, 2.4vw, 18px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  text-shadow: 0 0 3px var(--button-color, var(--cyan));
+}
+
+/* Reached by the keyboard, the choice is outlined like a focused toggle */
+.option-row__value:focus-visible {
+  outline: 2px solid var(--button-color, var(--cyan));
+  outline-offset: 2px;
+}
+
+/* The name a little dimmer than the value it names */
+.option-row__name {
+  opacity: 0.75;
+}
+
+.screen-buttons .option-row__arrow {
+  display: grid;
+  place-items: center;
+
+  flex: none;
+  width: 2.8em;
   padding: 0;
-  list-style: none;
 }
 
-.mode-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45em;
+.option-row__chevron {
+  width: 0.8em;
+  height: 0.8em;
 
-  width: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.mode-card__description {
-  font-size: 0.8em;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  text-transform: none;
+/* A button that can't be pressed yet (a mode still to come): dimmed, no glow, no reaction */
+.game-button:disabled {
+  opacity: 0.35;
+  box-shadow: none;
+  text-shadow: none;
+  cursor: default;
 }
 
 @media (max-height: 520px) {
@@ -236,20 +281,15 @@
     line-height: 1.1;
   }
 
-  .game__buttons {
+  .game__buttons,
+  .screen-buttons {
     gap: 6px;
     margin-top: 0;
   }
 
   .game__buttons button,
-  .mode-select .game-button {
+  .screen-buttons button {
     padding: 0.6em 1.2em;
-  }
-
-  .mode-select,
-  .mode-select__list {
-    gap: 6px;
-    margin-top: 0;
   }
 }
 
@@ -276,13 +316,13 @@
   }
 
   .game__buttons button,
-  .mode-select .game-button {
+  .screen-buttons button {
     padding: 1em 1.4em;
     font-size: 15px;
   }
 
-  .game__screen {
-    width: 80%;
+  .option-row__value {
+    font-size: 17px;
   }
 }
 

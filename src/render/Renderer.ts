@@ -12,7 +12,7 @@ import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer'
 import { HudRenderer } from '@/render/HudRenderer';
 import { sprites } from '@/render/SpriteCache';
 import { approach, clamp } from '@/shared/math';
-import { SceneId } from '@/shared/scenes';
+import { BackgroundChoice, SceneId } from '@/shared/scenes';
 
 // Lightweight scene dimming for menu and pause overlays
 const MENU_DIM = { RGB: '8, 2, 26', ALPHA: 0.6, SPEED: 8.6 } as const;
@@ -276,12 +276,20 @@ export class Renderer {
   }
 
   /**
-   * Switches to another background at the start of a match, flicking through a few channels
-   * in static first (a plain cut with reduced motion).
-   * @returns the backdrop the match is played on
+   * Switches to another background (the chosen one, if the player chose one), flicking through
+   * a few channels in static first (a plain cut with reduced motion).
+   * @param isAnimated false cuts straight over (the game opening on the chosen background)
+   * @returns the backdrop on screen now
    */
-  public switchChannel(): SceneId {
-    return this.background.switchChannel(!this.reducedMotion.matches && !this.isClassicMode);
+  public switchChannel(isAnimated = true): SceneId {
+    return this.background.switchChannel(
+      isAnimated && !this.reducedMotion.matches && !this.isClassicMode,
+    );
+  }
+
+  /** The player's choice of background, which every switchChannel goes to from now on. */
+  public chooseBackground(choice: BackgroundChoice): void {
+    this.background.choose(choice === 'random' ? null : choice);
   }
 
   /**

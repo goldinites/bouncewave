@@ -1,6 +1,15 @@
 export const TWO_PI = Math.PI * 2;
 
 /**
+ * The value `step` places along `list` from `value` (1 the next, -1 the previous), wrapping
+ * around at either end.
+ */
+export function stepThrough<T>(list: readonly T[], value: T, step: number): T {
+  const index = list.indexOf(value) + step;
+  return list[((index % list.length) + list.length) % list.length];
+}
+
+/**
  * Clamps a number between a minimum and a maximum value.
  */
 export function clamp(value: number, min: number, max: number): number {

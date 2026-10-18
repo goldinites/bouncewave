@@ -57,7 +57,20 @@ body.classic-mode .game-button {
   font-family: 'Courier New', monospace;
 }
 
-body.classic-mode .game__buttons button[aria-pressed='true'] {
+/* A choice between its arrows (the quick match's setup, the language): white monospace like the
+   buttons around it, its row's color dropped */
+body.classic-mode .option-row {
+  --button-color: var(--white);
+}
+
+body.classic-mode .option-row__value {
+  border-radius: 0;
+  text-shadow: none;
+  font-family: 'Courier New', monospace;
+}
+
+body.classic-mode .game__buttons button[aria-pressed='true'],
+body.classic-mode .screen-buttons button[aria-pressed='true'] {
   background: var(--white);
   color: var(--black);
 }
