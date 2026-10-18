@@ -26,7 +26,9 @@ them and blocks the deploy otherwise. Run `test:visual` after anything that can 
 background draws; its baselines are Windows renders of `e2e/stand` (seeded randomness, fixed
 time). Update them with `npm run test:visual -- --update-snapshots` only for an intended change,
 after showing the user the new pictures. In the browser: `?debug` or F3 shows the FPS overlay and a menu of
-backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts`).
+backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts`);
+`?challenge=<id>` makes every match that challenge (ids in `src/match/challenges.ts`), its last
+verdict shown in the debug overlay.
 
 ## Architecture
 

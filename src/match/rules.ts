@@ -19,6 +19,13 @@ export interface MatchRules {
    * if need be: the side ahead wins it, and a level score is the player's loss.
    */
   readonly timeLimit: number | null;
+  /**
+   * Hits in one rally that end the match at once, won by the player (the left side when no one
+   * plays); null when rallies end only in points.
+   */
+  readonly rallyGoal: number | null;
+  /** The CPU growing stronger with every point its opponent wins; null for a CPU that doesn't. */
+  readonly cpuRamp: CpuRamp | null;
   /** Whether the player's perfect hits charge Overdrive, and its meter is shown. */
   readonly overdrive: boolean;
   /**
@@ -28,10 +35,25 @@ export interface MatchRules {
   readonly balls: number;
 }
 
+/**
+ * A CPU that gets stronger as its opponent scores (Survival). Its strength is a rank, as in
+ * `skillAt`: the match's level to begin with, then `perPoint` more for every point it loses, up to
+ * `maxRank`. Past the hardest level its play stays the hardest level's and the ball takes over:
+ * it speeds up harder and gets faster (`paceAt`). It plays at that strength, with no form.
+ */
+export interface CpuRamp {
+  /** Ranks (levels) added for every point the CPU's opponent wins. */
+  readonly perPoint: number;
+  /** The strongest it gets, in ranks; above the hardest level's, the ball keeps quickening. */
+  readonly maxRank: number;
+}
+
 /** The match as it has always been played: first to 10, no clock, Overdrive on, one ball. */
 export const STANDARD_RULES: MatchRules = {
   winningScores: [WINNING_SCORE, WINNING_SCORE],
   timeLimit: null,
+  rallyGoal: null,
+  cpuRamp: null,
   overdrive: true,
   balls: 1,
 };

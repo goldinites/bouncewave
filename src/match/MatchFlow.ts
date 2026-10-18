@@ -1,7 +1,7 @@
 import { ShotThreat, SHOT_THREAT } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
 import { BALL, COURT } from '@/match/config';
-import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
+import { DifficultyConfig, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
 import {
@@ -13,6 +13,7 @@ import {
 import { OVERDRIVE, Overdrive } from '@/match/Overdrive';
 import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Physics, PhysicsEvent } from '@/match/Physics';
+import { cpuRank, paceAt } from '@/match/ramp';
 import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
 
@@ -366,8 +367,7 @@ export class MatchFlow {
       }
     }
 
-    // The demo plays at the chosen level, also right after a challenge at its own
-    const difficulty = DIFFICULTY_CONFIGS[this.isDemo ? this.getDifficulty() : this.difficulty];
+    const difficulty = this.physicsConfig;
     this.updatePaddles(dt);
 
     if (this._serveTime > 0) {
@@ -380,8 +380,9 @@ export class MatchFlow {
         ball.updateTrail(dt);
         const events = Physics.step(ball, this.paddles, difficulty, dt);
         for (const event of events) this.handlePhysicsEvent(event, ball);
-        // The first ball out ends the point: every ball has just been served again
-        if (events.some((event) => event.type === 'score')) break;
+        // The first ball out ends the point: every ball has just been served again. A rally
+        // goal reached ends the match, and the balls with it
+        if (this.phase === 'finale' || events.some((event) => event.type === 'score')) break;
       }
     }
 
@@ -430,6 +431,21 @@ export class MatchFlow {
     return pick;
   }
 
+  /**
+   * The level the ball plays to. The demo plays at the chosen one, also right after a challenge
+   * at its own; a ramping CPU quickens the ball as it grows stronger.
+   */
+  private get physicsConfig(): DifficultyConfig {
+    if (this.isDemo) return DIFFICULTY_CONFIGS[this.getDifficulty()];
+
+    const config = DIFFICULTY_CONFIGS[this.difficulty];
+    const ramp = this._rules.cpuRamp;
+    if (!ramp) return config;
+    // The CPU's opponent is the player (the left side when no one plays)
+    const opponentPoints = this._scores[this.playerSide ?? 0];
+    return { ...config, ...paceAt(cpuRank(this.difficulty, ramp, opponentPoints)) };
+  }
+
   /** Hands the paddles to `lineup`, each made the paddle its participant plays with. */
   private useLineup(lineup: Lineup): void {
     this.lineup = lineup;
@@ -458,6 +474,9 @@ export class MatchFlow {
 
   /** @param ball the ball it happened to */
   private handlePhysicsEvent(event: PhysicsEvent, ball: Ball): void {
+    // A rally goal ended the match earlier in this step: the rest of it is not played
+    if (this._phase === 'finale') return;
+
     switch (event.type) {
       case 'wallBounce':
         this.emit(event);
@@ -485,6 +504,12 @@ export class MatchFlow {
             : SHOT_THREAT.NORMAL;
         this.shotAt(otherSide(this.paddles[hitter].side), threat);
         this.emit({ ...event, rally: this._rally, isPowerShot, chargedOverdrive });
+
+        // A rally long enough wins the match for the player (the left side when no one plays)
+        const { rallyGoal } = this._rules;
+        if (!this.isDemo && rallyGoal !== null && this._rally >= rallyGoal) {
+          this.beginFinale(this.playerSide ?? 0, ball.y);
+        }
         break;
       }
       case 'score':
