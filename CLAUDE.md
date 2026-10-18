@@ -30,79 +30,37 @@ backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts
 
 ## Architecture
 
-`src/app/Game.ts` is the composition root and the frame loop: it builds everything, connects the
-listeners to the match's events and builds the per-frame `RenderFrame` and `MusicState`.
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** has the layers, what may import what, one frame
+step by step, the match's building blocks and how to add each kind of thing (background, song,
+setting, paddle, rules, lineup, a listener to the match). Read it before adding a feature.
 
-| Directory       | Owns                                                                                                                                                                |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/match/`    | Rules and simulation: `MatchFlow` (phases, serve, score, finale), `Physics`, `Paddle`, `Ball`, `AiController`/`AiForm`, `difficulty`, `Overdrive`, `config` (sizes) |
-| `src/fx/`       | Presentation reacting to match events: `EffectsDirector` and its parts (drama, climax, paddle fx, particles, fireworks)                                             |
-| `src/render/`   | `Renderer` (frame, camera, overlays), `BackgroundRenderer` + `backgrounds/`, court/entity/HUD/final-score renderers, `SpriteCache`, `AdaptiveResolution`            |
-| `src/audio/`    | `AudioEngine` (owns the AudioContext), `music/` (engine, `Conductor`, `songs.ts`, instruments), `sfx/`                                                              |
-| `src/ui/`       | DOM menus: `UIManager` (renders button lists), `MenuController` (which menu), `NowPlaying`, `BootScreen`                                                            |
-| `src/input/`    | `InputHandler`: keyboard, pointer, touch, portrait rotation                                                                                                         |
-| `src/settings/` | `SETTINGS` (declarative), `SettingsStore` (subscribe), storage                                                                                                      |
-| `src/i18n/`     | `translations.ts` (typed schema, en + ru), `I18nManager`                                                                                                            |
-| `src/shared/`   | palette, math, scene ids, fonts — imports nothing from the project                                                                                                  |
+`src/app/Game.ts` is the composition root and the frame loop. `src/match/` is the game itself
+(rules, simulation, AI); `fx/`, `render/`, `audio/`, `ui/` present it; `input/` feeds it;
+`settings/`, `i18n/` serve everything; `shared/` imports nothing from the project.
 
-Rules that keep it clean:
+Rules that keep it clean (the first two are enforced by `tests/architecture.test.ts`):
 
-- `match/` imports only `match/` and `shared/`: the rules never know about pixels, sound or DOM.
-  The match reports what happened as `MatchEvent`s; `fx/` turns them into effects.
-- Effects are presentation only and must never change the outcome; a failing effect is caught and
-  reported, the match goes on.
-- Randomness in the simulation is injected (`random` in `MatchFlow`, `AiController`,
-  `Ball.serve`); presentation may use `Math.random`.
-- Everything with listeners or timers has `dispose()`; listeners go through an `AbortController`.
+- `match/` imports only `match/` and `shared/`; `shared/` imports nothing from the project.
+- The match reports through `MatchEvent`s on `Game`'s `matchEvents` (`shared/EventBus.ts`);
+  whatever reacts to it subscribes itself (`listenTo(events)`) and never changes the outcome. A
+  listener that throws is reported; the rest still hear the event.
+- The match runs in fixed steps of 1/240 s (`app/FixedStep.ts`) with injected randomness, so a
+  seed and inputs replay it; presentation may use `Math.random`. Draw `ball.drawX/drawY` and
+  `paddle.drawY` (between the last two steps), never `x`/`y`.
+- A match is `MatchRules` (`flow.rules`: winning score, Overdrive, balls) played by a `Lineup`
+  (a `PaddleController` and an Overdrive flag per paddle). Never read `WINNING_SCORE`, never
+  branch on "paddle 0 is the player": ask the rules and the lineup.
+- Paddles are a list, each with a `side` and a `PaddleSpec` (`paddle.spec`: size, perfect zone,
+  power, spin, speed); read sizes from the spec, never the global `PADDLE`. Points belong to the
+  side (`flow.scores`). Balls are a list (`flow.balls`); the first ball out ends the point; the
+  camera and the drama follow `flow.leadBall`.
+- Everything with listeners or timers has `dispose()`; DOM listeners go through an
+  `AbortController`.
 - Every new string exists in both languages; every new screen effect honours
   `prefers-reduced-motion`; everything works on a phone in either orientation (`isRotated`: the
   stage is turned in CSS on a portrait phone).
-
-- The match runs in fixed steps of 1/240 s (`app/FixedStep.ts`): `Game` feeds frame time in,
-  `MatchFlow.update` runs once per step, and the same seed and inputs replay the same match.
-  Renderers draw `ball.drawX/drawY` and `paddle.drawY` (set by `MatchFlow.interpolate` between
-  the last two steps), never `x`/`y`; `fx/` may read the simulated positions.
-
-- A match is played under `MatchRules` (`match/rules.ts`: winning score, Overdrive on or off),
-  given to `MatchFlow.startMatch` and read back as `flow.rules`; `STANDARD_RULES` is the classic
-  match. Read the winning score and the deciding point from the rules, never from
-  `WINNING_SCORE`.
-
-- The court has any number of paddles, each playing for a `side` (`match/side.ts`: 0 left,
-  1 right; at least one a side). Points belong to the side and are kept by the match
-  (`flow.scores`), never by a paddle. A `paddleIndex` is a paddle's place in the match's list.
-- Who plays each paddle is the match's `Lineup` (`MatchFlow.ts`): a `PaddleController` per
-  paddle (`match/PaddleController.ts`: `HumanController`, `AiPaddleController` for the demo
-  or the CPU) and whether it has Overdrive. Never branch on "paddle 0 is the player" in the
-  match; ask the lineup.
-
-- The rules say how many balls are in play (`rules.balls`); the match keeps them
-  (`flow.balls`, the first is `deps.ball`) and the first ball out ends the point for all of
-  them. Draw every ball in `frame.balls`; the camera and the drama follow `flow.leadBall`.
-
-- Every paddle carries a `PaddleSpec` (`match/PaddleSpec.ts`: size, perfect zone, power, spin,
-  speed; `STANDARD_PADDLE` by default) as `paddle.spec`. Read a paddle's size and hitting from
-  its spec, never from the global `PADDLE` (which only lays out the court).
-
-- Match events go out on `Game`'s `matchEvents` (`shared/EventBus.ts`): to react to the match,
-  give the class a `listenTo(events)` that subscribes (`subscribe`, or `on(type)`), and call it
-  where `Game` wires the effects and the menus. A listener that throws is reported, the rest
-  still hear the event.
-
-Outside the match the left side is still taken to be the player (whose win the finale and
-menus show, whose Overdrive meter is drawn).
-
-## Extension points that exist today
-
-- **Background:** a class implementing `Background` (`render/backgrounds/Background.ts`), listed
-  in `createBackgrounds()` (`render/BackgroundRenderer.ts`) and its id in `SCENES`
-  (`shared/scenes.ts`). Draw for both orientations; read `laserIntensity` through a floor so play
-  stays lit; heat (`climax`/`celebration`) warms the palette.
-- **Song:** an entry in `SONG_DEFS` (`audio/music/songs.ts`); `scene` ties it to a background.
-- **Paddle kind:** a `PaddleSpec` (trade-offs as multipliers against `STANDARD_PADDLE`), given
-  to `new Paddle(side, x, color, spec)`.
-- **Setting:** a field in `UserSettings` plus an entry in `SETTINGS`, an entry in `SETTINGS_MENU`
-  (`ui/MenuController.ts`) and its texts in `translations.ts`.
+- Outside the match the left side is still taken to be the player (whose win the finale and
+  menus show, whose Overdrive meter is drawn), until local multiplayer (2.2).
 
 ## Code style
 

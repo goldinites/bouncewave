@@ -1,0 +1,145 @@
+# BounceWave architecture
+
+How the game is put together, which part may depend on which, and how to add things without
+editing the code that is already there. `CLAUDE.md` keeps a short summary; the plan for what
+comes next is in [ROADMAP.md](ROADMAP.md).
+
+## The big picture
+
+```
+            input ──► ┌──────────────┐  events (EventBus)  ┌───────────────┐
+                      │  match/      │ ──────────────────► │ fx/  ui/      │
+ Game (app/) ──────►  │  rules +     │                     │ (effects,     │
+  frame loop          │  simulation  │ ◄── state, read ─── │  menus)       │
+                      └──────────────┘    every frame      └───────────────┘
+                             │                                     │
+                             ▼                                     ▼
+                      render/ (canvas)  ◄── RenderFrame ──  audio/ (music, sfx)
+```
+
+- **`match/` is the game itself**: rules, simulation, AI. It knows nothing about pixels, sound or
+  the DOM. It tells the world what happened through events and lets everyone read its state.
+- **Everything else is presentation or plumbing**: it reacts to the match's events (`fx/`,
+  `ui/`), draws its state (`render/`), plays it (`audio/`), or feeds it input (`input/`).
+- **`app/Game.ts` is the composition root**: it builds every part, connects the listeners to the
+  match's events, and runs the frame loop.
+
+## Layers and their dependencies
+
+| Directory              | Owns                                                                  | May import                                          |
+| ---------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
+| `shared/`              | palette, math, fonts, scene ids, `EventBus`                           | nothing in the project                              |
+| `match/`               | rules, simulation, AI, paddles, balls, sides                          | `match/`, `shared/`                                 |
+| `settings/`            | the player's settings, their storage                                  | `match/` (difficulty), `i18n/` (language)           |
+| `i18n/`                | texts in every language                                               | `match/` (difficulty, standard rules)               |
+| `input/`               | keyboard, pointer, touch, portrait rotation                           | `match/`, `shared/`                                 |
+| `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |
+| `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `fx/` (particle types), `shared/`         |
+| `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax | `match/`, `render/`, `audio/`, `shared/`            |
+| `ui/`                  | DOM menus, now-playing chip, boot screen                              | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
+| `debug/`, `easterEgg/` | FPS overlay and background menu; Konami code, title taps              | `shared/`                                           |
+| `app/`                 | `Game` (composition root, frame loop), `FixedStep`                    | anything                                            |
+
+The rules that matter most are checked by `tests/architecture.test.ts`: `match/` imports only
+`match/` and `shared/`, and `shared/` imports nothing from the project.
+
+Known coupling to undo: `fx/` drives the `Renderer` directly (shake, flash, stage effects) and
+`render/` reads the particle types from `fx/`. Roadmap step 3.2 (rendering in layers) removes the
+loop.
+
+## One frame
+
+`Game.runFrame`, every animation frame:
+
+1. **Effects before the simulation** (`effects.beforeSimulation`), on wall-clock time: the
+   deciding point's drama and the rally climax, which may slow the simulation down.
+2. **The simulation** (`FixedStep.advance`): frame time, scaled by any slow motion, is cut into
+   steps of exactly 1/240 s; `MatchFlow.update` runs once per step and emits events as things
+   happen. Leftover time carries over to the next frame.
+3. **Effects after the simulation** (`effects.afterSimulation`), on the frame's smooth time:
+   particles, paddle sparks, embers, fireworks.
+4. **Interpolation** (`flow.interpolate`): balls and paddles get a draw position between the last
+   two steps, so motion stays smooth at any refresh rate.
+5. **Music** reads a `MusicState` snapshot; **the renderer** draws a `RenderFrame` snapshot.
+
+Everything freezes while paused except the menu dimming. Because the steps are fixed and the
+simulation's randomness is injected, the same seed and inputs replay the same match
+(`tests/fixedStep.test.ts`).
+
+## The match
+
+`MatchFlow` runs a match; its pieces each answer one question:
+
+| Question                             | Answer                                                                     |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score, Overdrive, balls                 |
+| Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)       |
+| What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed |
+| Who plays a paddle                   | the `Lineup`: a `PaddleController` and an Overdrive flag per paddle        |
+| How the ball moves and bounces       | `Physics.step`, one ball at a time                                         |
+| How the AI plays                     | `AiController` (reading, aiming, nerves) and `AiForm` (form by score)      |
+
+Points belong to sides and are kept by the match (`flow.scores`). The first ball out wins the
+point and ends it for every ball. The demo behind the menus is a match with its own lineup of two
+AIs and one ball.
+
+Phases: `attract` (the demo) → `serving` → `rally` → … → `finale` → back to `attract`; `paused`
+can interrupt `serving` and `rally`.
+
+### Events
+
+The match reports through one stream of `MatchEvent`s (`matchStart`, `serve`, `wallBounce`,
+`paddleHit`, `score`, `finaleStart`, `gameOver`, `returnToMenu`). `Game` puts them on an
+`EventBus` (`matchEvents`); listeners subscribe to everything or to one type. A listener that
+throws is reported in the debug overlay and the others still hear the event, so presentation can
+never stop the match.
+
+## How to add things
+
+Each of these works without editing the code that is already there, beyond one registration line.
+
+**A background.** A class implementing `Background` (`render/backgrounds/Background.ts`), added to
+`createBackgrounds()` (`render/BackgroundRenderer.ts`), its id added to `SCENES`
+(`shared/scenes.ts`). Draw for both orientations (`isRotated`); read `laserIntensity` through a
+floor so play stays lit; warm the palette with the heat (`climax`, `celebration`). Run
+`npm run test:visual -- --update-snapshots` for its new baselines, and look at them.
+
+**A song.** An entry in `SONG_DEFS` (`audio/music/songs.ts`); its `scene` ties it to a background,
+which then plays it first.
+
+**A setting.** A field in `UserSettings` and its entry in `SETTINGS`
+(`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), and its texts
+in both languages (`i18n/translations.ts`). The compiler insists on all of them.
+
+**A kind of paddle.** A `PaddleSpec`: trade-offs as multipliers against `STANDARD_PADDLE` (one
+strength, one weakness), given to `new Paddle(side, x, color, spec)`.
+
+**A set of rules (the core of a mode).** A `MatchRules` value, started with
+`flow.startMatch(rules)`; read the winning score and the deciding point from the rules
+(`flow.rules`, `flow.isDecidingPoint`), never from `WINNING_SCORE`.
+
+**A different line-up.** `flow.startMatch(rules, lineup)` with a participant per paddle: two
+`HumanController`s for two players, an `AiPaddleController` with a difficulty for each CPU.
+A new kind of player (a replay, a remote player) is a new `PaddleController`.
+
+**Something that reacts to the match** (statistics, achievements). A class with
+`listenTo(events: EventBus<MatchEvent>)` that subscribes, called where `Game` wires the effects and
+the menus. It never changes the match.
+
+**Planned, not there yet** (see the roadmap): modifiers that hook into the simulation and add a
+drawing layer (3.3), screens with a back stack on Preact (1.1, 3.1), a versioned player profile
+(1.4), dialogue through Ink (6.1).
+
+## Rules of thumb
+
+- Randomness in the simulation is injected (`random` in `MatchFlow`, the AI, `Ball.serve`), so a
+  match replays; presentation may use `Math.random`.
+- Draw `ball.drawX/drawY` and `paddle.drawY`, never `x`/`y`: those are the simulated positions.
+- Everything with listeners or timers has `dispose()`; DOM listeners go through an
+  `AbortController`.
+- Every new string exists in both languages; every new screen effect honours
+  `prefers-reduced-motion`; everything works on a phone in either orientation.
+- Outside the match the left side is still taken to be the player: whose win the finale and the
+  menus show, whose Overdrive meter is drawn. Local multiplayer (2.2) changes that.
+- If a feature needs `Game.ts`, `MatchFlow.ts`, `RenderFrame` and `EffectsDirector` changed all at
+  once, a building block is missing: add it first, then the feature.
