@@ -1,5 +1,6 @@
 import { COURT } from '@/match/config';
 import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
+import { mixHexColors } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
 type LaserConfig = [
@@ -26,6 +27,15 @@ const LASER_CONFIGURATIONS: LaserConfig[] = [
 const CLIMAX_SPECTRUM_DAMPING = 0.3;
 // Victory sweeps each beam's hue by up to this many degrees
 const CELEBRATION_HUE_SWING = 180;
+// How far laserIntensity (full behind the menus, low during play) may dim the show. A floor,
+// not a straight multiply, so the beams stay faintly on during play instead of going black
+const LIGHT_INTENSITY_FLOOR = 0.35;
+// The glow behind the beams, middle to edge: violet at rest, warming a little toward plum at
+// full climax or celebration, in the same heat language as the other backdrops
+const SKY_COOL = ['#2b0a5c', '#05010d'];
+const SKY_HOT = ['#4a0c4c', '#0e020c'];
+// The sky gradient is rebuilt only when the heat moves by a step this size
+const HEAT_STEPS = 40;
 
 const BEAM_LENGTH = 900;
 const BAR_COUNT = 32;
@@ -41,26 +51,27 @@ const TOP_ROW_COLORS = Array.from(
   (_, j) => `hsl(${320 - j * 8}, 100%, 60%)`,
 );
 
-/** Laser light show: sweeping beams, a spectrum analyzer and an oscilloscope line. */
 // Horizontal stretch of the dark ellipse behind the court
 const VIGNETTE_STRETCH = (COURT.WIDTH * 0.5) / (COURT.HEIGHT * 0.4);
 
+/** Laser light show: sweeping beams, a spectrum analyzer and an oscilloscope line. */
 export class LaserBackground implements Background {
   public readonly scene = 'lasers';
   public readonly overlayTint = 0.15;
 
-  /** Gradients that never change, built on first use. */
-  private gradients: { sky: CanvasGradient; vignette: CanvasGradient } | null = null;
+  /** The vignette never changes, so it is built on first use. */
+  private vignette: CanvasGradient | null = null;
+  private sky: { heatStep: number; value: CanvasGradient } | null = null;
   private readonly barHeights = new Array<number>(BAR_COUNT).fill(0);
 
   public render(frame: BackgroundFrame): void {
-    const { ctx, pulse, laserIntensity } = frame;
-    const gradients = (this.gradients ??= this.createGradients(ctx));
+    const { ctx, pulse, laserIntensity, climax, celebration } = frame;
+    const lights = LIGHT_INTENSITY_FLOOR + (1 - LIGHT_INTENSITY_FLOOR) * laserIntensity;
 
-    ctx.fillStyle = gradients.sky;
+    ctx.fillStyle = this.getSky(ctx, Math.max(climax, celebration));
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
-    const pulseAlpha = pulse * 0.1 * laserIntensity;
+    const pulseAlpha = pulse * 0.1 * lights;
     if (pulseAlpha > 0.004) {
       ctx.fillStyle = `rgba(90, 70, 255, ${pulseAlpha})`;
       ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
@@ -70,43 +81,54 @@ export class LaserBackground implements Background {
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
 
-    this.renderBeams(frame);
+    this.renderBeams(frame, lights);
     this.renderSpectrumBars(frame);
-    this.renderOscilloscope(frame);
+    this.renderOscilloscope(frame, lights);
 
     ctx.restore();
 
-    this.renderVignette(ctx, gradients.vignette);
+    this.renderVignette(ctx, (this.vignette ??= this.createVignette(ctx)));
   }
 
-  private createGradients(ctx: CanvasRenderingContext2D): {
-    sky: CanvasGradient;
-    vignette: CanvasGradient;
-  } {
+  /** The glow behind the beams, warmed by the heat; cached per heat step. */
+  private getSky(ctx: CanvasRenderingContext2D, heat: number): CanvasGradient {
+    const heatStep = Math.round(heat * HEAT_STEPS);
+    if (this.sky?.heatStep === heatStep) return this.sky.value;
+
     const centerX = COURT.WIDTH / 2;
     const centerY = COURT.HEIGHT * 0.45;
-    const sky = ctx.createRadialGradient(centerX, centerY, 10, centerX, centerY, COURT.WIDTH * 0.7);
-    sky.addColorStop(0, '#2b0a5c');
-    sky.addColorStop(1, '#05010d');
-
-    // Centered on the origin; renderVignette moves and stretches it into place
-    const vignette = ctx.createRadialGradient(0, 0, 0, 0, 0, COURT.HEIGHT * 0.4);
-    vignette.addColorStop(0, 'rgba(4, 1, 12, 0.92)');
-    vignette.addColorStop(0.55, 'rgba(4, 1, 12, 0.82)');
-    vignette.addColorStop(1, 'rgba(4, 1, 12, 0)');
-
-    return { sky, vignette };
+    const value = ctx.createRadialGradient(
+      centerX,
+      centerY,
+      10,
+      centerX,
+      centerY,
+      COURT.WIDTH * 0.7,
+    );
+    SKY_COOL.forEach((cool, i) =>
+      value.addColorStop(i, mixHexColors(cool, SKY_HOT[i], heatStep / HEAT_STEPS)),
+    );
+    this.sky = { heatStep, value };
+    return value;
   }
 
-  private renderBeams({ ctx, pulse, time, laserIntensity, celebration }: BackgroundFrame): void {
+  private createVignette(ctx: CanvasRenderingContext2D): CanvasGradient {
+    // Centered on the origin; renderVignette moves and stretches it into place
+    const vignette = ctx.createRadialGradient(0, 0, 0, 0, 0, COURT.HEIGHT * 0.4);
+    vignette.addColorStop(0, 'rgba(4, 1, 12, 0.78)');
+    vignette.addColorStop(0.55, 'rgba(4, 1, 12, 0.62)');
+    vignette.addColorStop(1, 'rgba(4, 1, 12, 0)');
+    return vignette;
+  }
+
+  private renderBeams({ ctx, pulse, time, celebration }: BackgroundFrame, lights: number): void {
     for (const [x, y, baseAngle, sweep, speed, phase, hue] of LASER_CONFIGURATIONS) {
       const angle = baseAngle + Math.sin(time * speed + phase) * sweep;
       // Victory sweeps each beam through the color wheel, out of phase with its neighbours
       const celebrationSwing = celebration * CELEBRATION_HUE_SWING * Math.sin(time * 3 + phase);
-      const beamHue = 225 + ((hue - 185) / 135) * 50 + celebrationSwing;
 
-      ctx.strokeStyle = `hsl(${beamHue}, 85%, 50%)`;
-      ctx.globalAlpha = (0.07 + pulse * 0.06) * laserIntensity;
+      ctx.strokeStyle = `hsl(${hue + celebrationSwing}, 90%, 55%)`;
+      ctx.globalAlpha = (0.07 + pulse * 0.06) * lights;
       ctx.lineWidth = 12 + pulse * 6;
       ctx.beginPath();
       ctx.moveTo(x, y);
@@ -114,7 +136,7 @@ export class LaserBackground implements Background {
       ctx.stroke();
 
       // Bright core over the soft glow
-      ctx.globalAlpha = (0.3 + pulse * 0.3) * laserIntensity;
+      ctx.globalAlpha = (0.3 + pulse * 0.3) * lights;
       ctx.lineWidth = 1.4 + pulse;
       ctx.stroke();
     }
@@ -159,8 +181,8 @@ export class LaserBackground implements Background {
     }
   }
 
-  private renderOscilloscope({ ctx, spectrum, time, laserIntensity }: BackgroundFrame): void {
-    ctx.globalAlpha = 0.06 + 0.24 * laserIntensity;
+  private renderOscilloscope({ ctx, spectrum, time }: BackgroundFrame, lights: number): void {
+    ctx.globalAlpha = 0.3 * lights;
     ctx.strokeStyle = COLORS.CYAN;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
