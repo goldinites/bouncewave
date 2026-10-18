@@ -15,3 +15,6 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+# Playwright: results and reports of the last run
+test-results/
+playwright-report/

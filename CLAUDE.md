@@ -17,10 +17,15 @@ npm test              # vitest, happy-dom
 npx tsc --noEmit -p . # types (npm run build also builds)
 npm run lint
 npm run format:check  # prettier, Markdown included; npm run format fixes
+npm run test:e2e      # Playwright smoke: desktop, phone portrait and landscape (CI runs it too)
+npm run test:visual   # every background vs its saved picture in e2e/__screenshots__ (local only)
 ```
 
-All four checks (tests, types, lint, format) must pass before a commit; CI runs the same and
-blocks the deploy otherwise. In the browser: `?debug` or F3 shows the FPS overlay and a menu of
+All four checks (tests, types, lint, format) and the smoke must pass before a commit; CI runs
+them and blocks the deploy otherwise. Run `test:visual` after anything that can change what a
+background draws; its baselines are Windows renders of `e2e/stand` (seeded randomness, fixed
+time). Update them with `npm run test:visual -- --update-snapshots` only for an intended change,
+after showing the user the new pictures. In the browser: `?debug` or F3 shows the FPS overlay and a menu of
 backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts`).
 
 ## Architecture

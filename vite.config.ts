@@ -57,6 +57,8 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
+    // The unit tests only: the browser checks in e2e/ are Playwright's (npm run test:e2e)
+    include: ['tests/**/*.test.ts'],
     // npm run coverage
     coverage: {
       provider: 'v8',
