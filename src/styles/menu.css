@@ -359,6 +359,14 @@
     padding: 0.6em 1.2em;
   }
 
+  /* On a phone the settings column is only as wide as its longest row: across the whole court
+     it looked stretched next to the menu it opens from. The quick match's setup keeps its
+     width, so its value doesn't jump about as the choices step */
+  .screen-buttons--settings {
+    width: max-content;
+    max-width: 100%;
+  }
+
   /* Short of height: the sections side by side, the rows tighter */
   .stats {
     gap: 8px;
@@ -403,6 +411,11 @@
 
   .option-row__value {
     font-size: 17px;
+  }
+
+  .screen-buttons--settings {
+    width: max-content;
+    max-width: 100%;
   }
 }
 

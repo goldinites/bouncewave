@@ -34,7 +34,7 @@ export function SettingsScreen({
   onBack,
 }: SettingsScreenProps) {
   return (
-    <div class="screen-buttons screen-buttons--wide">
+    <div class="screen-buttons screen-buttons--wide screen-buttons--settings">
       {items.map((item) =>
         item.kind === 'toggle' ? (
           <MenuButton key={item.id} color={item.color} pressed={item.isOn} onClick={item.onToggle}>
