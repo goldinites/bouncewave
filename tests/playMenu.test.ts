@@ -274,7 +274,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     expect(menu.goBack()).toBe(true);
     expect(title()).toBe('GAME MODE');
     expect(menu.goBack()).toBe(true);
-    expect(menuButtons().map((b) => b.textContent)).toEqual(['PLAY', 'SETTINGS']);
+    expect(menuButtons().map((b) => b.textContent)).toEqual(['PLAY', 'STATISTICS', 'SETTINGS']);
     expect(menu.goBack()).toBe(false);
   });
 

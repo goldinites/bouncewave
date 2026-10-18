@@ -3,6 +3,7 @@ import { DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent } from '@/match/MatchFlow';
 import { LEGACY_KEYS, LEGACY_SETTINGS_KEY, loadProfile } from '@/profile/migrations';
 import { getDefaultProfile, PROFILE_VERSION } from '@/profile/Profile';
+import { getEmptyStatistics } from '@/profile/Statistics';
 import { PROFILE_KEY, ProfileStore } from '@/profile/ProfileStore';
 import { StoragePersistence } from '@/profile/StoragePersistence';
 import { SettingsStore } from '@/settings/SettingsStore';
@@ -51,7 +52,11 @@ const DEFAULTS = getDefaultSettings();
 describe('the profile', () => {
   it('starts from the defaults when nothing is saved', () => {
     expect(new ProfileStore(storageWith()).current).toEqual(getDefaultProfile());
-    expect(getDefaultProfile()).toEqual({ version: PROFILE_VERSION, settings: DEFAULTS });
+    expect(getDefaultProfile()).toEqual({
+      version: PROFILE_VERSION,
+      settings: DEFAULTS,
+      stats: getEmptyStatistics(),
+    });
   });
 
   it('saves itself whole, with its version, and loads back as it was', () => {
@@ -59,7 +64,11 @@ describe('the profile', () => {
     const settings = { ...DEFAULTS, difficulty: DifficultyLevel.HARD, language: 'ru' as const };
     new ProfileStore(storage).update({ settings });
 
-    expect(JSON.parse(storage.getItem(PROFILE_KEY)!)).toEqual({ version: 1, settings });
+    expect(JSON.parse(storage.getItem(PROFILE_KEY)!)).toEqual({
+      version: 2,
+      settings,
+      stats: getEmptyStatistics(),
+    });
     expect(new ProfileStore(storage).current.settings).toEqual(settings);
   });
 
@@ -72,7 +81,7 @@ describe('the profile', () => {
 
   it('falls back per setting: one bad value does not reset the others', () => {
     const storage = storageWith({
-      [PROFILE_KEY]: { version: 1, settings: { ...DEFAULTS, difficulty: 'x', language: 'ru' } },
+      [PROFILE_KEY]: { version: 2, settings: { ...DEFAULTS, difficulty: 'x', language: 'ru' } },
     });
     expect(new ProfileStore(storage).current.settings).toEqual({ ...DEFAULTS, language: 'ru' });
   });
@@ -82,12 +91,17 @@ describe('the profile', () => {
       const storage = storageWith({ [PROFILE_KEY]: saved });
       expect(new ProfileStore(storage).current).toEqual(getDefaultProfile());
     }
-    expect(loadProfile({ version: 1, settings: 'none' })).toEqual(getDefaultProfile());
+    expect(loadProfile({ version: 2, settings: 'none', stats: 'none' })).toEqual(
+      getDefaultProfile(),
+    );
   });
 
   it('reads a profile from a newer build for what it knows of it', () => {
     const saved = { version: 9, settings: { ...DEFAULTS, matchPoints: 3 }, trophies: [1] };
-    expect(loadProfile(saved)).toEqual({ version: 1, settings: { ...DEFAULTS, matchPoints: 3 } });
+    expect(loadProfile(saved)).toEqual({
+      ...getDefaultProfile(),
+      settings: { ...DEFAULTS, matchPoints: 3 },
+    });
   });
 
   it("leaves a newer build's profile alone at start", () => {
@@ -112,6 +126,20 @@ describe('the profile', () => {
   });
 });
 
+describe('a profile saved by 1.4 (version 1)', () => {
+  it('comes up with its settings, and statistics from nothing', () => {
+    const settings = { ...DEFAULTS, language: 'ru' as const, matchPoints: 7 as const };
+    const storage = storageWith({ [PROFILE_KEY]: { version: 1, settings } });
+
+    expect(new ProfileStore(storage).current).toEqual({
+      version: 2,
+      settings,
+      stats: getEmptyStatistics(),
+    });
+    expect(JSON.parse(storage.getItem(PROFILE_KEY)!).version).toBe(2);
+  });
+});
+
 describe('settings saved before the profile (version 0)', () => {
   const legacy = (saved: unknown) =>
     new ProfileStore(storageWith({ [LEGACY_SETTINGS_KEY]: saved })).current.settings;
@@ -132,13 +160,14 @@ describe('settings saved before the profile (version 0)', () => {
     new ProfileStore(storage);
 
     expect(JSON.parse(storage.getItem(PROFILE_KEY)!)).toEqual({
-      version: 1,
+      version: 2,
       settings: { ...DEFAULTS, language: 'ru', matchPoints: 3 },
+      stats: getEmptyStatistics(),
     });
   });
 
   it('leave a profile of this version as it was saved, and nothing saved as nothing', () => {
-    const saved = JSON.stringify({ version: 1, settings: DEFAULTS, extra: true });
+    const saved = JSON.stringify({ version: 2, settings: DEFAULTS, extra: true });
     const storage = storageWith({ [PROFILE_KEY]: saved });
     new ProfileStore(storage);
     expect(storage.getItem(PROFILE_KEY)).toBe(saved);

@@ -31,7 +31,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | `shared/`              | palette, math, fonts, scene ids, `EventBus`                           | nothing in the project                              |
 | `match/`               | rules, simulation, AI, paddles, balls, sides                          | `match/`, `shared/`                                 |
 | `settings/`            | the player's settings and quick-match setup                           | `match/`, `i18n/` (language), `shared/`             |
-| `profile/`             | everything saved between visits: versions, migrations, `persist()`    | `settings/`, `match/` (events), `shared/`           |
+| `profile/`             | everything saved between visits: versions, migrations, statistics     | `settings/`, `match/` (events), `shared/`           |
 | `i18n/`                | texts in every language                                               | `match/` (difficulty, modes)                        |
 | `input/`               | keyboard, pointer, touch, portrait rotation                           | `match/`, `shared/`                                 |
 | `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |

@@ -234,6 +234,17 @@ export class MatchFlow {
     );
   }
 
+  /** Whether a person plays this paddle (an index into the match's paddles) in this match. */
+  public isPlayerPaddle(index: number): boolean {
+    return this.lineup[index]?.controller instanceof HumanController;
+  }
+
+  /** The side a person plays in this match; null when no one does (the demo). */
+  public get playerSide(): Side | null {
+    const index = this.paddles.findIndex((_, i) => this.isPlayerPaddle(i));
+    return index < 0 ? null : this.paddles[index].side;
+  }
+
   /** The left side's first paddle, which the player plays in the usual match. */
   private get playerIndex(): number {
     return this.paddles.findIndex((p) => p.side === 0);

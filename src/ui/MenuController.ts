@@ -3,6 +3,8 @@ import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { MatchEvent } from '@/match/MatchFlow';
 import { MODE_IDS, ModeId, MODES } from '@/match/modes';
+import { DIFFICULTY_LEVELS } from '@/match/difficulty';
+import { getEmptyStatistics, Statistics } from '@/profile/Statistics';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
@@ -10,6 +12,7 @@ import { PlayMenu } from '@/ui/screens/PlayMenu';
 import { Choice } from '@/ui/screens/OptionRow';
 import { QuickMatchSetup } from '@/ui/screens/QuickMatchSetup';
 import { SettingsScreen } from '@/ui/screens/SettingsScreen';
+import { StatsScreen } from '@/ui/screens/StatsScreen';
 import { ButtonColor, UIManager } from '@/ui/UIManager';
 
 export interface GameMenuActions {
@@ -111,6 +114,8 @@ export class MenuController {
   private sfx: SoundEffects;
   private settings: SettingsStore;
   private actions: GameMenuActions;
+  /** The player's record, as the profile keeps it, for the statistics screen. */
+  private readonly getStatistics: () => Statistics;
   /** Where Esc leads from what is on screen (the settings, the PLAY menu, the setup). */
   private back: (() => void) | null = null;
   /** Shows what is on screen again, when it shows settings that may change; null otherwise. */
@@ -123,12 +128,14 @@ export class MenuController {
     sfx: SoundEffects,
     settings: SettingsStore,
     actions: GameMenuActions,
+    getStatistics: () => Statistics = getEmptyStatistics,
   ) {
     this.uiManager = uiManager;
     this.i18n = i18n;
     this.sfx = sfx;
     this.settings = settings;
     this.actions = actions;
+    this.getStatistics = getStatistics;
 
     // A setting may also change from outside the menu (the music chip, the M key)
     this.unsubscribe = settings.subscribe(() => {
@@ -157,12 +164,58 @@ export class MenuController {
           action: () => this.showPlayMenu(),
         },
         {
+          label: this.i18n.t('stats'),
+          color: 'yellow',
+          action: () => this.showStatistics(),
+        },
+        {
           label: this.i18n.t('settings'),
           color: 'pink',
           action: () => this.showSettingsMenu(() => this.showMainMenu()),
         },
       ],
       this.actions.onUnlockAudio,
+    );
+  }
+
+  /** The player's record: the overall one, then wins at each difficulty. */
+  public showStatistics(): void {
+    const back = () => this.showMainMenu();
+    this.open(back);
+    const stats = this.getStatistics();
+    const t = (key: Parameters<I18nManager['t']>[0]) => this.i18n.t(key) as string;
+    const percent = stats.played > 0 ? Math.round((100 * stats.won) / stats.played) : 0;
+
+    this.uiManager.showScreen(
+      t('stats'),
+      '',
+      h(StatsScreen, {
+        sections: [
+          {
+            rows: [
+              { label: t('statPlayed'), value: String(stats.played) },
+              { label: t('statWon'), value: `${stats.won} (${percent}%)` },
+              { label: t('statStreak'), value: String(stats.streak) },
+              { label: t('statBestStreak'), value: String(stats.bestStreak) },
+              { label: t('statRally'), value: String(stats.longestRally) },
+              { label: t('statPerfect'), value: String(stats.perfectHits) },
+              { label: t('statPower'), value: String(stats.powerShots) },
+              { label: t('statPoints'), value: `${stats.pointsWon} : ${stats.pointsLost}` },
+            ],
+          },
+          {
+            heading: t('statByDifficulty'),
+            rows: DIFFICULTY_LEVELS.map((level) => {
+              const { played, won } = stats.byDifficulty[level];
+              return { label: this.i18n.getDifficultyInfo(level)[0], value: `${won} / ${played}` };
+            }),
+          },
+        ],
+        backLabel: t('back'),
+        onBack: back,
+      }),
+      this.actions.onUnlockAudio,
+      'stats',
     );
   }
 
@@ -290,8 +343,8 @@ export class MenuController {
   }
 
   /**
-   * Esc in the settings, the PLAY menu or the quick match's setup: back to where it was opened
-   * from, as its BACK button does.
+   * Esc in the settings, the statistics, the PLAY menu or the quick match's setup: back to
+   * where it was opened from, as its BACK button does.
    * @returns whether it went back (false anywhere else)
    */
   public goBack(): boolean {

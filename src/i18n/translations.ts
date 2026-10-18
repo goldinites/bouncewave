@@ -44,6 +44,17 @@ export interface TranslationSchema {
   /** The arrows either side of a quick match choice, for screen readers. */
   previousChoice: string;
   nextChoice: string;
+  /** The statistics screen: its title (and the main menu's button), and its rows. */
+  stats: string;
+  statPlayed: string;
+  statWon: string;
+  statStreak: string;
+  statBestStreak: string;
+  statRally: string;
+  statPerfect: string;
+  statPower: string;
+  statPoints: string;
+  statByDifficulty: string;
   /** Every backdrop's name, and random's, by choice. */
   backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
@@ -82,6 +93,16 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     start: 'START',
     previousChoice: 'Previous',
     nextChoice: 'Next',
+    stats: 'STATISTICS',
+    statPlayed: 'MATCHES',
+    statWon: 'WINS',
+    statStreak: 'WIN STREAK',
+    statBestStreak: 'BEST STREAK',
+    statRally: 'LONGEST RALLY',
+    statPerfect: 'PERFECT HITS',
+    statPower: 'OVERDRIVE SHOTS',
+    statPoints: 'POINTS FOR : AGAINST',
+    statByDifficulty: 'WINS BY DIFFICULTY',
     backgrounds: {
       random: 'RANDOM',
       lasers: 'LASERS',
@@ -128,6 +149,16 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     start: 'НАЧАТЬ',
     previousChoice: 'Предыдущий вариант',
     nextChoice: 'Следующий вариант',
+    stats: 'СТАТИСТИКА',
+    statPlayed: 'МАТЧИ',
+    statWon: 'ПОБЕДЫ',
+    statStreak: 'СЕРИЯ ПОБЕД',
+    statBestStreak: 'ЛУЧШАЯ СЕРИЯ',
+    statRally: 'ДЛИННЕЙШИЙ РОЗЫГРЫШ',
+    statPerfect: 'ИДЕАЛЬНЫЕ УДАРЫ',
+    statPower: 'УДАРЫ OVERDRIVE',
+    statPoints: 'ОЧКИ ЗА : ПРОТИВ',
+    statByDifficulty: 'ПОБЕДЫ ПО СЛОЖНОСТИ',
     backgrounds: {
       random: 'СЛУЧАЙНЫЙ',
       lasers: 'ЛАЗЕРНЫЙ',

@@ -69,6 +69,14 @@ body.classic-mode .option-row__value {
   font-family: 'Courier New', monospace;
 }
 
+/* The statistics: white monospace, no neon */
+body.classic-mode .stats__heading,
+body.classic-mode .stats__row dt,
+body.classic-mode .stats__row dd {
+  color: var(--white);
+  font-family: 'Courier New', monospace;
+}
+
 body.classic-mode .game__buttons button[aria-pressed='true'],
 body.classic-mode .screen-buttons button[aria-pressed='true'] {
   background: var(--white);
