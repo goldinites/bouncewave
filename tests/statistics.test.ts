@@ -1,3 +1,4 @@
+import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
@@ -20,8 +21,6 @@ import { UIManager } from '@/ui/UIManager';
 const match = (overrides: Partial<MatchRecord> = {}): MatchRecord => ({
   difficulty: DifficultyLevel.NORMAL,
   isWin: true,
-  pointsWon: 5,
-  pointsLost: 2,
   longestRally: 6,
   perfectHits: 3,
   powerShots: 1,
@@ -35,8 +34,6 @@ describe('counting a match in', () => {
     expect(stats).toMatchObject({
       played: 1,
       won: 1,
-      pointsWon: 5,
-      pointsLost: 2,
       longestRally: 6,
       perfectHits: 3,
       powerShots: 1,
@@ -103,7 +100,7 @@ describe('recording matches from their events', () => {
     return { profile, events, hit, score, gameOver };
   };
 
-  it("counts the player's finished match: their hits, the rally, the points and the win", () => {
+  it("counts the player's finished match: their hits, the rally and the win", () => {
     const { profile, events, hit, score, gameOver } = setup();
     events.emit({ type: 'matchStart' });
     hit(0, 1, true);
@@ -120,8 +117,6 @@ describe('recording matches from their events', () => {
       perfectHits: 2,
       powerShots: 1,
       longestRally: 3,
-      pointsWon: 2,
-      pointsLost: 1,
       streak: 1,
     });
     expect(profile.current.stats.byDifficulty[DifficultyLevel.INSANE]).toEqual({
@@ -147,8 +142,6 @@ describe('recording matches from their events', () => {
     expect(profile.current.stats).toMatchObject({
       played: 1,
       won: 1,
-      pointsWon: 1,
-      pointsLost: 0,
       perfectHits: 0,
       longestRally: 0,
     });
@@ -222,7 +215,12 @@ describe('the statistics screen', () => {
         onReturnToMainMenu: vi.fn(),
         onUnlockAudio: vi.fn(),
       },
-      () => stats,
+      {
+        get: () => stats,
+        reset: () => {
+          stats = getEmptyStatistics();
+        },
+      },
     );
     const rows = () =>
       [...document.querySelectorAll('#gameScreen .stats__row')].map(
@@ -231,13 +229,24 @@ describe('the statistics screen', () => {
     return { menu, rows };
   };
 
-  it('opens from the main menu, between PLAY and SETTINGS', () => {
+  it('opens from the main menu, under the multiplayer still switched off', () => {
     const { menu } = setup();
     menu.showMainMenu();
     const buttons = [...document.querySelectorAll<HTMLButtonElement>('#gameButtons button')];
-    expect(buttons.map((b) => b.textContent)).toEqual(['PLAY', 'STATISTICS', 'SETTINGS']);
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      'PLAY',
+      'MULTIPLAYER',
+      'STATISTICS',
+      'SETTINGS',
+    ]);
+    expect(buttons.map((b) => b.disabled)).toEqual([false, true, false, false]);
 
-    buttons[1].click();
+    // The keyboard walks past the multiplayer
+    buttons[0].focus();
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown' }));
+    expect(document.activeElement).toBe(buttons[2]);
+
+    buttons[2].click();
     expect(document.getElementById('gameTitle')?.textContent).toBe('STATISTICS');
   });
 
@@ -253,12 +262,29 @@ describe('the statistics screen', () => {
       'LONGEST RALLY 14',
       'PERFECT HITS 9',
       'OVERDRIVE SHOTS 3',
-      'POINTS FOR : AGAINST 15 : 6',
       'NORMAL 1 / 2',
       'HARD 1 / 1',
       'INSANE 0 / 0',
     ]);
     expect(document.querySelector('.stats__heading')?.textContent).toBe('WINS BY DIFFICULTY');
+  });
+
+  it('wipes the statistics only on a second press of RESET', () => {
+    const { menu, rows } = setup();
+    menu.showStatistics();
+    const reset = () =>
+      [...document.querySelectorAll<HTMLButtonElement>('#gameScreen button')].find((b) =>
+        /RESET/.test(b.textContent ?? ''),
+      )!;
+
+    act(() => reset().click());
+    expect(reset().textContent).toBe('SURE? RESET');
+    expect(rows()[0]).toBe('MATCHES 3');
+
+    act(() => reset().click());
+    expect(rows()[0]).toBe('MATCHES 0');
+    expect(rows()[1]).toBe('WINS 0 (0%)');
+    expect(reset().textContent).toBe('RESET');
   });
 
   it('speaks the language, and goes back to the main menu on Esc', () => {

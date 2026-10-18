@@ -53,8 +53,12 @@ export interface TranslationSchema {
   statRally: string;
   statPerfect: string;
   statPower: string;
-  statPoints: string;
   statByDifficulty: string;
+  /** Wiping the statistics: the button, and what it asks before it does. */
+  resetStats: string;
+  resetStatsConfirm: string;
+  /** Local multiplayer, on the main menu before it is playable (stage 2). */
+  multiplayer: string;
   /** Every backdrop's name, and random's, by choice. */
   backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
@@ -101,8 +105,10 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     statRally: 'LONGEST RALLY',
     statPerfect: 'PERFECT HITS',
     statPower: 'OVERDRIVE SHOTS',
-    statPoints: 'POINTS FOR : AGAINST',
     statByDifficulty: 'WINS BY DIFFICULTY',
+    resetStats: 'RESET',
+    resetStatsConfirm: 'SURE? RESET',
+    multiplayer: 'MULTIPLAYER',
     backgrounds: {
       random: 'RANDOM',
       lasers: 'LASERS',
@@ -157,8 +163,10 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     statRally: 'ДЛИННЕЙШИЙ РОЗЫГРЫШ',
     statPerfect: 'ИДЕАЛЬНЫЕ УДАРЫ',
     statPower: 'УДАРЫ OVERDRIVE',
-    statPoints: 'ОЧКИ ЗА : ПРОТИВ',
     statByDifficulty: 'ПОБЕДЫ ПО СЛОЖНОСТИ',
+    resetStats: 'СБРОСИТЬ',
+    resetStatsConfirm: 'ТОЧНО СБРОСИТЬ?',
+    multiplayer: 'МУЛЬТИПЛЕЕР',
     backgrounds: {
       random: 'СЛУЧАЙНЫЙ',
       lasers: 'ЛАЗЕРНЫЙ',

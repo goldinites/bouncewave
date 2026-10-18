@@ -16,9 +16,6 @@ export interface Statistics {
   won: number;
   /** By the CPU's difficulty in the match. */
   byDifficulty: Record<DifficultyLevel, Tally>;
-  /** Points the player won and lost. */
-  pointsWon: number;
-  pointsLost: number;
   /** Hits in the longest rally, both paddles' together. */
   longestRally: number;
   /** The player's perfect hits, and the shots their Overdrive powered. */
@@ -38,8 +35,6 @@ export function getEmptyStatistics(): Statistics {
     byDifficulty: Object.fromEntries(
       DIFFICULTY_LEVELS.map((level) => [level, emptyTally()]),
     ) as Record<DifficultyLevel, Tally>,
-    pointsWon: 0,
-    pointsLost: 0,
     longestRally: 0,
     perfectHits: 0,
     powerShots: 0,
@@ -61,8 +56,6 @@ export const statisticsSchema = v.fallback(
       v.object(Object.fromEntries(DIFFICULTY_LEVELS.map((level) => [level, tally]))),
       () => getEmptyStatistics().byDifficulty,
     ),
-    pointsWon: count,
-    pointsLost: count,
     longestRally: count,
     perfectHits: count,
     powerShots: count,
@@ -76,8 +69,6 @@ export const statisticsSchema = v.fallback(
 export interface MatchRecord {
   difficulty: DifficultyLevel;
   isWin: boolean;
-  pointsWon: number;
-  pointsLost: number;
   longestRally: number;
   perfectHits: number;
   powerShots: number;
@@ -95,8 +86,6 @@ export function recordMatch(stats: Statistics, match: MatchRecord): Statistics {
       ...stats.byDifficulty,
       [match.difficulty]: { played: byLevel.played + 1, won: byLevel.won + win },
     },
-    pointsWon: stats.pointsWon + match.pointsWon,
-    pointsLost: stats.pointsLost + match.pointsLost,
     longestRally: Math.max(stats.longestRally, match.longestRally),
     perfectHits: stats.perfectHits + match.perfectHits,
     powerShots: stats.powerShots + match.powerShots,

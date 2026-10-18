@@ -15,6 +15,13 @@ import { SettingsScreen } from '@/ui/screens/SettingsScreen';
 import { StatsScreen } from '@/ui/screens/StatsScreen';
 import { ButtonColor, UIManager } from '@/ui/UIManager';
 
+/** The player's statistics, as the statistics screen shows and wipes them. */
+export interface StatisticsAccess {
+  get(): Statistics;
+  /** Back to nothing, for good. */
+  reset(): void;
+}
+
 export interface GameMenuActions {
   /** Starts a quick match, as the player last set it up (the settings keep the setup). */
   onStartGame: () => void;
@@ -115,7 +122,7 @@ export class MenuController {
   private settings: SettingsStore;
   private actions: GameMenuActions;
   /** The player's record, as the profile keeps it, for the statistics screen. */
-  private readonly getStatistics: () => Statistics;
+  private readonly statistics: StatisticsAccess;
   /** Where Esc leads from what is on screen (the settings, the PLAY menu, the setup). */
   private back: (() => void) | null = null;
   /** Shows what is on screen again, when it shows settings that may change; null otherwise. */
@@ -128,14 +135,14 @@ export class MenuController {
     sfx: SoundEffects,
     settings: SettingsStore,
     actions: GameMenuActions,
-    getStatistics: () => Statistics = getEmptyStatistics,
+    statistics: StatisticsAccess = { get: getEmptyStatistics, reset: () => {} },
   ) {
     this.uiManager = uiManager;
     this.i18n = i18n;
     this.sfx = sfx;
     this.settings = settings;
     this.actions = actions;
-    this.getStatistics = getStatistics;
+    this.statistics = statistics;
 
     // A setting may also change from outside the menu (the music chip, the M key)
     this.unsubscribe = settings.subscribe(() => {
@@ -164,6 +171,13 @@ export class MenuController {
           action: () => this.showPlayMenu(),
         },
         {
+          // Local multiplayer comes in stage 2; until then it is on the menu, switched off
+          label: this.i18n.t('multiplayer'),
+          color: 'green',
+          disabled: true,
+          action: () => {},
+        },
+        {
           label: this.i18n.t('stats'),
           color: 'yellow',
           action: () => this.showStatistics(),
@@ -182,7 +196,7 @@ export class MenuController {
   public showStatistics(): void {
     const back = () => this.showMainMenu();
     this.open(back);
-    const stats = this.getStatistics();
+    const stats = this.statistics.get();
     const t = (key: Parameters<I18nManager['t']>[0]) => this.i18n.t(key) as string;
     const percent = stats.played > 0 ? Math.round((100 * stats.won) / stats.played) : 0;
 
@@ -200,7 +214,6 @@ export class MenuController {
               { label: t('statRally'), value: String(stats.longestRally) },
               { label: t('statPerfect'), value: String(stats.perfectHits) },
               { label: t('statPower'), value: String(stats.powerShots) },
-              { label: t('statPoints'), value: `${stats.pointsWon} : ${stats.pointsLost}` },
             ],
           },
           {
@@ -211,6 +224,12 @@ export class MenuController {
             }),
           },
         ],
+        resetLabel: t('resetStats'),
+        resetConfirmLabel: t('resetStatsConfirm'),
+        onReset: () => {
+          this.statistics.reset();
+          this.showStatistics();
+        },
         backLabel: t('back'),
         onBack: back,
       }),

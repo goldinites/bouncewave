@@ -218,7 +218,7 @@ describe('settings menu', () => {
   it('leaves the difficulty to the quick match, out of the settings', () => {
     const { menu, buttons } = setup();
     menu.showMainMenu();
-    buttons()[2].click(); // settings
+    buttons()[3].click(); // settings
     expect(buttons().map((b) => text(b))).not.toContainEqual(expect.stringMatching(/^DIFFICULTY/));
   });
 

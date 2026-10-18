@@ -46,8 +46,6 @@ export class StatsRecorder {
                 side,
                 difficulty: this.deps.getDifficulty(),
                 isWin: false,
-                pointsWon: 0,
-                pointsLost: 0,
                 longestRally: 0,
                 perfectHits: 0,
                 powerShots: 0,
@@ -61,11 +59,6 @@ export class StatsRecorder {
           if (event.isPerfect) this.current.perfectHits++;
           if (event.isPowerShot) this.current.powerShots++;
         }
-        break;
-      case 'score':
-        if (!this.current || event.isDemo) return;
-        if (event.scoringPlayerIndex === this.current.side) this.current.pointsWon++;
-        else this.current.pointsLost++;
         break;
       case 'gameOver': {
         if (!this.current) return;

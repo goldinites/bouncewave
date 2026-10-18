@@ -16,6 +16,7 @@ import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
 import { ProfileStore } from '@/profile/ProfileStore';
+import { getEmptyStatistics } from '@/profile/Statistics';
 import { StatsRecorder } from '@/profile/StatsRecorder';
 import { StoragePersistence } from '@/profile/StoragePersistence';
 import { Renderer, RenderFrame } from '@/render/Renderer';
@@ -164,7 +165,10 @@ export class Game {
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
       },
-      () => this.profile.current.stats,
+      {
+        get: () => this.profile.current.stats,
+        reset: () => this.profile.update({ stats: getEmptyStatistics() }),
+      },
     );
 
     this.statsRecorder = new StatsRecorder({
