@@ -1,13 +1,16 @@
+import { h } from 'preact';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { MatchEvent } from '@/match/MatchFlow';
+import { DEFAULT_MODE, MODE_IDS, ModeId } from '@/match/modes';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
+import { ModeSelect } from '@/ui/screens/ModeSelect';
 import { ButtonColor, UIManager } from '@/ui/UIManager';
 
 export interface GameMenuActions {
-  onStartGame: () => void;
+  onStartGame: (mode: ModeId) => void;
   onResumeGame: () => void;
   onReturnToMainMenu: () => void;
   onUnlockAudio: () => void;
@@ -63,6 +66,10 @@ export class MenuController {
   private actions: GameMenuActions;
   /** Where the settings menu's BACK leads while it is on screen; null when it isn't. */
   private settingsBack: (() => void) | null = null;
+  /** Where Esc leads from what is on screen (the settings, the mode screen); null for none. */
+  private back: (() => void) | null = null;
+  /** The mode of the match last started, which PLAY AGAIN starts again. */
+  private mode: ModeId = DEFAULT_MODE;
   /** Whether the settings menu on screen was opened from the pause. */
   private isSettingsMidMatch = false;
   private readonly unsubscribe: () => void;
@@ -92,15 +99,21 @@ export class MenuController {
     this.unsubscribe();
   }
 
+  /** Forgets where BACK and Esc led: called by every menu and screen as it opens. */
+  private open(back: (() => void) | null = null, settingsBack: (() => void) | null = null): void {
+    this.back = back;
+    this.settingsBack = settingsBack;
+  }
+
   public showMainMenu(): void {
-    this.settingsBack = null;
+    this.open();
     this.uiManager.showMenu(
       this.uiManager.gameTitle,
       '',
       [
         {
           label: this.i18n.t('play'),
-          action: () => this.actions.onStartGame(),
+          action: () => this.showModeSelect(),
         },
         {
           label: this.i18n.t('settings'),
@@ -112,8 +125,33 @@ export class MenuController {
     );
   }
 
+  /** The mode screen, from PLAY: a card per mode, picking one starts its match. */
+  public showModeSelect(): void {
+    const back = () => this.showMainMenu();
+    this.open(back);
+    this.uiManager.showScreen(
+      this.i18n.t('mode'),
+      '',
+      h(ModeSelect, {
+        modes: MODE_IDS.map((id) => {
+          const [name, description] = this.i18n.getModeInfo(id);
+          return { id, name, description };
+        }),
+        backLabel: this.i18n.t('back'),
+        onPick: (mode) => this.startGame(mode),
+        onBack: back,
+      }),
+      this.actions.onUnlockAudio,
+    );
+  }
+
+  private startGame(mode: ModeId): void {
+    this.mode = mode;
+    this.actions.onStartGame(mode);
+  }
+
   public showPauseMenu(): void {
-    this.settingsBack = null;
+    this.open();
     this.uiManager.showMenu(
       this.i18n.t('pause'),
       '',
@@ -149,7 +187,7 @@ export class MenuController {
   }
 
   public showGameOverMenu(winnerIndex: number, scores: [number, number]): void {
-    this.settingsBack = null;
+    this.open();
     const isPlayerWin = winnerIndex === 0;
     const title = this.i18n.t(isPlayerWin ? 'win' : 'lose');
     const subtitle = `${scores[0]} : ${scores[1]}`;
@@ -160,7 +198,7 @@ export class MenuController {
       [
         {
           label: this.i18n.t('again'),
-          action: () => this.actions.onStartGame(),
+          action: () => this.startGame(this.mode),
         },
         {
           label: this.i18n.t('settings'),
@@ -178,12 +216,13 @@ export class MenuController {
   }
 
   /**
-   * Esc in the settings menu: back to the menu it was opened from, as its BACK button does.
-   * @returns whether it went back (false outside the settings menu)
+   * Esc in the settings menu or the mode screen: back to where it was opened from, as its BACK
+   * button does.
+   * @returns whether it went back (false anywhere else)
    */
   public goBack(): boolean {
-    if (!this.settingsBack || !this.uiManager.isMenuVisible) return false;
-    this.settingsBack();
+    if (!this.back || !this.uiManager.isMenuVisible) return false;
+    this.back();
     return true;
   }
 
@@ -192,7 +231,7 @@ export class MenuController {
    * difficulty) are left out, so they can't be switched halfway through one
    */
   public showSettingsMenu(onBack: () => void, isMidMatch = false): void {
-    this.settingsBack = onBack;
+    this.open(onBack, onBack);
     this.isSettingsMidMatch = isMidMatch;
     const settings = this.settings.current;
     const entries = SETTINGS_MENU.filter((entry) => !(isMidMatch && entry.isBetweenMatches));

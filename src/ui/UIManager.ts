@@ -1,3 +1,4 @@
+import { ComponentChild, render } from 'preact';
 import { I18nManager } from '@/i18n/I18nManager';
 import { getRequiredElement } from '@/ui/dom';
 
@@ -34,6 +35,10 @@ export class UIManager {
   private titleElement: HTMLElement;
   private subtitleElement: HTMLElement;
   private buttonsContainer: HTMLElement;
+  /** Where a Preact screen renders, under the title in place of the buttons. */
+  private screenElement: HTMLElement;
+  /** Runs before any click on the screen on show, as `onAnyClick` does for menu buttons. */
+  private onScreenClick: (() => void) | null = null;
   private hintElement: HTMLElement;
   private pauseButton: HTMLButtonElement;
   private i18n: I18nManager;
@@ -50,6 +55,7 @@ export class UIManager {
     this.gameTitle = this.titleElement.textContent ?? '';
     this.subtitleElement = getRequiredElement<HTMLElement>('gameSubtitle');
     this.buttonsContainer = getRequiredElement<HTMLElement>('gameButtons');
+    this.screenElement = getRequiredElement<HTMLElement>('gameScreen');
     this.hintElement = getRequiredElement<HTMLElement>('gameHint');
     this.pauseButton = getRequiredElement<HTMLButtonElement>('pauseButton');
 
@@ -59,13 +65,32 @@ export class UIManager {
     window.addEventListener('keydown', (e) => this.onKeyDown(e), {
       signal: this.listeners.signal,
     });
+    // Captured, so it runs before the button's own action (which may start a match)
+    this.screenElement.addEventListener('click', () => this.onScreenClick?.(), {
+      capture: true,
+      signal: this.listeners.signal,
+    });
+  }
+
+  /** The buttons of whatever is on show: a menu's or a screen's (only one has any). */
+  private get buttons(): HTMLButtonElement[] {
+    return [
+      ...this.buttonsContainer.querySelectorAll('button'),
+      ...this.screenElement.querySelectorAll('button'),
+    ];
+  }
+
+  /** Whether the keyboard focus is on a menu's or a screen's button. */
+  private get hasFocus(): boolean {
+    const focused = document.activeElement;
+    return this.buttonsContainer.contains(focused) || this.screenElement.contains(focused);
   }
 
   /** Arrows (or W and S), Home and End walk the open menu, wrapping around at either end. */
   private onKeyDown(e: KeyboardEvent): void {
     if (!this.isMenuVisible || e.altKey || e.ctrlKey || e.metaKey) return;
 
-    const buttons = [...this.buttonsContainer.querySelectorAll('button')];
+    const buttons = this.buttons;
     if (buttons.length === 0) return;
 
     const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
@@ -97,8 +122,10 @@ export class UIManager {
     const focusedIndex = [...this.buttonsContainer.children].indexOf(
       document.activeElement as Element,
     );
+    const wasOnScreen = this.screenElement.contains(document.activeElement);
     const isSameMenu = this.titleElement.textContent === title;
 
+    this.closeScreen();
     this.titleElement.textContent = title;
     this.subtitleElement.textContent = subtitle;
     this.buttonsContainer.textContent = '';
@@ -120,12 +147,46 @@ export class UIManager {
       this.buttonsContainer.appendChild(btn);
     });
 
-    if (focusedIndex >= 0) {
+    if (focusedIndex >= 0 || wasOnScreen) {
       const buttons = this.buttonsContainer.children;
-      const target = isSameMenu ? Math.min(focusedIndex, buttons.length - 1) : 0;
+      const target = isSameMenu ? Math.min(Math.max(0, focusedIndex), buttons.length - 1) : 0;
       (buttons[target] as HTMLElement | undefined)?.focus();
     }
 
+    this.reveal();
+  }
+
+  /**
+   * Shows a Preact screen under the title in place of a menu's buttons. Shown again, the same
+   * screen is updated in place, so the focus stays where it was; coming from a menu, the focus
+   * moves to the screen's first button if it was in the menu.
+   */
+  public showScreen(
+    title: string,
+    subtitle: string,
+    screen: ComponentChild,
+    onAnyClick?: () => void,
+  ): void {
+    const hadFocus = this.hasFocus;
+    const wasOnScreen = this.screenElement.contains(document.activeElement);
+
+    this.titleElement.textContent = title;
+    this.subtitleElement.textContent = subtitle;
+    this.buttonsContainer.textContent = '';
+    this.onScreenClick = onAnyClick ?? null;
+    render(screen, this.screenElement);
+
+    if (hadFocus && !wasOnScreen) this.screenElement.querySelector('button')?.focus();
+    this.reveal();
+  }
+
+  /** Takes the Preact screen down (its components unmount), leaving the place to a menu. */
+  private closeScreen(): void {
+    this.onScreenClick = null;
+    render(null, this.screenElement);
+  }
+
+  private reveal(): void {
     document.body.style.cursor = 'default';
     this.uiOverlay.classList.remove(CSS_CLASSES.GAME_UI_HIDDEN);
   }
@@ -157,6 +218,7 @@ export class UIManager {
     this.listeners.abort();
     this.pauseButton.onclick = null;
     this.buttonsContainer.textContent = '';
+    this.closeScreen();
   }
 
   /** The texts outside the menus, in the current language. */

@@ -1,10 +1,12 @@
 import {
   DifficultyDescription,
   Language,
+  ModeDescription,
   TRANSLATIONS,
   TranslationSchema,
 } from '@/i18n/translations';
 import { DifficultyLevel } from '@/match/difficulty';
+import { ModeId } from '@/match/modes';
 
 export class I18nManager {
   private currentLanguage: Language = 'en';
@@ -30,5 +32,9 @@ export class I18nManager {
 
   public getDifficultyInfo(level: DifficultyLevel): DifficultyDescription {
     return TRANSLATIONS[this.currentLanguage].d[level];
+  }
+
+  public getModeInfo(mode: ModeId): ModeDescription {
+    return TRANSLATIONS[this.currentLanguage].modes[mode];
   }
 }

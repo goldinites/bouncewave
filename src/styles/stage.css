@@ -17,6 +17,9 @@
   flex-shrink: 0;
 
   overflow: hidden;
+  /* Clipped, not just hidden: the border's spinning gradient is far larger than the stage, and
+     focusing a menu button would scroll a merely hidden overflow, sliding the court away */
+  overflow: clip;
   /* The neon border is .game__border showing through this padding around the canvas */
   padding: var(--border-width);
   border-radius: 14px;

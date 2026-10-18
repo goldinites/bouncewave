@@ -36,7 +36,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |
 | `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `fx/` (particle types), `shared/`         |
 | `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax | `match/`, `render/`, `audio/`, `shared/`            |
-| `ui/`                  | DOM menus, now-playing chip, boot screen                              | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
+| `ui/`                  | DOM menus, Preact screens, now-playing chip, boot screen              | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
 | `debug/`, `easterEgg/` | FPS overlay and background menu; Konami code, title taps              | `shared/`                                           |
 | `app/`                 | `Game` (composition root, frame loop), `FixedStep`                    | anything                                            |
 
@@ -118,6 +118,14 @@ strength, one weakness), given to `new Paddle(side, x, color, spec)`.
 `flow.startMatch(rules)`; read the winning score and the deciding point from the rules
 (`flow.rules`, `flow.isDecidingPoint`), never from `WINNING_SCORE`.
 
+**A game mode.** An entry in `MODES` (`match/modes.ts`) with its rules, and its name and
+description in both languages (`modes` in `i18n/translations.ts`). The mode screen lists it, and
+`Game.start(mode)` plays it.
+
+**A screen.** A Preact component in `ui/screens/` (`.tsx`), taking its texts ready to show and
+its actions as props, shown with `uiManager.showScreen(title, subtitle, h(Screen, props))`. The
+menu keys walk its buttons like a menu's; give Esc a way back through `MenuController.goBack`.
+
 **A different line-up.** `flow.startMatch(rules, lineup)` with a participant per paddle: two
 `HumanController`s for two players, an `AiPaddleController` with a difficulty for each CPU.
 A new kind of player (a replay, a remote player) is a new `PaddleController`.
@@ -127,7 +135,7 @@ A new kind of player (a replay, a remote player) is a new `PaddleController`.
 the menus. It never changes the match.
 
 **Planned, not there yet** (see the roadmap): modifiers that hook into the simulation and add a
-drawing layer (3.3), screens with a back stack on Preact (1.1, 3.1), a versioned player profile
+drawing layer (3.3), a back stack for the screens and the old menus moved onto Preact (3.1), a versioned player profile
 (1.4), dialogue through Ink (6.1).
 
 ## Rules of thumb

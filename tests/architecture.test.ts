@@ -2,12 +2,12 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-/** Every TypeScript file under `dir`, recursively. */
+/** Every TypeScript file under `dir` (screens with JSX included), recursively. */
 const sourceFiles = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
     if (statSync(path).isDirectory()) return sourceFiles(path);
-    return path.endsWith('.ts') ? [path] : [];
+    return /\.tsx?$/.test(path) ? [path] : [];
   });
 
 /** The top-level directories of src/ that `file` imports from, e.g. ['match', 'shared']. */
