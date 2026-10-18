@@ -6,6 +6,10 @@ import { COLORS } from '@/shared/palette';
 // Sky, cool at rest and hot at full climax or celebration — same heat language as Memphis
 const SKY_COOL = ['#0a0330', '#3c1465', '#7a2a6e'];
 const SKY_HOT = ['#2b0a45', '#9a1460', '#ff6a2f'];
+// The floor under the grid: the sky's horizon color at rest, but it heats only to a deep
+// crimson, so a hot rally doesn't flood the lower half of the court in orange
+const FLOOR_COOL = SKY_COOL[2];
+const FLOOR_HOT = '#7a1840';
 const MOUNTAIN_COOL = '#241152';
 const MOUNTAIN_HOT = '#5c1030';
 // The far range, paler in the haze, behind the sun
@@ -108,7 +112,9 @@ export class OutrunBackground implements Background {
 
     const sky = this.getSky(ctx, heat, layout);
     ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, layout.width, layout.height);
+    ctx.fillRect(0, 0, layout.width, layout.horizonY);
+    ctx.fillStyle = mixHexColors(FLOOR_COOL, FLOOR_HOT, heat);
+    ctx.fillRect(0, layout.horizonY, layout.width, layout.height - layout.horizonY);
 
     this.renderStars(ctx, time, layout);
     // The sun sets between the ranges: behind the near mountains, in front of the far ones
