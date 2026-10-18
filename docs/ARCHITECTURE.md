@@ -30,7 +30,8 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | ---------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
 | `shared/`              | palette, math, fonts, scene ids, `EventBus`                           | nothing in the project                              |
 | `match/`               | rules, simulation, AI, paddles, balls, sides                          | `match/`, `shared/`                                 |
-| `settings/`            | the player's settings and quick-match setup, their storage            | `match/`, `i18n/` (language), `shared/`             |
+| `settings/`            | the player's settings and quick-match setup                           | `match/`, `i18n/` (language), `shared/`             |
+| `profile/`             | everything saved between visits: versions, migrations, `persist()`    | `settings/`, `match/` (events), `shared/`           |
 | `i18n/`                | texts in every language                                               | `match/` (difficulty, modes)                        |
 | `input/`               | keyboard, pointer, touch, portrait rotation                           | `match/`, `shared/`                                 |
 | `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |
@@ -113,8 +114,15 @@ which then plays it first.
 (`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), or in
 `QUICK_MATCH_SETUP` if it sets up the match rather than the game (a `toggle` for on/off, a
 `choice` stepped by arrows for one from a list), and its texts in both
-languages (`i18n/translations.ts`). The compiler insists on all of them. Saved settings
+languages (`i18n/translations.ts`). The compiler insists on all of them; the profile checks
+and saves it with no change there. Saved settings
 from before it get its default.
+
+**Something else to save** (statistics, unlocks). A field in `profileSchema`
+(`profile/Profile.ts`) with a fallback, so a bad or missing value never costs the rest; raise
+`PROFILE_VERSION` and add the step from the version before to `MIGRATIONS`
+(`profile/migrations.ts`), with a test that a profile of that version loads. Write it with
+`profile.update`.
 
 **A kind of paddle.** A `PaddleSpec`: trade-offs as multipliers against `STANDARD_PADDLE` (one
 strength, one weakness), given to `new Paddle(side, x, color, spec)`.

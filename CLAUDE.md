@@ -36,7 +36,8 @@ setting, paddle, rules, lineup, a listener to the match). Read it before adding 
 
 `src/app/Game.ts` is the composition root and the frame loop. `src/match/` is the game itself
 (rules, simulation, AI); `fx/`, `render/`, `audio/`, `ui/` present it; `input/` feeds it;
-`settings/`, `i18n/` serve everything; `shared/` imports nothing from the project.
+`settings/`, `i18n/` serve everything; `profile/` saves what outlasts a visit (versioned, with
+migrations); `shared/` imports nothing from the project.
 
 Rules that keep it clean (the first two are enforced by `tests/architecture.test.ts`):
 

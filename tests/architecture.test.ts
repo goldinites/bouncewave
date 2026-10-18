@@ -28,6 +28,10 @@ describe('architecture', () => {
     expect(violations('match', ['match', 'shared'])).toEqual([]);
   });
 
+  it('keeps the profile to the settings it saves and the match it listens to', () => {
+    expect(violations('profile', ['profile', 'settings', 'match', 'shared'])).toEqual([]);
+  });
+
   it('keeps shared/ free of the rest of the project', () => {
     expect(violations('shared', ['shared'])).toEqual([]);
   });

@@ -147,3 +147,19 @@ test('restarts a match from the pause', async ({ page, isMobile }) => {
   await expect(menu(page)).toHaveClass(/game__ui--hidden/);
   await page.waitForTimeout(SETTLE_MS);
 });
+
+test('brings settings saved before the profile into it', async ({ page }) => {
+  // As a player who last played 1.2 left them: Russian, music off, a quick match to 7
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('bouncewave_profile')) {
+      localStorage.setItem('bouncewave_settings', JSON.stringify({ l: 'ru', u: true, p: 7 }));
+    }
+  });
+  await page.goto('');
+
+  await button(page, 'ИГРАТЬ').click();
+  await button(page, 'БЫСТРЫЙ МАТЧ').click();
+  await expect(choice(page, 'ОЧКИ')).toHaveAttribute('aria-valuetext', '7');
+  const profile = await page.evaluate(() => localStorage.getItem('bouncewave_profile'));
+  expect(JSON.parse(profile ?? '{}')).toMatchObject({ version: 1 });
+});

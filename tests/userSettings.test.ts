@@ -2,11 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { getDefaultSettings, SETTING_KEYS, SETTINGS } from '@/settings/UserSettings';
 
 describe('SETTINGS', () => {
-  it('gives every setting its own storage key', () => {
-    const keys = SETTING_KEYS.map((key) => SETTINGS[key].storageKey);
-    expect(new Set(keys).size).toBe(keys.length);
-  });
-
   it('has defaults that pass their own validation', () => {
     const defaults = getDefaultSettings();
     for (const key of SETTING_KEYS) {
