@@ -1,6 +1,6 @@
 import { COURT, BALL } from '@/match/config';
 import { getRallyHeat, getSpeedHeat } from '@/match/heat';
-import { approach } from '@/shared/math';
+import { approach, lerp } from '@/shared/math';
 
 const RADIUS_SMOOTHING = 6.3; // 1/s toward the radius the rally and speed call for
 
@@ -20,8 +20,20 @@ export class Ball {
   public trail: Point[] = [];
   /** Seconds since each trail point was laid. */
   private trailAges: number[] = [];
+  /** Seconds since the last trail point; the first update after a serve lays one at once. */
+  private sinceTrailPoint = Infinity;
   /** In flight from an Overdrive power shot; cleared by the next hit or serve. */
   public isPowerShot = false;
+
+  /** Where the ball stood when the current simulation step began. */
+  private previousX = this.x;
+  private previousY = this.y;
+  /**
+   * Where to draw the ball this frame: a frame usually falls between two simulation steps, and
+   * is drawn that far between them (see `interpolate`) so motion stays smooth at any refresh rate.
+   */
+  public drawX = this.x;
+  public drawY = this.y;
 
   // Temporary speed surge (e.g. after a perfect hit); fades out linearly
   private boostAmount = 0;
@@ -59,18 +71,39 @@ export class Ball {
     this.speed = initialSpeed;
     this.trail = [];
     this.trailAges = [];
+    this.sinceTrailPoint = Infinity;
     this.clearBoost();
     this.isPowerShot = false;
+    // Back at the center in one jump: nothing to draw between where it was and here
+    this.rememberPosition();
+    this.interpolate(1);
 
     const angle = (random() - 0.5) * 0.8;
     this.vx = direction * Math.cos(angle) * this.speed;
     this.vy = Math.sin(angle) * this.speed;
   }
 
+  /** Call at the start of every simulation step. */
+  public rememberPosition(): void {
+    this.previousX = this.x;
+    this.previousY = this.y;
+  }
+
+  /** Sets the position to draw at: `alpha` of the way from the step's start to where it is now. */
+  public interpolate(alpha: number): void {
+    this.drawX = lerp(this.previousX, this.x, alpha);
+    this.drawY = lerp(this.previousY, this.y, alpha);
+  }
+
   public updateTrail(dt: number): void {
     for (let i = 0; i < this.trailAges.length; i++) this.trailAges[i] += dt;
-    this.trail.push({ x: this.x, y: this.y });
-    this.trailAges.push(0);
+    this.sinceTrailPoint += dt;
+    // A hair of slack, as frame times summed in floating point fall just short of an interval
+    if (this.sinceTrailPoint >= BALL.TRAIL_INTERVAL - 1e-9) {
+      this.trail.push({ x: this.x, y: this.y });
+      this.trailAges.push(0);
+      this.sinceTrailPoint = 0;
+    }
 
     while (this.trailAges[0] > BALL.TRAIL_DURATION) {
       this.trail.shift();

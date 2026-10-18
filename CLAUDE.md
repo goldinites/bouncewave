@@ -58,8 +58,13 @@ Rules that keep it clean:
   `prefers-reduced-motion`; everything works on a phone in either orientation (`isRotated`: the
   stage is turned in CSS on a portrait phone).
 
+- The match runs in fixed steps of 1/240 s (`app/FixedStep.ts`): `Game` feeds frame time in,
+  `MatchFlow.update` runs once per step, and the same seed and inputs replay the same match.
+  Renderers draw `ball.drawX/drawY` and `paddle.drawY` (set by `MatchFlow.interpolate` between
+  the last two steps), never `x`/`y`; `fx/` may read the simulated positions.
+
 Known hard-coded assumptions the roadmap's stage 0 removes: one ball, paddle 0 = player and
-paddle 1 = AI, a global `WINNING_SCORE`, global `PADDLE` sizes, a variable simulation step.
+paddle 1 = AI, a global `WINNING_SCORE`, global `PADDLE` sizes.
 
 ## Extension points that exist today
 

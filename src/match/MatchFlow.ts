@@ -198,6 +198,9 @@ export class MatchFlow {
   public update(dt: number): void {
     if (this._phase === 'paused') return;
 
+    // Where everything stood before this step, so a frame can be drawn between two steps
+    this.ball.rememberPosition();
+    this.paddles.forEach((p) => p.rememberPosition());
     this._time += dt;
 
     if (this._phase === 'finale') {
@@ -227,6 +230,15 @@ export class MatchFlow {
 
     // Radius grows with rally and speed, and also affects collisions, so it is simulation
     this.ball.updateRadius(dt, this._rally, difficulty.maxSpeed);
+  }
+
+  /**
+   * Places the ball and the paddles for drawing, `alpha` of the way through the last step
+   * (0 = where they stood when it began, 1 = where it left them).
+   */
+  public interpolate(alpha: number): void {
+    this.ball.interpolate(alpha);
+    this.paddles.forEach((p) => p.interpolate(alpha));
   }
 
   private updatePaddles(dt: number): void {

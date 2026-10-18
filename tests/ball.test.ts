@@ -86,4 +86,40 @@ describe('Ball', () => {
     expect(ball.radius).toBeGreaterThan(initialRadius);
     expect(ball.radius).toBeGreaterThan(BALL.INITIAL_RADIUS);
   });
+
+  it('is drawn between where the last step began and where it ended', () => {
+    const ball = new Ball();
+    ball.x = 100;
+    ball.y = 200;
+    ball.rememberPosition();
+    ball.x = 140;
+    ball.y = 180;
+
+    ball.interpolate(0.25);
+    expect([ball.drawX, ball.drawY]).toEqual([110, 195]);
+    ball.interpolate(1);
+    expect([ball.drawX, ball.drawY]).toEqual([140, 180]);
+  });
+
+  it('is drawn at the center straight after a serve, not on its way back there', () => {
+    const ball = new Ball();
+    ball.x = -20;
+    ball.rememberPosition();
+    ball.serve(1);
+
+    ball.interpolate(0.5);
+    expect([ball.drawX, ball.drawY]).toEqual([COURT.WIDTH / 2, COURT.HEIGHT / 2]);
+  });
+
+  it('lays its trail at a steady rate however short the simulation steps are', () => {
+    const ball = new Ball();
+    for (let i = 0; i < 240; i++) {
+      ball.x = i;
+      ball.updateTrail(1 / 240);
+    }
+
+    // As many points as at 60 fps: more would only stack up brighter
+    expect(ball.trail.length).toBeGreaterThanOrEqual(8);
+    expect(ball.trail.length).toBeLessThanOrEqual(9);
+  });
 });

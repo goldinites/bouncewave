@@ -1,5 +1,5 @@
 import { COURT, PADDLE } from '@/match/config';
-import { approach, clamp } from '@/shared/math';
+import { approach, clamp, lerp } from '@/shared/math';
 
 const PADDLE_SMOOTH_FACTOR = 27.4; // 1/s toward the target
 const PADDLE_VELOCITY_SMOOTHING = 13.4; // 1/s, ~75 ms averaging window
@@ -16,12 +16,18 @@ export class Paddle {
   /** Smoothed vertical speed in px/s (positive = moving down). */
   public velocity: number = 0;
   public readonly index: 0 | 1;
+  /** Where the paddle stood when the current simulation step began. */
+  private previousY: number;
+  /** Where to draw the paddle this frame, between two simulation steps (see `interpolate`). */
+  public drawY: number;
 
   constructor(index: 0 | 1, x: number, color: string) {
     this.index = index;
     this.x = x;
     this.y = COURT.HEIGHT / 2;
     this.targetY = COURT.HEIGHT / 2;
+    this.previousY = this.y;
+    this.drawY = this.y;
     this.color = color;
   }
 
@@ -29,6 +35,19 @@ export class Paddle {
     this.y = COURT.HEIGHT / 2;
     this.targetY = COURT.HEIGHT / 2;
     this.velocity = 0;
+    // Back at the center in one jump: nothing to draw in between
+    this.rememberPosition();
+    this.interpolate(1);
+  }
+
+  /** Call at the start of every simulation step. */
+  public rememberPosition(): void {
+    this.previousY = this.y;
+  }
+
+  /** Sets the position to draw at: `alpha` of the way from the step's start to where it is now. */
+  public interpolate(alpha: number): void {
+    this.drawY = lerp(this.previousY, this.y, alpha);
   }
 
   public resetScore(): void {

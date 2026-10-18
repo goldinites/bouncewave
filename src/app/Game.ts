@@ -1,3 +1,4 @@
+import { FixedStep } from '@/app/FixedStep';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
 import { BackgroundMenu } from '@/debug/BackgroundMenu';
@@ -42,6 +43,8 @@ export class Game {
   private readonly ball = new Ball();
   private readonly particles = new ParticleSystem();
   private readonly flow: MatchFlow;
+  /** Cuts frame times into the match's fixed simulation steps. */
+  private readonly simulation = new FixedStep();
   private readonly effects: EffectsDirector;
   private readonly fpsMeter: FpsMeter;
   private readonly backgroundMenu: BackgroundMenu;
@@ -306,9 +309,12 @@ export class Game {
       this.effects.beforeSimulation(realDt, this.flow);
       // Match-point slow motion scales the simulation, not the screen effects
       const dt = realDt * this.effects.timeScale;
-      this.flow.update(dt);
+      // The match runs in whole steps of a fixed length; the effects, which only decorate it,
+      // follow the frame's own smooth time
+      this.simulation.advance(dt, (step) => this.flow.update(step));
       this.effects.afterSimulation(dt, this.flow);
     }
+    this.flow.interpolate(this.simulation.alpha);
 
     // Music reads this on its own scheduler tick, paused frames included (it muffles in pause)
     this.audio.music.setState(this.buildMusicState());
@@ -360,7 +366,9 @@ export class Game {
       ball: this.ball,
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),
-      time: this.flow.time,
+      // The moment the ball and paddles are drawn at, between the last two steps (never before
+      // the clock starts: a tape counter would read -1)
+      time: Math.max(0, this.flow.time - this.simulation.lag),
       serveTime: this.flow.serveTime,
       rally: this.flow.rally,
       readyText: this.i18n.t(this.effects.isDecidingPoint ? 'decider' : 'ready'),
