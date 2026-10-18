@@ -63,8 +63,13 @@ Rules that keep it clean:
   Renderers draw `ball.drawX/drawY` and `paddle.drawY` (set by `MatchFlow.interpolate` between
   the last two steps), never `x`/`y`; `fx/` may read the simulated positions.
 
+- A match is played under `MatchRules` (`match/rules.ts`: winning score, Overdrive on or off),
+  given to `MatchFlow.startMatch` and read back as `flow.rules`; `STANDARD_RULES` is the classic
+  match. Read the winning score and the deciding point from the rules, never from
+  `WINNING_SCORE`.
+
 Known hard-coded assumptions the roadmap's stage 0 removes: one ball, paddle 0 = player and
-paddle 1 = AI, a global `WINNING_SCORE`, global `PADDLE` sizes.
+paddle 1 = AI, global `PADDLE` sizes.
 
 ## Extension points that exist today
 

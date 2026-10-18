@@ -53,8 +53,8 @@ Web Audio, DOM-меню, i18n. Сборка на v1.1.0: 171 КБ, 54 КБ gzip.
 | #   | Шаг                                    | Размер | Статус |
 | --- | -------------------------------------- | ------ | ------ |
 | 0.0 | Playwright: смоук и визуальные снимки  | S      | ✅ #33 |
-| 0.1 | Фиксированный шаг симуляции            | S      | 🔄     |
-| 0.2 | Правила матча (`MatchRules`)           | S      | ⬜     |
+| 0.1 | Фиксированный шаг симуляции            | S      | ✅ #34 |
+| 0.2 | Правила матча (`MatchRules`)           | S      | 🔄     |
 | 0.3 | Контроллеры ракеток                    | M      | ⬜     |
 | 0.4 | Стороны и несколько ракеток на стороне | M      | ⬜     |
 | 0.5 | Мячи массивом                          | M      | ⬜     |
@@ -89,6 +89,12 @@ Web Audio, DOM-меню, i18n. Сборка на v1.1.0: 171 КБ, 54 КБ gzip.
 `MatchFlow.startMatch(rules)`. `WINNING_SCORE` из `config.ts` читают `MatchFlow`,
 `MatchPointDrama`, `AiForm`, `translations.ts`, `Game` — перевести на правила.
 `STANDARD_RULES` в точности повторяет нынешнее поведение.
+Сделано: `match/rules.ts` — `MatchRules` (победный счёт, Overdrive), `STANDARD_RULES`,
+`isDecidingPoint`. Матч хранит правила (`flow.rules`, `flow.isDecidingPoint`); драма решающего
+очка и форма ИИ получают их параметром (по умолчанию стандартные); метку «MATCH POINT» `Game`
+берёт у матча; без Overdrive его шкала не рисуется (`overdriveCharge: null`). `WINNING_SCORE`
+остался в `config.ts` только как значение стандартного матча. **Жизни перенесены в 1.3**: их
+смысл (одна жизнь у игрока, что вместо победного счёта) определит сам режим Survival.
 
 **0.3 Контроллеры.** Интерфейс `PaddleController`: человек (нынешний
 `InputHandler.pollPlayerMovement`), ИИ (`AiController` + `AiSkill`), демо. `MatchFlow` не

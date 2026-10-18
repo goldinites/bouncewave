@@ -35,4 +35,8 @@ export const BALL = {
   OUT_OF_BOUNDS_OFFSET: 30,
 } as const;
 
+/**
+ * Points that win a standard match. A match reads its own from its MatchRules (match/rules.ts);
+ * use STANDARD_RULES rather than this.
+ */
 export const WINNING_SCORE = 10;

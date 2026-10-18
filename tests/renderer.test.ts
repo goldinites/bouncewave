@@ -3,6 +3,7 @@ import { Ball } from '@/match/Ball';
 import { COURT, PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { ParticleSystem } from '@/fx/ParticleSystem';
+import { EntityRenderer } from '@/render/EntityRenderer';
 import { Renderer, RenderFrame } from '@/render/Renderer';
 import { COLORS } from '@/shared/palette';
 import { fakeContext } from './helpers/fakeContext';
@@ -197,5 +198,17 @@ describe('Renderer', () => {
 
     renderer.setClassicMode(true);
     expect(() => renderer.render(baseFrame({ isDemo: false }), 0.016)).not.toThrow();
+  });
+
+  it("shows the player's Overdrive meter in a match, unless its rules have no Overdrive", () => {
+    const meter = vi.spyOn(EntityRenderer, 'renderOverdriveMeter');
+    const { renderer } = makeRenderer();
+
+    renderer.render(baseFrame({ isDemo: false, overdriveCharge: 1 }), 0.016);
+    expect(meter).toHaveBeenCalledTimes(1);
+
+    renderer.render(baseFrame({ isDemo: false, overdriveCharge: null }), 0.016);
+    expect(meter).toHaveBeenCalledTimes(1);
+    meter.mockRestore();
   });
 });

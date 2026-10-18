@@ -1,6 +1,7 @@
 import { Ball } from '@/match/Ball';
-import { PADDLE, WINNING_SCORE } from '@/match/config';
+import { PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
+import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 import { approach, clamp, lerp } from '@/shared/math';
 
 export const DRAMA = {
@@ -64,8 +65,11 @@ export class MatchPointDrama {
   }
 
   /** Both sides are one point from winning: the next point decides the match. */
-  public static isDecidingPoint(paddles: [Paddle, Paddle]): boolean {
-    return paddles.every((p) => p.score === WINNING_SCORE - 1);
+  public static isDecidingPoint(
+    paddles: [Paddle, Paddle],
+    rules: MatchRules = STANDARD_RULES,
+  ): boolean {
+    return isDecidingPoint([paddles[0].score, paddles[1].score], rules);
   }
 
   /** True once the ball is behind either paddle: on the deciding point, the match is over. */
@@ -81,10 +85,17 @@ export class MatchPointDrama {
    * @param isActive false outside of a real match (demo, menu)
    * @param ball
    * @param paddles
+   * @param rules the match's, which say when the deciding point comes
    * @returns true on the frames a heartbeat should sound
    */
-  public update(realDt: number, isActive: boolean, ball: Ball, paddles: [Paddle, Paddle]): boolean {
-    const isDeciding = isActive && MatchPointDrama.isDecidingPoint(paddles);
+  public update(
+    realDt: number,
+    isActive: boolean,
+    ball: Ball,
+    paddles: [Paddle, Paddle],
+    rules: MatchRules = STANDARD_RULES,
+  ): boolean {
+    const isDeciding = isActive && MatchPointDrama.isDecidingPoint(paddles, rules);
 
     if (isDeciding && !this.hasTriggered && MatchPointDrama.isBallPastPaddle(ball, paddles)) {
       this.hasTriggered = true;

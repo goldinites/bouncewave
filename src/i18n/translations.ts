@@ -1,5 +1,5 @@
 import { DifficultyLevel } from '@/match/difficulty';
-import { WINNING_SCORE } from '@/match/config';
+import { STANDARD_RULES } from '@/match/rules';
 export type Language = 'en' | 'ru';
 
 export type DifficultyDescription = [name: string, description: string];
@@ -57,8 +57,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
-    hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Esc</kbd> pause</span><span><kbd>F</kbd> fullscreen</span><span><kbd>M</kbd> music</span><span><kbd>N</kbd> next track</span></span><span class="game-hint__rules">First to ${WINNING_SCORE} · paddle center = perfect shot · 3&nbsp;in&nbsp;a&nbsp;row&nbsp;=&nbsp;Overdrive</span>`,
-    hintT: `<span class="game-hint__keys">Drag your finger to move the paddle</span><span class="game-hint__rules">First to ${WINNING_SCORE} · paddle center = perfect shot · 3&nbsp;in&nbsp;a&nbsp;row&nbsp;=&nbsp;Overdrive</span>`,
+    hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Esc</kbd> pause</span><span><kbd>F</kbd> fullscreen</span><span><kbd>M</kbd> music</span><span><kbd>N</kbd> next track</span></span><span class="game-hint__rules">First to ${STANDARD_RULES.winningScore} · paddle center = perfect shot · 3&nbsp;in&nbsp;a&nbsp;row&nbsp;=&nbsp;Overdrive</span>`,
+    hintT: `<span class="game-hint__keys">Drag your finger to move the paddle</span><span class="game-hint__rules">First to ${STANDARD_RULES.winningScore} · paddle center = perfect shot · 3&nbsp;in&nbsp;a&nbsp;row&nbsp;=&nbsp;Overdrive</span>`,
     d: {
       [DifficultyLevel.NORMAL]: ['NORMAL', 'vs CPU: a balanced opponent'],
       [DifficultyLevel.HARD]: ['HARD', 'vs CPU: fast and accurate'],
@@ -86,8 +86,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
-    hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> ракетка</span><span><kbd>Esc</kbd> пауза</span><span><kbd>F</kbd> полный экран</span><span><kbd>M</kbd> музыка</span><span><kbd>N</kbd> следующий трек</span></span><span class="game-hint__rules">До ${WINNING_SCORE} очков · центр ракетки — идеальный удар · 3&nbsp;подряд&nbsp;—&nbsp;Overdrive</span>`,
-    hintT: `<span class="game-hint__keys">Двигайте ракетку пальцем</span><span class="game-hint__rules">До ${WINNING_SCORE} очков · центр ракетки — идеальный удар · 3&nbsp;подряд&nbsp;—&nbsp;Overdrive</span>`,
+    hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> ракетка</span><span><kbd>Esc</kbd> пауза</span><span><kbd>F</kbd> полный экран</span><span><kbd>M</kbd> музыка</span><span><kbd>N</kbd> следующий трек</span></span><span class="game-hint__rules">До ${STANDARD_RULES.winningScore} очков · центр ракетки — идеальный удар · 3&nbsp;подряд&nbsp;—&nbsp;Overdrive</span>`,
+    hintT: `<span class="game-hint__keys">Двигайте ракетку пальцем</span><span class="game-hint__rules">До ${STANDARD_RULES.winningScore} очков · центр ракетки — идеальный удар · 3&nbsp;подряд&nbsp;—&nbsp;Overdrive</span>`,
     d: {
       [DifficultyLevel.NORMAL]: ['СРЕДНЯЯ', 'Против CPU: сбалансированный соперник'],
       [DifficultyLevel.HARD]: ['СЛОЖНАЯ', 'Против CPU: быстрый и точный'],

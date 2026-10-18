@@ -70,8 +70,8 @@ export interface RenderFrame {
   climax: number;
   /** Hit glow of each paddle in [0, 1]. */
   paddleGlow: readonly [number, number];
-  /** Charges in the player's Overdrive meter (0..OVERDRIVE.CHARGE). */
-  overdriveCharge: number;
+  /** Charges in the player's Overdrive meter (0..OVERDRIVE.CHARGE); null when the match's rules have no Overdrive, and no meter is shown. */
+  overdriveCharge: number | null;
 }
 
 export class Renderer {
@@ -384,15 +384,15 @@ export class Renderer {
     }
 
     // Paddles
-    // The player's paddle carries their Overdrive meter (only in a match)
-    const overdrivePulse = isDemo
-      ? 0
-      : EntityRenderer.overdrivePulse(frame.overdriveCharge, gameTime);
+    // The player's paddle carries their Overdrive meter (only in a match that has Overdrive)
+    const charge = frame.overdriveCharge;
+    const showsOverdrive = !isDemo && charge !== null;
+    const overdrivePulse = showsOverdrive ? EntityRenderer.overdrivePulse(charge, gameTime) : 0;
     paddles.forEach((paddle, i) =>
       EntityRenderer.renderPaddle(ctx, paddle, frame.paddleGlow[i], i === 0 ? overdrivePulse : 0),
     );
-    if (!isDemo && !this.finalSign) {
-      EntityRenderer.renderOverdriveMeter(ctx, paddles[0], frame.overdriveCharge, gameTime);
+    if (showsOverdrive && !this.finalSign) {
+      EntityRenderer.renderOverdriveMeter(ctx, paddles[0], charge, gameTime);
     }
 
     // Ball
@@ -467,7 +467,7 @@ export class Renderer {
     }
 
     paddles.forEach((paddle) => EntityRenderer.renderClassicPaddle(ctx, paddle));
-    if (!isDemo && !this.finalSign) {
+    if (!isDemo && !this.finalSign && frame.overdriveCharge !== null) {
       EntityRenderer.renderOverdriveMeter(ctx, paddles[0], frame.overdriveCharge, frame.time, true);
     }
     EntityRenderer.renderClassicBall(ctx, ball);
