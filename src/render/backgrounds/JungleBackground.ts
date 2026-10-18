@@ -4,22 +4,22 @@ import { drawJungleTemple, SHRINE_DOOR } from '@/render/backgrounds/jungleTemple
 import { clamp, mixHexColors, randomRange, TWO_PI } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
-// Humid night sky, teal at rest and hot at full climax or celebration
-const SKY_COOL = ['#02060f', '#08243a', '#14505a'];
+// Humid night sky, indigo at rest and hot at full climax or celebration
+const SKY_COOL = ['#05021a', '#1c0b45', '#3d1a6a'];
 const SKY_HOT = ['#14051f', '#4a0f40', '#b8324a'];
 // The sky gradient and the heat's colors are rebuilt only when the heat moves by a step this size
 const HEAT_STEPS = 40;
 
 const WATER_LEVEL = 0.744; // share of the frame's height where the water's surface lies
-const WATER_COLOR = '#01060c';
+const WATER_COLOR = '#04021a';
 const RIPPLE_COUNT = 8; // dark lines breaking up the reflection
 const REFLECTION = { SQUASH: 0.55, ALPHA: 0.3 } as const;
 
 const JADE = '#2dffb3';
 const JADE_DIM = '#0f6b55';
-const STONE_TOP = '#0c2a2a';
-const STONE_FOOT = '#041312';
-const STONE_DARK = '#061615';
+const STONE_TOP = '#1a1438';
+const STONE_FOOT = '#08061a';
+const STONE_DARK = '#0a0820';
 const MIST_RGB = '183, 155, 255';
 
 /*
@@ -104,7 +104,7 @@ interface Leaf {
   phase: number;
 }
 
-const LEAF_FILL_COOL = '#020f0c';
+const LEAF_FILL_COOL = '#07041a';
 const LEAF_FILL_HOT = '#12030f';
 const SWAY = { RATE: 0.9, ANGLE: 0.05, PULSE: 0.05, CLIMAX: 2 } as const;
 
@@ -745,20 +745,20 @@ export class JungleBackground implements Background {
         ctx.lineTo(side * 66, 166);
         ctx.closePath();
       }
-      ctx.fillStyle = '#010706';
+      ctx.fillStyle = '#030110';
       ctx.fill();
 
       // A long, straight nose widening to a flat base
       ctx.beginPath();
       this.traceNose(ctx);
-      ctx.fillStyle = '#0d2e2c';
+      ctx.fillStyle = '#181436';
       ctx.fill();
     }
 
     // The brow, jutting out like a ledge
     ctx.beginPath();
     this.traceBrow(ctx);
-    ctx.fillStyle = '#0f3331';
+    ctx.fillStyle = '#1d1840';
     ctx.fill();
 
     // Brow, nose and lips share one stroke: a hard level line for a mouth, its corners pulled

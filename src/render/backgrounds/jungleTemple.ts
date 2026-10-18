@@ -1,5 +1,5 @@
 /*
- * The jungle's backdrop: a wall of forest and, rising out of it, an ancient seven-tiered
+ * The jungle's backdrop: flat walls of forest and, rising out of them, an ancient seven-tiered
  * pyramid like Prasat Thom at Koh Ker, its stone broken and cracked, mossy, hung with vines and
  * grown over by trees. Nothing in it moves, so it is drawn once into a cached picture.
  *
@@ -7,17 +7,19 @@
  * sized for a 500-unit frame.
  */
 
-const FOLIAGE_FAR = '#2a5a5c';
-const FOLIAGE_NEAR = '#1b4446';
-const FOLIAGE_ON_STONE = '#1f4f45';
-const VINE = '#1d4a3c';
+// The forest is flat silhouettes, far to near, so its texture never competes with the ball
+const FOLIAGE_FAR = '#251a4e';
+const FOLIAGE_MIDDLE = '#1e1442';
+const FOLIAGE_NEAR = '#170f36';
+const FOLIAGE_ON_STONE = '#1a2a40';
+const VINE = '#1a2440';
 const JADE = '#2dffb3';
-const MOSS = 'rgba(80, 190, 130, 0.4)';
-const STONE_FACE = '#4a6a63';
-const STONE_TOP = '#67857a';
-const STONE_SEAM = '#22332f';
-const STONE_BROKEN = '#33473f';
-const ROOT = '#a9b8a6';
+const MOSS = 'rgba(45, 255, 179, 0.25)';
+const STONE_FACE = '#2e2a52';
+const STONE_TOP = '#3e3866';
+const STONE_SEAM = '#141030';
+const STONE_BROKEN = '#221d42';
+const ROOT = '#6f6896';
 const MIST_RGB = '183, 155, 255';
 
 /** The pyramid: its foot, its half-widths at the bottom and the top, its height, its tiers. */
@@ -105,34 +107,30 @@ function fillRimmed(ctx: CanvasRenderingContext2D, color: string, rim: number): 
   ctx.restore();
 }
 
-/** Thick jungle: a few trunks, then rows of leaf clumps packed from `top` down to the water. */
-function thicket(
+/** A flat wall of forest: one silhouette from `top` down to the water, its crowns rounded bumps. */
+function canopy(
   ctx: CanvasRenderingContext2D,
   seed: number,
   top: number,
   halfWidth: number,
   color: string,
   rim: number,
-  rows: number,
 ): void {
   const random = seeded(seed);
+  const left = -halfWidth - 20;
+  let y = top + random() * 24;
   ctx.beginPath();
-  for (let i = 0; i < 12; i++) {
-    const x = (random() * 2 - 1) * halfWidth;
-    const trunkTop = top + 20 + random() * 40;
-    const width = 2 + random() * 4;
-    ctx.moveTo(x - width, 0);
-    ctx.lineTo(x - width * 0.5, trunkTop);
-    ctx.lineTo(x + width * 0.5, trunkTop);
-    ctx.lineTo(x + width, 0);
-    ctx.closePath();
+  ctx.moveTo(left, 0);
+  ctx.lineTo(left, y);
+  for (let x = left; x < halfWidth + 20;) {
+    const step = 26 + random() * 34;
+    const nextY = top + random() * 24;
+    ctx.quadraticCurveTo(x + step / 2, Math.min(y, nextY) - 10 - random() * 16, x + step, nextY);
+    x += step;
+    y = nextY;
   }
-  for (let row = 0; row < rows; row++) {
-    const y = top + (row * -top) / rows;
-    for (let x = -halfWidth - 20 + random() * 10; x < halfWidth + 30; x += 11 + random() * 9) {
-      clump(ctx, random, x, y + random() * 22, 22 + random() * 16, 6);
-    }
-  }
+  ctx.lineTo(halfWidth + 20, 0);
+  ctx.closePath();
   fillRimmed(ctx, color, rim);
 }
 
@@ -362,9 +360,10 @@ function pyramid(ctx: CanvasRenderingContext2D): void {
  * @param halfWidth how far the frame reaches either side of the middle, in scene units
  */
 export function drawJungleTemple(ctx: CanvasRenderingContext2D, halfWidth: number): void {
-  thicket(ctx, 61, -312, halfWidth, FOLIAGE_FAR, 0.1, 6);
+  canopy(ctx, 61, -300, halfWidth, FOLIAGE_FAR, 0.12);
+  canopy(ctx, 62, -215, halfWidth, FOLIAGE_MIDDLE, 0);
   mist(ctx, -252, 130, 0.18, halfWidth);
   pyramid(ctx);
-  thicket(ctx, 67, -70, halfWidth, FOLIAGE_NEAR, 0.2, 2);
+  canopy(ctx, 67, -64, halfWidth, FOLIAGE_NEAR, 0.25);
   mist(ctx, -70, 70, 0.12, halfWidth);
 }
