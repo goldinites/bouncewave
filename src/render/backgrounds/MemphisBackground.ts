@@ -16,10 +16,11 @@ interface MemphisShape {
   vy: number;
   rotation: number;
   rotationSpeed: number;
-  color: string;
+  /** Index into SHAPE_COLORS. */
+  color: number;
 }
 
-const SHAPE_COUNT = 24;
+const SHAPE_COUNT = 14;
 // Background gradient, cool at rest and hot at full climax or celebration
 const GRADIENT_COOL = ['#1a0b4d', '#4a0f6e', '#7a1a73'];
 const GRADIENT_HOT = ['#3d0a45', '#8f1460', '#c2432f'];
@@ -33,7 +34,13 @@ const PULSE_RELEASE = 6.3;
 // The background gradient is rebuilt only when the heat moves by a step this size
 const HEAT_STEPS = 40;
 
-const SHAPE_COLORS = [COLORS.CYAN, COLORS.PINK, COLORS.YELLOW, COLORS.PURPLE];
+// Memphis colors away from the paddles' cyan and pink
+const SHAPE_COLORS = [COLORS.YELLOW, COLORS.PURPLE, '#ff7a59', '#9ef0d0'];
+// The same colors lightened, which the shapes heat toward so they stay clear of the hot gradient
+const SHAPE_COLORS_HOT = ['#fff6b8', '#e8deff', '#ffcab8', '#d6fff1'];
+// px past every edge that the shapes travel through out of sight: they wrap round off screen,
+// falling in from above instead of popping up in view (the largest, pumped by the beat, fits)
+const SHAPE_MARGIN = 120;
 const DOT_SPACING = 28;
 const VHS_NOISE_STREAKS = 5;
 const OSD_FONT = gameFont(700, 16);
@@ -46,7 +53,16 @@ const OSD_COLORS = {
   FAST_FORWARD: { text: 'rgba(255, 229, 59, 0.9)', glow: COLORS.PINK },
 } as const;
 
-/** 80s/90s Memphis design on a VHS screen: drifting shapes, dot grid, scan bar, OSD text. */
+/**
+ * Where a shape that has travelled `distance` from the far side of the margin stands now: it
+ * goes round a loop `size` long plus the margin either side, so it leaves and comes back unseen.
+ */
+const wrapOffScreen = (distance: number, size: number): number => {
+  const loop = size + SHAPE_MARGIN * 2;
+  return (((distance % loop) + loop) % loop) - SHAPE_MARGIN;
+};
+
+/** 80s/90s Memphis design on a VHS screen: falling shapes, dot grid, scan bar, OSD text. */
 export class MemphisBackground implements Background {
   public readonly scene = 'memphis';
   public readonly overlayTint = 0.3;
@@ -58,18 +74,19 @@ export class MemphisBackground implements Background {
   private dropAge = Infinity;
   private heat = 0;
   private gradient: { heatStep: number; value: CanvasGradient } | null = null;
+  private shapeColors: { heatStep: number; value: string[] } | null = null;
 
   constructor() {
     this.shapes = Array.from({ length: SHAPE_COUNT }, (_, i) => ({
       kind: (i % 6) as MemphisShapeKind,
-      x: Math.random() * COURT.WIDTH,
-      y: Math.random() * COURT.HEIGHT,
-      size: randomRange(14, 38),
-      vx: (Math.random() - 0.5) * 16,
-      vy: randomRange(6, 16),
+      x: Math.random() * (COURT.WIDTH + SHAPE_MARGIN * 2),
+      y: Math.random() * (COURT.HEIGHT + SHAPE_MARGIN * 2),
+      size: randomRange(34, 70),
+      vx: (Math.random() - 0.5) * 8,
+      vy: randomRange(3, 8),
       rotation: Math.random() * 6,
-      rotationSpeed: (Math.random() - 0.5) * 1.2,
-      color: SHAPE_COLORS[i % SHAPE_COLORS.length],
+      rotationSpeed: (Math.random() - 0.5) * 0.5,
+      color: i % SHAPE_COLORS.length,
     }));
   }
 
@@ -132,6 +149,18 @@ export class MemphisBackground implements Background {
     return value;
   }
 
+  /** The shapes' colors, lightened with the heat; mixed once per heat step. */
+  private getShapeColors(): string[] {
+    const heatStep = Math.round(this.heat * HEAT_STEPS);
+    if (this.shapeColors?.heatStep === heatStep) return this.shapeColors.value;
+
+    const value = SHAPE_COLORS.map((color, i) =>
+      mixHexColors(color, SHAPE_COLORS_HOT[i], heatStep / HEAT_STEPS),
+    );
+    this.shapeColors = { heatStep, value };
+    return value;
+  }
+
   /** Outward push in px: rises smoothly from 0, peaks at DROP_PEAK_TIME, then fades. */
   private getDropPush(): number {
     if (!Number.isFinite(this.dropAge)) return 0;
@@ -146,13 +175,14 @@ export class MemphisBackground implements Background {
     const dropPush = this.getDropPush();
     const pulseScale = 0.25 + 0.35 * this.heat;
     const alphaBoost = 0.2 * this.heat;
+    const colors = this.getShapeColors();
 
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.lineJoin = 'round';
 
     for (const shape of this.shapes) {
-      let x = (((shape.x + shape.vx * clock) % COURT.WIDTH) + COURT.WIDTH) % COURT.WIDTH;
-      let y = (((shape.y + shape.vy * clock) % COURT.HEIGHT) + COURT.HEIGHT) % COURT.HEIGHT;
+      let x = wrapOffScreen(shape.x + shape.vx * clock, COURT.WIDTH);
+      let y = wrapOffScreen(shape.y + shape.vy * clock, COURT.HEIGHT);
 
       if (dropPush > 0.5) {
         const dx = x - COURT.WIDTH / 2;
@@ -165,14 +195,30 @@ export class MemphisBackground implements Background {
       const s = shape.size * (1 + pulse * pulseScale);
       const isFilled = shape.kind > 3;
 
+      // A hard dark shadow, offset down and right, as on a Memphis poster
+      ctx.save();
+      ctx.translate(x + 6, y + 6);
+      ctx.rotate(shape.rotation + shape.rotationSpeed * clock);
+      ctx.strokeStyle = '#07021a';
+      ctx.fillStyle = '#07021a';
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      this.tracePath(ctx, shape.kind, s);
+      if (isFilled) {
+        ctx.fill();
+      } else {
+        ctx.stroke();
+      }
+      ctx.restore();
+
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(shape.rotation + shape.rotationSpeed * clock);
-      ctx.strokeStyle = shape.color;
-      ctx.fillStyle = shape.color;
+      ctx.strokeStyle = colors[shape.color];
+      ctx.fillStyle = colors[shape.color];
       ctx.globalAlpha = Math.min(
         1,
-        (isFilled ? 0.35 + pulse * 0.2 : 0.55 + pulse * 0.3) + alphaBoost,
+        (isFilled ? 0.32 + pulse * 0.15 : 0.5 + pulse * 0.2) + alphaBoost,
       );
 
       ctx.beginPath();
