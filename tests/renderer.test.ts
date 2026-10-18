@@ -47,6 +47,7 @@ const baseFrame = (overrides: Partial<RenderFrame> = {}): RenderFrame => ({
     new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN),
     new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, COLORS.PINK),
   ],
+  scores: [0, 0],
   ball: new Ball(),
   particles: new ParticleSystem(),
   analyser: null,

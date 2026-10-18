@@ -3,6 +3,7 @@ import { Ball } from '@/match/Ball';
 import { COURT } from '@/match/config';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
+import { Scores } from '@/match/side';
 import { AdaptiveResolution } from '@/render/AdaptiveResolution';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import { CourtRenderer } from '@/render/CourtRenderer';
@@ -53,7 +54,10 @@ export interface RenderFrame {
   gameState: GameState;
   /** The AI-vs-AI demo behind the menus (no HUD). */
   isDemo: boolean;
-  paddles: [Paddle, Paddle];
+  /** Every paddle on the court; the player plays the left side's first. */
+  paddles: readonly Paddle[];
+  /** Points each side has won. */
+  scores: Scores;
   ball: Ball;
   particles: ParticleSystem;
   analyser: AnalyserNode | null;
@@ -68,11 +72,14 @@ export interface RenderFrame {
   zoom: number;
   /** Rally climax intensity in [0, 1]: lasers stay lit and the ball burns hotter. */
   climax: number;
-  /** Hit glow of each paddle in [0, 1]. */
-  paddleGlow: readonly [number, number];
+  /** Hit glow of each paddle in [0, 1], in the order of `paddles`. */
+  paddleGlow: readonly number[];
   /** Charges in the player's Overdrive meter (0..OVERDRIVE.CHARGE); null when the match's rules have no Overdrive, and no meter is shown. */
   overdriveCharge: number | null;
 }
+
+/** The paddle the player plays, which carries their Overdrive meter: the left side's first. */
+const playerPaddle = (paddles: readonly Paddle[]): Paddle => paddles.find((p) => p.side === 0)!;
 
 export class Renderer {
   private canvas: HTMLCanvasElement;
@@ -380,19 +387,34 @@ export class Renderer {
 
     // HUD (the final-score sign takes its place at the end of a match)
     if (!isDemo && !this.finalSign) {
-      this.hud.render(ctx, realDt, paddles, serveTime, frame.readyText, gameTime, isRotated);
+      this.hud.render(
+        ctx,
+        realDt,
+        paddles,
+        frame.scores,
+        serveTime,
+        frame.readyText,
+        gameTime,
+        isRotated,
+      );
     }
 
     // Paddles
     // The player's paddle carries their Overdrive meter (only in a match that has Overdrive)
+    const player = playerPaddle(paddles);
     const charge = frame.overdriveCharge;
     const showsOverdrive = !isDemo && charge !== null;
     const overdrivePulse = showsOverdrive ? EntityRenderer.overdrivePulse(charge, gameTime) : 0;
     paddles.forEach((paddle, i) =>
-      EntityRenderer.renderPaddle(ctx, paddle, frame.paddleGlow[i], i === 0 ? overdrivePulse : 0),
+      EntityRenderer.renderPaddle(
+        ctx,
+        paddle,
+        frame.paddleGlow[i],
+        paddle === player ? overdrivePulse : 0,
+      ),
     );
     if (showsOverdrive && !this.finalSign) {
-      EntityRenderer.renderOverdriveMeter(ctx, paddles[0], charge, gameTime);
+      EntityRenderer.renderOverdriveMeter(ctx, player, charge, gameTime);
     }
 
     // Ball
@@ -458,6 +480,7 @@ export class Renderer {
         ctx,
         realDt,
         paddles,
+        frame.scores,
         serveTime,
         frame.readyText,
         frame.time,
@@ -468,7 +491,8 @@ export class Renderer {
 
     paddles.forEach((paddle) => EntityRenderer.renderClassicPaddle(ctx, paddle));
     if (!isDemo && !this.finalSign && frame.overdriveCharge !== null) {
-      EntityRenderer.renderOverdriveMeter(ctx, paddles[0], frame.overdriveCharge, frame.time, true);
+      const player = playerPaddle(paddles);
+      EntityRenderer.renderOverdriveMeter(ctx, player, frame.overdriveCharge, frame.time, true);
     }
     EntityRenderer.renderClassicBall(ctx, ball);
 

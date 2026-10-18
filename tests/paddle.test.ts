@@ -8,7 +8,6 @@ describe('Paddle', () => {
     expect(paddle.x).toBe(34);
     expect(paddle.y).toBe(COURT.HEIGHT / 2);
     expect(paddle.targetY).toBe(COURT.HEIGHT / 2);
-    expect(paddle.score).toBe(0);
   });
 
   it('clamps target position within margins', () => {
@@ -57,14 +56,12 @@ describe('Paddle', () => {
     expect(paddle.velocity).toBeLessThan(rawSpeed * 0.25);
   });
 
-  it('resets score and position', () => {
+  it('resets its position', () => {
     const paddle = new Paddle(0, 34, '#19f0ff');
-    paddle.score = 5;
     paddle.y = 300;
     paddle.targetY = 300;
 
-    paddle.resetScore();
-    expect(paddle.score).toBe(0);
+    paddle.resetPosition();
     expect(paddle.y).toBe(COURT.HEIGHT / 2);
     expect(paddle.targetY).toBe(COURT.HEIGHT / 2);
   });

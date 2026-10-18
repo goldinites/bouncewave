@@ -100,7 +100,7 @@ export class EntityRenderer {
     const isFull = charge >= OVERDRIVE.CHARGE;
     const pulse = isFull && !classic ? 0.5 + 0.5 * Math.sin(time * PULSE_SPEED) : 1;
     const color = classic ? '#ffffff' : isFull ? COLORS.YELLOW : paddle.color;
-    const x = paddle.index === 0 ? paddle.x - GAP - SEGMENT.WIDTH : paddle.x + PADDLE.WIDTH + GAP;
+    const x = paddle.side === 0 ? paddle.x - GAP - SEGMENT.WIDTH : paddle.x + PADDLE.WIDTH + GAP;
     const columnHeight = OVERDRIVE.CHARGE * SEGMENT.HEIGHT + (OVERDRIVE.CHARGE - 1) * SEGMENT.GAP;
 
     ctx.save();

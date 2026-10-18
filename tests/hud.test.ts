@@ -17,15 +17,16 @@ describe('HudRenderer', () => {
   it('pops a changed score and settles it, on the clock it is given', () => {
     const hud = new HudRenderer();
     const players = paddles();
+    let scores: [number, number] = [0, 0];
     const draw = (dt: number) => {
       const { ctx, spies } = fakeContext();
-      hud.render(ctx, dt, players, 0, 'GET READY', 0, false);
+      hud.render(ctx, dt, players, scores, 0, 'GET READY', 0, false);
       return leftScoreScale(spies);
     };
 
     expect(draw(0)).toBe(1);
 
-    players[0].score = 1;
+    scores = [1, 0];
     expect(draw(0.11)).toBeCloseTo(1.5); // halfway through the pop: largest
     expect(draw(0.11)).toBeCloseTo(1); // settled
   });
@@ -33,7 +34,7 @@ describe('HudRenderer', () => {
   it('draws the get-ready prompt the same way in every language', () => {
     const drawReady = (text: string) => {
       const { ctx } = fakeContext();
-      new HudRenderer().render(ctx, 0, paddles(), 1, text, 0, false);
+      new HudRenderer().render(ctx, 0, paddles(), [0, 0], 1, text, 0, false);
       return { font: ctx.font, glow: ctx.shadowBlur };
     };
 

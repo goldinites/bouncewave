@@ -1,5 +1,6 @@
 import { COURT } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
+import { Scores, Side } from '@/match/side';
 import { measureText, paintText, sprites } from '@/render/SpriteCache';
 import { gameFont } from '@/shared/fonts';
 import { COLORS } from '@/shared/palette';
@@ -17,7 +18,8 @@ export class HudRenderer {
   /**
    * @param ctx
    * @param dt wall-clock seconds since the last frame (the HUD keeps animating in pause)
-   * @param paddles
+   * @param paddles every paddle on the court; each side's score shows in its first paddle's color
+   * @param scores
    * @param serveTime
    * @param readyText
    * @param time
@@ -28,15 +30,14 @@ export class HudRenderer {
   public render(
     ctx: CanvasRenderingContext2D,
     dt: number,
-    paddles: [Paddle, Paddle],
+    paddles: readonly Paddle[],
+    scores: Scores,
     serveTime: number,
     readyText: string,
     time: number,
     isRotated: boolean,
     classic = false,
   ): void {
-    const scores = [paddles[0].score, paddles[1].score] as const;
-
     scores.forEach((score, index) => {
       if (this.displayedScores[index] === -1) {
         this.displayedScores[index] = score;
@@ -53,8 +54,9 @@ export class HudRenderer {
     ctx.textBaseline = 'middle';
     ctx.font = classic ? "700 56px 'Courier New', monospace" : SCORE_FONT;
 
-    // Player scores
-    paddles.forEach((paddle, index) => {
+    // Each side's score, in its color
+    scores.forEach((score, index) => {
+      const color = paddles.find((p) => p.side === (index as Side))!.color;
       const pop = classic ? 0 : Math.sin((1 - this.scorePop[index]) * Math.PI);
       const scale = 1 + pop * 0.5;
 
@@ -75,18 +77,18 @@ export class HudRenderer {
 
       ctx.scale(scale, scale);
 
-      const text = String(paddle.score);
+      const text = String(score);
       if (classic) {
         ctx.fillText(text, 0, 0);
       } else {
         sprites.draw(
           ctx,
-          `score|${paddle.color}|${text}`,
+          `score|${color}|${text}`,
           0,
           0,
           (measureCtx, renderScale) =>
             measureText(measureCtx, renderScale, text, SCORE_FONT, SCORE_GLOW),
-          (spriteCtx) => paintText(spriteCtx, text, SCORE_FONT, paddle.color, SCORE_GLOW),
+          (spriteCtx) => paintText(spriteCtx, text, SCORE_FONT, color, SCORE_GLOW),
         );
       }
 

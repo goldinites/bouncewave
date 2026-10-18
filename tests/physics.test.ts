@@ -74,7 +74,7 @@ describe('Physics.step', () => {
   it('only moves the ball: the paddles are left as they were', () => {
     const { paddles } = hitLeftPaddleAt(0);
 
-    expect(paddles[0]).toMatchObject({ y: 250, targetY: 250, velocity: 0, score: 0 });
+    expect(paddles[0]).toMatchObject({ y: 250, targetY: 250, velocity: 0 });
     expect(paddles[1]).toEqual(makePaddles()[1]);
   });
 

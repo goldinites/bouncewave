@@ -1,4 +1,5 @@
 import { WINNING_SCORE } from '@/match/config';
+import { Scores } from '@/match/side';
 
 /**
  * How a match is played: what wins it and which mechanics are on. A mode picks its rules and
@@ -19,6 +20,6 @@ export const STANDARD_RULES: MatchRules = {
 };
 
 /** Both sides are one point from winning: the next point decides the match. */
-export function isDecidingPoint(scores: readonly [number, number], rules: MatchRules): boolean {
+export function isDecidingPoint(scores: Scores, rules: MatchRules): boolean {
   return scores.every((score) => score === rules.winningScore - 1);
 }

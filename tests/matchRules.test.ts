@@ -78,7 +78,7 @@ describe('a match under its rules', () => {
   });
 
   it('is won at the rules’ winning score, not at 10', () => {
-    const { flow, paddles, events, scoreFor } = setup();
+    const { flow, events, scoreFor } = setup();
     flow.startMatch(FIRST_TO_3);
 
     scoreFor(0);
@@ -90,7 +90,7 @@ describe('a match under its rules', () => {
     expect(flow.phase).not.toBe('finale');
 
     scoreFor(0);
-    expect(paddles[0].score).toBe(3);
+    expect(flow.scores[0]).toBe(3);
     expect(flow.phase).toBe('finale');
     expect(events.at(-1)).toMatchObject({ type: 'finaleStart', winnerIndex: 0, scores: [3, 2] });
   });
@@ -115,12 +115,10 @@ describe('a match under its rules', () => {
 
 describe('the deciding point under other rules', () => {
   it('brings on the drama one point short of the rules’ winning score', () => {
-    const { paddles } = setup();
-    paddles[0].score = 2;
-    paddles[1].score = 2;
+    const twoAll = [2, 2] as const;
 
-    expect(MatchPointDrama.isDecidingPoint(paddles, FIRST_TO_3)).toBe(true);
-    expect(MatchPointDrama.isDecidingPoint(paddles)).toBe(false);
+    expect(MatchPointDrama.isDecidingPoint(twoAll, FIRST_TO_3)).toBe(true);
+    expect(MatchPointDrama.isDecidingPoint(twoAll)).toBe(false);
   });
 
   it('freezes the CPU’s form on the rules’ deciding point', () => {

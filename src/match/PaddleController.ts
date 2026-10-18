@@ -4,6 +4,7 @@ import { Ball } from '@/match/Ball';
 import { AiSkill, DEMO_AI_SKILL, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
 import { MatchRules } from '@/match/rules';
+import { Scores, Side } from '@/match/side';
 
 /** Anything that can steer the player's paddle (keyboard, pointer, touch). */
 export interface PlayerInput {
@@ -19,13 +20,13 @@ export interface PaddleController {
   steer(paddle: Paddle, ball: Ball, opponent: Paddle, dt: number): void;
   /**
    * A point is about to be served.
-   * @param scores the score as it now stands, [left, right]
+   * @param scores the score as it now stands
    */
-  onServe(paddle: Paddle, scores: readonly [number, number], rules: MatchRules): void;
+  onServe(paddle: Paddle, scores: Scores, rules: MatchRules): void;
   /** A shot is on its way to `paddle`: the serve, or a hit by the other side. */
   onIncomingShot(paddle: Paddle, threat: ShotThreat): void;
   /** A point of a real match was won by the side `scorer`. */
-  onPoint(paddle: Paddle, scorer: 0 | 1): void;
+  onPoint(paddle: Paddle, scorer: Side): void;
   /** Forgets everything it has learnt (back to the menu). */
   reset(): void;
 }
@@ -79,7 +80,7 @@ export class AiPaddleController implements PaddleController {
     this.ai.update(paddle, ball, this._skill, dt, opponent);
   }
 
-  public onServe(paddle: Paddle, scores: readonly [number, number], rules: MatchRules): void {
+  public onServe(paddle: Paddle, scores: Scores, rules: MatchRules): void {
     if (!this.form || !this.getDifficulty) {
       this._skill = DEMO_AI_SKILL;
       return;
@@ -88,7 +89,7 @@ export class AiPaddleController implements PaddleController {
     const level = this.getDifficulty();
     // AiForm reads the score as [opponent, CPU]
     const [left, right] = scores;
-    const fromCpuSide: [number, number] = paddle.index === 1 ? [left, right] : [right, left];
+    const fromCpuSide: [number, number] = paddle.side === 1 ? [left, right] : [right, left];
     this.form.update(fromCpuSide, DIFFICULTY_CONFIGS[level].adaptivity, rules);
     this._skill = this.form.skillFor(level);
   }
@@ -97,9 +98,9 @@ export class AiPaddleController implements PaddleController {
     this.ai.readShot(paddle, this._skill, threat);
   }
 
-  public onPoint(paddle: Paddle, scorer: 0 | 1): void {
+  public onPoint(paddle: Paddle, scorer: Side): void {
     // AiForm counts a point for the CPU as 1, for its opponent as 0
-    this.form?.onPoint(scorer === paddle.index ? 1 : 0);
+    this.form?.onPoint(scorer === paddle.side ? 1 : 0);
   }
 
   public reset(): void {
