@@ -8,7 +8,7 @@ export interface GameMode {
 
 /**
  * Every mode, in the order the PLAY menu lists them. A new mode is an entry here and its name in
- * both languages; the compiler insists on the name. The story (stage 6) and the challenges (3.4)
+ * both languages; the compiler insists on the name. The story (stage 7) and the challenges (stage 2)
  * are on the menu before they are playable.
  */
 export const MODES = {
