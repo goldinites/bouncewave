@@ -32,7 +32,7 @@ export class EntityRenderer {
     glow: number,
     overdrivePulse = 0,
   ): void {
-    const topY = paddle.y - PADDLE.HEIGHT / 2;
+    const topY = paddle.drawY - PADDLE.HEIGHT / 2;
 
     ctx.save();
     // Pre-rendered neon; a hit fades the hot one in on top
@@ -106,7 +106,8 @@ export class EntityRenderer {
     ctx.save();
     for (let i = 0; i < OVERDRIVE.CHARGE; i++) {
       // Filled from the bottom up
-      const y = paddle.y + columnHeight / 2 - SEGMENT.HEIGHT - i * (SEGMENT.HEIGHT + SEGMENT.GAP);
+      const y =
+        paddle.drawY + columnHeight / 2 - SEGMENT.HEIGHT - i * (SEGMENT.HEIGHT + SEGMENT.GAP);
       const isLit = i < charge;
 
       if (isLit && !classic) {
@@ -131,7 +132,7 @@ export class EntityRenderer {
 
   /** Flat white block, no glow or rounded corners — a paddle as it looked in 1972. */
   public static renderClassicPaddle(ctx: CanvasRenderingContext2D, paddle: Paddle): void {
-    const topY = paddle.y - PADDLE.HEIGHT / 2;
+    const topY = paddle.drawY - PADDLE.HEIGHT / 2;
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(paddle.x, topY, PADDLE.WIDTH, PADDLE.HEIGHT);
   }
@@ -140,7 +141,7 @@ export class EntityRenderer {
   public static renderClassicBall(ctx: CanvasRenderingContext2D, ball: Ball): void {
     const size = ball.radius * 2;
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(ball.x - ball.radius, ball.y - ball.radius, size, size);
+    ctx.fillRect(ball.drawX - ball.radius, ball.drawY - ball.radius, size, size);
   }
 
   public static renderBall(
@@ -169,8 +170,8 @@ export class EntityRenderer {
 
     const currentRadius =
       serveTime > 0 ? ball.radius * (1 + 0.2 * Math.sin(time * 20)) : ball.radius;
-    const x = ball.x;
-    const y = ball.y;
+    const x = ball.drawX;
+    const y = ball.drawY;
 
     // Fading ball trail: one color, faded through globalAlpha (on top of the serve's fade)
     const baseAlpha = ctx.globalAlpha;

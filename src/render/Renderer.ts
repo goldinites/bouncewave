@@ -356,7 +356,7 @@ export class Renderer {
 
     // Camera: everything up to the screen overlays zooms in on the ball
     ctx.save();
-    this.applyZoom(frame.zoom, ball.x, ball.y);
+    this.applyZoom(frame.zoom, ball.drawX, ball.drawY);
 
     // Animated background
     this.background.render(ctx, frame.analyser, gameTime, this.screenShake, isRotated, {

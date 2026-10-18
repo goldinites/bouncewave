@@ -68,4 +68,23 @@ describe('Paddle', () => {
     expect(paddle.y).toBe(COURT.HEIGHT / 2);
     expect(paddle.targetY).toBe(COURT.HEIGHT / 2);
   });
+
+  it('is drawn between where the last step began and where it ended', () => {
+    const paddle = new Paddle(0, 34, '#19f0ff');
+    paddle.rememberPosition();
+    paddle.y += 40;
+
+    paddle.interpolate(0.5);
+    expect(paddle.drawY).toBe(COURT.HEIGHT / 2 + 20);
+  });
+
+  it('is drawn at the center straight after a reset', () => {
+    const paddle = new Paddle(0, 34, '#19f0ff');
+    paddle.y = 100;
+    paddle.rememberPosition();
+    paddle.resetPosition();
+
+    paddle.interpolate(0.5);
+    expect(paddle.drawY).toBe(COURT.HEIGHT / 2);
+  });
 });

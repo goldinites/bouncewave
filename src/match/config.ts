@@ -24,8 +24,13 @@ export const PADDLE = {
 export const BALL = {
   INITIAL_SPEED: 380,
   INITIAL_RADIUS: 8,
-  /** Seconds of flight the trail shows: nine points at 60 fps, the same length at any rate. */
+  /** Seconds of flight the trail shows: nine points, the same length at any rate. */
   TRAIL_DURATION: 0.14,
+  /**
+   * Seconds between trail points, however often the simulation steps: the points are drawn
+   * additively, so more of them would make the trail brighter, not longer.
+   */
+  TRAIL_INTERVAL: 1 / 60,
   /** How far past the edge of the court the ball travels before the point counts. */
   OUT_OF_BOUNDS_OFFSET: 30,
 } as const;
