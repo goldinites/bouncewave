@@ -371,13 +371,13 @@ export class Game {
       time: Math.max(0, this.flow.time - this.simulation.lag),
       serveTime: this.flow.serveTime,
       rally: this.flow.rally,
-      readyText: this.i18n.t(this.effects.isDecidingPoint ? 'decider' : 'ready'),
+      readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
       isRotated: this.inputHandler.isRotated,
       vignette: this.effects.vignette,
       zoom: this.effects.cameraZoom,
       climax: this.effects.climaxLevel,
       paddleGlow: this.effects.paddleGlow,
-      overdriveCharge: this.flow.overdriveCharge,
+      overdriveCharge: this.flow.rules.overdrive ? this.flow.overdriveCharge : null,
     };
   }
 

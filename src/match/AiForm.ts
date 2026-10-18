@@ -1,10 +1,10 @@
-import { WINNING_SCORE } from '@/match/config';
 import {
   AiSkill,
   DIFFICULTY_CONFIGS,
   DIFFICULTY_LEVELS,
   DifficultyLevel,
 } from '@/match/difficulty';
+import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 import { clamp, lerp } from '@/shared/math';
 
 // Pressure on the CPU: its lead in points, plus this much per point of the current streak
@@ -45,10 +45,14 @@ export class AiForm {
   /**
    * Call on every serve of a real match, after the score has changed.
    * @param scores [player, CPU]
+   * @param rules the match's, which say when the deciding point comes
    */
-  public update(scores: readonly [number, number], adaptivity: number): void {
-    const isDecidingPoint = scores.every((score) => score === WINNING_SCORE - 1);
-    if (isDecidingPoint) return;
+  public update(
+    scores: readonly [number, number],
+    adaptivity: number,
+    rules: MatchRules = STANDARD_RULES,
+  ): void {
+    if (isDecidingPoint(scores, rules)) return;
 
     const lead = scores[1] - scores[0];
     const streakPressure = Math.sign(this.streak) * Math.max(0, Math.abs(this.streak) - 1);

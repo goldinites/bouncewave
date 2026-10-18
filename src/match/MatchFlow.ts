@@ -1,12 +1,13 @@
 import { AiController, SHOT_THREAT } from '@/match/AiController';
 import { AiForm } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
-import { BALL, WINNING_SCORE } from '@/match/config';
+import { BALL } from '@/match/config';
 import { AiSkill, DEMO_AI_SKILL, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
 import { OVERDRIVE, Overdrive } from '@/match/Overdrive';
 import { Physics, PhysicsEvent } from '@/match/Physics';
+import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 
 // Seconds the ball waits at center before each kind of serve
 export const SERVE_DELAY = {
@@ -93,6 +94,8 @@ export class MatchFlow {
   private aiSkill: AiSkill = DEMO_AI_SKILL;
   /** The player's Overdrive meter; only fills in a real match. */
   private readonly overdrive = new Overdrive();
+  /** The rules of the match being played (or last played); set by startMatch. */
+  private _rules: MatchRules = STANDARD_RULES;
   private readonly paddles: [Paddle, Paddle];
   private readonly ball: Ball;
   private readonly input: PlayerInput;
@@ -145,6 +148,15 @@ export class MatchFlow {
     return 'play';
   }
 
+  public get rules(): MatchRules {
+    return this._rules;
+  }
+
+  /** Both sides are one point from winning under the match's rules. */
+  public get isDecidingPoint(): boolean {
+    return isDecidingPoint(this.scores, this._rules);
+  }
+
   /** A real match is being played right now (not demo, paused or finished). */
   public get isMatchActive(): boolean {
     return this._phase === 'serving' || this._phase === 'rally';
@@ -160,7 +172,9 @@ export class MatchFlow {
     this.serve(1, SERVE_DELAY.DEMO);
   }
 
-  public startMatch(): void {
+  /** @param rules what wins the match and which mechanics are on; a standard match by default */
+  public startMatch(rules: MatchRules = STANDARD_RULES): void {
+    this._rules = rules;
     this.emit({ type: 'matchStart' });
     this.resetScores();
     this._phase = 'serving';
@@ -262,10 +276,11 @@ export class MatchFlow {
         break;
       case 'paddleHit': {
         this._rally++;
-        const isPlayerHit = event.paddleIndex === 0 && !this.isDemo;
+        // Only the player has Overdrive, in a real match whose rules have it on
+        const hasOverdrive = event.paddleIndex === 0 && !this.isDemo && this._rules.overdrive;
         const wasCharged = this.overdrive.isCharged;
-        const isPowerShot = isPlayerHit && this.overdrive.onHit(event.isPerfect);
-        const chargedOverdrive = isPlayerHit && !wasCharged && this.overdrive.isCharged;
+        const isPowerShot = hasOverdrive && this.overdrive.onHit(event.isPerfect);
+        const chargedOverdrive = hasOverdrive && !wasCharged && this.overdrive.isCharged;
 
         this.ball.isPowerShot = isPowerShot;
         if (isPowerShot) {
@@ -301,7 +316,7 @@ export class MatchFlow {
     this.aiForm.onPoint(scorer);
     this.emit({ type: 'score', scoringPlayerIndex: scorer, y, isDemo: false });
 
-    if (this.paddles[scorer].score >= WINNING_SCORE) {
+    if (this.paddles[scorer].score >= this._rules.winningScore) {
       this.beginFinale(scorer, y);
       return;
     }
@@ -345,7 +360,7 @@ export class MatchFlow {
     if (this.isDemo) return DEMO_AI_SKILL;
 
     const level = this.getDifficulty();
-    this.aiForm.update(this.scores, DIFFICULTY_CONFIGS[level].adaptivity);
+    this.aiForm.update(this.scores, DIFFICULTY_CONFIGS[level].adaptivity, this._rules);
     return this.aiForm.skillFor(level);
   }
 

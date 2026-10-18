@@ -122,11 +122,6 @@ export class EffectsDirector {
     return this.drama.zoom;
   }
 
-  /** Both sides are one point from winning. */
-  public get isDecidingPoint(): boolean {
-    return MatchPointDrama.isDecidingPoint(this.paddles);
-  }
-
   /** Rally climax build-up in [0, 1]. */
   public get climaxLevel(): number {
     return this.climax.level;
@@ -141,7 +136,7 @@ export class EffectsDirector {
   public beforeSimulation(realDt: number, flow: MatchFlow): void {
     if (flow.phase === 'finale') return;
 
-    if (this.drama.update(realDt, flow.isMatchActive, this.ball, this.paddles)) {
+    if (this.drama.update(realDt, flow.isMatchActive, this.ball, this.paddles, flow.rules)) {
       this.audio.sfx.playHeartbeat();
     }
     this.audio.music.setDramaLevel(this.drama.level);
