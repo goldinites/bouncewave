@@ -1,5 +1,5 @@
 import { Ball } from '@/match/Ball';
-import { COURT, PADDLE, BALL } from '@/match/config';
+import { COURT, BALL } from '@/match/config';
 import { DifficultyConfig } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
 import { Side } from '@/match/side';
@@ -18,8 +18,8 @@ export const SPIN = {
   MAX_ANGLE: 0.2, // radians (~11°), saturates softly via tanh
 } as const;
 
+// What a perfect hit does; how big the perfect zone is depends on the paddle (PaddleSpec)
 export const PERFECT_HIT = {
-  ZONE: 0.15, // central share of the half-height that counts as perfect
   BOOST: 0.25, // temporary extra speed share right after a perfect hit
   BOOST_DURATION: 0.8, // seconds for the boost to fade out
   // A center hit alone goes out flat, the easiest ball to return; a perfect one lets the
@@ -92,27 +92,29 @@ export class Physics {
       // Paddle collisions
       for (let i = 0; i < paddles.length; i++) {
         const paddle = paddles[i];
+        const spec = paddle.spec;
         const isLeft = paddle.side === 0;
         const isCollidingX = isLeft
           ? ball.vx < 0 &&
-            ball.x - ball.radius <= paddle.x + PADDLE.WIDTH &&
+            ball.x - ball.radius <= paddle.x + spec.width &&
             ball.x + ball.radius >= paddle.x
           : ball.vx > 0 &&
             ball.x + ball.radius >= paddle.x &&
-            ball.x - ball.radius <= paddle.x + PADDLE.WIDTH;
+            ball.x - ball.radius <= paddle.x + spec.width;
 
-        const isCollidingY = Math.abs(ball.y - paddle.y) <= PADDLE.HEIGHT / 2 + ball.radius * 0.8;
+        const isCollidingY = Math.abs(ball.y - paddle.y) <= spec.height / 2 + ball.radius * 0.8;
 
         if (isCollidingX && isCollidingY) {
-          const hitOffset = clamp((ball.y - paddle.y) / (PADDLE.HEIGHT / 2), -1, 1);
-          const isPerfect = Math.abs(hitOffset) <= PERFECT_HIT.ZONE;
-          const spin = isPerfect
+          const hitOffset = clamp((ball.y - paddle.y) / (spec.height / 2), -1, 1);
+          const isPerfect = Math.abs(hitOffset) <= spec.perfectZone;
+          const steer = isPerfect
             ? Physics.getSpinAngle(
                 paddle.velocity,
                 PERFECT_HIT.SPIN_MAX_ANGLE,
                 PERFECT_HIT.SPIN_REFERENCE_SPEED,
               )
             : Physics.getSpinAngle(paddle.velocity);
+          const spin = steer * spec.spin;
           const bounceAngle = clamp(
             Physics.getBounceAngle(hitOffset) + spin,
             -BOUNCE.MAX_ANGLE,
@@ -121,7 +123,7 @@ export class Physics {
           const direction = isLeft ? 1 : -1;
 
           ball.speed = Math.min(
-            ball.speed * (1 + difficultyConfig.acceleration),
+            ball.speed * (1 + difficultyConfig.acceleration * spec.power),
             difficultyConfig.maxSpeed,
           );
 
@@ -132,7 +134,7 @@ export class Physics {
           }
           ball.vx = direction * Math.cos(bounceAngle) * ball.speed;
           ball.vy = Math.sin(bounceAngle) * ball.speed;
-          ball.x = isLeft ? paddle.x + PADDLE.WIDTH + ball.radius : paddle.x - ball.radius;
+          ball.x = isLeft ? paddle.x + spec.width + ball.radius : paddle.x - ball.radius;
 
           events.push({
             type: 'paddleHit',

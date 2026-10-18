@@ -1,5 +1,4 @@
 import { Ball } from '@/match/Ball';
-import { PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 import { Scores } from '@/match/side';
@@ -80,8 +79,10 @@ export class MatchPointDrama {
       return ball.x + ball.radius < lastLeft;
     }
     if (ball.vx > 0) {
-      const lastRight = Math.max(...paddles.filter((p) => p.side === 1).map((p) => p.x));
-      return ball.x - ball.radius > lastRight + PADDLE.WIDTH;
+      const lastRight = Math.max(
+        ...paddles.filter((p) => p.side === 1).map((p) => p.x + p.spec.width),
+      );
+      return ball.x - ball.radius > lastRight;
     }
     return false;
   }

@@ -1,12 +1,10 @@
 import { COURT, PADDLE } from '@/match/config';
+import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Side } from '@/match/side';
 import { approach, clamp, lerp } from '@/shared/math';
 
-const PADDLE_SMOOTH_FACTOR = 27.4; // 1/s toward the target
+const PADDLE_SMOOTH_FACTOR = 27.4; // 1/s toward the target, for a paddle of standard speed
 const PADDLE_VELOCITY_SMOOTHING = 13.4; // 1/s, ~75 ms averaging window
-// Range of the paddle center, so the whole paddle stays clear of the walls
-const MIN_Y = PADDLE.TOP_MARGIN + PADDLE.HEIGHT / 2;
-const MAX_Y = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - PADDLE.HEIGHT / 2;
 
 export class Paddle {
   public x: number;
@@ -17,13 +15,22 @@ export class Paddle {
   public velocity: number = 0;
   /** The side of the court it plays on; its points are that side's. */
   public readonly side: Side;
+  /** Its size and how it hits. */
+  public readonly spec: PaddleSpec;
+  /** Range of its center, so the whole paddle stays clear of the walls. */
+  private readonly minY: number;
+  private readonly maxY: number;
   /** Where the paddle stood when the current simulation step began. */
   private previousY: number;
   /** Where to draw the paddle this frame, between two simulation steps (see `interpolate`). */
   public drawY: number;
 
-  constructor(side: Side, x: number, color: string) {
+  /** @param spec what it is like to play with; the standard paddle when left out */
+  constructor(side: Side, x: number, color: string, spec: PaddleSpec = STANDARD_PADDLE) {
     this.side = side;
+    this.spec = spec;
+    this.minY = PADDLE.TOP_MARGIN + spec.height / 2;
+    this.maxY = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - spec.height / 2;
     this.x = x;
     this.y = COURT.HEIGHT / 2;
     this.targetY = COURT.HEIGHT / 2;
@@ -53,13 +60,13 @@ export class Paddle {
 
   /** Aims the paddle at `y`, kept within the court. */
   public setTargetY(y: number): void {
-    this.targetY = clamp(y, MIN_Y, MAX_Y);
+    this.targetY = clamp(y, this.minY, this.maxY);
   }
 
   /** Moves toward the target and tracks its speed. */
   public update(dt: number): void {
     const previousY = this.y;
-    this.y = approach(this.y, this.targetY, PADDLE_SMOOTH_FACTOR, dt);
+    this.y = approach(this.y, this.targetY, PADDLE_SMOOTH_FACTOR * this.spec.speed, dt);
 
     // Low-pass the measured speed so jerky touch input doesn't produce spikes
     if (dt > 0) {
