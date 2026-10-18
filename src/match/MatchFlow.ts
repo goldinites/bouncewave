@@ -1,10 +1,15 @@
-import { AiController, SHOT_THREAT } from '@/match/AiController';
-import { AiForm } from '@/match/AiForm';
+import { SHOT_THREAT } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
 import { BALL } from '@/match/config';
-import { AiSkill, DEMO_AI_SKILL, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
+import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
+import {
+  AiPaddleController,
+  HumanController,
+  PaddleController,
+  PlayerInput,
+} from '@/match/PaddleController';
 import { OVERDRIVE, Overdrive } from '@/match/Overdrive';
 import { Physics, PhysicsEvent } from '@/match/Physics';
 import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
@@ -56,10 +61,17 @@ export type MatchEvent =
   | { type: 'finaleStart'; winnerIndex: 0 | 1; ballY: number; scores: [number, number] }
   | { type: 'gameOver'; winnerIndex: 0 | 1; scores: [number, number] };
 
-/** Anything that can steer the player's paddle (keyboard, pointer, touch). */
-export interface PlayerInput {
-  pollPlayerMovement(paddle: Paddle, dt: number): void;
+export type { PlayerInput } from '@/match/PaddleController';
+
+/** Who plays one side of the court, and what they may do there. */
+export interface Participant {
+  readonly controller: PaddleController;
+  /** Whether this side charges Overdrive, when the match's rules have it on. */
+  readonly overdrive: boolean;
 }
+
+/** Who plays a match: [left, right]. */
+export type Lineup = readonly [Participant, Participant];
 
 export interface MatchFlowDeps {
   paddles: [Paddle, Paddle];
@@ -87,13 +99,12 @@ export class MatchFlow {
   private finaleElapsed = 0;
   private finaleDuration = 0;
 
-  private readonly ai: AiController;
-  /** The CPU's form in a match: drifts with the score, see AiForm. */
-  private readonly aiForm = new AiForm();
-  /** How the CPU plays this point; picked on every serve. */
-  private aiSkill: AiSkill = DEMO_AI_SKILL;
-  /** The player's Overdrive meter; only fills in a real match. */
-  private readonly overdrive = new Overdrive();
+  /** The AI-vs-AI demo behind the menus. */
+  private readonly demoLineup: Lineup;
+  /** Who is playing now: the demo, or the match being played (or just finished). */
+  private lineup: Lineup;
+  /** Each side's Overdrive meter; it only fills in a real match, for a side that has it. */
+  private readonly overdrives: [Overdrive, Overdrive] = [new Overdrive(), new Overdrive()];
   /** The rules of the match being played (or last played); set by startMatch. */
   private _rules: MatchRules = STANDARD_RULES;
   private readonly paddles: [Paddle, Paddle];
@@ -110,7 +121,11 @@ export class MatchFlow {
     this.getDifficulty = deps.getDifficulty;
     this.emit = deps.onEvent;
     this.random = deps.random ?? Math.random;
-    this.ai = new AiController(this.random);
+    this.demoLineup = [
+      { controller: new AiPaddleController(this.random), overdrive: false },
+      { controller: new AiPaddleController(this.random), overdrive: false },
+    ];
+    this.lineup = this.demoLineup;
   }
 
   public get phase(): MatchPhase {
@@ -122,9 +137,9 @@ export class MatchFlow {
     return this._serveTime;
   }
 
-  /** Charges in the player's Overdrive meter, 0..OVERDRIVE.CHARGE. */
+  /** Charges in the left side's (the player's) Overdrive meter, 0..OVERDRIVE.CHARGE. */
   public get overdriveCharge(): number {
-    return this.overdrive.charge;
+    return this.overdrives[0].charge;
   }
 
   public get rally(): number {
@@ -167,14 +182,27 @@ export class MatchFlow {
     return (this._phase === 'attract' || this._phase === 'rally') && this._serveTime <= 0;
   }
 
+  /** The usual match: the player on the left, the CPU at the chosen difficulty on the right. */
+  public playerVsCpu(): Lineup {
+    return [
+      { controller: new HumanController(this.input), overdrive: true },
+      { controller: new AiPaddleController(this.random, this.getDifficulty), overdrive: false },
+    ];
+  }
+
   public startAttract(): void {
+    this.lineup = this.demoLineup;
     this._phase = 'attract';
     this.serve(1, SERVE_DELAY.DEMO);
   }
 
-  /** @param rules what wins the match and which mechanics are on; a standard match by default */
-  public startMatch(rules: MatchRules = STANDARD_RULES): void {
+  /**
+   * @param rules what wins the match and which mechanics are on; a standard match by default
+   * @param lineup who plays it; the player against the CPU by default
+   */
+  public startMatch(rules: MatchRules = STANDARD_RULES, lineup: Lineup = this.playerVsCpu()): void {
     this._rules = rules;
+    this.lineup = lineup;
     this.emit({ type: 'matchStart' });
     this.resetScores();
     this._phase = 'serving';
@@ -256,16 +284,9 @@ export class MatchFlow {
   }
 
   private updatePaddles(dt: number): void {
-    const [player, cpu] = this.paddles;
-    const skill = this.aiSkill;
-
-    if (this.isDemo) {
-      this.ai.update(player, this.ball, skill, dt, cpu);
-    } else {
-      this.input.pollPlayerMovement(player, dt);
-    }
-    this.ai.update(cpu, this.ball, skill, dt, player);
-
+    this.lineup.forEach(({ controller }, side) => {
+      controller.steer(this.paddles[side], this.ball, this.paddles[1 - side], dt);
+    });
     this.paddles.forEach((p) => p.update(dt));
   }
 
@@ -276,11 +297,13 @@ export class MatchFlow {
         break;
       case 'paddleHit': {
         this._rally++;
-        // Only the player has Overdrive, in a real match whose rules have it on
-        const hasOverdrive = event.paddleIndex === 0 && !this.isDemo && this._rules.overdrive;
-        const wasCharged = this.overdrive.isCharged;
-        const isPowerShot = hasOverdrive && this.overdrive.onHit(event.isPerfect);
-        const chargedOverdrive = hasOverdrive && !wasCharged && this.overdrive.isCharged;
+        // Overdrive charges in a real match, for a side that has it, if the rules have it on
+        const side = event.paddleIndex;
+        const overdrive = this.overdrives[side];
+        const hasOverdrive = !this.isDemo && this._rules.overdrive && this.lineup[side].overdrive;
+        const wasCharged = overdrive.isCharged;
+        const isPowerShot = hasOverdrive && overdrive.onHit(event.isPerfect);
+        const chargedOverdrive = hasOverdrive && !wasCharged && overdrive.isCharged;
 
         this.ball.isPowerShot = isPowerShot;
         if (isPowerShot) {
@@ -293,7 +316,8 @@ export class MatchFlow {
           : event.isPerfect
             ? SHOT_THREAT.PERFECT
             : SHOT_THREAT.NORMAL;
-        this.ai.readShot(this.paddles[1 - event.paddleIndex], this.aiSkill, threat);
+        const receiver = 1 - side;
+        this.lineup[receiver].controller.onIncomingShot(this.paddles[receiver], threat);
         this.emit({ ...event, rally: this._rally, isPowerShot, chargedOverdrive });
         break;
       }
@@ -313,7 +337,7 @@ export class MatchFlow {
     }
 
     this.paddles[scorer].score++;
-    this.aiForm.onPoint(scorer);
+    this.lineup.forEach(({ controller }, side) => controller.onPoint(this.paddles[side], scorer));
     this.emit({ type: 'score', scoringPlayerIndex: scorer, y, isDemo: false });
 
     if (this.paddles[scorer].score >= this._rules.winningScore) {
@@ -337,6 +361,7 @@ export class MatchFlow {
   private finishFinale(): void {
     const winner = this.finaleWinner;
     this._phase = 'attract';
+    this.lineup = this.demoLineup;
 
     this.emit({ type: 'gameOver', winnerIndex: winner, scores: this.scores });
     this.serve(winner === 0 ? 1 : -1, SERVE_DELAY.GAME_OVER);
@@ -344,31 +369,21 @@ export class MatchFlow {
 
   private serve(direction: number, delay: number): void {
     this.ball.serve(direction, BALL.INITIAL_SPEED, this.random);
-    // The receiver reads the serve like any other shot
-    this.aiSkill = this.pickAiSkill();
-    this.ai.readShot(this.paddles[direction > 0 ? 1 : 0], this.aiSkill);
+    // Both sides get ready for the point; the receiver reads the serve like any other shot
+    this.lineup.forEach(({ controller }, side) => {
+      controller.onServe(this.paddles[side], this.scores, this._rules);
+    });
+    const receiver = direction > 0 ? 1 : 0;
+    this.lineup[receiver].controller.onIncomingShot(this.paddles[receiver], SHOT_THREAT.NORMAL);
     this._rally = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });
   }
 
-  /**
-   * The demo plays at its own level; in a match the CPU plays at the chosen difficulty, in
-   * whatever form the score has put it.
-   */
-  private pickAiSkill(): AiSkill {
-    if (this.isDemo) return DEMO_AI_SKILL;
-
-    const level = this.getDifficulty();
-    this.aiForm.update(this.scores, DIFFICULTY_CONFIGS[level].adaptivity, this._rules);
-    return this.aiForm.skillFor(level);
-  }
-
   private resetScores(): void {
     this.paddles.forEach((p) => p.resetScore());
-    this.ai.reset();
-    this.aiForm.reset();
-    this.overdrive.reset();
+    for (const { controller } of [...this.demoLineup, ...this.lineup]) controller.reset();
+    this.overdrives.forEach((o) => o.reset());
   }
 
   private get scores(): [number, number] {

@@ -68,8 +68,14 @@ Rules that keep it clean:
   match. Read the winning score and the deciding point from the rules, never from
   `WINNING_SCORE`.
 
-Known hard-coded assumptions the roadmap's stage 0 removes: one ball, paddle 0 = player and
-paddle 1 = AI, global `PADDLE` sizes.
+- Who plays each side is the match's `Lineup` (`MatchFlow.ts`): a `PaddleController` per side
+  (`match/PaddleController.ts`: `HumanController`, `AiPaddleController` for the demo or the
+  CPU) and whether that side has Overdrive. Never branch on "paddle 0 is the player" in the
+  match; ask the lineup.
+
+Known hard-coded assumptions the roadmap's stage 0 removes: one ball, exactly one paddle a
+side, global `PADDLE` sizes. Outside the match the left side is still taken to be the player
+(whose win the finale and menus show, whose Overdrive meter is drawn).
 
 ## Extension points that exist today
 
