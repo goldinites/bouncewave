@@ -40,6 +40,9 @@ export interface TranslationSchema {
   background: string;
   points: string;
   start: string;
+  /** The arrows either side of a quick match choice, for screen readers. */
+  previousChoice: string;
+  nextChoice: string;
   /** Every backdrop's name, and random's, by choice. */
   backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
@@ -73,8 +76,10 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     mode: 'GAME MODE',
     modes: { story: 'STORY', challenges: 'CHALLENGE', quick: 'QUICK MATCH' },
     background: 'BACKGROUND',
-    points: 'POINTS TO WIN',
+    points: 'POINTS',
     start: 'START',
+    previousChoice: 'Previous',
+    nextChoice: 'Next',
     backgrounds: {
       random: 'RANDOM',
       lasers: 'LASERS',
@@ -116,8 +121,10 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     mode: 'РЕЖИМ ИГРЫ',
     modes: { story: 'СЮЖЕТ', challenges: 'ИСПЫТАНИЕ', quick: 'БЫСТРЫЙ МАТЧ' },
     background: 'ФОН',
-    points: 'ОЧКОВ ДО ПОБЕДЫ',
+    points: 'ОЧКИ',
     start: 'НАЧАТЬ',
+    previousChoice: 'Предыдущий вариант',
+    nextChoice: 'Следующий вариант',
     backgrounds: {
       random: 'СЛУЧАЙНЫЙ',
       lasers: 'ЛАЗЕРНЫЙ',

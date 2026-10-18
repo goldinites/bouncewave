@@ -33,9 +33,14 @@ export class SettingsStore {
     this.listeners.forEach((listener) => listener(this.settings));
   }
 
-  /** Switches a setting to its next value, as picking it in the menu does. */
-  public cycle<K extends keyof UserSettings>(key: K): void {
-    const next = SETTINGS[key].next(this.settings[key]);
+  /**
+   * Switches a setting to its next value, as picking it in the menu does, or with `step` -1 back
+   * to its previous one.
+   */
+  public cycle<K extends keyof UserSettings>(key: K, step: 1 | -1 = 1): void {
+    const definition = SETTINGS[key];
+    const value = this.settings[key];
+    const next = step === 1 ? definition.next(value) : definition.previous(value);
     this.update({ [key]: next } as Pick<UserSettings, K>);
   }
 

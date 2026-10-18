@@ -192,6 +192,62 @@
   outline-offset: 3px;
 }
 
+/* A choice of the quick match's setup: its value between an arrow back and an arrow on, the
+   row as wide as the buttons under it */
+/* The setup's column takes the court's width up to a limit, so a choice's value fits between
+   its arrows on a phone too */
+.screen-buttons--wide {
+  width: min(100%, 380px);
+}
+
+.option-row {
+  display: flex;
+  gap: 8px;
+}
+
+/* The choice's name small over its value, so a long one (NEON CITY) still fits a phone */
+.screen-buttons .option-row__value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2em;
+
+  flex: 1;
+  min-width: 0;
+  padding-inline: 0.5em;
+}
+
+.option-row__name {
+  font-size: 0.7em;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+.option-row__current {
+  white-space: nowrap;
+}
+
+.screen-buttons .option-row__arrow {
+  display: grid;
+  place-items: center;
+
+  flex: none;
+  width: 2.8em;
+  padding: 0;
+}
+
+.option-row__chevron {
+  width: 0.8em;
+  height: 0.8em;
+
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* A button that can't be pressed yet (a mode still to come): dimmed, no glow, no reaction */
 .game-button:disabled {
   opacity: 0.35;
@@ -221,6 +277,13 @@
   .game__buttons button,
   .screen-buttons button {
     padding: 0.6em 1.2em;
+  }
+
+  /* Short of height but not of width (a phone on its side): name and value share a line */
+  .screen-buttons .option-row__value {
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.6em;
   }
 }
 

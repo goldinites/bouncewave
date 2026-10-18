@@ -15,7 +15,3 @@ export const BACKGROUND_CHOICES: readonly BackgroundChoice[] = ['random', ...SCE
 
 export const isBackgroundChoice = (value: unknown): value is BackgroundChoice =>
   (BACKGROUND_CHOICES as readonly unknown[]).includes(value);
-
-/** The next choice in the list, wrapping around. */
-export const nextBackgroundChoice = (choice: BackgroundChoice): BackgroundChoice =>
-  BACKGROUND_CHOICES[(BACKGROUND_CHOICES.indexOf(choice) + 1) % BACKGROUND_CHOICES.length];

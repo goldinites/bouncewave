@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { TRANSLATIONS } from '@/i18n/translations';
-import { MATCH_POINTS, MODE_IDS, nextMatchPoints, quickMatchRules } from '@/match/modes';
+import { MATCH_POINTS, MODE_IDS, quickMatchRules } from '@/match/modes';
 import { STANDARD_RULES } from '@/match/rules';
 import { SettingsStore } from '@/settings/SettingsStore';
-import { getDefaultSettings } from '@/settings/UserSettings';
-import { BACKGROUND_CHOICES, nextBackgroundChoice, SCENES } from '@/shared/scenes';
+import { getDefaultSettings, SETTINGS } from '@/settings/UserSettings';
+import { BACKGROUND_CHOICES, SCENES } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
 import { PlayMenu } from '@/ui/screens/PlayMenu';
 import { QuickMatchSetup } from '@/ui/screens/QuickMatchSetup';
@@ -31,10 +31,13 @@ describe('modes', () => {
     expect(quickMatchRules(7)).toEqual({ ...STANDARD_RULES, winningScore: 7 });
   });
 
-  it('steps through the lengths and the backgrounds, wrapping around', () => {
-    expect([3, 5, 7].map((points) => nextMatchPoints(points as 3 | 5 | 7))).toEqual([5, 7, 3]);
-    expect(nextBackgroundChoice('random')).toBe(SCENES[0]);
-    expect(nextBackgroundChoice(SCENES[SCENES.length - 1])).toBe('random');
+  it('steps through the lengths and the backgrounds either way, wrapping around', () => {
+    const { matchPoints, matchBackground } = SETTINGS;
+    expect(MATCH_POINTS.map((points) => matchPoints.next(points))).toEqual([5, 7, 3]);
+    expect(MATCH_POINTS.map((points) => matchPoints.previous(points))).toEqual([7, 3, 5]);
+    expect(matchBackground.next('random')).toBe(SCENES[0]);
+    expect(matchBackground.previous('random')).toBe(SCENES[SCENES.length - 1]);
+    expect(matchBackground.next(SCENES[SCENES.length - 1])).toBe('random');
   });
 });
 
@@ -63,27 +66,66 @@ describe('the PLAY menu and the setup, as screens', () => {
     expect(onPick.mock.calls).toEqual([['quick']]);
   });
 
-  it('steps a choice on, and starts or goes back', () => {
-    const props = {
-      options: [
-        { id: 'matchPoints', label: 'POINTS TO WIN: 5', color: 'pink' as const, onCycle: vi.fn() },
-      ],
-      startLabel: 'START',
-      backLabel: 'BACK',
-      onStart: vi.fn(),
-      onBack: vi.fn(),
+  const setupProps = () => {
+    const option = {
+      id: 'matchPoints',
+      name: 'POINTS',
+      value: '5',
+      color: 'pink' as const,
+      onNext: vi.fn(),
+      onPrevious: vi.fn(),
     };
-    render(h(QuickMatchSetup, props));
+    return {
+      option,
+      props: {
+        options: [option],
+        previousLabel: 'Previous',
+        nextLabel: 'Next',
+        startLabel: 'START',
+        backLabel: 'BACK',
+        onStart: vi.fn(),
+        onBack: vi.fn(),
+      },
+    };
+  };
 
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
-      'POINTS TO WIN: 5',
+  it('puts each choice between an arrow back and an arrow on, kept off the keyboard', () => {
+    render(h(QuickMatchSetup, setupProps().props));
+
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.map((b) => b.getAttribute('aria-label') ?? b.textContent)).toEqual([
+      'Previous',
+      'POINTS: 5',
+      'Next',
       'START',
       'BACK',
     ]);
-    fireEvent.click(screen.getByRole('button', { name: 'POINTS TO WIN: 5' }));
+    expect(buttons.map((b) => b.tabIndex)).toEqual([-1, 0, -1, 0, 0]);
+    expect(buttons[0].className).toBe('game-button game-button--pink option-row__arrow');
+  });
+
+  it('steps a choice back or on by its arrows, its value and the left and right keys', () => {
+    const { option, props } = setupProps();
+    render(h(QuickMatchSetup, props));
+    const value = screen.getByRole('button', { name: 'POINTS: 5' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(value);
+    fireEvent.keyDown(value, { code: 'ArrowLeft' });
+    fireEvent.keyDown(value, { code: 'KeyD' });
+    fireEvent.keyDown(value, { code: 'ArrowDown' }); // the menu's, not the choice's
+
+    expect(option.onPrevious).toHaveBeenCalledTimes(2);
+    expect(option.onNext).toHaveBeenCalledTimes(3);
+  });
+
+  it('starts or goes back', () => {
+    const { props } = setupProps();
+    render(h(QuickMatchSetup, props));
+
     fireEvent.click(screen.getByRole('button', { name: 'START' }));
     fireEvent.click(screen.getByRole('button', { name: 'BACK' }));
-    expect(props.options[0].onCycle).toHaveBeenCalledOnce();
     expect(props.onStart).toHaveBeenCalledOnce();
     expect(props.onBack).toHaveBeenCalledOnce();
   });
@@ -121,7 +163,11 @@ describe('the PLAY menu and the setup, in the menus', () => {
     const screenButtons = () => [
       ...document.querySelectorAll<HTMLButtonElement>('#gameScreen button'),
     ];
-    const labels = () => screenButtons().map((b) => b.textContent);
+    // The buttons the keyboard walks: on the setup, the values without their arrows
+    const keyButtons = () => screenButtons().filter((b) => b.tabIndex >= 0);
+    const labels = () => keyButtons().map((b) => b.getAttribute('aria-label') ?? b.textContent);
+    const arrows = (label: 'Previous' | 'Next') =>
+      screenButtons().filter((b) => b.getAttribute('aria-label') === label);
     const title = () => document.getElementById('gameTitle')?.textContent;
     const subtitle = () => document.getElementById('gameSubtitle')?.textContent;
     const press = (code: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code }));
@@ -132,6 +178,8 @@ describe('the PLAY menu and the setup, in the menus', () => {
       store,
       menuButtons,
       screenButtons,
+      keyButtons,
+      arrows,
       labels,
       title,
       subtitle,
@@ -151,7 +199,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
   });
 
   it('sets up the quick match: background, difficulty and points, as last chosen', () => {
-    const { menu, screenButtons, labels, title, subtitle, store } = setup();
+    const { menu, screenButtons, keyButtons, labels, title, subtitle, store } = setup();
     menu.showPlayMenu();
     screenButtons()[1].click(); // quick match
 
@@ -160,32 +208,41 @@ describe('the PLAY menu and the setup, in the menus', () => {
     expect(labels()).toEqual([
       'BACKGROUND: RANDOM',
       'DIFFICULTY: NORMAL',
-      'POINTS TO WIN: 5',
+      'POINTS: 5',
       'START',
       'BACK',
     ]);
 
-    screenButtons()[0].click();
-    screenButtons()[1].click();
-    screenButtons()[2].click();
+    keyButtons()[0].click();
+    keyButtons()[1].click();
+    keyButtons()[2].click();
     expect(store.current).toMatchObject({
       matchBackground: SCENES[0],
       difficulty: getDefaultSettings().difficulty + 1,
       matchPoints: 7,
     });
-    expect(labels().slice(0, 3)).toEqual([
-      'BACKGROUND: LASERS',
-      'DIFFICULTY: HARD',
-      'POINTS TO WIN: 7',
-    ]);
+    expect(labels().slice(0, 3)).toEqual(['BACKGROUND: LASERS', 'DIFFICULTY: HARD', 'POINTS: 7']);
     expect(subtitle()).toBe('vs CPU: fast and accurate');
   });
 
-  it('starts the match from START once the audio is unlocked, and again from PLAY AGAIN', () => {
-    const { menu, actions, calls, screenButtons, menuButtons } = setup();
+  it('steps each choice back and on by its arrows, wrapping around', () => {
+    const { menu, arrows, labels, store } = setup();
     menu.showQuickMatchSetup();
 
-    screenButtons()[3].click(); // start
+    arrows('Previous')[0].click();
+    arrows('Previous')[2].click();
+    expect(labels().slice(0, 3)).toEqual(['BACKGROUND: JUNGLE', 'DIFFICULTY: NORMAL', 'POINTS: 3']);
+    arrows('Next')[0].click();
+    arrows('Previous')[1].click(); // below the easiest, round to the hardest
+    expect(store.current).toMatchObject({ matchBackground: 'random', matchPoints: 3 });
+    expect(labels()[1]).toBe('DIFFICULTY: INSANE');
+  });
+
+  it('starts the match from START once the audio is unlocked, and again from PLAY AGAIN', () => {
+    const { menu, actions, calls, keyButtons, menuButtons } = setup();
+    menu.showQuickMatchSetup();
+
+    keyButtons()[3].click(); // start
     expect(calls).toEqual(['unlock', 'start']);
 
     menu.showGameOverMenu(1, [2, 5]);
@@ -221,18 +278,20 @@ describe('the PLAY menu and the setup, in the menus', () => {
   });
 
   it('keeps the focus on a choice as it steps, and moves it on between screens', () => {
-    const { menu, menuButtons, screenButtons, press } = setup();
+    const { menu, menuButtons, screenButtons, keyButtons, arrows, press } = setup();
     menu.showPlayMenu();
     screenButtons()[1].focus();
     screenButtons()[1].click(); // quick match
-    expect(document.activeElement).toBe(screenButtons()[0]);
+    expect(document.activeElement).toBe(keyButtons()[0]);
 
     press('ArrowDown');
-    screenButtons()[1].click(); // difficulty, redrawing the setup
-    expect(document.activeElement).toBe(screenButtons()[1]);
+    keyButtons()[1].click(); // difficulty, redrawing the setup
+    expect(document.activeElement).toBe(keyButtons()[1]);
+    arrows('Next')[1].click(); // its arrow leaves the focus on the value
+    expect(document.activeElement).toBe(keyButtons()[1]);
 
     press('End');
-    screenButtons()[4].click(); // back to the PLAY menu
+    keyButtons()[4].click(); // back to the PLAY menu
     expect(document.activeElement).toBe(screenButtons()[1]);
     screenButtons()[3].click(); // back to the main menu
     expect(document.activeElement).toBe(menuButtons()[0]);

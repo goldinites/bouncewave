@@ -17,7 +17,7 @@ const isPauseButtonShown = () => !$('#pauseButton').classList.contains('game-pau
 const press = (code: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code }));
 const screenButton = (label: string) =>
   [...document.querySelectorAll<HTMLButtonElement>('#gameScreen button')].find(
-    (button) => button.textContent === label,
+    (button) => (button.getAttribute('aria-label') ?? button.textContent) === label,
   )!;
 /** PLAY, QUICK MATCH, then START as it is set up. */
 const play = () => {
@@ -100,9 +100,9 @@ describe('Game', () => {
   it('keeps the quick match set up as it was left for the next visit', () => {
     buttons()[0].click();
     screenButton('QUICK MATCH').click();
-    screenButton('POINTS TO WIN: 5').click();
+    screenButton('POINTS: 5').click();
     screenButton('BACKGROUND: RANDOM').click();
-    expect(screenButton('POINTS TO WIN: 7')).toBeDefined();
+    expect(screenButton('POINTS: 7')).toBeDefined();
     game.dispose();
 
     document.body.innerHTML = BODY;
@@ -110,7 +110,7 @@ describe('Game', () => {
     game.init();
     buttons()[0].click();
     screenButton('QUICK MATCH').click();
-    expect(screenButton('POINTS TO WIN: 7')).toBeDefined();
+    expect(screenButton('POINTS: 7')).toBeDefined();
     expect(screenButton('BACKGROUND: LASERS')).toBeDefined();
   });
 

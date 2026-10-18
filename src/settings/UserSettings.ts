@@ -1,7 +1,8 @@
-import { isLanguage, Language, nextLanguage } from '@/i18n/translations';
-import { DifficultyLevel, isDifficultyLevel, nextDifficulty } from '@/match/difficulty';
-import { DEFAULT_MATCH_POINTS, isMatchPoints, MatchPoints, nextMatchPoints } from '@/match/modes';
-import { BackgroundChoice, isBackgroundChoice, nextBackgroundChoice } from '@/shared/scenes';
+import { isLanguage, Language, LANGUAGES } from '@/i18n/translations';
+import { DIFFICULTY_LEVELS, DifficultyLevel, isDifficultyLevel } from '@/match/difficulty';
+import { DEFAULT_MATCH_POINTS, isMatchPoints, MATCH_POINTS, MatchPoints } from '@/match/modes';
+import { stepThrough } from '@/shared/math';
+import { BACKGROUND_CHOICES, BackgroundChoice, isBackgroundChoice } from '@/shared/scenes';
 
 /**
  * Everything the player chose that outlasts a visit: the settings proper, and the quick match
@@ -23,12 +24,21 @@ export interface SettingDefinition<T> {
   defaultValue: T;
   /** Whether a saved value can be used as is; anything else falls back to the default. */
   isValid(value: unknown): value is T;
-  /** The value the setting switches to when the player picks it in the menu. */
+  /** The value the setting switches to when the player picks it, or steps it on, in the menu. */
   next(value: T): T;
+  /** The value the setting steps back to (the back arrow on the quick match's choices). */
+  previous(value: T): T;
 }
 
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 const toggle = (value: boolean): boolean => !value;
+const onOff = { next: toggle, previous: toggle };
+
+/** Steps through `list` either way, wrapping around at both ends. */
+const through = <T>(list: readonly T[]) => ({
+  next: (value: T) => stepThrough(list, value, 1),
+  previous: (value: T) => stepThrough(list, value, -1),
+});
 
 /**
  * Every setting, described once. To add one, add a field to UserSettings and an entry here
@@ -39,23 +49,23 @@ export const SETTINGS: { [K in keyof UserSettings]: SettingDefinition<UserSettin
     storageKey: 'd',
     defaultValue: DifficultyLevel.NORMAL,
     isValid: isDifficultyLevel,
-    next: nextDifficulty,
+    ...through(DIFFICULTY_LEVELS),
   },
   matchPoints: {
     storageKey: 'p',
     defaultValue: DEFAULT_MATCH_POINTS,
     isValid: isMatchPoints,
-    next: nextMatchPoints,
+    ...through(MATCH_POINTS),
   },
   matchBackground: {
     storageKey: 'b',
     defaultValue: 'random',
     isValid: isBackgroundChoice,
-    next: nextBackgroundChoice,
+    ...through(BACKGROUND_CHOICES),
   },
-  soundMuted: { storageKey: 'm', defaultValue: false, isValid: isBoolean, next: toggle },
-  musicMuted: { storageKey: 'u', defaultValue: false, isValid: isBoolean, next: toggle },
-  language: { storageKey: 'l', defaultValue: 'en', isValid: isLanguage, next: nextLanguage },
+  soundMuted: { storageKey: 'm', defaultValue: false, isValid: isBoolean, ...onOff },
+  musicMuted: { storageKey: 'u', defaultValue: false, isValid: isBoolean, ...onOff },
+  language: { storageKey: 'l', defaultValue: 'en', isValid: isLanguage, ...through(LANGUAGES) },
 };
 
 export const SETTING_KEYS = Object.keys(SETTINGS) as (keyof UserSettings)[];

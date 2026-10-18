@@ -31,10 +31,6 @@ export const DEFAULT_MATCH_POINTS: MatchPoints = 5;
 export const isMatchPoints = (value: unknown): value is MatchPoints =>
   (MATCH_POINTS as readonly unknown[]).includes(value);
 
-/** The next length in the list, wrapping around. */
-export const nextMatchPoints = (points: MatchPoints): MatchPoints =>
-  MATCH_POINTS[(MATCH_POINTS.indexOf(points) + 1) % MATCH_POINTS.length];
-
 /** A quick match: everything as in the standard rules but its length, which the player sets. */
 export function quickMatchRules(points: MatchPoints): MatchRules {
   return { ...STANDARD_RULES, winningScore: points };

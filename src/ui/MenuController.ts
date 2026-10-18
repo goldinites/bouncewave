@@ -59,25 +59,36 @@ const SETTINGS_MENU: SettingsMenuEntry[] = [
   },
 ];
 
+/** A choice of the quick match's setup: a setting, shown as its name over its value. */
+interface SetupEntry {
+  key: keyof UserSettings;
+  name: (i18n: I18nManager) => string;
+  value: (settings: UserSettings, i18n: I18nManager) => string;
+  color: ButtonColor;
+}
+
 /**
  * The quick match's choices, top to bottom; picking one steps it to its next value. They are
  * kept with the settings, so the next quick match is set up as the last one was.
  */
-const QUICK_MATCH_SETUP: SettingsMenuEntry[] = [
+const QUICK_MATCH_SETUP: SetupEntry[] = [
   {
     key: 'matchBackground',
     color: 'green',
-    label: (s, i18n) => `${i18n.t('background')}: ${i18n.getBackgroundName(s.matchBackground)}`,
+    name: (i18n) => i18n.t('background'),
+    value: (s, i18n) => i18n.getBackgroundName(s.matchBackground),
   },
   {
     key: 'difficulty',
     color: 'yellow',
-    label: (s, i18n) => `${i18n.t('diff')}: ${i18n.getDifficultyInfo(s.difficulty)[0]}`,
+    name: (i18n) => i18n.t('diff'),
+    value: (s, i18n) => i18n.getDifficultyInfo(s.difficulty)[0],
   },
   {
     key: 'matchPoints',
     color: 'pink',
-    label: (s, i18n) => `${i18n.t('points')}: ${s.matchPoints}`,
+    name: (i18n) => i18n.t('points'),
+    value: (s) => String(s.matchPoints),
   },
 ];
 
@@ -182,10 +193,14 @@ export class MenuController {
       h(QuickMatchSetup, {
         options: QUICK_MATCH_SETUP.map((entry) => ({
           id: entry.key,
-          label: entry.label(settings, this.i18n),
+          name: entry.name(this.i18n),
+          value: entry.value(settings, this.i18n),
           color: entry.color,
-          onCycle: () => this.changeSetting(entry),
+          onNext: () => this.changeSetting(entry, 1),
+          onPrevious: () => this.changeSetting(entry, -1),
         })),
+        previousLabel: this.i18n.t('previousChoice'),
+        nextLabel: this.i18n.t('nextChoice'),
         startLabel: this.i18n.t('start'),
         backLabel: this.i18n.t('back'),
         onStart: () => this.actions.onStartGame(),
@@ -296,8 +311,8 @@ export class MenuController {
   }
 
   /** Switches one setting; the subscription redraws the menu or screen to show it. */
-  private changeSetting(entry: SettingsMenuEntry): void {
-    this.settings.cycle(entry.key);
+  private changeSetting(entry: Pick<SettingsMenuEntry, 'key' | 'clicks'>, step: 1 | -1 = 1): void {
+    this.settings.cycle(entry.key, step);
     if (entry.clicks) {
       // Only audible when sound is on
       this.sfx.playSettingsClick();

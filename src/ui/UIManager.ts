@@ -74,13 +74,14 @@ export class UIManager {
 
   /**
    * The buttons of whatever is on show, a menu's or a screen's (only one has any), but those
-   * switched off: the keys walk past them, as the focus can't land on them.
+   * switched off and those kept out of the keyboard's way (a choice's arrows, which the left and
+   * right keys stand in for): the keys walk past them.
    */
   private get buttons(): HTMLButtonElement[] {
     return [
       ...this.buttonsContainer.querySelectorAll('button'),
       ...this.screenElement.querySelectorAll('button'),
-    ].filter((button) => !button.disabled);
+    ].filter((button) => !button.disabled && button.tabIndex >= 0);
   }
 
   /** Whether the keyboard focus is on a menu's or a screen's button. */
@@ -182,7 +183,7 @@ export class UIManager {
     render(screen, this.screenElement);
 
     if (hadFocus && !isSameScreen) {
-      this.screenElement.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+      this.buttons[0]?.focus();
     }
     this.reveal();
   }

@@ -347,14 +347,14 @@ export class Game {
   }
 
   /**
-   * The quick match's background was picked: from now on matches are played on it, and it comes
-   * up behind the menu at once, its song with it (random leaves the one on screen).
+   * The quick match's background was picked: from now on matches are played on it, and it cuts
+   * in behind the menu at once, its song with it, so the player can flick through them (random
+   * leaves the one on screen).
    */
   private previewBackground(choice: BackgroundChoice): void {
     this.renderer.chooseBackground(choice);
     if (choice === 'random' || this.flow.phase !== 'attract') return;
-    this.audio.music.enterScene(this.renderer.switchChannel());
-    this.audio.sfx.playChannelSurf();
+    this.audio.music.enterScene(this.renderer.switchChannel(false));
     this.showDebugDetail();
   }
 

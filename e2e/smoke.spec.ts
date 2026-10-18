@@ -92,11 +92,15 @@ test('sets up a quick match, its background coming up behind the menu', async ({
 
   await button(page, 'PLAY').click();
   await button(page, 'QUICK MATCH').click();
-  await button(page, 'BACKGROUND: RANDOM').click();
+  // The arrows step a choice either way; the value itself steps it on
+  await button(page, 'Next').first().click();
   await expect(button(page, 'BACKGROUND: LASERS')).toBeVisible();
-  await button(page, /^POINTS TO WIN/).click();
-  await expect(button(page, 'POINTS TO WIN: 7')).toBeVisible();
+  await button(page, 'Previous').last().click();
+  await expect(button(page, 'POINTS: 3')).toBeVisible();
   await expectOnCourt(page, button(page, 'BACK'));
+  // The rows, arrows and all, fit across the court too
+  await expectOnCourt(page, button(page, 'Previous').first());
+  await expectOnCourt(page, button(page, 'Next').first());
   await page.waitForTimeout(SETTLE_MS);
 
   await button(page, 'START').click();
