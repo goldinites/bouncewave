@@ -1,6 +1,5 @@
 import { Particle, ShockwaveRing } from '@/fx/ParticleSystem';
 import { Ball } from '@/match/Ball';
-import { PADDLE } from '@/match/config';
 import { OVERDRIVE } from '@/match/Overdrive';
 import { getRallyHeat } from '@/match/heat';
 import { Paddle } from '@/match/Paddle';
@@ -32,7 +31,8 @@ export class EntityRenderer {
     glow: number,
     overdrivePulse = 0,
   ): void {
-    const topY = paddle.drawY - PADDLE.HEIGHT / 2;
+    const { width, height } = paddle.spec;
+    const topY = paddle.drawY - height / 2;
 
     ctx.save();
     // Pre-rendered neon; a hit fades the hot one in on top
@@ -49,7 +49,7 @@ export class EntityRenderer {
       overdrivePulse > 0
         ? `rgba(255, 229, 59, ${0.75 + 0.25 * overdrivePulse})`
         : `rgba(255, 255, 255, ${0.7 + glow * 0.3})`;
-    this.roundRect(ctx, paddle.x + PADDLE.WIDTH / 2 - 2, topY + 8, 4, PADDLE.HEIGHT - 16, 2);
+    this.roundRect(ctx, paddle.x + width / 2 - 2, topY + 8, 4, height - 16, 2);
     ctx.fill();
 
     ctx.restore();
@@ -63,7 +63,7 @@ export class EntityRenderer {
   ): void {
     sprites.draw(
       ctx,
-      `paddle|${paddle.color}|${blur}`,
+      `paddle|${paddle.color}|${blur}|${paddle.spec.width}x${paddle.spec.height}`,
       paddle.x,
       topY,
       (_measureCtx, scale) => {
@@ -71,15 +71,15 @@ export class EntityRenderer {
         return {
           left: -margin,
           top: -margin,
-          width: PADDLE.WIDTH + margin * 2,
-          height: PADDLE.HEIGHT + margin * 2,
+          width: paddle.spec.width + margin * 2,
+          height: paddle.spec.height + margin * 2,
         };
       },
       (spriteCtx) => {
         spriteCtx.shadowColor = paddle.color;
         spriteCtx.shadowBlur = blur;
         spriteCtx.fillStyle = paddle.color;
-        this.roundRect(spriteCtx, 0, 0, PADDLE.WIDTH, PADDLE.HEIGHT, 6);
+        this.roundRect(spriteCtx, 0, 0, paddle.spec.width, paddle.spec.height, 6);
         spriteCtx.fill();
       },
     );
@@ -100,7 +100,8 @@ export class EntityRenderer {
     const isFull = charge >= OVERDRIVE.CHARGE;
     const pulse = isFull && !classic ? 0.5 + 0.5 * Math.sin(time * PULSE_SPEED) : 1;
     const color = classic ? '#ffffff' : isFull ? COLORS.YELLOW : paddle.color;
-    const x = paddle.side === 0 ? paddle.x - GAP - SEGMENT.WIDTH : paddle.x + PADDLE.WIDTH + GAP;
+    const x =
+      paddle.side === 0 ? paddle.x - GAP - SEGMENT.WIDTH : paddle.x + paddle.spec.width + GAP;
     const columnHeight = OVERDRIVE.CHARGE * SEGMENT.HEIGHT + (OVERDRIVE.CHARGE - 1) * SEGMENT.GAP;
 
     ctx.save();
@@ -132,9 +133,10 @@ export class EntityRenderer {
 
   /** Flat white block, no glow or rounded corners — a paddle as it looked in 1972. */
   public static renderClassicPaddle(ctx: CanvasRenderingContext2D, paddle: Paddle): void {
-    const topY = paddle.drawY - PADDLE.HEIGHT / 2;
+    const { width, height } = paddle.spec;
+    const topY = paddle.drawY - height / 2;
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(paddle.x, topY, PADDLE.WIDTH, PADDLE.HEIGHT);
+    ctx.fillRect(paddle.x, topY, width, height);
   }
 
   /** The ball as a plain white square, the way the original hardware drew it. */

@@ -1,5 +1,4 @@
 import { ParticleSystem } from '@/fx/ParticleSystem';
-import { PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { randomRange } from '@/shared/math';
 
@@ -55,8 +54,8 @@ export class PaddleEffects {
       const direction = paddle.side === 0 ? 1 : -1;
 
       particles.addParticle({
-        x: paddle.side === 0 ? paddle.x + PADDLE.WIDTH : paddle.x,
-        y: paddle.y + (Math.random() - 0.5) * PADDLE.HEIGHT,
+        x: paddle.side === 0 ? paddle.x + paddle.spec.width : paddle.x,
+        y: paddle.y + (Math.random() - 0.5) * paddle.spec.height,
         vx: direction * randomRange(SPARK_SPEED_MIN, SPARK_SPEED_MAX),
         vy: (Math.random() - 0.5) * 50,
         life: 0.7,

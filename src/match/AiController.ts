@@ -1,5 +1,5 @@
 import { Ball } from '@/match/Ball';
-import { COURT, PADDLE } from '@/match/config';
+import { COURT } from '@/match/config';
 import { AiSkill } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
 import { Physics } from '@/match/Physics';
@@ -145,7 +145,8 @@ export class AiController {
   public update(paddle: Paddle, ball: Ball, skill: AiSkill, dt: number, opponent: Paddle): void {
     const desiredY = this.getDesiredY(paddle, ball, skill, dt, opponent);
     const deltaY = desiredY - paddle.targetY;
-    const maxMovePerFrame = skill.speed * dt;
+    // A quicker paddle carries the AI further in the same time, as it does a player
+    const maxMovePerFrame = skill.speed * paddle.spec.speed * dt;
 
     const move =
       Math.abs(deltaY) > AIM_DEADZONE ? clamp(deltaY, -maxMovePerFrame, maxMovePerFrame) : 0;
@@ -199,7 +200,7 @@ export class AiController {
     }
 
     const faceX =
-      paddle.side === 1 ? paddle.x - ball.radius : paddle.x + PADDLE.WIDTH + ball.radius;
+      paddle.side === 1 ? paddle.x - ball.radius : paddle.x + paddle.spec.width + ball.radius;
     const arrival = predictArrival(faceX, ball.x, ball.y, ball.vx, ball.vy, ball.radius);
 
     // The shot is read once, as soon as the AI reacts: the more walls it has to bounce off from
@@ -220,7 +221,7 @@ export class AiController {
     read.watched += (dt * WATCH.REFERENCE_SPEED) / Math.max(apparentSpeed, WATCH.REFERENCE_SPEED);
 
     // The ball meets the paddle `hitOffset` half-heights below its center
-    return seenY + read.misread * correction - (read.hitOffset * PADDLE.HEIGHT) / 2;
+    return seenY + read.misread * correction - (read.hitOffset * paddle.spec.height) / 2;
   }
 
   /**
@@ -278,7 +279,7 @@ export class AiController {
    */
   private pickAngle(paddle: Paddle, opponent: Paddle, contactY: number, size: number): number {
     const direction = paddle.side === 0 ? 1 : -1;
-    const opponentFaceX = paddle.side === 0 ? opponent.x : opponent.x + PADDLE.WIDTH;
+    const opponentFaceX = paddle.side === 0 ? opponent.x : opponent.x + opponent.spec.width;
     const landing = (offset: number) => {
       const angle = Physics.getBounceAngle(offset);
       return predictArrival(

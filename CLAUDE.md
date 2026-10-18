@@ -80,8 +80,12 @@ Rules that keep it clean:
   (`flow.balls`, the first is `deps.ball`) and the first ball out ends the point for all of
   them. Draw every ball in `frame.balls`; the camera and the drama follow `flow.leadBall`.
 
-Known hard-coded assumptions the roadmap's stage 0 removes: global `PADDLE` sizes. Outside the match the left side is still taken to be the player
-(whose win the finale and menus show, whose Overdrive meter is drawn).
+- Every paddle carries a `PaddleSpec` (`match/PaddleSpec.ts`: size, perfect zone, power, spin,
+  speed; `STANDARD_PADDLE` by default) as `paddle.spec`. Read a paddle's size and hitting from
+  its spec, never from the global `PADDLE` (which only lays out the court).
+
+Outside the match the left side is still taken to be the player (whose win the finale and
+menus show, whose Overdrive meter is drawn).
 
 ## Extension points that exist today
 
@@ -90,6 +94,8 @@ Known hard-coded assumptions the roadmap's stage 0 removes: global `PADDLE` size
   (`shared/scenes.ts`). Draw for both orientations; read `laserIntensity` through a floor so play
   stays lit; heat (`climax`/`celebration`) warms the palette.
 - **Song:** an entry in `SONG_DEFS` (`audio/music/songs.ts`); `scene` ties it to a background.
+- **Paddle kind:** a `PaddleSpec` (trade-offs as multipliers against `STANDARD_PADDLE`), given
+  to `new Paddle(side, x, color, spec)`.
 - **Setting:** a field in `UserSettings` plus an entry in `SETTINGS`, an entry in `SETTINGS_MENU`
   (`ui/MenuController.ts`) and its texts in `translations.ts`.
 
