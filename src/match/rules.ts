@@ -11,12 +11,18 @@ export interface MatchRules {
   readonly winningScore: number;
   /** Whether the player's perfect hits charge Overdrive, and its meter is shown. */
   readonly overdrive: boolean;
+  /**
+   * Balls in play at once. Every serve sends them off alternately toward one side and the other;
+   * the first one out wins the point, which ends it for all of them.
+   */
+  readonly balls: number;
 }
 
-/** The match as it has always been played: first to 10, Overdrive on. */
+/** The match as it has always been played: first to 10, Overdrive on, one ball. */
 export const STANDARD_RULES: MatchRules = {
   winningScore: WINNING_SCORE,
   overdrive: true,
+  balls: 1,
 };
 
 /** Both sides are one point from winning: the next point decides the match. */

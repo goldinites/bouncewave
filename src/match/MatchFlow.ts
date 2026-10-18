@@ -1,6 +1,6 @@
 import { ShotThreat, SHOT_THREAT } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
-import { BALL } from '@/match/config';
+import { BALL, COURT } from '@/match/config';
 import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
@@ -79,6 +79,7 @@ export type Lineup = readonly Participant[];
 export interface MatchFlowDeps {
   /** Every paddle on the court, each playing for its side; at least one a side. */
   paddles: readonly Paddle[];
+  /** The match's first ball; the rules may put more on court alongside it. */
   ball: Ball;
   input: PlayerInput;
   getDifficulty: () => DifficultyLevel;
@@ -114,7 +115,8 @@ export class MatchFlow {
   /** The rules of the match being played (or last played); set by startMatch. */
   private _rules: MatchRules = STANDARD_RULES;
   private readonly paddles: readonly Paddle[];
-  private readonly ball: Ball;
+  /** Every ball on court: the first is the one given, the rest the rules' extra balls. */
+  private readonly _balls: Ball[];
   private readonly input: PlayerInput;
   private readonly getDifficulty: () => DifficultyLevel;
   private readonly emit: (event: MatchEvent) => void;
@@ -126,7 +128,7 @@ export class MatchFlow {
     }
     this.paddles = deps.paddles;
     this.overdrives = deps.paddles.map(() => new Overdrive());
-    this.ball = deps.ball;
+    this._balls = [deps.ball];
     this.input = deps.input;
     this.getDifficulty = deps.getDifficulty;
     this.emit = deps.onEvent;
@@ -192,6 +194,29 @@ export class MatchFlow {
     return this._phase === 'serving' || this._phase === 'rally';
   }
 
+  /** Every ball on court, the first one first. */
+  public get balls(): readonly Ball[] {
+    return this._balls;
+  }
+
+  /**
+   * The ball nearest to deciding the point: the first to reach the goal line it is flying at
+   * (or already past one). The camera and the deciding point's drama follow it.
+   */
+  public get leadBall(): Ball {
+    let lead = this._balls[0];
+    let leadTime = Infinity;
+    for (const ball of this._balls) {
+      const goalX = ball.vx < 0 ? 0 : COURT.WIDTH;
+      const time = ball.vx === 0 ? Infinity : (goalX - ball.x) / ball.vx;
+      if (time < leadTime) {
+        lead = ball;
+        leadTime = time;
+      }
+    }
+    return lead;
+  }
+
   /** The ball is moving on court (demo included). */
   public get isBallLive(): boolean {
     return (this._phase === 'attract' || this._phase === 'rally') && this._serveTime <= 0;
@@ -216,6 +241,7 @@ export class MatchFlow {
 
   public startAttract(): void {
     this.lineup = this.demoLineup;
+    this.useBalls(1);
     this._phase = 'attract';
     this.serve(1, SERVE_DELAY.DEMO);
   }
@@ -230,6 +256,7 @@ export class MatchFlow {
     }
     this._rules = rules;
     this.lineup = lineup;
+    this.useBalls(rules.balls);
     this.emit({ type: 'matchStart' });
     this.resetScores();
     this._phase = 'serving';
@@ -268,12 +295,12 @@ export class MatchFlow {
     if (this._phase === 'paused') return;
 
     // Where everything stood before this step, so a frame can be drawn between two steps
-    this.ball.rememberPosition();
+    this._balls.forEach((b) => b.rememberPosition());
     this.paddles.forEach((p) => p.rememberPosition());
     this._time += dt;
 
     if (this._phase === 'finale') {
-      // Paddles stay put but settle; the ball is already out of play
+      // Paddles stay put but settle; the balls are already out of play
       this.paddles.forEach((p) => p.update(dt));
       this.finaleElapsed += dt;
       if (this.finaleElapsed >= this.finaleDuration) {
@@ -291,14 +318,17 @@ export class MatchFlow {
         this._phase = 'rally';
       }
     } else {
-      this.ball.updateTrail(dt);
-      for (const event of Physics.step(this.ball, this.paddles, difficulty, dt)) {
-        this.handlePhysicsEvent(event);
+      for (const ball of this._balls) {
+        ball.updateTrail(dt);
+        const events = Physics.step(ball, this.paddles, difficulty, dt);
+        for (const event of events) this.handlePhysicsEvent(event, ball);
+        // The first ball out ends the point: every ball has just been served again
+        if (events.some((event) => event.type === 'score')) break;
       }
     }
 
     // Radius grows with rally and speed, and also affects collisions, so it is simulation
-    this.ball.updateRadius(dt, this._rally, difficulty.maxSpeed);
+    this._balls.forEach((b) => b.updateRadius(dt, this._rally, difficulty.maxSpeed));
   }
 
   /**
@@ -306,16 +336,46 @@ export class MatchFlow {
    * (0 = where they stood when it began, 1 = where it left them).
    */
   public interpolate(alpha: number): void {
-    this.ball.interpolate(alpha);
+    this._balls.forEach((b) => b.interpolate(alpha));
     this.paddles.forEach((p) => p.interpolate(alpha));
   }
 
   private updatePaddles(dt: number): void {
     this.lineup.forEach(({ controller }, i) => {
       const paddle = this.paddles[i];
-      controller.steer(paddle, this.ball, this.opponentOf(paddle), dt);
+      controller.steer(paddle, this.ballFor(paddle), this.opponentOf(paddle), dt);
     });
     this.paddles.forEach((p) => p.update(dt));
+  }
+
+  /**
+   * The ball a paddle should play: of those flying its way, the one that gets there first;
+   * with none coming, the nearest.
+   */
+  private ballFor(paddle: Paddle): Ball {
+    if (this._balls.length === 1) return this._balls[0];
+
+    const toward = paddle.side === 0 ? -1 : 1;
+    let pick = this._balls[0];
+    let soonest = Infinity;
+    let nearest = Infinity;
+    for (const ball of this._balls) {
+      const distance = Math.abs(paddle.x - ball.x);
+      // Seconds until it arrives if it is coming, otherwise ranked after every ball that is
+      const time = Math.sign(ball.vx) === toward ? distance / Math.abs(ball.vx) : Infinity;
+      if (time < soonest || (time === soonest && distance < nearest)) {
+        pick = ball;
+        soonest = time;
+        nearest = distance;
+      }
+    }
+    return pick;
+  }
+
+  /** Puts `count` balls on court: the match's first ball and as many new ones as it takes. */
+  private useBalls(count: number): void {
+    this._balls.length = Math.max(1, Math.min(count, this._balls.length));
+    while (this._balls.length < count) this._balls.push(new Ball());
   }
 
   /** Who a paddle plays against: the first paddle of the other side. */
@@ -332,7 +392,8 @@ export class MatchFlow {
     });
   }
 
-  private handlePhysicsEvent(event: PhysicsEvent): void {
+  /** @param ball the ball it happened to */
+  private handlePhysicsEvent(event: PhysicsEvent, ball: Ball): void {
     switch (event.type) {
       case 'wallBounce':
         this.emit(event);
@@ -347,9 +408,9 @@ export class MatchFlow {
         const isPowerShot = hasOverdrive && overdrive.onHit(event.isPerfect);
         const chargedOverdrive = hasOverdrive && !wasCharged && overdrive.isCharged;
 
-        this.ball.isPowerShot = isPowerShot;
+        ball.isPowerShot = isPowerShot;
         if (isPowerShot) {
-          this.ball.applyBoost(OVERDRIVE.BOOST, OVERDRIVE.BOOST_DURATION);
+          ball.applyBoost(OVERDRIVE.BOOST, OVERDRIVE.BOOST_DURATION);
         }
 
         // The other side now has to read the return, the harder the better it was hit
@@ -403,18 +464,24 @@ export class MatchFlow {
     const winner = this.finaleWinner;
     this._phase = 'attract';
     this.lineup = this.demoLineup;
+    this.useBalls(1);
 
     this.emit({ type: 'gameOver', winnerIndex: winner, scores: [...this._scores] });
     this.serve(winner === 0 ? 1 : -1, SERVE_DELAY.GAME_OVER);
   }
 
+  /** @param direction where the first ball goes (1 right, -1 left); any others alternate */
   private serve(direction: number, delay: number): void {
-    this.ball.serve(direction, BALL.INITIAL_SPEED, this.random);
-    // Both sides get ready for the point; the receiver reads the serve like any other shot
+    this._balls.forEach((ball, i) => {
+      ball.serve(i % 2 === 0 ? direction : -direction, BALL.INITIAL_SPEED, this.random);
+    });
+    // Both sides get ready for the point; whoever a ball is served to reads it like any shot
     this.lineup.forEach(({ controller }, i) => {
       controller.onServe(this.paddles[i], this.scores, this._rules);
     });
-    this.shotAt(direction > 0 ? 1 : 0, SHOT_THREAT.NORMAL);
+    const receiver: Side = direction > 0 ? 1 : 0;
+    this.shotAt(receiver, SHOT_THREAT.NORMAL);
+    if (this._balls.length > 1) this.shotAt(otherSide(receiver), SHOT_THREAT.NORMAL);
     this._rally = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });

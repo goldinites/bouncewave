@@ -77,7 +77,6 @@ export interface EffectsDirectorDeps {
   audio: AudioEngine;
   particles: ParticleSystem;
   paddles: readonly Paddle[];
-  ball: Ball;
   translate: (key: 'win' | 'lose') => string;
 }
 
@@ -96,7 +95,6 @@ export class EffectsDirector {
   private readonly audio: AudioEngine;
   private readonly particles: ParticleSystem;
   private readonly paddles: readonly Paddle[];
-  private readonly ball: Ball;
   private readonly translate: EffectsDirectorDeps['translate'];
 
   constructor(deps: EffectsDirectorDeps) {
@@ -105,7 +103,6 @@ export class EffectsDirector {
     this.particles = deps.particles;
     this.paddles = deps.paddles;
     this.paddleFx = new PaddleEffects(deps.paddles.length);
-    this.ball = deps.ball;
     this.translate = deps.translate;
   }
 
@@ -144,7 +141,8 @@ export class EffectsDirector {
     if (flow.phase === 'finale') return;
 
     const { isMatchActive, scores, rules } = flow;
-    if (this.drama.update(realDt, isMatchActive, this.ball, this.paddles, scores, rules)) {
+    // The drama follows whichever ball is about to decide the point
+    if (this.drama.update(realDt, isMatchActive, flow.leadBall, this.paddles, scores, rules)) {
       this.audio.sfx.playHeartbeat();
     }
     this.audio.music.setDramaLevel(this.drama.level);
@@ -162,10 +160,12 @@ export class EffectsDirector {
     const sparkRally = flow.phase === 'finale' ? 0 : flow.rally;
     this.paddleFx.update(dt, this.paddles, this.particles, sparkRally);
 
-    // A power shot burns like the full climax
-    const emberLevel = Math.max(this.climax.level, this.ball.isPowerShot ? 1 : 0);
-    if (flow.isBallLive && emberLevel > 0.05) {
-      this.emitClimaxEmbers(dt, emberLevel);
+    // Every ball burns with the climax; a power shot burns like the full climax
+    if (flow.isBallLive) {
+      for (const ball of flow.balls) {
+        const emberLevel = Math.max(this.climax.level, ball.isPowerShot ? 1 : 0);
+        if (emberLevel > 0.05) this.emitClimaxEmbers(dt, emberLevel, ball);
+      }
     }
 
     for (const shot of this.fireworks?.update(dt) ?? []) {
@@ -335,11 +335,10 @@ export class EffectsDirector {
     this.audio.music.resetClimax();
   }
 
-  /** Burning-ball embers during the rally climax or a power shot, `level` in [0, 1]. */
-  private emitClimaxEmbers(dt: number, level: number): void {
+  /** Embers off a burning `ball` during the rally climax or a power shot, `level` in [0, 1]. */
+  private emitClimaxEmbers(dt: number, level: number, ball: Ball): void {
     const expected = EMBERS.RATE * level * dt;
     const count = Math.floor(expected + Math.random());
-    const ball = this.ball;
 
     for (let i = 0; i < count; i++) {
       const angle = Math.atan2(-ball.vy, -ball.vx) + (Math.random() - 0.5) * EMBERS.SPREAD;

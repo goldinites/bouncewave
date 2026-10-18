@@ -39,30 +39,34 @@ const makeRenderer = (width = 800) => {
   return { renderer, ctx, spies, stage, canvas };
 };
 
-const baseFrame = (overrides: Partial<RenderFrame> = {}): RenderFrame => ({
-  gameState: 'play',
-  // Demo mode skips the HUD, keeping the canvas call trace free of its own translate/fillText
-  isDemo: true,
-  paddles: [
-    new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN),
-    new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, COLORS.PINK),
-  ],
-  scores: [0, 0],
-  ball: new Ball(),
-  particles: new ParticleSystem(),
-  analyser: null,
-  time: 0,
-  serveTime: 0,
-  rally: 0,
-  readyText: '',
-  isRotated: false,
-  vignette: 0,
-  zoom: 1,
-  climax: 0,
-  paddleGlow: [0, 0],
-  overdriveCharge: 0,
-  ...overrides,
-});
+const baseFrame = (overrides: Partial<RenderFrame> = {}): RenderFrame => {
+  const ball = new Ball();
+  return {
+    gameState: 'play',
+    // Demo mode skips the HUD, keeping the canvas call trace free of its own translate/fillText
+    isDemo: true,
+    paddles: [
+      new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN),
+      new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, COLORS.PINK),
+    ],
+    scores: [0, 0],
+    balls: [ball],
+    ball,
+    particles: new ParticleSystem(),
+    analyser: null,
+    time: 0,
+    serveTime: 0,
+    rally: 0,
+    readyText: '',
+    isRotated: false,
+    vignette: 0,
+    zoom: 1,
+    climax: 0,
+    paddleGlow: [0, 0],
+    overdriveCharge: 0,
+    ...overrides,
+  };
+};
 
 describe('Renderer', () => {
   afterEach(() => {
@@ -211,5 +215,21 @@ describe('Renderer', () => {
     renderer.render(baseFrame({ isDemo: false, overdriveCharge: null }), 0.016);
     expect(meter).toHaveBeenCalledTimes(1);
     meter.mockRestore();
+  });
+
+  it('draws every ball on court, in both looks', () => {
+    const neon = vi.spyOn(EntityRenderer, 'renderBall');
+    const classic = vi.spyOn(EntityRenderer, 'renderClassicBall');
+    const { renderer } = makeRenderer();
+    const balls = [new Ball(), new Ball()];
+
+    renderer.render(baseFrame({ balls, ball: balls[0] }), 0.016);
+    expect(neon.mock.calls.map((call) => call[1])).toEqual(balls);
+
+    renderer.setClassicMode(true);
+    renderer.render(baseFrame({ balls, ball: balls[0] }), 0.016);
+    expect(classic.mock.calls.map((call) => call[1])).toEqual(balls);
+    neon.mockRestore();
+    classic.mockRestore();
   });
 });

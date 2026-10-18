@@ -114,7 +114,6 @@ export class Game {
       audio: this.audio,
       particles: this.particles,
       paddles: this.paddles,
-      ball: this.ball,
       translate: (key) => this.i18n.t(key),
     });
 
@@ -349,7 +348,8 @@ export class Game {
     return {
       gameState: this.flow.gameState,
       serveTime: this.flow.serveTime,
-      ballSpeed: this.ball.speed,
+      // The music builds with the fastest ball on court
+      ballSpeed: Math.max(...this.flow.balls.map((b) => b.speed)),
       maxBallSpeed: DIFFICULTY_CONFIGS[this.settings.current.difficulty].maxSpeed,
       rally: this.flow.rally,
       scores: [...this.flow.scores],
@@ -364,7 +364,8 @@ export class Game {
       isDemo: this.flow.isDemo,
       paddles: this.paddles,
       scores: this.flow.scores,
-      ball: this.ball,
+      balls: this.flow.balls,
+      ball: this.flow.leadBall,
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),
       // The moment the ball and paddles are drawn at, between the last two steps (never before

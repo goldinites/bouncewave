@@ -146,7 +146,6 @@ describe('a side with more than one paddle', () => {
       audio: audio as unknown as AudioEngine,
       particles: new ParticleSystem(),
       paddles: oneVersusTwo(),
-      ball: new Ball(),
       translate: () => '',
     });
 
