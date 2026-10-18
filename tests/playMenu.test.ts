@@ -323,3 +323,32 @@ describe('the PLAY menu and the setup, in the menus', () => {
     expect(document.activeElement).toBe(menuButtons()[0]);
   });
 });
+
+describe('telling the game the quick match setup is on screen', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
+      <div id="gameButtons"></div><div id="gameScreen"></div><p id="gameHint"></p><button id="pauseButton"></button>`;
+  });
+
+  it('says so as it opens and as it gives way, not as it is redrawn', () => {
+    const ui = new UIManager(new I18nManager('en'));
+    const onQuickMatchSetup = vi.fn();
+    const store = new SettingsStore({ load: getDefaultSettings, save: () => {} });
+    const menu = new MenuController(ui, new I18nManager('en'), {} as SoundEffects, store, {
+      onStartGame: vi.fn(),
+      onResumeGame: vi.fn(),
+      onReturnToMainMenu: vi.fn(),
+      onUnlockAudio: vi.fn(),
+      onQuickMatchSetup,
+    });
+
+    menu.showPlayMenu();
+    menu.showQuickMatchSetup();
+    store.cycle('matchBackground'); // redraws the setup
+    menu.showQuickMatchSetup();
+    menu.showPlayMenu();
+    expect(onQuickMatchSetup.mock.calls).toEqual([[true], [false]]);
+    ui.dispose();
+  });
+});

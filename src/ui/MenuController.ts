@@ -28,6 +28,8 @@ export interface GameMenuActions {
   onResumeGame: () => void;
   onReturnToMainMenu: () => void;
   onUnlockAudio: () => void;
+  /** The quick match's setup came on screen (true) or gave way to another (false). */
+  onQuickMatchSetup?: (isShown: boolean) => void;
 }
 
 /** An on/off setting: a toggle, filled while on; picking it switches it. */
@@ -125,6 +127,8 @@ export class MenuController {
   private readonly statistics: StatisticsAccess;
   /** Where Esc leads from what is on screen (the settings, the PLAY menu, the setup). */
   private back: (() => void) | null = null;
+  /** Whether the quick match's setup is the last screen opened. */
+  private isQuickMatchSetupShown = false;
   /** Shows what is on screen again, when it shows settings that may change; null otherwise. */
   private redraw: (() => void) | null = null;
   private readonly unsubscribe: () => void;
@@ -154,10 +158,21 @@ export class MenuController {
     this.unsubscribe();
   }
 
-  /** Forgets where BACK and Esc led: called by every menu and screen as it opens. */
-  private open(back: (() => void) | null = null, redraw: (() => void) | null = null): void {
+  /**
+   * Forgets where BACK and Esc led: called by every menu and screen as it opens, and says when
+   * the quick match's setup comes on screen or goes (not when it is merely redrawn).
+   */
+  private open(
+    back: (() => void) | null = null,
+    redraw: (() => void) | null = null,
+    isQuickMatchSetup = false,
+  ): void {
     this.back = back;
     this.redraw = redraw;
+    if (isQuickMatchSetup !== this.isQuickMatchSetupShown) {
+      this.isQuickMatchSetupShown = isQuickMatchSetup;
+      this.actions.onQuickMatchSetup?.(isQuickMatchSetup);
+    }
   }
 
   public showMainMenu(): void {
@@ -271,7 +286,7 @@ export class MenuController {
    */
   public showQuickMatchSetup(): void {
     const back = () => this.showPlayMenu();
-    this.open(back, () => this.showQuickMatchSetup());
+    this.open(back, () => this.showQuickMatchSetup(), true);
     const settings = this.settings.current;
     this.uiManager.showScreen(
       this.i18n.getModeName('quick'),

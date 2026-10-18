@@ -164,6 +164,7 @@ export class Game {
         onResumeGame: () => this.resume(),
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
+        onQuickMatchSetup: (isShown) => this.onQuickMatchSetup(isShown),
       },
       {
         get: () => this.profile.current.stats,
@@ -369,13 +370,32 @@ export class Game {
   }
 
   /**
+   * The quick match's setup shows its background behind it: the one chosen when it opens, and
+   * the unknown channel for random. Left with the unknown channel on, a real backdrop is drawn at
+   * random, flicking through the channels.
+   */
+  private onQuickMatchSetup(isShown: boolean): void {
+    if (isShown) {
+      this.previewBackground(this.settings.current.matchBackground);
+    } else if (this.renderer.isShowingMystery) {
+      this.audio.music.enterScene(this.renderer.switchChannel());
+      this.audio.sfx.playChannelSurf();
+      this.showDebugDetail();
+    }
+  }
+
+  /**
    * The quick match's background was picked: from now on matches are played on it, and it cuts
-   * in behind the menu at once, its song with it, so the player can flick through them (random
-   * leaves the one on screen).
+   * in behind the menu at once, its song with it, so the player can flick through them; random
+   * puts the unknown channel there, since which backdrop it will be is not known yet.
    */
   private previewBackground(choice: BackgroundChoice): void {
     this.renderer.chooseBackground(choice);
-    if (choice === 'random' || this.flow.phase !== 'attract') return;
+    if (this.flow.phase !== 'attract') return;
+    if (choice === 'random') {
+      this.renderer.showMystery();
+      return;
+    }
     this.audio.music.enterScene(this.renderer.switchChannel(false));
     this.showDebugDetail();
   }

@@ -5,6 +5,7 @@ import { FujiBackground } from '@/render/backgrounds/FujiBackground';
 import { JungleBackground } from '@/render/backgrounds/JungleBackground';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
+import { MysteryBackground } from '@/render/backgrounds/MysteryBackground';
 import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
 import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
@@ -56,6 +57,9 @@ export class BackgroundRenderer {
   private _isPinned = false;
   /** The background the player chose for their matches; null deals one from the deck. */
   private chosen: number | null = null;
+  /** Stands in for "random" behind the quick match's setup; never dealt for a match. */
+  private readonly mystery = new MysteryBackground();
+  private _isShowingMystery = false;
   private lastTime: number | null = null;
 
   private layer: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null = null;
@@ -118,9 +122,12 @@ export class BackgroundRenderer {
    */
   public switchChannel(isAnimated: boolean): SceneId {
     if (this._isPinned) return this.scene;
+    const wasMystery = this._isShowingMystery;
+    this._isShowingMystery = false;
     const count = this.backgrounds.length;
     const previous = this.backgroundIndex;
-    if (this.chosen === previous) return this.scene;
+    // Already on the chosen one (and showing it, not the mystery): it stays
+    if (this.chosen === previous && !wasMystery) return this.scene;
     this.backgroundIndex = this.chosen ?? this.deal();
 
     if (isAnimated && count > 1) {
@@ -138,6 +145,21 @@ export class BackgroundRenderer {
       this.surf = { age: 0, channels };
     }
     return this.scene;
+  }
+
+  /**
+   * Shows the unknown channel in place of the background (the player picked "random"), until
+   * the next switchChannel deals a real one. Not over a developer's pin.
+   */
+  public showMystery(): void {
+    if (this._isPinned) return;
+    this._isShowingMystery = true;
+    this.surf = null;
+  }
+
+  /** Whether the unknown channel stands in for the background right now. */
+  public get isShowingMystery(): boolean {
+    return this._isShowingMystery;
   }
 
   /** Whether a developer pinned the background on screen. */
@@ -206,7 +228,10 @@ export class BackgroundRenderer {
     }
 
     const surf = this.advanceSurf(dt);
-    const background = this.backgrounds[surf?.channel ?? this.backgroundIndex];
+    const background =
+      this._isShowingMystery && !surf
+        ? this.mystery
+        : this.backgrounds[surf?.channel ?? this.backgroundIndex];
 
     // At each switch the picture rolls down a little and settles, as an old set's would
     const roll = surf?.roll ?? 0;
