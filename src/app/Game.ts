@@ -1,10 +1,10 @@
+import { effect, untracked } from '@preact/signals-core';
 import { FixedStep } from '@/app/FixedStep';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
 import { BackgroundMenu } from '@/debug/BackgroundMenu';
 import { FpsMeter } from '@/debug/FpsMeter';
-import { KonamiCode } from '@/easterEgg/KonamiCode';
-import { TitleTaps } from '@/easterEgg/TitleTaps';
+import { ClassicSwitch } from '@/easterEgg/ClassicSwitch';
 import { EffectsDirector } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { I18nManager } from '@/i18n/I18nManager';
@@ -25,6 +25,7 @@ import { StoragePersistence } from '@/profile/StoragePersistence';
 import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { EventBus } from '@/shared/EventBus';
+import { Look } from '@/shared/look';
 import { COLORS } from '@/shared/palette';
 import { BackgroundChoice, isPickableScene, isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
@@ -102,14 +103,9 @@ export class Game {
   private readonly backgroundMenu: BackgroundMenu;
   /** The background the debug overlay last showed, to notice when the next match changes it. */
   private debugScene: SceneId | null = null;
-  private readonly konamiCode: KonamiCode;
-  private readonly titleTaps: TitleTaps | null;
-
-  /**
-   * The classic-mode easter egg: the Konami code, or on a phone five quick taps on the menu's
-   * title, toggles it.
-   */
-  private classicMode = false;
+  /** The classic look's easter egg, and the look the whole game follows. */
+  private readonly classicSwitch: ClassicSwitch;
+  private readonly stopFollowingLook: () => void;
 
   private lastTimestamp = 0;
   private isRunning = false;
@@ -195,6 +191,14 @@ export class Game {
       onEvent: (event) => this.matchEvents.emit(event),
     });
 
+    // The classic look comes and goes only on the main menu. Taps on the title are the phone's
+    // way in; a mouse has the Konami code's keyboard to hand
+    const title = document.getElementById('gameTitle');
+    this.classicSwitch = new ClassicSwitch(
+      () => this.menuController.isOnMainMenu,
+      window.matchMedia('(pointer: coarse)').matches ? title : null,
+    );
+
     this.menuController = new MenuController(
       this.uiManager,
       this.i18n,
@@ -203,7 +207,8 @@ export class Game {
       {
         onStartGame: () => this.start(),
         onStartQuickMatch: () => {
-          this.challenge = this.pinnedChallenge;
+          // The classic look has no challenges, not even a pinned one
+          this.challenge = this.look === 'classic' ? null : this.pinnedChallenge;
           this.isTwoPlayers = false;
           this.start();
         },
@@ -230,6 +235,7 @@ export class Game {
         reset: () => this.profile.update({ stats: getEmptyStatistics() }),
       },
       { get: () => this.profile.current.challenges },
+      this.classicSwitch.look,
     );
 
     this.statsRecorder = new StatsRecorder({
@@ -263,13 +269,15 @@ export class Game {
       this.togglePause();
     });
 
-    this.konamiCode = new KonamiCode(() => this.setClassicMode(!this.classicMode));
-    // Taps are the phone's way in; a mouse has the Konami code's keyboard to hand
-    const title = document.getElementById('gameTitle');
-    this.titleTaps =
-      title && window.matchMedia('(pointer: coarse)').matches
-        ? new TitleTaps(title, () => this.setClassicMode(!this.classicMode))
-        : null;
+    // Everything that looks or sounds the part follows the look; the menus redraw themselves
+    this.stopFollowingLook = effect(() => {
+      const look = this.classicSwitch.look.value;
+      untracked(() => {
+        this.renderer.setLook(look);
+        this.uiManager.setLook(look);
+        this.audio.setLook(look);
+      });
+    });
 
     // Errors outside the game loop (input and button handlers): shown in the ?debug overlay
     window.addEventListener(
@@ -315,11 +323,8 @@ export class Game {
     this.settings.cycle('musicMuted');
   }
 
-  /** Swaps the whole presentation (canvas, menu chrome and music) for the 1972 look. */
-  private setClassicMode(enabled: boolean): void {
-    this.classicMode = enabled;
-    this.renderer.setClassicMode(enabled);
-    this.uiManager.setClassicMode(enabled);
+  private get look(): Look {
+    return this.classicSwitch.look.value;
   }
 
   /**
@@ -484,8 +489,7 @@ export class Game {
     this.flow.interpolate(this.simulation.alpha);
 
     // Music reads this on its own scheduler tick, paused frames included (it muffles in pause)
-    this.audio.music.setState(this.buildMusicState());
-    this.audio.classicMusic.setActive(this.classicMode && !this.settings.current.musicMuted);
+    this.audio.playMusic(this.buildMusicState());
 
     // A challenge's condition: in the strip above the court, or on the court on a phone on its
     // side, which has no strip
@@ -583,7 +587,7 @@ export class Game {
       rally: this.flow.rally,
       scores: [...this.flow.scores],
       winningScores: this.flow.rules.winningScores,
-      isMuted: this.settings.current.musicMuted || this.classicMode,
+      isMuted: this.settings.current.musicMuted,
       difficulty,
     };
   }
@@ -628,8 +632,8 @@ export class Game {
     this.matchEvents.clear();
     this.unsubscribeSettings();
     this.menuController.dispose();
-    this.konamiCode.dispose();
-    this.titleTaps?.dispose();
+    this.stopFollowingLook();
+    this.classicSwitch.dispose();
     this.inputHandler.dispose();
     this.uiManager.dispose();
     this.renderer.dispose();

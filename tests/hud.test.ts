@@ -46,7 +46,7 @@ describe('HudRenderer', () => {
   it('labels whose score is whose only when two players have labels', () => {
     const labelsDrawn = (sideLabels: [string, string] | null) => {
       const { ctx, spies } = fakeContext();
-      new HudRenderer().render(ctx, 0, paddles(), [0, 0], 0, '', 0, false, false, null, sideLabels);
+      new HudRenderer().render(ctx, 0, paddles(), [0, 0], 0, '', 0, false, null, sideLabels);
       return spies.fillText.mock.calls.map(([text]) => text).filter((text) => /^P/.test(text));
     };
 

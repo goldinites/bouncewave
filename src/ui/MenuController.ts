@@ -1,4 +1,4 @@
-import { effect, untracked } from '@preact/signals-core';
+import { effect, ReadonlySignal, signal, untracked } from '@preact/signals-core';
 import { h } from 'preact';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
@@ -18,6 +18,7 @@ import { getEmptyStatistics, Statistics } from '@/profile/Statistics';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
+import { Look } from '@/shared/look';
 import { BACKGROUND_CHOICES, SceneId } from '@/shared/scenes';
 import { describeShortfall } from '@/ui/challengeTexts';
 import { ScreenEntry, ScreenStack, ScreenView } from '@/ui/ScreenStack';
@@ -154,6 +155,10 @@ const SETTINGS_MENU: SettingsMenuEntry[] = [
 const TWO_PLAYER_SETUP = (): ChoiceEntry[] =>
   QUICK_MATCH_SETUP.filter((entry) => entry.key !== 'difficulty');
 
+/** A match's setup in a look: the classic one draws no backdrop, so it has none to choose. */
+const setupIn = (look: Look, entries: ChoiceEntry[]): ChoiceEntry[] =>
+  look === 'classic' ? entries.filter((entry) => entry.key !== 'matchBackground') : entries;
+
 /**
  * The quick match's choices, top to bottom. They are kept with the settings, so the next quick
  * match is set up as the last one was.
@@ -188,8 +193,10 @@ const QUICK_MATCH_SETUP: ChoiceEntry[] = [
 /**
  * Every menu of the game, each a Preact screen on a stack (`ScreenStack`): a button opens a
  * screen over the one on show, BACK and Esc step back down to the one it was opened from. The
- * screen on show is drawn in an effect, so a setting or the profile changing (from the menu or
- * from outside it: the M key) draws it again by itself.
+ * screen on show is drawn in an effect, so a setting, the profile or the look changing (from the
+ * menu or from outside it: the M key, the classic look's easter egg) draws it again by itself.
+ * The classic look plays only a quick match and a match of two: its main menu offers just those,
+ * and their setups have no backdrop to choose.
  */
 export class MenuController {
   private uiManager: UIManager;
@@ -202,6 +209,8 @@ export class MenuController {
   /** Which challenges the player has passed, for their screens and the statistics. */
   private readonly challenges: ChallengeProgressAccess;
   private readonly stack = new ScreenStack();
+  /** The game's look, which decides what the menus offer. */
+  private readonly look: ReadonlySignal<Look>;
   /** The screen last drawn, to tell one drawn again from one that has just come on screen. */
   private drawn: ScreenEntry | null = null;
   /** Whether a match's setup (quick, two players) was the last screen to come up. */
@@ -216,6 +225,7 @@ export class MenuController {
     actions: GameMenuActions,
     statistics: StatisticsAccess = { get: getEmptyStatistics, reset: () => {} },
     challenges: ChallengeProgressAccess = { get: getEmptyChallengeProgress },
+    look: ReadonlySignal<Look> = signal('neon'),
   ) {
     this.uiManager = uiManager;
     this.i18n = i18n;
@@ -224,6 +234,7 @@ export class MenuController {
     this.actions = actions;
     this.statistics = statistics;
     this.challenges = challenges;
+    this.look = look;
 
     this.stopDrawing = effect(() => {
       const entry = this.stack.top.value;
@@ -265,6 +276,11 @@ export class MenuController {
     );
   }
 
+  /** Whether the main menu is on show (the one place the look may change). */
+  public get isOnMainMenu(): boolean {
+    return this.uiManager.isMenuVisible && this.stack.top.value?.id === 'main';
+  }
+
   /** Back down the stack, as BACK does. */
   private readonly back = () => {
     this.stack.back();
@@ -283,7 +299,17 @@ export class MenuController {
         subtitle: '',
         body: h(ButtonMenu, {
           items: [
-            { id: 'play', label: this.i18n.t('play'), onClick: () => this.open(this.playMenu()) },
+            this.look.value === 'classic'
+              ? {
+                  id: 'quick',
+                  label: this.i18n.getModeName('quick'),
+                  onClick: () => this.open(this.quickMatchSetup()),
+                }
+              : {
+                  id: 'play',
+                  label: this.i18n.t('play'),
+                  onClick: () => this.open(this.playMenu()),
+                },
             {
               id: 'multiplayer',
               label: this.i18n.t('multiplayer'),
@@ -530,7 +556,9 @@ export class MenuController {
    * The difficulty's description stands under the title, as it did in the settings.
    */
   public showQuickMatchSetup(): void {
-    this.stack.reset(this.mainMenu(), this.playMenu(), this.quickMatchSetup());
+    // The classic look has no PLAY menu: its main menu opens the setup itself
+    const way = this.look.value === 'classic' ? [] : [this.playMenu()];
+    this.stack.reset(this.mainMenu(), ...way, this.quickMatchSetup());
   }
 
   private quickMatchSetup(): ScreenEntry {
@@ -543,7 +571,9 @@ export class MenuController {
           title: this.i18n.getModeName('quick'),
           subtitle: this.i18n.getDifficultyInfo(settings.difficulty)[1],
           body: h(QuickMatchSetup, {
-            options: QUICK_MATCH_SETUP.map((entry) => this.choiceOf(entry, settings)),
+            options: setupIn(this.look.value, QUICK_MATCH_SETUP).map((entry) =>
+              this.choiceOf(entry, settings),
+            ),
             previousLabel: this.i18n.t('previousChoice'),
             nextLabel: this.i18n.t('nextChoice'),
             startLabel: this.i18n.t('start'),
@@ -574,7 +604,9 @@ export class MenuController {
           title: this.i18n.t('twoPlayers'),
           subtitle: this.i18n.t('twoPlayersHint'),
           body: h(QuickMatchSetup, {
-            options: TWO_PLAYER_SETUP().map((entry) => this.choiceOf(entry, settings)),
+            options: setupIn(this.look.value, TWO_PLAYER_SETUP()).map((entry) =>
+              this.choiceOf(entry, settings),
+            ),
             previousLabel: this.i18n.t('previousChoice'),
             nextLabel: this.i18n.t('nextChoice'),
             startLabel: this.i18n.t('start'),

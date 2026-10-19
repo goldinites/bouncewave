@@ -84,7 +84,7 @@ describe('Renderer', () => {
     expect(spies.stroke).not.toHaveBeenCalled();
   });
 
-  it('draws the flat classic scene instead of the neon one once classic mode is on', () => {
+  it('draws the flat classic scene instead of the neon one in the classic look', () => {
     const { renderer, ctx, spies } = makeRenderer();
     const strokeStyles: unknown[] = [];
     (spies.stroke as Mock).mockImplementation(() => strokeStyles.push(ctx.strokeStyle));
@@ -93,18 +93,18 @@ describe('Renderer', () => {
     expect(strokeStyles).toContain('rgba(255, 255, 255, 0.3)'); // the neon net line
 
     strokeStyles.length = 0;
-    renderer.setClassicMode(true);
+    renderer.setLook('classic');
     renderer.render(baseFrame(), 0.016);
     expect(strokeStyles).toContain('#ffffff'); // the flat classic net line
     expect(strokeStyles).not.toContain('rgba(255, 255, 255, 0.3)');
   });
 
-  it('reports back whatever classic mode was last set to', () => {
+  it('shows its effects in the neon look only', () => {
     const { renderer } = makeRenderer();
-    expect(renderer.classicMode).toBe(false);
+    expect(renderer.showsEffects).toBe(true);
 
-    renderer.setClassicMode(true);
-    expect(renderer.classicMode).toBe(true);
+    renderer.setLook('classic');
+    expect(renderer.showsEffects).toBe(false);
   });
 
   it('shows a screen flash normally', () => {
@@ -160,51 +160,51 @@ describe('Renderer', () => {
     });
   });
 
-  it("doesn't leave a flash that only shows up once classic mode is switched off again", () => {
+  it("doesn't leave a flash that only shows up once the classic look is switched off again", () => {
     const { renderer, ctx } = makeRenderer();
 
-    // A hit lands while classic mode is on...
-    renderer.setClassicMode(true);
+    // A hit lands in the classic look...
+    renderer.setLook('classic');
     renderer.addFlash(1.0);
 
     // ...then the player switches back to the normal view
-    renderer.setClassicMode(false);
+    renderer.setLook('neon');
     renderer.render(baseFrame(), 0.016);
 
-    // The flash from the classic-mode event must not suddenly appear here
+    // The flash from the classic look's event must not suddenly appear here
     expect(ctx.fillStyle).not.toMatch(/^rgba\(255, 255, 255,/);
   });
 
-  it('plays the CRT-glitch stage effect, but not while classic mode is on', () => {
+  it('plays the CRT-glitch stage effect, but not in the classic look', () => {
     const { renderer, stage } = makeRenderer();
 
     renderer.triggerCrtGlitch();
     expect(stage.classList.contains('crt-glitch-active')).toBe(true);
 
     stage.classList.remove('crt-glitch-active');
-    renderer.setClassicMode(true);
+    renderer.setLook('classic');
     renderer.triggerCrtGlitch();
     expect(stage.classList.contains('crt-glitch-active')).toBe(false);
   });
 
-  it('plays the victory-burst stage effect, but not while classic mode is on', () => {
+  it('plays the victory-burst stage effect, but not in the classic look', () => {
     const { renderer, stage } = makeRenderer();
 
     renderer.triggerVictoryEffect();
     expect(stage.classList.contains('victory-burst-active')).toBe(true);
 
     stage.classList.remove('victory-burst-active');
-    renderer.setClassicMode(true);
+    renderer.setLook('classic');
     renderer.triggerVictoryEffect();
     expect(stage.classList.contains('victory-burst-active')).toBe(false);
   });
 
-  it('renders both modes without throwing across a full frame, demo or not', () => {
+  it('renders both looks without throwing across a full frame, demo or not', () => {
     const { renderer } = makeRenderer();
 
     expect(() => renderer.render(baseFrame({ isDemo: false }), 0.016)).not.toThrow();
 
-    renderer.setClassicMode(true);
+    renderer.setLook('classic');
     expect(() => renderer.render(baseFrame({ isDemo: false }), 0.016)).not.toThrow();
   });
 
@@ -231,17 +231,21 @@ describe('Renderer', () => {
 
   it('draws every ball on court, in both looks', () => {
     const neon = vi.spyOn(EntityRenderer, 'renderBall');
-    const classic = vi.spyOn(EntityRenderer, 'renderClassicBall');
-    const { renderer } = makeRenderer();
+    const { renderer, spies } = makeRenderer();
     const balls = [new Ball(), new Ball()];
 
     renderer.render(baseFrame({ balls, ball: balls[0] }), 0.016);
     expect(neon.mock.calls.map((call) => call[1])).toEqual(balls);
 
-    renderer.setClassicMode(true);
+    renderer.setLook('classic');
+    (spies.fillRect as Mock).mockClear();
     renderer.render(baseFrame({ balls, ball: balls[0] }), 0.016);
-    expect(classic.mock.calls.map((call) => call[1])).toEqual(balls);
+    // A classic ball is a white square as wide as the ball
+    const size = balls[0].radius * 2;
+    const squares = (spies.fillRect as Mock).mock.calls.filter(
+      ([, , width, height]) => width === size && height === size,
+    );
+    expect(squares).toHaveLength(balls.length);
     neon.mockRestore();
-    classic.mockRestore();
   });
 });

@@ -6,11 +6,13 @@ import { Paddle } from '@/match/Paddle';
 import { Scores } from '@/match/side';
 import { AdaptiveResolution } from '@/render/AdaptiveResolution';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
+import { ClassicScene } from '@/render/ClassicScene';
 import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer';
 import { HudCondition, HudRenderer } from '@/render/HudRenderer';
 import { sprites } from '@/render/SpriteCache';
+import { Look } from '@/shared/look';
 import { approach, clamp } from '@/shared/math';
 import { BackgroundChoice, SceneId } from '@/shared/scenes';
 
@@ -122,8 +124,10 @@ export class Renderer {
   /** Bumped on every stage effect, so a finishing older one never clears a newer one. */
   private stageEffectId = 0;
 
-  /** The classic-mode easter egg; also silences every flashy feedback method below. */
-  private isClassicMode = false;
+  /** How the game looks: the classic look draws its own flat scene and silences every flashy
+   * feedback method below. */
+  private look: Look = 'neon';
+  private readonly classicScene = new ClassicScene();
   /**
    * The player asked the system for less motion: no screen shake, white flashes or camera zoom.
    * Read live, so changing the setting mid-game takes effect at once. The stage's CSS effects
@@ -213,7 +217,7 @@ export class Renderer {
    */
   private triggerStageEffect(className: StageClass): void {
     const stage = this.stage;
-    if (!stage || this.isClassicMode) return;
+    if (!stage || !this.showsEffects) return;
 
     const id = ++this.stageEffectId;
     stage.classList.remove(STAGE_CLASSES.CRT_GLITCH, STAGE_CLASSES.VICTORY_BURST);
@@ -247,12 +251,12 @@ export class Renderer {
   }
 
   public addShake(amount: number): void {
-    if (this.isClassicMode || this.reducedMotion.matches) return;
+    if (!this.showsEffects || this.reducedMotion.matches) return;
     this.screenShake = Math.max(this.screenShake, amount);
   }
 
   public addFlash(amount: number): void {
-    if (this.isClassicMode || this.reducedMotion.matches) return;
+    if (!this.showsEffects || this.reducedMotion.matches) return;
     this.screenFlash = Math.max(this.screenFlash, amount);
   }
 
@@ -262,7 +266,7 @@ export class Renderer {
    * whole background mid-rally. That burst is kept for the victory celebration only.
    */
   public triggerClimaxSurge(): void {
-    if (this.isClassicMode) return;
+    if (!this.showsEffects) return;
     // Raises the laser target rather than the value, so the swell eases in
     this.laserSurge = LASERS.CLIMAX_SURGE;
     this.addFlash(CLIMAX_FLASH);
@@ -270,7 +274,7 @@ export class Renderer {
 
   /** Victory: lasers flare and sweep through hues, Memphis shapes burst outward and heat up. */
   public celebrate(): void {
-    if (this.isClassicMode) return;
+    if (!this.showsEffects) return;
     this.laserSurge = LASERS.CELEBRATION_SURGE;
     this.celebration = 1;
     this.background.triggerDrop();
@@ -296,7 +300,7 @@ export class Renderer {
    */
   public switchChannel(isAnimated = true, scene: SceneId | null = null): SceneId {
     return this.background.switchChannel(
-      isAnimated && !this.reducedMotion.matches && !this.isClassicMode,
+      isAnimated && !this.reducedMotion.matches && this.showsEffects,
       scene,
     );
   }
@@ -324,13 +328,17 @@ export class Renderer {
     return this.background.pin(scene);
   }
 
-  /** Swaps the whole canvas scene for a flat monochrome 1972 look, with no flashy feedback. */
-  public setClassicMode(enabled: boolean): void {
-    this.isClassicMode = enabled;
+  /** Draws the game in a look from now on: the classic one is flat black and white. */
+  public setLook(look: Look): void {
+    this.look = look;
   }
 
-  public get classicMode(): boolean {
-    return this.isClassicMode;
+  /**
+   * Whether the look shows the flashy feedback: shake, flashes, surges, particles, the stage's
+   * effects, channels flicking over. The classic look shows none of it.
+   */
+  public get showsEffects(): boolean {
+    return this.look === 'neon';
   }
 
   public showFinalScore(sign: FinalScoreSign): void {
@@ -391,8 +399,8 @@ export class Renderer {
     ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     sprites.setScale(this.scale);
 
-    if (this.isClassicMode) {
-      this.renderClassic(frame, realDt);
+    if (this.look === 'classic') {
+      this.classicScene.render(ctx, frame, this.finalSign, this.menuDim);
       return;
     }
 
@@ -431,7 +439,6 @@ export class Renderer {
         frame.readyText,
         gameTime,
         isRotated,
-        false,
         frame.condition,
         frame.sideLabels,
         frame.isConditionOnCourt,
@@ -490,57 +497,6 @@ export class Renderer {
     if (this.screenFlash > 0) {
       ctx.fillStyle = `rgba(255, 255, 255, ${this.screenFlash * 0.25})`;
 
-      ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
-    }
-  }
-
-  /**
-   * The classic-mode easter egg's whole scene: flat black and white, no background, glow,
-   * particles, shake, zoom or vignette — just the court, the paddles, the ball and the score.
-   */
-  private renderClassic(frame: RenderFrame, realDt: number): void {
-    const { isDemo, paddles, serveTime, isRotated } = frame;
-    const ctx = this.ctx;
-
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
-
-    CourtRenderer.renderClassic(ctx);
-
-    if (!isDemo && !this.finalSign) {
-      this.hud.render(
-        ctx,
-        realDt,
-        paddles,
-        frame.scores,
-        serveTime,
-        frame.readyText,
-        frame.time,
-        isRotated,
-        true,
-        frame.condition,
-        frame.sideLabels,
-        frame.isConditionOnCourt,
-      );
-    }
-
-    paddles.forEach((paddle) => EntityRenderer.renderClassicPaddle(ctx, paddle));
-    if (!isDemo && !this.finalSign) {
-      paddles.forEach((paddle, i) => {
-        const charge = frame.overdriveCharges[i] ?? null;
-        if (charge !== null) {
-          EntityRenderer.renderOverdriveMeter(ctx, paddle, charge, frame.time, true);
-        }
-      });
-    }
-    frame.balls.forEach((each) => EntityRenderer.renderClassicBall(ctx, each));
-
-    if (this.finalSign) {
-      FinalScoreRenderer.render(ctx, this.finalSign, this.finalSignAge, isRotated, true);
-    }
-
-    if (this.menuDim > 0.003) {
-      ctx.fillStyle = `rgba(0, 0, 0, ${this.menuDim})`;
       ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
     }
   }

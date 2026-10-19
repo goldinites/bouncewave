@@ -38,7 +38,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `fx/` (particle types), `shared/`         |
 | `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax | `match/`, `render/`, `audio/`, `shared/`            |
 | `ui/`                  | menus as Preact screens on a stack, challenge condition, boot screen  | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
-| `debug/`, `easterEgg/` | FPS overlay and background menu; Konami code, title taps              | `shared/`                                           |
+| `debug/`, `easterEgg/` | FPS overlay and background menu; the classic look's switch            | `shared/`                                           |
 | `app/`                 | `Game` (composition root, frame loop), `FixedStep`                    | anything                                            |
 
 The rules that matter most are checked by `tests/architecture.test.ts`: `match/` imports only
@@ -170,6 +170,14 @@ buttons (skipping the disabled ones and those with `tabIndex` -1) and any other 
 **A different line-up.** `flow.startMatch(rules, lineup)` with a participant per paddle: two
 `HumanController`s for two players, an `AiPaddleController` with a difficulty for each CPU.
 A new kind of player (a replay, a remote player) is a new `PaddleController`.
+
+**A look.** The whole game's presentation, a `Look` (`shared/look.ts`): neon, or the classic
+look `ClassicSwitch` (`easterEgg/`) turns on and off from the main menu only. `Game` follows its
+signal and hands the look to the `Renderer` (the classic one draws its own flat `ClassicScene` and
+shows no effects: `renderer.showsEffects`), the `UIManager` (the menus' chrome, `classic.css`) and
+the `AudioEngine` (which music `playMusic` plays); the menus read it to offer only what the look can
+play. The neon drawing code never asks which look is on. A new look is a value of `Look`, a scene
+that draws it, and its chrome.
 
 **Something that reacts to the match** (statistics, achievements). A class with
 `listenTo(events: EventBus<MatchEvent>)` that subscribes, called where `Game` wires the effects and

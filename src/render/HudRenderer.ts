@@ -10,15 +10,16 @@ const SCORE_FONT = gameFont(700, 64);
 const SCORE_GLOW = 22;
 const READY_FONT = gameFont(700, 22);
 const READY_GLOW = 6;
-// Each side's label under its score with two players, which says whose score is whose
-const SIDE_LABEL = {
-  FONT: gameFont(700, 18),
-  CLASSIC_FONT: "700 16px 'Courier New', monospace",
-  OFFSET: 46, // px under the score's center
-  ALPHA: 0.75,
+/** Where the HUD stands on the court, whatever the look draws it in. */
+export const HUD_LAYOUT = {
+  SCORE_X: 90, // px either side of the net, each side's score's center
+  SCORE_Y: 82, // court px
+  LABEL_OFFSET: 46, // px under the score's center, each side's label with two players
+  LABEL_ALPHA: 0.75,
 } as const;
-// A challenge's condition line, under the scores or in their place. Drawn as plain text, not a
-// cached sprite: its clock changes every second
+// Each side's label under its score with two players, which says whose score is whose
+const SIDE_LABEL_FONT = gameFont(700, 18);
+// A challenge's condition line, under the scores or in their place
 const CONDITION = {
   SIZE: 26, // px
   /** In the scores' place, larger: it is all the HUD shows. */
@@ -42,6 +43,60 @@ export interface HudCondition {
   readonly isUrgent: boolean;
   /** Shown in place of the scores, which it makes useless. */
   readonly replacesScore: boolean;
+}
+
+/** How a look writes a challenge's condition line. */
+export interface ConditionStyle {
+  /** The font at a size in px. */
+  font: (size: number) => string;
+  color: string;
+  hearts: string;
+  alpha: number;
+}
+
+/**
+ * A challenge's condition line, text then hearts for lives, centered under the scores or in
+ * their place. Laid out by hand, as plain text rather than a cached sprite: its clock changes
+ * every second.
+ */
+export function drawConditionLine(
+  ctx: CanvasRenderingContext2D,
+  condition: HudCondition,
+  style: ConditionStyle,
+): void {
+  ctx.save();
+  const alone = condition.replacesScore;
+  const size = alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
+  ctx.font = style.font(size);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = style.color;
+  ctx.globalAlpha = style.alpha;
+  ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
+
+  const { lives } = condition;
+  const textWidth = ctx.measureText(condition.text).width;
+  const heart = size * CONDITION.HEART;
+  const heartGap = size * CONDITION.HEART_GAP;
+  const heartsWidth = lives
+    ? size * CONDITION.HEART_LEAD + lives.total * heart + (lives.total - 1) * heartGap
+    : 0;
+  const start = -(textWidth + heartsWidth) / 2;
+  ctx.textAlign = 'left';
+  ctx.fillText(condition.text, start, 0);
+
+  if (lives) {
+    const first = start + textWidth + size * CONDITION.HEART_LEAD + heart / 2;
+    ctx.fillStyle = ctx.strokeStyle = style.hearts;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < lives.total; i++) {
+      const isLeft = i < lives.left;
+      ctx.globalAlpha = isLeft ? style.alpha : style.alpha * CONDITION.LOST_HEART_ALPHA;
+      heartPath(ctx, first + i * (heart + heartGap), 0, heart);
+      if (isLeft) ctx.fill();
+      else ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 /** A heart `size` across, centered on (x, y). */
@@ -73,8 +128,6 @@ export class HudRenderer {
    * @param readyText
    * @param time
    * @param isRotated
-   * @param classic plain white blocky digits with no pop, color or glow, and no "get ready"
-   *   prompt at all — the original scoreboard never had one
    * @param condition a challenge's condition line, under the scores or in their place; urgent, it
    *   turns pink and throbs
    * @param sideLabels each side's label under its score, [left, right] (two players); null for none
@@ -90,7 +143,6 @@ export class HudRenderer {
     readyText: string,
     time: number,
     isRotated: boolean,
-    classic = false,
     condition: HudCondition | null = null,
     sideLabels: readonly [string, string] | null = null,
     isConditionOnCourt = true,
@@ -109,23 +161,23 @@ export class HudRenderer {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = classic ? "700 56px 'Courier New', monospace" : SCORE_FONT;
+    ctx.font = SCORE_FONT;
 
     // Each side's score, in its color (unless the condition line stands in for them)
     const shownScores = condition?.replacesScore ? [] : scores;
     shownScores.forEach((score, index) => {
       const color = paddles.find((p) => p.side === (index as Side))!.color;
-      const pop = classic ? 0 : Math.sin((1 - this.scorePop[index]) * Math.PI);
+      const pop = Math.sin((1 - this.scorePop[index]) * Math.PI);
       const scale = 1 + pop * 0.5;
 
       ctx.save();
 
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = classic ? 1 : 0.9;
+      ctx.globalAlpha = 0.9;
 
-      const posX = COURT.WIDTH / 2 + (index ? 1 : -1) * 90;
-      const posY = 82;
+      const posX = COURT.WIDTH / 2 + (index ? 1 : -1) * HUD_LAYOUT.SCORE_X;
+      const posY = HUD_LAYOUT.SCORE_Y;
 
       ctx.translate(posX, posY);
 
@@ -137,29 +189,25 @@ export class HudRenderer {
       const label = sideLabels?.[index];
       if (label) {
         ctx.save();
-        ctx.font = classic ? SIDE_LABEL.CLASSIC_FONT : SIDE_LABEL.FONT;
-        ctx.fillStyle = classic ? '#ffffff' : color;
-        ctx.globalAlpha = SIDE_LABEL.ALPHA;
-        ctx.fillText(label, 0, SIDE_LABEL.OFFSET);
+        ctx.font = SIDE_LABEL_FONT;
+        ctx.fillStyle = color;
+        ctx.globalAlpha = HUD_LAYOUT.LABEL_ALPHA;
+        ctx.fillText(label, 0, HUD_LAYOUT.LABEL_OFFSET);
         ctx.restore();
       }
 
       ctx.scale(scale, scale);
 
       const text = String(score);
-      if (classic) {
-        ctx.fillText(text, 0, 0);
-      } else {
-        sprites.draw(
-          ctx,
-          `score|${color}|${text}`,
-          0,
-          0,
-          (measureCtx, renderScale) =>
-            measureText(measureCtx, renderScale, text, SCORE_FONT, SCORE_GLOW),
-          (spriteCtx) => paintText(spriteCtx, text, SCORE_FONT, color, SCORE_GLOW),
-        );
-      }
+      sprites.draw(
+        ctx,
+        `score|${color}|${text}`,
+        0,
+        0,
+        (measureCtx, renderScale) =>
+          measureText(measureCtx, renderScale, text, SCORE_FONT, SCORE_GLOW),
+        (spriteCtx) => paintText(spriteCtx, text, SCORE_FONT, color, SCORE_GLOW),
+      );
 
       ctx.restore();
     });
@@ -167,11 +215,11 @@ export class HudRenderer {
     // Only a phone on its side, with no strip above the court, has the line drawn here; across a
     // turned court it would cross the ball's path
     if (condition && isConditionOnCourt && !isRotated) {
-      this.renderCondition(ctx, condition, time, classic);
+      this.renderCondition(ctx, condition, time);
     }
 
-    // "GET READY" indicator — the original had no such prompt, so classic mode stays silent
-    if (serveTime > 0 && !classic) {
+    // "GET READY" indicator
+    if (serveTime > 0) {
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
 
       this.renderReadyText(ctx, readyText, COURT.WIDTH / 2, COURT.HEIGHT / 2 + 8, isRotated);
@@ -180,52 +228,21 @@ export class HudRenderer {
     ctx.restore();
   }
 
+  /** The condition line in neon white; urgent, pink and throbbing (still with reduced motion). */
   private renderCondition(
     ctx: CanvasRenderingContext2D,
     condition: HudCondition,
     time: number,
-    classic: boolean,
   ): void {
-    ctx.save();
-    const alone = condition.replacesScore;
-    const size = alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
-    ctx.font = classic ? `700 ${size - 4}px 'Courier New', monospace` : gameFont(700, size);
-    ctx.textBaseline = 'middle';
-    const isUrgent = condition.isUrgent && !classic;
-    ctx.fillStyle = isUrgent ? COLORS.PINK : COLORS.WHITE;
-    const throb = isUrgent && !this.isMotionReduced();
-    ctx.globalAlpha = throb
-      ? 0.6 + 0.4 * Math.abs(Math.sin(time * CONDITION.URGENT_PULSE))
-      : CONDITION.ALPHA;
-
-    ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
-
-    // Laid out by hand, text then hearts, centered
-    const { lives } = condition;
-    const textWidth = ctx.measureText(condition.text).width;
-    const heart = size * CONDITION.HEART;
-    const heartGap = size * CONDITION.HEART_GAP;
-    const heartsWidth = lives
-      ? size * CONDITION.HEART_LEAD + lives.total * heart + (lives.total - 1) * heartGap
-      : 0;
-    const start = -(textWidth + heartsWidth) / 2;
-    ctx.textAlign = 'left';
-    ctx.fillText(condition.text, start, 0);
-
-    if (lives) {
-      const first = start + textWidth + size * CONDITION.HEART_LEAD + heart / 2;
-      ctx.fillStyle = ctx.strokeStyle = classic ? COLORS.WHITE : COLORS.RED;
-      ctx.lineWidth = 2;
-      const alpha = ctx.globalAlpha;
-      for (let i = 0; i < lives.total; i++) {
-        const isLeft = i < lives.left;
-        ctx.globalAlpha = isLeft ? alpha : alpha * CONDITION.LOST_HEART_ALPHA;
-        heartPath(ctx, first + i * (heart + heartGap), 0, heart);
-        if (isLeft) ctx.fill();
-        else ctx.stroke();
-      }
-    }
-    ctx.restore();
+    const throb = condition.isUrgent && !this.isMotionReduced();
+    drawConditionLine(ctx, condition, {
+      font: (size) => gameFont(700, size),
+      color: condition.isUrgent ? COLORS.PINK : COLORS.WHITE,
+      hearts: COLORS.RED,
+      alpha: throb
+        ? 0.6 + 0.4 * Math.abs(Math.sin(time * CONDITION.URGENT_PULSE))
+        : CONDITION.ALPHA,
+    });
   }
 
   private renderReadyText(
