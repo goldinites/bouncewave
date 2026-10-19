@@ -6,6 +6,9 @@ Preact screens, an installable offline PWA. Played at https://goldinites.github.
 - The user writes in Russian: answer in Russian. Code, comments, commits and PRs are in English.
 - **The development plan is [docs/ROADMAP.md](docs/ROADMAP.md).** Read it before any roadmap
   work; it holds the stages, each step's scope, its status and the agreed decisions.
+- Review every new requirement of the user's, and every step of the plan, as a professional game
+  designer and point out objectively bad decisions before building them (how: `/roadmap-step`,
+  step 1a).
 - Skills for recurring jobs: `/roadmap-step` (carry out the next step of the plan), `/release`
   (ship a version to GitHub Pages).
 
