@@ -78,8 +78,6 @@ body.classic-mode .stats__row dd {
 }
 
 /* The challenges' card and an attempt's result: white monospace, no neon, no flourish */
-body.classic-mode .challenge-card__row dt,
-body.classic-mode .challenge-card__row dd,
 body.classic-mode .challenge-card__passed,
 body.classic-mode .challenge-result__message {
   color: var(--white);

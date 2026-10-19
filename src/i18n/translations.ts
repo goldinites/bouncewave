@@ -6,7 +6,7 @@ export type Language = 'en' | 'ru';
 
 export type DifficultyDescription = [name: string, description: string];
 
-/** A challenge's name, and what it takes to pass it. */
+/** A challenge's name, and what it takes to pass it and what sets its match apart. */
 export type ChallengeDescription = [name: string, goal: string];
 
 export interface TranslationSchema {
@@ -69,15 +69,6 @@ export interface TranslationSchema {
    */
   challengesHeading: string;
   challengesPassed: string;
-  /** A challenge's card: its match. */
-  challengeMatch: string;
-  /** A challenge's match, piece by piece: its length, the player's lives, its clock, and so on. */
-  ruleFirstTo: string;
-  ruleLives: string;
-  ruleTime: string;
-  ruleBalls: string;
-  ruleCpuPaddle: string;
-  ruleRamp: string;
   /** An attempt's outcome: passed or not, every challenge passed, and its buttons. */
   attemptPassed: string;
   attemptFailed: string;
@@ -95,7 +86,10 @@ export interface TranslationSchema {
   backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
   d: Record<DifficultyLevel, DifficultyDescription>;
-  /** Name and goal of every challenge, by challenge. */
+  /**
+   * Name and description of every challenge, by challenge. The description is all the card says
+   * of it: its goal and whatever sets its match apart (points to win, clock, level, paddles).
+   */
   challenges: Record<ChallengeId, ChallengeDescription>;
 }
 
@@ -145,13 +139,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     multiplayer: 'MULTIPLAYER',
     challengesHeading: 'CHALLENGES',
     challengesPassed: 'PASSED',
-    challengeMatch: 'MATCH',
-    ruleFirstTo: 'first to {n}',
-    ruleLives: '{n} lives',
-    ruleTime: '{time} on the clock',
-    ruleBalls: '{n} balls',
-    ruleCpuPaddle: 'CPU paddle ×{n}',
-    ruleRamp: 'CPU stronger every point',
     attemptPassed: 'PASSED!',
     attemptFailed: 'NOT PASSED',
     attemptAllPassed: 'EVERY CHALLENGE PASSED',
@@ -178,15 +165,18 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       [DifficultyLevel.INSANE]: ['INSANE', 'vs CPU: barely makes mistakes'],
     },
     challenges: {
-      warmUp: ['WARM-UP', 'Win the match'],
+      warmUp: ['WARM-UP', 'Win a match to 3 points'],
       blitz: ['BLITZ', 'Win in two minutes: first to 5, or ahead when time is up'],
       longRally: ['LONG RALLY', 'Keep a rally going for 20 hits within a minute'],
-      shutout: ['SHUTOUT', 'Win without losing a point'],
-      twoBalls: ['TWO BALLS', 'Win with two balls in play'],
-      survival: ['SURVIVAL', 'Score 15 points before you lose three lives'],
-      giant: ['GIANT', 'Win against a CPU with a paddle half as long again'],
-      overload: ['OVERLOAD', 'Win with 5 Overdrive shots'],
-      insanity: ['INSANITY', 'Win on Insane'],
+      shutout: ['SHUTOUT', 'Win to 3 without losing a single point'],
+      twoBalls: ['TWO BALLS', 'Win to 5 with two balls in play at once'],
+      survival: [
+        'SURVIVAL',
+        'Score 15 before you lose three lives; the CPU grows stronger every point',
+      ],
+      giant: ['GIANT', 'Win to 5 against a hard CPU whose paddle is half as long again'],
+      overload: ['OVERLOAD', 'Beat a hard CPU to 7, landing 5 Overdrive shots'],
+      insanity: ['INSANITY', 'Win to 5 against the Insane CPU'],
     },
   },
   ru: {
@@ -234,13 +224,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     multiplayer: 'МУЛЬТИПЛЕЕР',
     challengesHeading: 'ИСПЫТАНИЯ',
     challengesPassed: 'ПРОЙДЕНО',
-    challengeMatch: 'МАТЧ',
-    ruleFirstTo: 'до {n} очков',
-    ruleLives: 'жизней: {n}',
-    ruleTime: 'на время: {time}',
-    ruleBalls: 'мячей: {n}',
-    ruleCpuPaddle: 'ракетка CPU ×{n}',
-    ruleRamp: 'CPU сильнее с каждым очком',
     attemptPassed: 'ПРОЙДЕНО!',
     attemptFailed: 'НЕ ПРОЙДЕНО',
     attemptAllPassed: 'ВСЕ ИСПЫТАНИЯ ПРОЙДЕНЫ',
@@ -267,15 +250,18 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       [DifficultyLevel.INSANE]: ['БЕЗУМИЕ', 'Против CPU: почти не ошибается'],
     },
     challenges: {
-      warmUp: ['РАЗМИНКА', 'Выиграй матч'],
+      warmUp: ['РАЗМИНКА', 'Выиграй матч до 3 очков'],
       blitz: ['БЛИЦ', 'Выиграй за две минуты: до 5 очков или по счёту в конце'],
       longRally: ['ДОЛГИЙ РОЗЫГРЫШ', 'Розыгрыш в 20 ударов за минуту'],
-      shutout: ['ВСУХУЮ', 'Выиграй, не пропустив ни одного очка'],
-      twoBalls: ['ДВА МЯЧА', 'Выиграй, когда в игре два мяча'],
-      survival: ['ВЫЖИВАНИЕ', 'Набери 15 очков, пока не кончились три жизни'],
-      giant: ['ВЕЛИКАН', 'Выиграй у CPU с ракеткой в полтора раза длиннее'],
-      overload: ['ПЕРЕГРУЗКА', 'Выиграй, сделав 5 ударов Overdrive'],
-      insanity: ['БЕЗУМИЕ', 'Выиграй на безумной сложности'],
+      shutout: ['ВСУХУЮ', 'Выиграй до 3 очков, не пропустив ни одного'],
+      twoBalls: ['ДВА МЯЧА', 'Выиграй до 5 очков, когда в игре сразу два мяча'],
+      survival: [
+        'ВЫЖИВАНИЕ',
+        'Набери 15 очков, пока не кончились три жизни; CPU сильнее с каждым очком',
+      ],
+      giant: ['ВЕЛИКАН', 'Выиграй до 5 очков у сложного CPU с ракеткой в полтора раза длиннее'],
+      overload: ['ПЕРЕГРУЗКА', 'Выиграй у сложного CPU до 7 очков, сделав 5 ударов Overdrive'],
+      insanity: ['БЕЗУМИЕ', 'Выиграй до 5 очков у безумного CPU'],
     },
   },
 };

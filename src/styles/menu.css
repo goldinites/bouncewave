@@ -377,7 +377,7 @@
   stroke-linejoin: round;
 }
 
-/* A challenge's card and an attempt's result: a few lines over their buttons */
+/* A challenge's card and an attempt's result: a line over their buttons */
 .challenge-card,
 .challenge-result {
   display: flex;
@@ -387,37 +387,6 @@
 
   width: min(100%, 520px);
   margin-bottom: auto;
-}
-
-.challenge-card__rows {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  margin: 0;
-}
-
-.challenge-card__row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0 0.6em;
-
-  font-size: clamp(11px, 1.8vw, 14px);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.challenge-card__row dt {
-  color: var(--cyan);
-  opacity: 0.8;
-}
-
-.challenge-card__row dd {
-  margin: 0;
-
-  color: var(--white);
-  font-weight: 700;
 }
 
 .challenge-card__passed,

@@ -15,7 +15,7 @@ import { loadProfile } from '@/profile/migrations';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { getDefaultSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
-import { clockTime, describeMatch, describeShortfall } from '@/ui/challengeTexts';
+import { describeShortfall } from '@/ui/challengeTexts';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
 
@@ -61,20 +61,9 @@ describe('the challenges in words', () => {
   const ru = new I18nManager('ru');
 
   it('fills a text in, numbers as the language writes them', () => {
-    expect(en.format('ruleCpuPaddle', { n: 1.5 })).toBe('CPU paddle ×1.5');
-    expect(ru.format('ruleCpuPaddle', { n: 1.5 })).toBe('ракетка CPU ×1,5');
+    expect(en.format('shortRally', { n: 1500, target: 2 })).toBe('RALLY: 1,500 OF 2');
+    expect(ru.format('shortRally', { n: 1500, target: 2 })).toBe('РОЗЫГРЫШ: 1 500 ИЗ 2');
     expect(en.format('shortRally', { n: 18 })).toBe('RALLY: 18 OF {target}');
-  });
-
-  it('tells each match by what sets it apart, its level always', () => {
-    expect(clockTime(120)).toBe('2:00');
-    expect(clockTime(45)).toBe('0:45');
-    expect(describeMatch(en, 'warmUp')).toBe('first to 3 · NORMAL');
-    expect(describeMatch(en, 'blitz')).toBe('first to 5 · 2:00 on the clock · NORMAL');
-    expect(describeMatch(en, 'longRally')).toBe('1:00 on the clock · NORMAL');
-    expect(describeMatch(en, 'twoBalls')).toBe('first to 5 · 2 balls · NORMAL');
-    expect(describeMatch(en, 'survival')).toBe('3 lives · CPU stronger every point · NORMAL');
-    expect(describeMatch(ru, 'giant')).toBe('до 5 очков · ракетка CPU ×1,5 · СЛОЖНАЯ');
   });
 
   it('says what a failed attempt fell short by', () => {
@@ -163,10 +152,7 @@ describe('the challenges in the menus', () => {
     button('GIANT').click();
 
     expect(title()).toBe('GIANT');
-    expect(subtitle()).toBe('Win against a CPU with a paddle half as long again');
-    expect(
-      [...document.querySelectorAll('.challenge-card__row')].map((row) => row.textContent),
-    ).toEqual(['MATCHfirst to 5 · CPU paddle ×1.5 · HARD']);
+    expect(subtitle()).toBe('Win to 5 against a hard CPU whose paddle is half as long again');
     expect(text('.challenge-card__passed')).toBeUndefined();
 
     button('START').click();

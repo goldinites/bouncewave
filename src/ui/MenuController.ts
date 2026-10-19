@@ -16,7 +16,7 @@ import { getEmptyStatistics, Statistics } from '@/profile/Statistics';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
-import { describeMatch, describeShortfall } from '@/ui/challengeTexts';
+import { describeShortfall } from '@/ui/challengeTexts';
 import { ChallengeCard } from '@/ui/screens/ChallengeCard';
 import { ChallengeList } from '@/ui/screens/ChallengeList';
 import { ChallengeResult, ChallengeResultAction } from '@/ui/screens/ChallengeResult';
@@ -354,22 +354,19 @@ export class MenuController {
   }
 
   /**
-   * A challenge's card: its name and goal, its match, START and BACK. A passed one is marked so,
-   * and can be played again. Its reward (money) joins it with the economy (stage 6).
+   * A challenge's card: its name and its description (which says what sets its match apart), START
+   * and BACK. A passed one is marked so, and can be played again. Its reward (money) joins it with
+   * the economy (stage 6).
    */
   public showChallengeCard(challenge: ChallengeId): void {
     const back = () => this.showChallengeList();
     this.open(back);
-    const [name, goal] = this.i18n.getChallengeInfo(challenge);
+    const [name, description] = this.i18n.getChallengeInfo(challenge);
     const isPassed = challengeState(this.challenges.get(), challenge) === 'passed';
-    const rows = [
-      { label: this.i18n.t('challengeMatch'), value: describeMatch(this.i18n, challenge) },
-    ];
     this.uiManager.showScreen(
       name,
-      goal,
+      description,
       h(ChallengeCard, {
-        rows,
         passedLabel: isPassed ? this.i18n.t('attemptPassed') : null,
         startLabel: this.i18n.t('start'),
         backLabel: this.i18n.t('back'),

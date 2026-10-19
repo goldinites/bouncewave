@@ -126,7 +126,7 @@ test('lists the challenges on the court and starts the first from its card', asy
   await expectOnCourt(page, button(page, 'BACK'));
 
   await button(page, 'WARM-UP').click();
-  await expect(page.locator('#gameSubtitle')).toHaveText('Win the match');
+  await expect(page.locator('#gameSubtitle')).toHaveText('Win a match to 3 points');
   await expectOnCourt(page, button(page, 'BACK'));
   await button(page, 'START').click();
   await expect(menu(page)).toHaveClass(/game__ui--hidden/);
