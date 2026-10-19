@@ -1,4 +1,5 @@
-/* The strips of the court's width above and below it: the controls on top, the hint underneath */
+/* The strips of the court's width above and below it: the controls on top, and underneath, on a
+   phone held upright, a challenge's condition */
 
 .game-bar {
   flex: none;
@@ -8,71 +9,71 @@
   padding-inline: 8px;
 }
 
+/* Only a phone held upright has the bottom strip (below); elsewhere the HUD draws the condition
+   on the court */
+.game-bar--bottom {
+  display: none;
+}
+
+/* A challenge's condition, as the court's HUD writes it: white, the lives as red hearts, the
+   clock pink and throbbing in its last seconds */
+.game-condition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+
+  /* One line's room, kept while empty, so the court never shifts */
+  min-height: 1.4em;
+  margin: 0;
+
+  color: var(--white);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+.game-condition--urgent {
+  color: var(--pink);
+  animation: condition-throb 0.45s ease-in-out infinite alternate;
+}
+
+@keyframes condition-throb {
+  to {
+    opacity: 0.6;
+  }
+}
+
+.game-condition__hearts {
+  display: inline-flex;
+  gap: 0.25em;
+}
+
+.game-condition__heart {
+  width: 0.9em;
+  height: 0.9em;
+
+  fill: var(--red);
+}
+
+.game-condition__heart--lost {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1.2;
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-condition--urgent {
+    animation: none;
+  }
+}
+
 .game-bar--top {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.game-hint {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-
-  margin: 0;
-
-  color: var(--purple);
-  font-size: clamp(10px, 1.5vw, 12px);
-  line-height: 1.4;
-  text-align: center;
-}
-
-/* Controls as keycaps grouped by what they do, so the eye finds the key, not a sentence */
-.game-hint__keys {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 16px;
-}
-
-.game-hint__keys > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.game-hint kbd {
-  display: inline-block;
-  min-width: 1.7em;
-  padding: 0.15em 0.4em;
-  margin-right: 1px;
-
-  border: 1px solid rgba(183, 155, 255, 0.45);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  background: rgba(183, 155, 255, 0.08);
-
-  color: var(--text);
-  font: inherit;
-  font-size: 0.9em;
-  line-height: 1.2;
-  text-align: center;
-}
-
-.game-hint__rules {
-  opacity: 0.7;
-}
-
-/* Fullscreen is for a bigger court: the hint gives its room up to it (layout.css) */
-:fullscreen .game-hint {
-  display: none;
-}
-
-@media (max-height: 520px) {
-  .game-hint {
-    display: none;
-  }
 }
 
 /* A phone on its side: the top bar becomes a dock in the right-hand margin beside the court,
@@ -87,11 +88,6 @@
     width: auto;
     padding-inline: 0;
   }
-
-  /* Only the hint lives there, and it's hidden at this height */
-  .game-bar--bottom {
-    display: none;
-  }
 }
 
 @media (orientation: portrait) and (max-width: 900px) {
@@ -99,7 +95,7 @@
     width: var(--game-width);
   }
 
-  .game-hint {
-    font-size: 12px;
+  .game-bar--bottom {
+    display: block;
   }
 }

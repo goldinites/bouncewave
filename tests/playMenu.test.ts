@@ -106,7 +106,9 @@ describe('the PLAY menu and the setup, as screens', () => {
     const value = screen.getByRole('spinbutton', { name: 'POINTS' });
     expect(value.getAttribute('aria-valuetext')).toBe('5');
     expect(value.tabIndex).toBe(0);
-    expect(value.textContent).toBe('POINTS:5');
+    // Its name over its value, as two lines
+    expect(value.querySelector('.option-row__name')?.textContent).toBe('POINTS');
+    expect(value.querySelector('.option-row__current > span')?.textContent).toBe('5');
   });
 
   it('steps a choice back or on by its arrows and the left and right keys, not by its value', () => {
@@ -142,7 +144,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><p id="gameHint"></p><button id="pauseButton"></button>`;
+      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   afterEach(() => {
@@ -244,6 +246,25 @@ describe('the PLAY menu and the setup, in the menus', () => {
     expect(subtitle()).toBe('Opponent: fast and accurate');
   });
 
+  it('keeps every value’s room in its row, so the row never jumps as the choice steps', () => {
+    const { menu } = setup('ru');
+    menu.showQuickMatchSetup();
+    const sizers = (name: string) =>
+      [...document.querySelectorAll(`[aria-label="${name}"] .option-row__sizer`)].map(
+        (sizer) => sizer.textContent,
+      );
+
+    expect(sizers('ФОН')).toEqual(
+      BACKGROUND_CHOICES.map((choice) => TRANSLATIONS.ru.backgrounds[choice]),
+    );
+    expect(sizers('ОЧКИ')).toEqual(['3', '5', '7']);
+    expect(
+      [...document.querySelectorAll('.option-row__sizer')].every(
+        (sizer) => sizer.getAttribute('aria-hidden') === 'true',
+      ),
+    ).toBe(true);
+  });
+
   it('steps each choice back and on by its arrows, wrapping around', () => {
     const { menu, arrows, labels, store } = setup();
     menu.showQuickMatchSetup();
@@ -334,7 +355,7 @@ describe('telling the game the quick match setup is on screen', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><p id="gameHint"></p><button id="pauseButton"></button>`;
+      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   it('says so as it opens and as it gives way, not as it is redrawn', () => {

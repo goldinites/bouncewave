@@ -34,6 +34,15 @@ describe('BackgroundMenu', () => {
     expect(new URLSearchParams(window.location.search).get('bg')).toBe('jungle');
   });
 
+  it('lists the backgrounds it is given, the challenges’ own among them', () => {
+    const menu = new BackgroundMenu(vi.fn(), ['lasers', 'warehouse']);
+    menus.push(menu);
+    const names = [...document.querySelectorAll<HTMLAnchorElement>('nav a')].map(
+      (link) => link.textContent,
+    );
+    expect(names).toEqual(['lasers', 'warehouse']);
+  });
+
   it('marks the background on screen', () => {
     const { menu, links } = setup();
     menu.setCurrent('outrun');

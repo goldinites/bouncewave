@@ -34,9 +34,6 @@ export interface TranslationSchema {
   ready: string;
   /** Shown instead of `ready` before the point that decides the match. */
   decider: string;
-  /** Controls and rules under the court, as HTML: a row of keycaps, then a line of rules. */
-  hintK: string;
-  hintT: string;
   /** The PLAY menu's title. */
   mode: string;
   /** Every game mode's name, by mode. */
@@ -120,8 +117,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
-    hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Esc</kbd> pause</span><span><kbd>F</kbd> fullscreen</span><span><kbd>M</kbd> music</span><span><kbd>N</kbd> next track</span></span><span class="game-hint__rules">Paddle center = perfect shot · 3&nbsp;in&nbsp;a&nbsp;row&nbsp;=&nbsp;Overdrive</span>`,
-    hintT: `<span class="game-hint__keys">Drag your finger to move the paddle</span><span class="game-hint__rules">Paddle center = perfect shot · 3&nbsp;in&nbsp;a&nbsp;row&nbsp;=&nbsp;Overdrive</span>`,
     mode: 'GAME MODE',
     modes: { story: 'STORY', challenges: 'CHALLENGE', quick: 'QUICK MATCH' },
     background: 'BACKGROUND',
@@ -209,8 +204,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
-    hintK: `<span class="game-hint__keys"><span><kbd>W</kbd><kbd>S</kbd><kbd>↑</kbd><kbd>↓</kbd> ракетка</span><span><kbd>Esc</kbd> пауза</span><span><kbd>F</kbd> полный экран</span><span><kbd>M</kbd> музыка</span><span><kbd>N</kbd> следующий трек</span></span><span class="game-hint__rules">Центр ракетки — идеальный удар · 3&nbsp;подряд&nbsp;—&nbsp;Overdrive</span>`,
-    hintT: `<span class="game-hint__keys">Двигайте ракетку пальцем</span><span class="game-hint__rules">Центр ракетки — идеальный удар · 3&nbsp;подряд&nbsp;—&nbsp;Overdrive</span>`,
     mode: 'РЕЖИМ ИГРЫ',
     modes: { story: 'СЮЖЕТ', challenges: 'ИСПЫТАНИЕ', quick: 'БЫСТРЫЙ МАТЧ' },
     background: 'ФОН',

@@ -8,6 +8,11 @@ export interface Choice {
   /** What the choice is, e.g. "POINTS", and its current value, e.g. "5". */
   name: string;
   value: string;
+  /**
+   * Every value it can take: the row is as wide as the widest of them, so it never jumps as the
+   * choice steps. Left out, it is as wide as the value shown.
+   */
+  values?: readonly string[];
   color: ButtonColor;
   /** Steps the choice on to its next value, or back to its previous one; both wrap around. */
   onNext: () => void;
@@ -65,8 +70,16 @@ export function OptionRow({ choice, previousLabel, nextLabel }: OptionRowProps) 
         aria-valuetext={choice.value}
         onKeyDown={step}
       >
-        <span class="option-row__name">{choice.name}:</span>
-        <span class="option-row__current">{choice.value}</span>
+        <span class="option-row__name">{choice.name}</span>
+        {/* The value over invisible copies of every other, which hold the widest one's room */}
+        <span class="option-row__current">
+          <span>{choice.value}</span>
+          {choice.values?.map((value) => (
+            <span key={value} class="option-row__sizer" aria-hidden="true">
+              {value}
+            </span>
+          ))}
+        </span>
       </div>
       <MenuButton
         color={choice.color}

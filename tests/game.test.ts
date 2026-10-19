@@ -3,6 +3,7 @@ import { Mock, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Game } from '@/app/Game';
 import { MatchEvent } from '@/match/MatchFlow';
 import { EventBus } from '@/shared/EventBus';
+import { isPickableScene, SceneId } from '@/shared/scenes';
 import { fakeContext } from './helpers/fakeContext';
 
 // The real page, so the game finds every element it expects
@@ -134,6 +135,42 @@ describe('Game', () => {
     expect($('#gameTitle').textContent).toBe('PAUSED');
   });
 
+  it("shows a challenge's own backdrop on its card only, the player's everywhere else", () => {
+    const { renderer, matchEvents } = game as unknown as {
+      renderer: { scene: string; isShowingMystery: boolean };
+      matchEvents: EventBus<MatchEvent>;
+    };
+    buttons()[0].click(); // play
+    screenButton('CHALLENGE').click();
+    expect(isPickableScene(renderer.scene as SceneId)).toBe(true);
+
+    screenButton('WARM-UP').click();
+    expect(renderer.scene).toBe('warehouse');
+    press('Escape'); // back to the list
+    expect(isPickableScene(renderer.scene as SceneId)).toBe(true);
+
+    // After an attempt, the way back to the menus leaves the challenge's backdrop behind
+    screenButton('WARM-UP').click();
+    screenButton('START').click();
+    expect(renderer.scene).toBe('warehouse');
+    matchEvents.emit({ type: 'gameOver', winnerIndex: 1, scores: [0, 3] });
+    expect(renderer.scene).toBe('warehouse'); // the attempt's result belongs to it
+    screenButton('ALL CHALLENGES').click();
+    expect(isPickableScene(renderer.scene as SceneId)).toBe(true);
+  });
+
+  it('cuts a random backdrop straight in on leaving the setup, no channels flicking past', () => {
+    const { renderer } = game as unknown as {
+      renderer: { isShowingMystery: boolean; background: { surf: unknown } };
+    };
+    buttons()[0].click(); // play
+    screenButton('QUICK MATCH').click();
+    expect(renderer.isShowingMystery).toBe(true); // random, the default
+    press('Escape');
+    expect(renderer.isShowingMystery).toBe(false);
+    expect(renderer.background.surf).toBeNull();
+  });
+
   it('plays a challenge from its card and keeps it passed', () => {
     buttons()[0].click(); // play
     screenButton('CHALLENGE').click();
@@ -167,7 +204,6 @@ describe('Game', () => {
 
     expect(document.documentElement.lang).toBe('ru');
     expect($('#pauseButton').getAttribute('aria-label')).toBe('Пауза');
-    expect($('#gameHint').textContent).toMatch(/пауза/);
   });
 
   it('stops answering the keyboard once disposed', () => {

@@ -26,10 +26,11 @@ import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
-import { BackgroundChoice, isSceneId, SceneId } from '@/shared/scenes';
+import { BackgroundChoice, isPickableScene, isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
 import { NowPlaying } from '@/ui/NowPlaying';
-import { describeCondition } from '@/ui/challengeTexts';
+import { Condition, describeCondition } from '@/ui/challengeTexts';
+import { ConditionBar } from '@/ui/ConditionBar';
 import { UIManager } from '@/ui/UIManager';
 
 // Longest step the simulation takes in one frame (e.g. after a hitch)
@@ -67,6 +68,8 @@ export class Game {
   private readonly inputHandler: InputHandler;
   private readonly menuController: MenuController;
   private readonly nowPlaying: NowPlaying;
+  /** A challenge's condition under the court, on a phone held upright. */
+  private readonly conditionBar: ConditionBar;
 
   private readonly paddles: readonly Paddle[];
   private readonly ball = new Ball();
@@ -127,7 +130,10 @@ export class Game {
     // the debug overlay shows how the last attempt went
     const challenge = new URLSearchParams(window.location.search).get('challenge');
     if (isChallengeId(challenge)) this.pinnedChallenge = challenge;
-    this.backgroundMenu = new BackgroundMenu((scene) => this.pickBackground(scene));
+    this.backgroundMenu = new BackgroundMenu(
+      (scene) => this.pickBackground(scene),
+      this.renderer.scenes,
+    );
     this.fpsMeter = new FpsMeter((isVisible) => this.backgroundMenu.setVisible(isVisible));
     // The music opens with the song of whichever backdrop comes up first
     this.audio.music.enterScene(this.renderer.scene);
@@ -196,6 +202,7 @@ export class Game {
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
         onQuickMatchSetup: (isShown) => this.onQuickMatchSetup(isShown),
+        onMenuScene: (scene) => this.showMenuScene(scene),
       },
       {
         get: () => this.profile.current.stats,
@@ -227,6 +234,7 @@ export class Game {
     this.challengeJudge.listenTo(this.matchEvents);
     this.storagePersistence.listenTo(this.matchEvents);
 
+    this.conditionBar = new ConditionBar();
     this.nowPlaying = new NowPlaying(this.i18n, {
       onToggle: () => this.toggleMusic(),
       onNext: () => this.nextTrack(),
@@ -427,7 +435,17 @@ export class Game {
       this.settings.current.musicMuted,
     );
 
-    const frame = this.buildRenderFrame();
+    // A challenge's condition: on the court, or under it on a phone held upright
+    const condition = this.flow.isDemo
+      ? null
+      : describeCondition(
+          this.i18n,
+          this.flow,
+          this.challenge ? CHALLENGES[this.challenge].goal : null,
+          this.challengeJudge.progress,
+        );
+    this.conditionBar.update(condition, this.inputHandler.isRotated);
+    const frame = this.buildRenderFrame(condition);
     if (!isPaused) {
       this.renderer.update(realDt, frame);
     }
@@ -451,16 +469,30 @@ export class Game {
   /**
    * The quick match's setup shows its background behind it: the one chosen when it opens, and
    * the unknown channel for random. Left with the unknown channel on, a real backdrop is drawn at
-   * random, flicking through the channels.
+   * random and cut straight in: the channels flick past only when a match starts.
    */
   private onQuickMatchSetup(isShown: boolean): void {
     if (isShown) {
       this.previewBackground(this.settings.current.matchBackground);
     } else if (this.renderer.isShowingMystery) {
-      this.audio.music.enterScene(this.renderer.switchChannel());
-      this.audio.sfx.playChannelSurf();
+      this.audio.music.enterScene(this.renderer.switchChannel(false));
       this.showDebugDetail();
     }
+  }
+
+  /**
+   * The backdrop behind a menu, cut straight in with its song. A challenge's card shows its own;
+   * the others the player's: a mode's own backdrop left from a challenge gives way to the chosen
+   * one, or with random to one drawn at random, and a pickable one already there stays. Never
+   * during a match, nor over a developer's pin.
+   */
+  private showMenuScene(scene: SceneId | null): void {
+    if (this.flow.phase !== 'attract') return;
+    const current = this.renderer.scene;
+    const isPlayers = isPickableScene(current) && !this.renderer.isShowingMystery;
+    if (scene === null ? isPlayers : current === scene) return;
+    this.audio.music.enterScene(this.renderer.switchChannel(false, scene));
+    this.showDebugDetail();
   }
 
   /**
@@ -503,7 +535,7 @@ export class Game {
     };
   }
 
-  private buildRenderFrame(): RenderFrame {
+  private buildRenderFrame(condition: Condition | null): RenderFrame {
     return {
       gameState: this.flow.gameState,
       isDemo: this.flow.isDemo,
@@ -519,14 +551,7 @@ export class Game {
       serveTime: this.flow.serveTime,
       rally: this.flow.rally,
       readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
-      condition: this.flow.isDemo
-        ? null
-        : describeCondition(
-            this.i18n,
-            this.flow,
-            this.challenge ? CHALLENGES[this.challenge].goal : null,
-            this.challengeJudge.progress,
-          ),
+      condition,
       isRotated: this.inputHandler.isRotated,
       vignette: this.effects.vignette,
       zoom: this.effects.cameraZoom,

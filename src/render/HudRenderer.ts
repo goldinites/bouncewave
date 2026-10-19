@@ -23,12 +23,6 @@ const CONDITION = {
   LOST_HEART_ALPHA: 0.35, // a life lost stays as a faint outline
   Y: 142, // court px, the line's center under the scores
   Y_ALONE: 82, // court px, where the scores stand
-  // Portrait phone: the turned line starts this far from the court's top edge, and sits this far
-  // off the net toward the left side's score, so it reads between the scores without the net's
-  // dashes running through it; alone, it stands where the player's score would
-  ROTATED_START: 40, // court px
-  ROTATED_OFFSET: 40, // court px
-  ROTATED_OFFSET_ALONE: 90, // court px
   ALPHA: 0.8,
   URGENT_PULSE: 7, // 1/s, the urgent clock's throb
 } as const;
@@ -147,7 +141,8 @@ export class HudRenderer {
       ctx.restore();
     });
 
-    if (condition) this.renderCondition(ctx, condition, time, isRotated, classic);
+    // A phone held upright has it under the court instead (ui/ConditionBar), out of the ball's way
+    if (condition && !isRotated) this.renderCondition(ctx, condition, time, classic);
 
     // "GET READY" indicator — the original had no such prompt, so classic mode stays silent
     if (serveTime > 0 && !classic) {
@@ -163,7 +158,6 @@ export class HudRenderer {
     ctx: CanvasRenderingContext2D,
     condition: HudCondition,
     time: number,
-    isRotated: boolean,
     classic: boolean,
   ): void {
     ctx.save();
@@ -178,17 +172,9 @@ export class HudRenderer {
       ? 0.6 + 0.4 * Math.abs(Math.sin(time * CONDITION.URGENT_PULSE))
       : CONDITION.ALPHA;
 
-    // On a portrait phone the court is turned: the line runs down from the top edge, between the
-    // two scores, so it reads across the screen without crossing them
-    if (isRotated) {
-      const offset = alone ? CONDITION.ROTATED_OFFSET_ALONE : CONDITION.ROTATED_OFFSET;
-      ctx.translate(COURT.WIDTH / 2 - offset, CONDITION.ROTATED_START);
-      ctx.rotate(Math.PI / 2);
-    } else {
-      ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
-    }
+    ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
 
-    // Laid out by hand, text then hearts: centered on the court, or from the top edge when turned
+    // Laid out by hand, text then hearts, centered
     const { lives } = condition;
     const textWidth = ctx.measureText(condition.text).width;
     const heart = size * CONDITION.HEART;
@@ -196,7 +182,7 @@ export class HudRenderer {
     const heartsWidth = lives
       ? size * CONDITION.HEART_LEAD + lives.total * heart + (lives.total - 1) * heartGap
       : 0;
-    const start = isRotated ? 0 : -(textWidth + heartsWidth) / 2;
+    const start = -(textWidth + heartsWidth) / 2;
     ctx.textAlign = 'left';
     ctx.fillText(condition.text, start, 0);
 

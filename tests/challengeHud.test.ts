@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { I18nManager } from '@/i18n/I18nManager';
 import { CHALLENGES } from '@/match/challenges';
 import { PADDLE } from '@/match/config';
@@ -8,6 +8,7 @@ import { Scores } from '@/match/side';
 import { HudCondition, HudRenderer } from '@/render/HudRenderer';
 import { COLORS } from '@/shared/palette';
 import { clockTime, ConditionMatch, describeCondition } from '@/ui/challengeTexts';
+import { ConditionBar } from '@/ui/ConditionBar';
 import { fakeContext } from './helpers/fakeContext';
 
 const en = new I18nManager('en');
@@ -184,5 +185,57 @@ describe('the condition line on the court', () => {
       [false, COLORS.RED],
     ]);
     expect(hearts[2].alpha).toBeLessThan(hearts[0].alpha);
+  });
+});
+
+describe('the condition under the court, on a phone held upright', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<p id="gameCondition"></p>';
+  });
+
+  const line = {
+    text: 'POINTS 7 / 10',
+    lives: { left: 2, total: 3 },
+    isUrgent: false,
+    replacesScore: true,
+  };
+
+  it('shows the text and the lives as hearts, those lost as outlines', () => {
+    const bar = new ConditionBar();
+    bar.update(line, true);
+    const el = document.getElementById('gameCondition')!;
+    expect(el.textContent).toBe('POINTS 7 / 10');
+    const hearts = [...el.querySelectorAll('.game-condition__heart')];
+    expect(hearts).toHaveLength(3);
+    expect(hearts.map((h) => h.classList.contains('game-condition__heart--lost'))).toEqual([
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  it('stays empty where the court shows it, and marks the urgent clock', () => {
+    const bar = new ConditionBar();
+    const el = document.getElementById('gameCondition')!;
+    bar.update(line, false);
+    expect(el.textContent).toBe('');
+    bar.update({ ...line, text: '0:09', lives: null, isUrgent: true }, true);
+    expect(el.classList).toContain('game-condition--urgent');
+  });
+
+  it('leaves the DOM alone when nothing changed', () => {
+    const bar = new ConditionBar();
+    bar.update(line, true);
+    const first = document.querySelector('#gameCondition span');
+    bar.update({ ...line }, true);
+    expect(document.querySelector('#gameCondition span')).toBe(first);
+  });
+
+  it('is not drawn on the turned court', () => {
+    const { ctx, spies } = fakeContext();
+    spies.measureText.mockReturnValue({ width: 50 });
+    const paddles = [new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN), new Paddle(1, 700, COLORS.PINK)];
+    new HudRenderer().render(ctx, 0, paddles, [0, 0], 0, '', 0, true, false, line);
+    expect(spies.fillText.mock.calls.some(([text]) => text === line.text)).toBe(false);
   });
 });

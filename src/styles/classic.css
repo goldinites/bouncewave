@@ -34,17 +34,24 @@ body.classic-mode .game__title {
   animation: none;
 }
 
-body.classic-mode .game__subtitle,
-body.classic-mode .game-hint {
+body.classic-mode .game-condition {
   color: var(--white);
-  text-shadow: none;
+  font-family: 'Courier New', monospace;
+  animation: none;
 }
 
-body.classic-mode .game-hint kbd {
-  border-color: var(--white);
-  border-radius: 0;
-  background: none;
+body.classic-mode .game-condition__heart {
+  fill: var(--white);
+}
+
+body.classic-mode .game-condition__heart--lost {
+  fill: none;
+  stroke: var(--white);
+}
+
+body.classic-mode .game__subtitle {
   color: var(--white);
+  text-shadow: none;
 }
 
 body.classic-mode .game-button {

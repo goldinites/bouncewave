@@ -7,13 +7,15 @@ import { SCENES, SceneId } from '@/shared/scenes';
  *   shared; a plain click switches at once instead of reloading, and updates the address so a
  *   reload keeps it.
  * - Picking a background pins it, matches included.
+ * - It lists every background there is: the challenges' own too, which nothing else offers.
  */
 export class BackgroundMenu {
   private readonly el: HTMLElement;
   private readonly onPick: (scene: SceneId) => void;
   private readonly listeners = new AbortController();
 
-  constructor(onPick: (scene: SceneId) => void) {
+  /** @param scenes the backgrounds there are, in order; the pickable ones when left out */
+  constructor(onPick: (scene: SceneId) => void, scenes: readonly SceneId[] = SCENES) {
     this.onPick = onPick;
 
     this.el = document.createElement('nav');
@@ -35,7 +37,7 @@ export class BackgroundMenu {
     const title = document.createElement('span');
     title.textContent = 'bg';
     title.style.color = '#7cfc8a';
-    this.el.append(title, ...SCENES.map((scene) => this.createLink(scene)));
+    this.el.append(title, ...scenes.map((scene) => this.createLink(scene)));
     document.body.appendChild(this.el);
   }
 
