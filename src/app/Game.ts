@@ -174,7 +174,6 @@ export class Game {
       },
       onToggleFullscreen: () => this.toggleFullscreen(),
       onToggleMusic: () => this.toggleMusic(),
-      onNextTrack: () => this.nextTrack(),
       onPress: () => this.flow.skipFinale(),
     });
 
@@ -314,13 +313,6 @@ export class Game {
   private toggleMusic(): void {
     this.unlockAudio();
     this.settings.cycle('musicMuted');
-  }
-
-  /** The N key: another synthwave song, at random (classic mode has one). */
-  private nextTrack(): void {
-    if (this.classicMode) return;
-    this.unlockAudio();
-    this.audio.music.skipSong();
   }
 
   /** Swaps the whole presentation (canvas, menu chrome and music) for the 1972 look. */
