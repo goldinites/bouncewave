@@ -28,9 +28,8 @@ import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
 import { BackgroundChoice, isPickableScene, isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
-import { NowPlaying } from '@/ui/NowPlaying';
 import { Condition, describeCondition } from '@/ui/challengeTexts';
-import { ConditionBar } from '@/ui/ConditionBar';
+import { ConditionBar, SIDE_DOCK_QUERY } from '@/ui/ConditionBar';
 import { UIManager } from '@/ui/UIManager';
 
 // Longest step the simulation takes in one frame (e.g. after a hitch)
@@ -80,9 +79,10 @@ export class Game {
   private readonly uiManager: UIManager;
   private readonly inputHandler: InputHandler;
   private readonly menuController: MenuController;
-  private readonly nowPlaying: NowPlaying;
-  /** A challenge's condition under the court, on a phone held upright. */
+  /** A challenge's condition in the strip above the court. */
   private readonly conditionBar: ConditionBar;
+  /** A phone on its side, as bars.css lays it out: the controls in the margin beside the court. */
+  private readonly sideDock = window.matchMedia(SIDE_DOCK_QUERY);
 
   private readonly paddles: readonly Paddle[];
   private readonly ball = new Ball();
@@ -258,10 +258,6 @@ export class Game {
     this.storagePersistence.listenTo(this.matchEvents);
 
     this.conditionBar = new ConditionBar();
-    this.nowPlaying = new NowPlaying(this.i18n, {
-      onToggle: () => this.toggleMusic(),
-      onNext: () => this.nextTrack(),
-    });
 
     this.uiManager.bindPauseButton(() => {
       this.unlockAudio();
@@ -314,13 +310,13 @@ export class Game {
     this.audio.unlock();
   }
 
-  /** The now-playing chip and the M key: the same switch as the music setting. */
+  /** The M key: the same switch as the music setting. */
   private toggleMusic(): void {
     this.unlockAudio();
     this.settings.cycle('musicMuted');
   }
 
-  /** The chip's skip and the N key: another synthwave song, at random (classic mode has one). */
+  /** The N key: another synthwave song, at random (classic mode has one). */
   private nextTrack(): void {
     if (this.classicMode) return;
     this.unlockAudio();
@@ -399,6 +395,14 @@ export class Game {
     this.flow.returnToMenu();
     this.uiManager.setPauseButtonVisibility(false);
     this.menuController.showMainMenu();
+  }
+
+  /**
+   * Whether a challenge's condition is drawn on the court: only on a phone on its side, whose
+   * controls sit in the narrow margin beside the court with no strip above it (bars.css).
+   */
+  private get isConditionOnCourt(): boolean {
+    return this.sideDock.matches;
   }
 
   /**
@@ -490,12 +494,9 @@ export class Game {
     // Music reads this on its own scheduler tick, paused frames included (it muffles in pause)
     this.audio.music.setState(this.buildMusicState());
     this.audio.classicMusic.setActive(this.classicMode && !this.settings.current.musicMuted);
-    this.nowPlaying.update(
-      this.classicMode ? null : this.audio.music.getSongTitle(),
-      this.settings.current.musicMuted,
-    );
 
-    // A challenge's condition: on the court, or under it on a phone held upright
+    // A challenge's condition: in the strip above the court, or on the court on a phone on its
+    // side, which has no strip
     const condition = this.flow.isDemo
       ? null
       : describeCondition(
@@ -504,7 +505,7 @@ export class Game {
           this.challenge ? CHALLENGES[this.challenge].goal : null,
           this.challengeJudge.progress,
         );
-    this.conditionBar.update(condition, this.isPortraitView);
+    this.conditionBar.update(condition, !this.isConditionOnCourt);
     const frame = this.buildRenderFrame(condition);
     if (!isPaused) {
       this.renderer.update(realDt, frame);
@@ -612,6 +613,7 @@ export class Game {
       rally: this.flow.rally,
       readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
       condition,
+      isConditionOnCourt: this.isConditionOnCourt,
       isRotated: this.isPortraitView,
       vignette: this.effects.vignette,
       zoom: this.effects.cameraZoom,
@@ -634,7 +636,6 @@ export class Game {
     this.matchEvents.clear();
     this.unsubscribeSettings();
     this.menuController.dispose();
-    this.nowPlaying.dispose();
     this.konamiCode.dispose();
     this.titleTaps?.dispose();
     this.inputHandler.dispose();

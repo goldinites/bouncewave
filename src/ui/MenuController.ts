@@ -189,7 +189,7 @@ const QUICK_MATCH_SETUP: ChoiceEntry[] = [
  * Every menu of the game, each a Preact screen on a stack (`ScreenStack`): a button opens a
  * screen over the one on show, BACK and Esc step back down to the one it was opened from. The
  * screen on show is drawn in an effect, so a setting or the profile changing (from the menu or
- * from outside it: the music chip, the M key) draws it again by itself.
+ * from outside it: the M key) draws it again by itself.
  */
 export class MenuController {
   private uiManager: UIManager;

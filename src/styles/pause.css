@@ -1,6 +1,6 @@
 /* The touch-screen pause button, drawn as the game's two paddles */
 
-/* Above the court's left corner, across from the chip: off the court, so a drag steering the
+/* Above the court's left corner: off the court, so a drag steering the
    paddle never lands on it, and away from the hint so it never covers the text */
 .game-pause {
   --pause-fill: #0d0326;
@@ -33,8 +33,7 @@
     box-shadow 0.15s;
 }
 
-/* Each bar is a little paddle: neon color with a white-hot core and a glow. 14px tall, like the
-   skip arrows in the chip beside it, so the two buttons read as one size */
+/* Each bar is a little paddle: neon color with a white-hot core and a glow */
 .game-pause__bar {
   width: 4px;
   height: 14px;
@@ -84,7 +83,7 @@
 }
 
 /* A phone on its side: pinned to the bottom of the margin beside the court, under the thumb, and
-   down to the chip's 32px, the two now sitting alone in the same narrow column */
+   down to 32px to fit the narrow column */
 @media (max-height: 520px) and (orientation: landscape) {
   .game-pause {
     position: fixed;

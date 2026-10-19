@@ -70,6 +70,8 @@ export interface RenderFrame {
   readyText: string;
   /** A challenge's condition under the score ("RALLY 12 / 20 · 0:41"); null for none. */
   condition: HudCondition | null;
+  /** Whether its line is drawn on the court; elsewhere the strip above it shows the line. */
+  isConditionOnCourt: boolean;
   isRotated: boolean;
   /** Edge darkening from the deciding-point drama: 0 = none, may go above 1 on a heartbeat. */
   vignette: number;
@@ -432,6 +434,7 @@ export class Renderer {
         false,
         frame.condition,
         frame.sideLabels,
+        frame.isConditionOnCourt,
       );
     }
 
@@ -517,6 +520,7 @@ export class Renderer {
         true,
         frame.condition,
         frame.sideLabels,
+        frame.isConditionOnCourt,
       );
     }
 

@@ -1,16 +1,22 @@
 import { Condition } from '@/ui/challengeTexts';
 import { getRequiredElement } from '@/ui/dom';
 
+/**
+ * A phone on its side, as bars.css lays it out: no strip above the court, only the margin beside
+ * it, too narrow for a line, so the HUD draws the condition on the court instead.
+ */
+export const SIDE_DOCK_QUERY = '(max-height: 520px) and (orientation: landscape)';
+
 const URGENT_CLASS = 'game-condition--urgent';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 // A heart in a 16-unit box, the same shape the court's HUD draws
 const HEART_PATH = 'M8 14.8 C1 9.6 2.8 2.6 8 5.6 C13.2 2.6 15 9.6 8 14.8 Z';
 
 /**
- * A challenge's condition under the court on a phone held upright, where across the turned court
- * it would cross the ball's path ("RALLY 12 / 20 · 0:41", the lives as hearts). Elsewhere the HUD
- * draws it on the court and this stays empty. Its bar always keeps its room, so the court never
- * shifts when a line comes or goes.
+ * A challenge's condition in the strip above the court ("RALLY 12 / 20 · 0:41", the lives as
+ * hearts), out of the ball's way, where the controls sit. A phone on its side has no such strip, so
+ * there the HUD draws it on the court and this stays empty. The strip always keeps its room, so the
+ * court never shifts when a line comes or goes.
  */
 export class ConditionBar {
   private readonly el: HTMLElement;
@@ -23,7 +29,7 @@ export class ConditionBar {
 
   /**
    * @param condition what to show; null for nothing
-   * @param isShown whether it belongs here at all (a phone held upright)
+   * @param isShown whether it belongs here at all (not on a phone on its side)
    */
   public update(condition: Condition | null, isShown: boolean): void {
     const line = isShown ? condition : null;

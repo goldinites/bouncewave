@@ -68,8 +68,8 @@ body {
 }
 
 /* A phone on its side has no height to spare above or below the court, so the controls move
-   into the margin beside it (bars.css, pause.css, now-playing.css). The court leaves a gutter
-   wide enough for the shrunk chip on both sides, so it stays centered */
+   into the margin beside it (bars.css, pause.css). The court leaves a gutter as wide on both
+   sides, so it stays centered */
 @media (max-height: 520px) and (orientation: landscape) {
   :root {
     --dock-gutter: calc(
@@ -82,9 +82,9 @@ body {
 @media (orientation: portrait) and (max-width: 900px) {
   :root {
     /* The rotated court keeps its real 8:5 shape, so width and height grow together. On most
-       phones the height is what binds: the court takes what's left once the safe areas, the
-       controls above it and a challenge's condition below (with the gaps between) are given
+       phones the height is what binds: the court takes what's left once the safe areas and the
+       strip above it (the pause and a challenge's condition, with the gap under it) are given
        their room. */
-    --game-width: min(98vw, calc((100 * var(--vh) - var(--safe-y) - 124px) / 1.6));
+    --game-width: min(98vw, calc((100 * var(--vh) - var(--safe-y) - 85px) / 1.6));
   }
 }

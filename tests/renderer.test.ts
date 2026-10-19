@@ -59,6 +59,7 @@ const baseFrame = (overrides: Partial<RenderFrame> = {}): RenderFrame => {
     rally: 0,
     readyText: '',
     condition: null,
+    isConditionOnCourt: false,
     isRotated: false,
     vignette: 0,
     zoom: 1,
