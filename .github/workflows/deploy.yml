@@ -23,6 +23,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A run takes about 2 minutes; one stuck on a runner (as in a GitHub outage) would otherwise
+    # hold the pull request for the default 6 hours. Failed, it can simply be rerun. Time spent
+    # queued for a runner doesn't count
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -97,6 +101,7 @@ jobs:
 
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 10
 
     steps:
       - name: Deploy to GitHub Pages
