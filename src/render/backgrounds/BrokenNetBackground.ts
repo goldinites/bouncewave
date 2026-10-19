@@ -6,8 +6,10 @@ import { COLORS } from '@/shared/palette';
 // The third and last tier of the challenges (docs/CHALLENGES.md): the finale, where the world
 // itself loses its connection. The synthwave of the quick match coming apart: the sun crumbles
 // into pixels, a wireframe range flies at the viewer with lines missing like lost packets, and
-// windows of real network errors pop up along the edges. Faults stay at the edges, away from the
-// ball; a win brings the signal back for a moment
+// windows of real network errors pop up along the edges. The range itself breaks as the rally
+// heats up: corrupted peaks spike and sink, then pieces of the slopes fall away into the void,
+// and at the height of it the picture slides apart in bands. Faults stay at the edges, away from
+// the ball; a win brings the signal back for a moment
 
 // Where things stand, as shares of the frame's height (or width), so either orientation fits
 const LAYOUT = {
@@ -56,6 +58,44 @@ const TERRAIN = {
   FADE: 2.5, // world units over which a new ridge fades in at the horizon
   NEAR: COLORS.CYAN,
   FAR: DEEP_BLUE,
+} as const;
+
+// The range breaking, more the hotter the rally: corrupted vertices from the start, holes from
+// VOID.FROM, bands sliding apart from SLABS.FROM. Never in the valley under the court
+const CORRUPT = {
+  BASE: 0.15, // how corrupt the range is at rest, of 1
+  HEAT: 0.6, // how much more at the height of a rally
+  CHANCE: [0.03, 0.15], // share of the slopes' vertices corrupted, at none and at full
+  FLICKER: 0.4, // of that share again, flicking on and off rather than staying
+  FLICKER_RATE: 10, // times a second the flickering ones change
+  SPIKE: [1.8, 4], // times a peak's height a corrupted one shoots to, at none and at full
+  SPIKE_LIFT: 0.4, // world units added on top, at full
+  MAX_RISE: 3.4, // world units, so a near spike doesn't fill the sky
+  PIT_SHARE: 0.35, // share of corrupted vertices that sink into pits instead
+  PIT: [0.3, 1], // world units below the valley floor a pit drops
+  COLOR: '#ff8ae6', // a corrupted line: pink gone white-hot
+} as const;
+
+const VOID = {
+  FROM: 0.3, // the climax the slopes start falling apart at
+  CHANCE: [0.04, 0.2], // share of the slopes' cells that fall away, from VOID.FROM to full
+  OPENS: [3, 10], // world units away a cell may come loose, near to far (hotter: farther)
+  FALL: 1.6, // world units the range travels while a piece falls away
+  DROP: 140, // px a piece has dropped by the time it is gone
+  TURN: 1.6, // radians a piece may turn as it drops
+  EDGE: COLORS.PINK, // the hole's rim
+  HOLE: '#000000',
+} as const;
+
+const SLABS = {
+  FROM: 0.7, // the climax the picture starts sliding apart at
+  EDGE: 0.22, // share of the width either side the bands keep to, away from the ball
+  TOP: 120, // px above the horizon they start, through the peaks
+  BAND: [5, 33], // px a band is tall
+  CHANCE: [0.25, 0.65], // share of the bands that slide, from SLABS.FROM to full
+  RATE: [2, 8], // times a second they change, from SLABS.FROM to full
+  SHIFT: [20, 130], // px they slide at most, from SLABS.FROM to full
+  SEAM_ALPHA: 0.35, // the coloured seam along a slid band's top
 } as const;
 
 const TEAR = {
@@ -177,6 +217,8 @@ export class BrokenNetBackground implements Background {
   private wasBeat = false;
   /** The rally's climax as last drawn: more errors come the hotter it is. */
   private climax = 0;
+  /** How broken the range is this frame: the climax's effects, none while the signal is back. */
+  private breakage = { corrupt: 0, void: 0, slabs: 0 };
   private dropAge = Infinity;
   /** The sun's last layout, where the loose pixels fall from. */
   private sunAt: { x: number; y: number; radius: number; cell: number } | null = null;
@@ -242,6 +284,13 @@ export class BrokenNetBackground implements Background {
     this.climax = climax;
     const repair = this.dropAge < DROP_DURATION ? 1 - this.dropAge / DROP_DURATION : 0;
     const lights = 0.6 + 0.4 * laserIntensity;
+    const whole = 1 - repair;
+    this.breakage = {
+      corrupt: (CORRUPT.BASE + CORRUPT.HEAT * climax) * whole,
+      void: clamp((climax - VOID.FROM) / (1 - VOID.FROM), 0, 1) * whole,
+      // The flicker of sliding bands is the one break held back with reduced motion
+      slabs: this.isStill ? 0 : clamp((climax - SLABS.FROM) / (1 - SLABS.FROM), 0, 1) * whole,
+    };
 
     ctx.save();
     const layout = this.applyOrientation(ctx, isRotated);
@@ -250,6 +299,7 @@ export class BrokenNetBackground implements Background {
     this.renderSun(ctx, pulse, climax, repair, lights, layout);
     this.renderFalling(ctx);
     this.renderTerrain(ctx, climax, lights, layout);
+    if (this.breakage.slabs > 0) this.renderSlabs(ctx, layout);
     this.renderWindows(ctx, layout);
     if (this.tearAge < TEAR.DURATION) this.renderTear(ctx, layout);
     ctx.restore();
@@ -411,7 +461,9 @@ export class BrokenNetBackground implements Background {
    * The wireframe range flying at the viewer: ridge after ridge, far to near, each strip between
    * two ridges filled dark so it hides what is behind it, then its lines stroked. The valley in
    * the middle stays flat, under the court; the slopes rise either side of it. Some lines are
-   * missing, like lost packets, and they stay missing as the ridge comes on.
+   * missing, like lost packets, and they stay missing as the ridge comes on. Corrupted vertices
+   * spike or sink, their lines burning white-hot, and cells of the slopes fall away into the
+   * void; both stay with their ridge as it comes on.
    */
   private renderTerrain(
     ctx: CanvasRenderingContext2D,
@@ -426,23 +478,31 @@ export class BrokenNetBackground implements Background {
     const offset = this.travel - passed;
     const columns = TERRAIN.COLUMNS;
 
-    // A ridge's points on screen, at depth z, for the ridge numbered k since the start
-    const ridge = (z: number, k: number): number[] => {
+    const tick = Math.floor(this.decayTime * CORRUPT.FLICKER_RATE);
+
+    // A ridge's points on screen, at depth z, for the ridge numbered k since the start, and
+    // which of them are corrupted
+    const ridge = (z: number, k: number): { points: number[]; hot: boolean[] } => {
       const points: number[] = [];
+      const hot: boolean[] = [];
       for (let c = -columns; c <= columns; c++) {
         const slope = clamp((Math.abs(c) - TERRAIN.VALLEY) / TERRAIN.RISE, 0, 1) ** 1.3;
-        const rise = slope * TERRAIN.PEAK * (0.35 + 0.65 * hash(c, k));
+        let rise = slope * TERRAIN.PEAK * (0.35 + 0.65 * hash(c, k));
+        const corrupted = this.corruptRise(c, k, rise, tick);
+        if (corrupted !== null) rise = corrupted;
+        hot.push(corrupted !== null);
         points.push(cx + (c * focal) / z, horizon + ((TERRAIN.CAMERA - rise) * focal) / z);
       }
-      return points;
+      return { points, hot };
     };
 
     ctx.lineWidth = 1.5;
     let far: number[] | null = null;
+    let farHot: boolean[] = [];
     for (let i = TERRAIN.ROWS; i >= 0; i--) {
       const z = i + 1 - offset;
       const k = passed + i;
-      const near = ridge(z, k);
+      const { points: near, hot } = ridge(z, k);
       if (far) {
         // The strip between the far ridge and this one
         ctx.fillStyle = FLOOR;
@@ -455,25 +515,192 @@ export class BrokenNetBackground implements Background {
 
         const depth = (z - 1) / TERRAIN.ROWS;
         ctx.strokeStyle = mixHexColors(mixToHex(TERRAIN.NEAR, HOT, climax), TERRAIN.FAR, depth);
-        ctx.globalAlpha =
+        const alpha =
           clamp((TERRAIN.ROWS + 1 - z) / TERRAIN.FADE, 0, 1) * (0.7 + 0.3 * climax) * lights;
+        ctx.globalAlpha = alpha;
+        // Lines at a corrupted vertex are stroked apart, after the rest, white-hot
+        const hotLines: number[] = [];
         ctx.beginPath();
         for (let p = 0, c = -columns; p < near.length; p += 2, c++) {
+          const n = p / 2;
           // The line back to the far ridge, and the ridge's own line to the next point
           if (hash(c * 7 + 3, k) >= TERRAIN.LOST) {
-            ctx.moveTo(near[p], near[p + 1]);
-            ctx.lineTo(far[p], far[p + 1]);
+            if (hot[n] || farHot[n]) {
+              hotLines.push(near[p], near[p + 1], far[p], far[p + 1]);
+            } else {
+              ctx.moveTo(near[p], near[p + 1]);
+              ctx.lineTo(far[p], far[p + 1]);
+            }
           }
           if (p + 2 < near.length && hash(c * 13 + 5, k) >= TERRAIN.LOST) {
-            ctx.moveTo(near[p], near[p + 1]);
-            ctx.lineTo(near[p + 2], near[p + 3]);
+            if (hot[n] || hot[n + 1]) {
+              hotLines.push(near[p], near[p + 1], near[p + 2], near[p + 3]);
+            } else {
+              ctx.moveTo(near[p], near[p + 1]);
+              ctx.lineTo(near[p + 2], near[p + 3]);
+            }
           }
         }
         ctx.stroke();
+        if (hotLines.length > 0) {
+          const lineColor = ctx.strokeStyle;
+          ctx.strokeStyle = CORRUPT.COLOR;
+          ctx.beginPath();
+          for (let p = 0; p < hotLines.length; p += 4) {
+            ctx.moveTo(hotLines[p], hotLines[p + 1]);
+            ctx.lineTo(hotLines[p + 2], hotLines[p + 3]);
+          }
+          ctx.stroke();
+          ctx.strokeStyle = lineColor;
+        }
+        if (this.breakage.void > 0) this.renderVoid(ctx, far, near, z, k, alpha);
         ctx.globalAlpha = 1;
       }
       far = near;
+      farHot = hot;
     }
+  }
+
+  /**
+   * A corrupted vertex's height, or null for a sound one. Off the valley only: a few stay
+   * corrupted all the way in, a few more flick on and off; most spike, the rest sink into pits.
+   */
+  private corruptRise(c: number, k: number, rise: number, tick: number): number | null {
+    const amount = this.breakage.corrupt;
+    if (amount <= 0 || Math.abs(c) <= TERRAIN.VALLEY + 0.5) return null;
+    const [least, most] = CORRUPT.CHANCE;
+    const chance = least + (most - least) * amount;
+    const isStuck = hash(c * 5 + 1, k) < chance;
+    const isFlicking = hash(c + tick * 3, k * 7 + tick) < chance * CORRUPT.FLICKER;
+    if (!isStuck && !isFlicking) return null;
+    if (hash(c, k + 99) < CORRUPT.PIT_SHARE) {
+      const [shallow, deep] = CORRUPT.PIT;
+      return -(shallow + (deep - shallow) * hash(k, c));
+    }
+    const [low, high] = CORRUPT.SPIKE;
+    return Math.min(
+      CORRUPT.MAX_RISE,
+      rise * (low + (high - low) * amount) + CORRUPT.SPIKE_LIFT * amount,
+    );
+  }
+
+  /**
+   * Cells of the strip between two ridges that have come loose: a black hole into the void with
+   * a pink rim where each was, and the cell itself dropping and turning away until it is gone.
+   * The nearer strips, drawn after, cover it as it falls behind them.
+   */
+  private renderVoid(
+    ctx: CanvasRenderingContext2D,
+    far: number[],
+    near: number[],
+    z: number,
+    k: number,
+    alpha: number,
+  ): void {
+    const [least, most] = VOID.CHANCE;
+    const chance = least + (most - least) * this.breakage.void;
+    const [nearest, farthest] = VOID.OPENS;
+    const lineColor = ctx.strokeStyle;
+    for (let p = 0, c = -TERRAIN.COLUMNS; p + 2 < near.length; p += 2, c++) {
+      if (Math.min(Math.abs(c), Math.abs(c + 1)) < TERRAIN.VALLEY + 1) continue;
+      if (hash(c * 31 + 7, k) >= chance) continue;
+      const opensAt =
+        nearest + (farthest - nearest) * hash(k, c * 3) * (0.6 + 0.4 * this.breakage.void);
+      const fall = clamp((opensAt - z) / VOID.FALL, 0, 1);
+      if (fall <= 0) continue;
+
+      // The cell, traced afresh for each fill and stroke
+      const cell = () => {
+        ctx.beginPath();
+        ctx.moveTo(far[p], far[p + 1]);
+        ctx.lineTo(far[p + 2], far[p + 3]);
+        ctx.lineTo(near[p + 2], near[p + 3]);
+        ctx.lineTo(near[p], near[p + 1]);
+        ctx.closePath();
+      };
+
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = VOID.HOLE;
+      cell();
+      ctx.fill();
+      ctx.strokeStyle = VOID.EDGE;
+      ctx.globalAlpha = alpha * Math.min(1, fall * 3);
+      ctx.stroke();
+
+      if (fall < 1) {
+        const mx = (far[p] + near[p + 2]) / 2;
+        const my = (far[p + 1] + near[p + 3]) / 2;
+        ctx.save();
+        ctx.translate(mx, my + fall * fall * VOID.DROP);
+        ctx.rotate((hash(c, k) - 0.5) * VOID.TURN * fall);
+        ctx.translate(-mx, -my);
+        ctx.globalAlpha = alpha * (1 - fall);
+        ctx.fillStyle = FLOOR;
+        cell();
+        ctx.fill();
+        ctx.strokeStyle = lineColor;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    ctx.strokeStyle = lineColor;
+    ctx.globalAlpha = alpha;
+  }
+
+  /**
+   * At the height of a rally the picture slides apart: bands down the edges, from the peaks to
+   * the bottom, show what lies further along, like a picture that lost its packets. Copied from
+   * the canvas as drawn so far (only the background), through its transform, so it holds on a
+   * turned or zoomed court. Never across the middle, where the ball is.
+   */
+  private renderSlabs(ctx: CanvasRenderingContext2D, layout: Layout): void {
+    const matrix = ctx.getTransform?.();
+    if (!matrix) return;
+    const { width, height, horizon } = layout;
+    const amount = this.breakage.slabs;
+    const lerp = ([from, to]: readonly number[]) => from + (to - from) * amount;
+    const epoch = Math.floor(this.decayTime * lerp(SLABS.RATE));
+    const chance = lerp(SLABS.CHANCE);
+    const shift = lerp(SLABS.SHIFT);
+    const edge = width * SLABS.EDGE;
+    const [shortest, tallest] = SLABS.BAND;
+
+    // A rectangle of the picture in the canvas's own pixels: turns are by quarters, so it stays
+    // a rectangle
+    const toCanvas = (x: number, y: number, w: number, h: number) => {
+      const a = matrix.transformPoint({ x, y });
+      const b = matrix.transformPoint({ x: x + w, y: y + h });
+      return [Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y)];
+    };
+
+    ctx.save();
+    for (let y = horizon - SLABS.TOP, n = 0; y < height; n++) {
+      const h = shortest + (tallest - shortest) * hash(n, epoch);
+      if (hash(n + 50, epoch) < chance) {
+        const slide = hash(epoch, n + 7) * shift;
+        // The left band shows what lies to its right, the right one what lies to its left, so
+        // the copy never reaches past the picture
+        const bands = [
+          [0, slide],
+          [width - edge, width - edge - slide],
+        ];
+        for (const [x, from] of bands) {
+          const [sx, sy, sw, sh] = toCanvas(from, y, edge, h);
+          const [dx, dy, dw, dh] = toCanvas(x, y, edge, h);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.drawImage(ctx.canvas, sx, sy, sw, sh, dx, dy, dw, dh);
+          ctx.setTransform(matrix);
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = SLABS.SEAM_ALPHA;
+          ctx.fillStyle = hash(n, epoch + 3) < 0.5 ? COLORS.PINK : COLORS.CYAN;
+          ctx.fillRect(x, y, edge, 1.5);
+        }
+      }
+      y += h;
+    }
+    ctx.restore();
   }
 
   /**
