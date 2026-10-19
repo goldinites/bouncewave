@@ -32,10 +32,13 @@ export function QuickMatchSetup({
           nextLabel={nextLabel}
         />
       ))}
-      <MenuButton onClick={onStart}>{startLabel}</MenuButton>
-      <MenuButton color="purple" onClick={onBack}>
-        {backLabel}
-      </MenuButton>
+      {/* Under the choices, or beside each other where height is short (menu.css) */}
+      <div class="screen-buttons__actions">
+        <MenuButton onClick={onStart}>{startLabel}</MenuButton>
+        <MenuButton color="purple" onClick={onBack}>
+          {backLabel}
+        </MenuButton>
+      </div>
     </div>
   );
 }
