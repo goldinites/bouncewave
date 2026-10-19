@@ -51,6 +51,11 @@ export class Game {
   private readonly challengeJudge: ChallengeJudge;
   /** The challenge the match on court (and its restarts) is an attempt at; null for a quick match. */
   private challenge: ChallengeId | null = null;
+  /**
+   * The backdrop the match on court asked for when it started: a challenge's (or, in stage 8, a
+   * story chapter's) own; null plays it on the player's. Set by whatever starts the match.
+   */
+  private matchScene: SceneId | null = null;
   /** For developers: the challenge ?challenge= makes every quick match an attempt at. */
   private pinnedChallenge: ChallengeId | null = null;
   /** How the last attempt at a challenge went, for the debug overlay. */
@@ -160,8 +165,7 @@ export class Game {
       particles: this.particles,
       paddles: this.paddles,
       translate: (key) => this.i18n.t(key),
-      // A challenge is played on its tier's own backdrop
-      matchScene: () => (this.challenge ? CHALLENGES[this.challenge].scene : null),
+      matchScene: () => this.matchScene,
     });
 
     this.flow = new MatchFlow({
@@ -336,11 +340,14 @@ export class Game {
    */
   public start(): void {
     this.challengeJudge.judge(this.challenge);
+    // The scene is set before the match starts: the effects ask for it on its matchStart
     if (this.challenge) {
-      // A challenge is set up in advance: its own rules, paddles and level
-      const { rules, paddles, difficulty } = CHALLENGES[this.challenge];
+      // A challenge is set up in advance: its own rules, paddles, level and backdrop
+      const { rules, paddles, difficulty, scene } = CHALLENGES[this.challenge];
+      this.matchScene = scene;
       this.flow.startMatch(rules, this.flow.playerVsCpu(paddles), difficulty);
     } else {
+      this.matchScene = null;
       this.flow.startMatch(quickMatchRules(this.settings.current.matchPoints));
     }
     this.uiManager.hideMenu();

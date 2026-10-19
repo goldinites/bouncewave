@@ -1,7 +1,7 @@
 import { DifficultyLevel } from '@/match/difficulty';
 import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { firstTo, MatchRules, STANDARD_RULES } from '@/match/rules';
-import { ChallengeSceneId } from '@/shared/scenes';
+import { ExclusiveSceneId } from '@/shared/scenes';
 
 /**
  * What the player has to do in a challenge's match to pass it. The judge (step 2.2) reads it
@@ -30,7 +30,7 @@ export interface Challenge {
   readonly paddles: readonly [player: PaddleSpec, cpu: PaddleSpec];
   readonly goal: ChallengeGoal;
   /** The backdrop (and its song) it is played on: its tier's, one of the challenges' own. */
-  readonly scene: ChallengeSceneId;
+  readonly scene: ExclusiveSceneId<'challenges'>;
 }
 
 const STANDARD_PADDLES = [STANDARD_PADDLE, STANDARD_PADDLE] as const;

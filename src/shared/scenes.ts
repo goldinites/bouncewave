@@ -8,19 +8,32 @@ export const SCENES = ['lasers', 'memphis', 'outrun', 'neonCity', 'fuji', 'jungl
 export type PickableSceneId = (typeof SCENES)[number];
 
 /**
- * The challenges' own backdrops, one per tier of the list (docs/CHALLENGES.md): never offered to
- * the quick match, nor dealt by "random". Each one's background comes in its own step (2.7–2.9);
- * until it does, its challenges play on the player's.
+ * Backdrops a mode keeps for itself, by mode: never offered to the quick match, nor dealt by
+ * "random". A match of that mode asks for one when it starts. The challenges' are one per tier of
+ * the list (docs/CHALLENGES.md), each one's background coming in its own step (2.7–2.9); the
+ * story's chapters (stage 8) will list theirs here. A scene with no background yet gets the
+ * player's.
  */
-export const CHALLENGE_SCENES = ['warehouse', 'dojo', 'brokenNet'] as const;
+export const EXCLUSIVE_SCENES = {
+  challenges: ['warehouse', 'dojo', 'brokenNet'],
+  story: [],
+} as const;
 
-export type ChallengeSceneId = (typeof CHALLENGE_SCENES)[number];
+/** A mode that keeps backdrops of its own. */
+export type SceneOwner = keyof typeof EXCLUSIVE_SCENES;
+
+/** A backdrop a mode keeps for itself; of one mode, or of any. */
+export type ExclusiveSceneId<Owner extends SceneOwner = SceneOwner> =
+  (typeof EXCLUSIVE_SCENES)[Owner][number];
 
 /** A backdrop; a song can belong to one, and then plays only behind it. */
-export type SceneId = PickableSceneId | ChallengeSceneId;
+export type SceneId = PickableSceneId | ExclusiveSceneId;
 
-/** Every backdrop there is: the pickable ones, then the challenges'. */
-export const ALL_SCENES: readonly SceneId[] = [...SCENES, ...CHALLENGE_SCENES];
+/** Every backdrop there is: the pickable ones, then each mode's own. */
+export const ALL_SCENES: readonly SceneId[] = [
+  ...SCENES,
+  ...Object.values(EXCLUSIVE_SCENES).flat(),
+];
 
 export const isSceneId = (value: string): value is SceneId =>
   (ALL_SCENES as readonly string[]).includes(value);

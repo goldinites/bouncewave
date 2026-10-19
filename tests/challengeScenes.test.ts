@@ -5,7 +5,7 @@ import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import {
   ALL_SCENES,
   BACKGROUND_CHOICES,
-  CHALLENGE_SCENES,
+  EXCLUSIVE_SCENES,
   isPickableScene,
   isSceneId,
   SceneId,
@@ -14,9 +14,12 @@ import {
 const fakeBackground = (scene: SceneId): Background => ({ scene, overlayTint: 0, render: vi.fn() });
 
 describe("the challenges' own scenes", () => {
-  it('are scenes, but never the player’s to pick', () => {
-    expect(ALL_SCENES).toEqual(expect.arrayContaining([...CHALLENGE_SCENES]));
-    for (const scene of CHALLENGE_SCENES) {
+  it('are scenes, but never the player’s to pick, like any mode’s own', () => {
+    const own = Object.values(EXCLUSIVE_SCENES).flat();
+    expect(EXCLUSIVE_SCENES.challenges).toEqual(['warehouse', 'dojo', 'brokenNet']);
+    expect(ALL_SCENES).toEqual(expect.arrayContaining(own));
+    expect(new Set(ALL_SCENES).size).toBe(ALL_SCENES.length);
+    for (const scene of own) {
       expect(isSceneId(scene)).toBe(true);
       expect(isPickableScene(scene)).toBe(false);
       expect(BACKGROUND_CHOICES).not.toContain(scene);
