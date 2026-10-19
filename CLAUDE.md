@@ -1,7 +1,7 @@
 # BounceWave — guide for Claude
 
-Synthwave Pong in TypeScript: Canvas 2D rendering, procedural Web Audio music, DOM menus and
-Preact screens, an installable offline PWA. Played at https://goldinites.github.io/bouncewave/.
+Synthwave Pong in TypeScript: Canvas 2D rendering, procedural Web Audio music, menus as Preact
+screens, an installable offline PWA. Played at https://goldinites.github.io/bouncewave/.
 
 - The user writes in Russian: answer in Russian. Code, comments, commits and PRs are in English.
 - **The development plan is [docs/ROADMAP.md](docs/ROADMAP.md).** Read it before any roadmap
