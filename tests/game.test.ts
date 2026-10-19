@@ -13,7 +13,7 @@ const BODY = /<body>([\s\S]*)<\/body>/
 
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) =>
   document.querySelector<T>(selector)!;
-const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('#gameButtons button')];
+const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('#gameScreen button')];
 const labels = () => buttons().map((button) => button.textContent);
 const isMenuOpen = () => !$('#gameUI').classList.contains('game__ui--hidden');
 const isPauseButtonShown = () => !$('#pauseButton').classList.contains('game-pause--hidden');
@@ -78,7 +78,6 @@ describe('Game', () => {
     press('Escape');
     expect($('#gameTitle').textContent).toBe('BOUNCEWAVE');
     expect(labels()).toEqual(['PLAY', 'MULTIPLAYER', 'STATISTICS', 'SETTINGS']);
-    expect($('#gameScreen').childElementCount).toBe(0);
   });
 
   it('starts a match from PLAY, and pauses and resumes it with Esc', () => {

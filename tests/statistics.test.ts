@@ -1,3 +1,4 @@
+import { signal } from '@preact/signals-core';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
@@ -189,7 +190,7 @@ describe('the statistics screen', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
+      <div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   afterEach(() => {
@@ -200,10 +201,12 @@ describe('the statistics screen', () => {
     const i18n = new I18nManager(language);
     const ui = new UIManager(i18n);
     managers.push(ui);
-    let stats = getEmptyStatistics();
-    stats = recordMatch(stats, match({ difficulty: DifficultyLevel.HARD }));
-    stats = recordMatch(stats, match({ isWin: false, longestRally: 14 }));
-    stats = recordMatch(stats, match());
+    // A signal, as the profile keeps it: the screen follows a reset by itself
+    let record = getEmptyStatistics();
+    record = recordMatch(record, match({ difficulty: DifficultyLevel.HARD }));
+    record = recordMatch(record, match({ isWin: false, longestRally: 14 }));
+    record = recordMatch(record, match());
+    const stats = signal(record);
     const menu = new MenuController(
       ui,
       i18n,
@@ -218,9 +221,9 @@ describe('the statistics screen', () => {
         onUnlockAudio: vi.fn(),
       },
       {
-        get: () => stats,
+        get: () => stats.value,
         reset: () => {
-          stats = getEmptyStatistics();
+          stats.value = getEmptyStatistics();
         },
       },
       { get: () => ({ passed: ['warmUp', 'blitz'] }) },
@@ -235,7 +238,7 @@ describe('the statistics screen', () => {
   it('opens from the main menu, under the multiplayer', () => {
     const { menu } = setup();
     menu.showMainMenu();
-    const buttons = [...document.querySelectorAll<HTMLButtonElement>('#gameButtons button')];
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>('#gameScreen button')];
     expect(buttons.map((b) => b.textContent)).toEqual([
       'PLAY',
       'MULTIPLAYER',
@@ -270,6 +273,35 @@ describe('the statistics screen', () => {
       'WINS BY DIFFICULTY',
       'CHALLENGES',
     ]);
+  });
+
+  it('follows the profile as it changes, with nothing to tell it', () => {
+    const profile = new ProfileStore(null);
+    const i18n = new I18nManager('en');
+    const ui = new UIManager(i18n);
+    managers.push(ui);
+    const menu = new MenuController(
+      ui,
+      i18n,
+      {} as SoundEffects,
+      new SettingsStore(profile.settings),
+      {
+        onStartGame: vi.fn(),
+        onStartQuickMatch: vi.fn(),
+        onStartChallenge: vi.fn(),
+        onResumeGame: vi.fn(),
+        onReturnToMainMenu: vi.fn(),
+        onUnlockAudio: vi.fn(),
+      },
+      { get: () => profile.current.stats, reset: () => {} },
+    );
+    menu.showStatistics();
+    const played = () => document.querySelector('#gameScreen .stats__row dd')?.textContent;
+    expect(played()).toBe('0');
+
+    profile.update({ stats: recordMatch(profile.current.stats, match()) });
+    expect(played()).toBe('1');
+    menu.dispose();
   });
 
   it('wipes the statistics only on a second press of RESET', () => {

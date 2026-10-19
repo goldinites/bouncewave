@@ -93,15 +93,13 @@ body.classic-mode .challenge-result__message {
   animation: none;
 }
 
-body.classic-mode .game__buttons button[aria-pressed='true'],
 body.classic-mode .screen-buttons button[aria-pressed='true'] {
   background: var(--white);
   color: var(--black);
 }
 
 @media (hover: hover) {
-  body.classic-mode .game-button:hover,
-  body.classic-mode .game__buttons button:hover {
+  body.classic-mode .game-button:hover {
     transform: none;
     animation: none;
     background: var(--white);
@@ -109,8 +107,7 @@ body.classic-mode .screen-buttons button[aria-pressed='true'] {
   }
 }
 
-body.classic-mode .game-button:focus-visible,
-body.classic-mode .game__buttons button:focus-visible {
+body.classic-mode .game-button:focus-visible {
   transform: none;
   background: var(--white);
   color: var(--black);

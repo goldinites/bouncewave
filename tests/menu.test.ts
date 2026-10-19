@@ -40,7 +40,7 @@ const setup = () => {
   const buttons = () =>
     [
       ...document.querySelectorAll<HTMLButtonElement>(
-        '#gameButtons button, #gameScreen button, #gameScreen [data-menu-item]',
+        '#gameScreen button, #gameScreen [data-menu-item]',
       ),
     ].filter((item) => item.tabIndex >= 0);
   return { menu, buttons, store };
@@ -54,12 +54,12 @@ describe('settings menu', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
+      <div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   it('shows music and sound as toggles, pressed while on', () => {
     const { menu, buttons } = setup();
-    menu.showSettingsMenu(() => {});
+    menu.showSettingsMenu();
 
     // music (muted), sound (on), language, back
     expect(buttons().map((b) => b.getAttribute('aria-pressed'))).toEqual([
@@ -72,7 +72,7 @@ describe('settings menu', () => {
 
   it('flips a toggle when it is picked', () => {
     const { menu, buttons } = setup();
-    menu.showSettingsMenu(() => {});
+    menu.showSettingsMenu();
 
     buttons()[0].click(); // music back on
     expect(buttons()[0].getAttribute('aria-pressed')).toBe('true');
@@ -83,7 +83,7 @@ describe('settings menu', () => {
     const { menu, buttons } = setup();
     const classes = () => buttons().map((b) => b.className);
 
-    menu.showSettingsMenu(() => {});
+    menu.showSettingsMenu();
     expect(classes()).toEqual([
       'game-button game-button--pink', // music
       'game-button game-button--purple', // sound
@@ -103,7 +103,7 @@ describe('settings menu', () => {
 
   it('steps the language either way by its arrows, the focus staying on it', () => {
     const { menu, buttons, store } = setup();
-    menu.showSettingsMenu(() => {});
+    menu.showSettingsMenu();
     const arrow = (label: string) =>
       document.querySelector<HTMLButtonElement>(`#gameScreen [aria-label="${label}"]`)!;
 
@@ -119,7 +119,7 @@ describe('settings menu', () => {
 
   it('redraws an open settings menu when the music is toggled from outside it', () => {
     const { menu, buttons, store } = setup();
-    menu.showSettingsMenu(() => {});
+    menu.showSettingsMenu();
 
     store.cycle('musicMuted');
     expect(buttons()[0].textContent).toBe('MUSIC: ON');
@@ -127,7 +127,7 @@ describe('settings menu', () => {
 
   it('keeps the keyboard focus on the setting that was just changed', () => {
     const { menu, buttons } = setup();
-    menu.showSettingsMenu(() => {});
+    menu.showSettingsMenu();
 
     buttons()[1].focus();
     buttons()[1].click(); // sound, redrawing the whole menu
@@ -136,7 +136,8 @@ describe('settings menu', () => {
 
   it('moves the focus to the first button of the menu it leads to', () => {
     const { menu, buttons } = setup();
-    menu.showSettingsMenu(() => menu.showMainMenu());
+    menu.showMainMenu();
+    menu.showSettingsMenu();
 
     buttons()[3].focus();
     buttons()[3].click(); // back
@@ -145,7 +146,7 @@ describe('settings menu', () => {
 
   it("leaves the focus alone when it wasn't in the menu", () => {
     const { menu, buttons } = setup();
-    menu.showSettingsMenu(() => {});
+    menu.showSettingsMenu();
 
     menu.showPauseMenu();
     expect(buttons()).not.toContain(document.activeElement);
@@ -192,16 +193,31 @@ describe('settings menu', () => {
     expect(buttons()).not.toContain(document.activeElement);
   });
 
-  it('goes back from the settings menu on Esc, and only from there', () => {
-    const { menu } = setup();
-    const back = vi.fn();
-
-    menu.showSettingsMenu(back);
-    expect(menu.goBack()).toBe(true);
-    expect(back).toHaveBeenCalledOnce();
+  it('goes back on Esc from the settings to where they were opened, and no further', () => {
+    const { menu, buttons } = setup();
+    const title = () => document.getElementById('gameTitle')?.textContent;
 
     menu.showPauseMenu();
+    menu.showSettingsMenu();
+    expect(menu.goBack()).toBe(true);
+    expect(title()).toBe('PAUSED');
     expect(menu.goBack()).toBe(false);
+
+    buttons()[2].click(); // settings, from the pause
+    buttons()[3].click(); // back
+    expect(title()).toBe('PAUSED');
+  });
+
+  it('leads back from the settings to the end of the match they were opened from', () => {
+    const { menu, buttons } = setup();
+    const title = () => document.getElementById('gameTitle')?.textContent;
+    menu.showGameOverMenu(0, [5, 3]);
+    buttons()[1].click(); // settings
+    expect(title()).toBe('SETTINGS');
+
+    expect(menu.goBack()).toBe(true);
+    expect(title()).toBe('YOU WIN');
+    expect(document.getElementById('gameSubtitle')?.textContent).toBe('5 : 3');
   });
 
   it('opens the same settings from the pause', () => {
@@ -237,7 +253,7 @@ describe('settings menu', () => {
 
   it('stays hidden when a setting changes during play', () => {
     const { menu, buttons, store } = setup();
-    menu.showSettingsMenu(() => {});
+    menu.showSettingsMenu();
     document.getElementById('gameUI')?.classList.add('game__ui--hidden');
 
     store.cycle('musicMuted');

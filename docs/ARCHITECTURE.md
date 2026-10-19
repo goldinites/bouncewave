@@ -37,7 +37,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |
 | `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `fx/` (particle types), `shared/`         |
 | `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax | `match/`, `render/`, `audio/`, `shared/`            |
-| `ui/`                  | DOM menus, Preact screens, now-playing chip, boot screen              | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
+| `ui/`                  | menus as Preact screens on a stack, now-playing chip, boot screen     | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
 | `debug/`, `easterEgg/` | FPS overlay and background menu; Konami code, title taps              | `shared/`                                           |
 | `app/`                 | `Game` (composition root, frame loop), `FixedStep`                    | anything                                            |
 
@@ -157,11 +157,15 @@ its screen. The quick match is the model: a setup screen whose choices are setti
 `Game.start` building its `MatchRules` from them (`quickMatchRules`).
 
 **A screen.** A Preact component in `ui/screens/` (`.tsx`), taking its texts ready to show and
-its actions as props, shown with `uiManager.showScreen(title, subtitle, h(Screen, props))`. The
-menu keys walk its buttons like a menu's (skipping the disabled ones and those with
-`tabIndex` -1), and any other element it marks `data-menu-item` (a quick match choice); `MenuController.open(back,
-redraw)` gives Esc its way back and redraws the screen when a setting changes. Lay its buttons
-out in a `.screen-buttons` column (`MenuButton`), as a menu's are.
+its actions as props. `MenuController` describes it as a `ScreenEntry` (`ui/ScreenStack.ts`): an
+`id`, a `view()` building its title, subtitle and `h(Screen, props)`, and the backdrop it wants. A
+button opens it over the screen on show (`stack.push`), its BACK and Esc step back down
+(`stack.back`), and a way in from outside the menus resets the stack to the way down to it. The
+screen on show is drawn in an effect: whatever signal `view()` reads (`settings.current`,
+`profile.current`) draws it again when it changes, with nothing to call. The menu keys walk its
+buttons (skipping the disabled ones and those with `tabIndex` -1) and any other element it marks
+`data-menu-item` (a quick match choice). Lay its buttons out in a `.screen-buttons` column
+(`MenuButton`, or `ButtonMenu` for a plain column).
 
 **A different line-up.** `flow.startMatch(rules, lineup)` with a participant per paddle: two
 `HumanController`s for two players, an `AiPaddleController` with a difficulty for each CPU.
@@ -172,8 +176,7 @@ A new kind of player (a replay, a remote player) is a new `PaddleController`.
 the menus. It never changes the match.
 
 **Planned, not there yet** (see the roadmap): modifiers that hook into the simulation and add a
-drawing layer (4.3), a back stack for the screens and the old menus moved onto Preact (4.1), a versioned player profile
-(1.4), dialogue through Ink (8.1).
+drawing layer (4.3), dialogue through Ink (8.1).
 
 ## Rules of thumb
 

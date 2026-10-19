@@ -21,27 +21,15 @@ const MENU_KEYS: Record<string, 'previous' | 'next' | 'first' | 'last'> = {
 /** Button colors; all but the default cyan have a .game-button--<color> modifier in main.css. */
 export type ButtonColor = 'cyan' | 'yellow' | 'pink' | 'purple' | 'green';
 
-export interface MenuItem {
-  label: string;
-  action: () => void;
-  /** Cyan when left out. */
-  color?: ButtonColor;
-  /** Makes the item a toggle, drawn filled while on; plain buttons leave it out. */
-  isOn?: boolean;
-  /** Shown, but can't be pressed (something still to come). */
-  disabled?: boolean;
-}
-
 export class UIManager {
   private uiOverlay: HTMLElement;
   private titleElement: HTMLElement;
   private subtitleElement: HTMLElement;
-  private buttonsContainer: HTMLElement;
-  /** Where a Preact screen renders, under the title in place of the buttons. */
+  /** Where the Preact screen on show renders, under the title. */
   private screenElement: HTMLElement;
   /** Which screen is on show (as showScreen was told), to tell it redrawn from another. */
   private screenId: string | null = null;
-  /** Runs before any click on the screen on show, as `onAnyClick` does for menu buttons. */
+  /** Runs before any click on the screen on show (it unlocks the audio). */
   private onScreenClick: (() => void) | null = null;
   private pauseButton: HTMLButtonElement;
   private i18n: I18nManager;
@@ -56,7 +44,6 @@ export class UIManager {
     this.titleElement = getRequiredElement<HTMLElement>('gameTitle');
     this.gameTitle = this.titleElement.textContent ?? '';
     this.subtitleElement = getRequiredElement<HTMLElement>('gameSubtitle');
-    this.buttonsContainer = getRequiredElement<HTMLElement>('gameButtons');
     this.screenElement = getRequiredElement<HTMLElement>('gameScreen');
     this.pauseButton = getRequiredElement<HTMLButtonElement>('pauseButton');
 
@@ -73,23 +60,19 @@ export class UIManager {
   }
 
   /**
-   * What the menu keys walk on whatever is on show, a menu's or a screen's (only one has any):
-   * its buttons and the other items a screen marks `data-menu-item` (a quick match choice), but
-   * not the buttons switched off, nor those kept out of the keyboard's way (a choice's arrows,
-   * which the left and right keys stand in for).
+   * What the menu keys walk on the screen on show: its buttons and the other items it marks
+   * `data-menu-item` (a quick match choice), but not the buttons switched off, nor those kept out
+   * of the keyboard's way (a choice's arrows, which the left and right keys stand in for).
    */
   private get buttons(): HTMLElement[] {
-    const selector = 'button, [data-menu-item]';
-    return [
-      ...this.buttonsContainer.querySelectorAll<HTMLElement>(selector),
-      ...this.screenElement.querySelectorAll<HTMLElement>(selector),
-    ].filter((item) => !(item instanceof HTMLButtonElement && item.disabled) && item.tabIndex >= 0);
+    return [...this.screenElement.querySelectorAll<HTMLElement>('button, [data-menu-item]')].filter(
+      (item) => !(item instanceof HTMLButtonElement && item.disabled) && item.tabIndex >= 0,
+    );
   }
 
-  /** Whether the keyboard focus is on a menu's or a screen's button. */
+  /** Whether the keyboard focus is on the screen on show. */
   private get hasFocus(): boolean {
-    const focused = document.activeElement;
-    return this.buttonsContainer.contains(focused) || this.screenElement.contains(focused);
+    return this.screenElement.contains(document.activeElement);
   }
 
   /** Arrows (or W and S), Home and End walk the open menu, wrapping around at either end. */
@@ -116,58 +99,10 @@ export class UIManager {
     buttons[target].focus();
   }
 
-  public showMenu(
-    title: string,
-    subtitle: string,
-    items: MenuItem[],
-    onAnyClick?: () => void,
-  ): void {
-    // The buttons are rebuilt every time, so a keyboard player's focus would drop out of the
-    // menu: put it back on the same button when the same menu is redrawn (a setting changed),
-    // on the first one when it is another menu
-    const focusedIndex = [...this.buttonsContainer.children].indexOf(
-      document.activeElement as Element,
-    );
-    const wasOnScreen = this.screenElement.contains(document.activeElement);
-    const isSameMenu = this.titleElement.textContent === title;
-
-    this.closeScreen();
-    this.titleElement.textContent = title;
-    this.subtitleElement.textContent = subtitle;
-    this.buttonsContainer.textContent = '';
-
-    items.forEach((item) => {
-      const btn = document.createElement('button');
-      btn.className = 'game-button';
-      if (item.color && item.color !== 'cyan') {
-        btn.classList.add(`game-button--${item.color}`);
-      }
-      btn.textContent = item.label;
-      btn.disabled = item.disabled ?? false;
-      if (item.isOn !== undefined) {
-        btn.setAttribute('aria-pressed', String(item.isOn));
-      }
-      btn.onclick = () => {
-        if (onAnyClick) onAnyClick();
-        item.action();
-      };
-      this.buttonsContainer.appendChild(btn);
-    });
-
-    if (focusedIndex >= 0 || wasOnScreen) {
-      const buttons = this.buttonsContainer.children;
-      const target = isSameMenu ? Math.min(Math.max(0, focusedIndex), buttons.length - 1) : 0;
-      (buttons[target] as HTMLElement | undefined)?.focus();
-    }
-
-    this.reveal();
-  }
-
   /**
-   * Shows a Preact screen under the title in place of a menu's buttons. Shown again (same `id`,
-   * by default its title), the screen is updated in place, so the focus stays where it was; coming from a menu
-   * or another screen, the focus moves to the first button that can be pressed, if it was in
-   * the menu.
+   * Shows a Preact screen under the title. Shown again (same `id`, by default its title), the
+   * screen is updated in place, so the focus stays where it was; coming from another screen, the
+   * focus moves to the first button that can be pressed, if it was on the screen before.
    */
   public showScreen(
     title: string,
@@ -182,8 +117,9 @@ export class UIManager {
 
     this.titleElement.textContent = title;
     this.subtitleElement.textContent = subtitle;
-    this.buttonsContainer.textContent = '';
     this.onScreenClick = onAnyClick ?? null;
+    // Another screen starts afresh: its components don't inherit the last one's state
+    if (!isSameScreen) render(null, this.screenElement);
     render(screen, this.screenElement);
 
     if (hadFocus && !isSameScreen) {
@@ -192,7 +128,7 @@ export class UIManager {
     this.reveal();
   }
 
-  /** Takes the Preact screen down (its components unmount), leaving the place to a menu. */
+  /** Takes the Preact screen down (its components unmount). */
   private closeScreen(): void {
     this.screenId = null;
     this.onScreenClick = null;
@@ -226,11 +162,10 @@ export class UIManager {
     this.pauseButton.onclick = onClick;
   }
 
-  /** Detaches its listeners (menu buttons are rebuilt on every showMenu, so not theirs). */
+  /** Detaches its listeners and takes the screen down. */
   public dispose(): void {
     this.listeners.abort();
     this.pauseButton.onclick = null;
-    this.buttonsContainer.textContent = '';
     this.closeScreen();
   }
 
