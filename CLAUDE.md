@@ -21,11 +21,14 @@ npx tsc --noEmit -p . # types (npm run build also builds)
 npm run lint
 npm run format:check  # prettier, Markdown included; npm run format fixes
 npm run test:e2e      # Playwright smoke: desktop, phone portrait and landscape (CI runs it too)
+npm run test:perf     # every background's frame time vs e2e/frameBudget.ts (CI runs it too)
 npm run test:visual   # every background vs its saved picture in e2e/__screenshots__ (local only)
 ```
 
-All four checks (tests, types, lint, format) and the smoke must pass before a commit; CI runs
-them and blocks the deploy otherwise. Run `test:visual` after anything that can change what a
+All four checks (tests, types, lint, format), the smoke and the frame budget must pass before a
+commit; CI runs them and blocks the deploy otherwise. Run `test:perf` after anything that can make
+a frame heavier (a background, a layer, an effect, the simulation); raise a budget only for a
+reason, in the commit that needs it. Run `test:visual` after anything that can change what a
 background draws; its baselines are Windows renders of `e2e/stand` (seeded randomness, fixed
 time). Update them with `npm run test:visual -- --update-snapshots` only for an intended change,
 after showing the user the new pictures. In the browser: `?debug` or F3 shows the FPS overlay and a menu of

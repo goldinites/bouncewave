@@ -71,6 +71,19 @@ jobs:
       - name: End-to-end smoke
         run: npm run test:e2e
 
+      # Every background's frame timed against the budget (e2e/frameBudget.ts); the times go on the
+      # run's summary and in a notice, failed or not
+      - name: Frame budget
+        run: npm run test:perf
+
+      - name: Show the frame times
+        if: always()
+        run: |
+          if [ -f test-results/frame-times.md ]; then
+            cat test-results/frame-times.md >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice title=Frame times, drawing p95 (ms)::$(cat test-results/frame-times.txt)"
+          fi
+
       - name: Keep the end-to-end report of a failed run
         if: failure()
         uses: actions/upload-artifact@v4
