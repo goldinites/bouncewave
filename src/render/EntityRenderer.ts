@@ -1,4 +1,4 @@
-import { Particle, ShockwaveRing } from '@/fx/ParticleSystem';
+import { Particle, ShockwaveRing } from '@/render/particles';
 import { Ball } from '@/match/Ball';
 import { OVERDRIVE } from '@/match/Overdrive';
 import { getRallyHeat } from '@/match/heat';
@@ -238,7 +238,10 @@ export class EntityRenderer {
     ctx.restore();
   }
 
-  public static renderParticles(ctx: CanvasRenderingContext2D, particles: Particle[]): void {
+  public static renderParticles(
+    ctx: CanvasRenderingContext2D,
+    particles: readonly Particle[],
+  ): void {
     ctx.globalCompositeOperation = 'lighter';
     for (const p of particles) {
       ctx.globalAlpha = p.life;
@@ -247,7 +250,10 @@ export class EntityRenderer {
     }
   }
 
-  public static renderShockwaves(ctx: CanvasRenderingContext2D, rings: ShockwaveRing[]): void {
+  public static renderShockwaves(
+    ctx: CanvasRenderingContext2D,
+    rings: readonly ShockwaveRing[],
+  ): void {
     ctx.globalCompositeOperation = 'lighter';
     for (const r of rings) {
       ctx.globalAlpha = r.life;

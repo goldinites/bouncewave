@@ -6,7 +6,7 @@ import { COURT_LINES } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FINAL_SIGN_LAYOUT, FinalScoreSign, finalScoreText } from '@/render/FinalScoreRenderer';
 import { drawConditionLine, HUD_LAYOUT } from '@/render/HudRenderer';
-import type { RenderFrame } from '@/render/Renderer';
+import { CourtView, HudView, RenderFrame, Scene, SceneState } from '@/render/scene';
 import { COLORS } from '@/shared/palette';
 
 // Everything in the 1972 monitor's one colour on black, in a plain monospace
@@ -30,18 +30,12 @@ const CLASSIC = {
  * here: both scores (or a challenge's line in their place), the side labels of two players, the
  * Overdrive meters, every ball.
  */
-export class ClassicScene {
-  /**
-   * @param finalSign the final score, once the match is over; the HUD and meters give way to it
-   * @param menuDim the darkening behind the menus, in [0, 1]
-   */
-  public render(
-    ctx: CanvasRenderingContext2D,
-    frame: RenderFrame,
-    finalSign: FinalScoreSign | null,
-    menuDim: number,
-  ): void {
-    const { isDemo, paddles, isRotated } = frame;
+export class ClassicScene implements Scene {
+  /** The final score and the menus' darkening come from `state`; nothing else of it shows. */
+  public render(ctx: CanvasRenderingContext2D, frame: RenderFrame, state: SceneState): void {
+    const { court, hud, isRotated } = frame;
+    const { isDemo, paddles } = court;
+    const { finalSign, menuDim } = state;
 
     ctx.fillStyle = PAPER;
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
@@ -50,14 +44,14 @@ export class ClassicScene {
 
     this.renderCourt(ctx);
     const isMatchOn = !isDemo && !finalSign;
-    if (isMatchOn) this.renderHud(ctx, frame);
+    if (isMatchOn) this.renderHud(ctx, court, hud, isRotated);
 
     paddles.forEach((paddle, i) => {
       this.renderPaddle(ctx, paddle);
-      const charge = frame.overdriveCharges[i] ?? null;
+      const charge = hud.overdriveCharges[i] ?? null;
       if (isMatchOn && charge !== null) this.renderMeter(ctx, paddle, charge);
     });
-    frame.balls.forEach((ball) => this.renderBall(ctx, ball));
+    court.balls.forEach((ball) => this.renderBall(ctx, ball));
 
     if (finalSign) this.renderFinalScore(ctx, finalSign, isRotated);
 
@@ -86,12 +80,17 @@ export class ClassicScene {
    * Both scores as blocky digits, with each side's label under it when two play, turned with the
    * court on a phone held upright; a challenge's line under them or in their place.
    */
-  private renderHud(ctx: CanvasRenderingContext2D, frame: RenderFrame): void {
-    const { condition, isRotated, sideLabels } = frame;
+  private renderHud(
+    ctx: CanvasRenderingContext2D,
+    court: CourtView,
+    hud: HudView,
+    isRotated: boolean,
+  ): void {
+    const { condition, sideLabels } = hud;
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const scores = condition?.replacesScore ? [] : frame.scores;
+    const scores = condition?.replacesScore ? [] : court.scores;
     scores.forEach((score, index) => {
       ctx.save();
       ctx.translate(COURT.WIDTH / 2 + (index ? 1 : -1) * HUD_LAYOUT.SCORE_X, HUD_LAYOUT.SCORE_Y);
@@ -110,7 +109,7 @@ export class ClassicScene {
 
     // As in the neon look: on the court only where there is no strip above it, never across a
     // turned court
-    if (condition && frame.isConditionOnCourt && !isRotated) {
+    if (condition && hud.isConditionOnCourt && !isRotated) {
       drawConditionLine(ctx, condition, {
         font: (size) => MONO(size - CLASSIC.CONDITION_SHRINK),
         color: INK,

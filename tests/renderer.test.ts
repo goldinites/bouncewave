@@ -4,7 +4,8 @@ import { COURT, PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { EntityRenderer } from '@/render/EntityRenderer';
-import { Renderer, RenderFrame } from '@/render/Renderer';
+import { Renderer } from '@/render/Renderer';
+import { CourtView, DramaView, HudView, RenderFrame } from '@/render/scene';
 import { COLORS } from '@/shared/palette';
 import { fakeContext } from './helpers/fakeContext';
 
@@ -39,35 +40,44 @@ const makeRenderer = (width = 800) => {
   return { renderer, ctx, spies, stage, canvas };
 };
 
-const baseFrame = (overrides: Partial<RenderFrame> = {}): RenderFrame => {
+/** A frame's parts to change from the base one, each group on its own. */
+interface FrameOverrides {
+  court?: Partial<CourtView>;
+  hud?: Partial<HudView>;
+  drama?: Partial<DramaView>;
+}
+
+const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
   const ball = new Ball();
   return {
-    gameState: 'play',
-    // Demo mode skips the HUD, keeping the canvas call trace free of its own translate/fillText
-    isDemo: true,
-    paddles: [
-      new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN),
-      new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, COLORS.PINK),
-    ],
-    scores: [0, 0],
-    balls: [ball],
-    ball,
+    court: {
+      gameState: 'play',
+      // Demo mode skips the HUD, keeping the canvas call trace free of its own translate/fillText
+      isDemo: true,
+      paddles: [
+        new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN),
+        new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, COLORS.PINK),
+      ],
+      scores: [0, 0],
+      balls: [ball],
+      ball,
+      time: 0,
+      serveTime: 0,
+      rally: 0,
+      ...court,
+    },
+    hud: {
+      readyText: '',
+      condition: null,
+      isConditionOnCourt: false,
+      sideLabels: null,
+      overdriveCharges: [0, null],
+      ...hud,
+    },
+    drama: { climax: 0, vignette: 0, zoom: 1, paddleGlow: [0, 0], ...drama },
     particles: new ParticleSystem(),
     analyser: null,
-    time: 0,
-    serveTime: 0,
-    rally: 0,
-    readyText: '',
-    condition: null,
-    isConditionOnCourt: false,
     isRotated: false,
-    vignette: 0,
-    zoom: 1,
-    climax: 0,
-    paddleGlow: [0, 0],
-    overdriveCharges: [0, null],
-    sideLabels: null,
-    ...overrides,
   };
 };
 
@@ -148,7 +158,7 @@ describe('Renderer', () => {
       vi.spyOn(Math, 'random').mockReturnValue(1);
       const shakeAndZoom = ({ renderer, spies }: typeof normal) => {
         renderer.addShake(20);
-        renderer.render(baseFrame({ zoom: 1.2 }), 0.016);
+        renderer.render(baseFrame({ drama: { zoom: 1.2 } }), 0.016);
         return [
           spies.translate.mock.calls.some(([x, y]) => x === 10 && y === 10),
           spies.scale.mock.calls.some(([x, y]) => x === 1.2 && y === 1.2),
@@ -202,20 +212,26 @@ describe('Renderer', () => {
   it('renders both looks without throwing across a full frame, demo or not', () => {
     const { renderer } = makeRenderer();
 
-    expect(() => renderer.render(baseFrame({ isDemo: false }), 0.016)).not.toThrow();
+    expect(() => renderer.render(baseFrame({ court: { isDemo: false } }), 0.016)).not.toThrow();
 
     renderer.setLook('classic');
-    expect(() => renderer.render(baseFrame({ isDemo: false }), 0.016)).not.toThrow();
+    expect(() => renderer.render(baseFrame({ court: { isDemo: false } }), 0.016)).not.toThrow();
   });
 
   it("shows the player's Overdrive meter in a match, unless its rules have no Overdrive", () => {
     const meter = vi.spyOn(EntityRenderer, 'renderOverdriveMeter');
     const { renderer } = makeRenderer();
 
-    renderer.render(baseFrame({ isDemo: false, overdriveCharges: [1, null] }), 0.016);
+    renderer.render(
+      baseFrame({ court: { isDemo: false }, hud: { overdriveCharges: [1, null] } }),
+      0.016,
+    );
     expect(meter).toHaveBeenCalledTimes(1);
 
-    renderer.render(baseFrame({ isDemo: false, overdriveCharges: [null, null] }), 0.016);
+    renderer.render(
+      baseFrame({ court: { isDemo: false }, hud: { overdriveCharges: [null, null] } }),
+      0.016,
+    );
     expect(meter).toHaveBeenCalledTimes(1);
     meter.mockRestore();
   });
@@ -224,7 +240,10 @@ describe('Renderer', () => {
     const meter = vi.spyOn(EntityRenderer, 'renderOverdriveMeter');
     const { renderer } = makeRenderer();
 
-    renderer.render(baseFrame({ isDemo: false, overdriveCharges: [1, 2] }), 0.016);
+    renderer.render(
+      baseFrame({ court: { isDemo: false }, hud: { overdriveCharges: [1, 2] } }),
+      0.016,
+    );
     expect(meter.mock.calls.map(([, , charge]) => charge)).toEqual([1, 2]);
     meter.mockRestore();
   });
@@ -234,12 +253,12 @@ describe('Renderer', () => {
     const { renderer, spies } = makeRenderer();
     const balls = [new Ball(), new Ball()];
 
-    renderer.render(baseFrame({ balls, ball: balls[0] }), 0.016);
+    renderer.render(baseFrame({ court: { balls, ball: balls[0] } }), 0.016);
     expect(neon.mock.calls.map((call) => call[1])).toEqual(balls);
 
     renderer.setLook('classic');
     (spies.fillRect as Mock).mockClear();
-    renderer.render(baseFrame({ balls, ball: balls[0] }), 0.016);
+    renderer.render(baseFrame({ court: { balls, ball: balls[0] } }), 0.016);
     // A classic ball is a white square as wide as the ball
     const size = balls[0].radius * 2;
     const squares = (spies.fillRect as Mock).mock.calls.filter(

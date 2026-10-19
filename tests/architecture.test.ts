@@ -32,6 +32,11 @@ describe('architecture', () => {
     expect(violations('profile', ['profile', 'settings', 'match', 'shared'])).toEqual([]);
   });
 
+  it('keeps the canvas reading the match, never driving the effects that drive it', () => {
+    // fx/ moves particles and calls the renderer; the renderer only reads what fx/ leaves it
+    expect(violations('render', ['render', 'match', 'shared'])).toEqual([]);
+  });
+
   it('keeps shared/ free of the rest of the project', () => {
     expect(violations('shared', ['shared'])).toEqual([]);
   });
