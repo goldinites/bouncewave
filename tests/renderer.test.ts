@@ -64,7 +64,8 @@ const baseFrame = (overrides: Partial<RenderFrame> = {}): RenderFrame => {
     zoom: 1,
     climax: 0,
     paddleGlow: [0, 0],
-    overdriveCharge: 0,
+    overdriveCharges: [0, null],
+    sideLabels: null,
     ...overrides,
   };
 };
@@ -210,11 +211,20 @@ describe('Renderer', () => {
     const meter = vi.spyOn(EntityRenderer, 'renderOverdriveMeter');
     const { renderer } = makeRenderer();
 
-    renderer.render(baseFrame({ isDemo: false, overdriveCharge: 1 }), 0.016);
+    renderer.render(baseFrame({ isDemo: false, overdriveCharges: [1, null] }), 0.016);
     expect(meter).toHaveBeenCalledTimes(1);
 
-    renderer.render(baseFrame({ isDemo: false, overdriveCharge: null }), 0.016);
+    renderer.render(baseFrame({ isDemo: false, overdriveCharges: [null, null] }), 0.016);
     expect(meter).toHaveBeenCalledTimes(1);
+    meter.mockRestore();
+  });
+
+  it('gives each of two players their own Overdrive meter', () => {
+    const meter = vi.spyOn(EntityRenderer, 'renderOverdriveMeter');
+    const { renderer } = makeRenderer();
+
+    renderer.render(baseFrame({ isDemo: false, overdriveCharges: [1, 2] }), 0.016);
+    expect(meter.mock.calls.map(([, , charge]) => charge)).toEqual([1, 2]);
     meter.mockRestore();
   });
 

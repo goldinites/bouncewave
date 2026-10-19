@@ -79,12 +79,14 @@ export interface RenderFrame {
   climax: number;
   /** Hit glow of each paddle in [0, 1], in the order of `paddles`. */
   paddleGlow: readonly number[];
-  /** Charges in the player's Overdrive meter (0..OVERDRIVE.CHARGE); null when the match's rules have no Overdrive, and no meter is shown. */
-  overdriveCharge: number | null;
+  /**
+   * Charges in each paddle's Overdrive meter (0..OVERDRIVE.CHARGE), in the order of `paddles`;
+   * null for a paddle that shows none (the CPU's, every one under rules without Overdrive).
+   */
+  overdriveCharges: readonly (number | null)[];
+  /** Each side's label under its score, [left, right]; null to show none (only two players have them). */
+  sideLabels: readonly [string, string] | null;
 }
-
-/** The paddle the player plays, which carries their Overdrive meter: the left side's first. */
-const playerPaddle = (paddles: readonly Paddle[]): Paddle => paddles.find((p) => p.side === 0)!;
 
 export class Renderer {
   private canvas: HTMLCanvasElement;
@@ -429,26 +431,19 @@ export class Renderer {
         isRotated,
         false,
         frame.condition,
+        frame.sideLabels,
       );
     }
 
-    // Paddles
-    // The player's paddle carries their Overdrive meter (only in a match that has Overdrive)
-    const player = playerPaddle(paddles);
-    const charge = frame.overdriveCharge;
-    const showsOverdrive = !isDemo && charge !== null;
-    const overdrivePulse = showsOverdrive ? EntityRenderer.overdrivePulse(charge, gameTime) : 0;
-    paddles.forEach((paddle, i) =>
-      EntityRenderer.renderPaddle(
-        ctx,
-        paddle,
-        frame.paddleGlow[i],
-        paddle === player ? overdrivePulse : 0,
-      ),
-    );
-    if (showsOverdrive && !this.finalSign) {
-      EntityRenderer.renderOverdriveMeter(ctx, player, charge, gameTime);
-    }
+    // Paddles; each person's carries their Overdrive meter (only in a match that has Overdrive)
+    paddles.forEach((paddle, i) => {
+      const charge = isDemo ? null : (frame.overdriveCharges[i] ?? null);
+      const pulse = charge === null ? 0 : EntityRenderer.overdrivePulse(charge, gameTime);
+      EntityRenderer.renderPaddle(ctx, paddle, frame.paddleGlow[i], pulse);
+      if (charge !== null && !this.finalSign) {
+        EntityRenderer.renderOverdriveMeter(ctx, paddle, charge, gameTime);
+      }
+    });
 
     // Balls; a power shot burns as hot as the full rally climax
     for (const each of frame.balls) {
@@ -521,13 +516,18 @@ export class Renderer {
         isRotated,
         true,
         frame.condition,
+        frame.sideLabels,
       );
     }
 
     paddles.forEach((paddle) => EntityRenderer.renderClassicPaddle(ctx, paddle));
-    if (!isDemo && !this.finalSign && frame.overdriveCharge !== null) {
-      const player = playerPaddle(paddles);
-      EntityRenderer.renderOverdriveMeter(ctx, player, frame.overdriveCharge, frame.time, true);
+    if (!isDemo && !this.finalSign) {
+      paddles.forEach((paddle, i) => {
+        const charge = frame.overdriveCharges[i] ?? null;
+        if (charge !== null) {
+          EntityRenderer.renderOverdriveMeter(ctx, paddle, charge, frame.time, true);
+        }
+      });
     }
     frame.balls.forEach((each) => EntityRenderer.renderClassicBall(ctx, each));
 

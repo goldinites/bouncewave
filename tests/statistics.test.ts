@@ -232,7 +232,7 @@ describe('the statistics screen', () => {
     return { menu, rows };
   };
 
-  it('opens from the main menu, under the multiplayer still switched off', () => {
+  it('opens from the main menu, under the multiplayer', () => {
     const { menu } = setup();
     menu.showMainMenu();
     const buttons = [...document.querySelectorAll<HTMLButtonElement>('#gameButtons button')];
@@ -242,12 +242,7 @@ describe('the statistics screen', () => {
       'STATISTICS',
       'SETTINGS',
     ]);
-    expect(buttons.map((b) => b.disabled)).toEqual([false, true, false, false]);
-
-    // The keyboard walks past the multiplayer
-    buttons[0].focus();
-    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown' }));
-    expect(document.activeElement).toBe(buttons[2]);
+    expect(buttons.map((b) => b.disabled)).toEqual([false, false, false, false]);
 
     buttons[2].click();
     expect(document.getElementById('gameTitle')?.textContent).toBe('STATISTICS');

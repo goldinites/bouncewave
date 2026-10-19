@@ -158,9 +158,15 @@ export class MatchFlow {
     return this._serveTime;
   }
 
-  /** Charges in the player's Overdrive meter (the left side's first paddle), 0..OVERDRIVE.CHARGE. */
-  public get overdriveCharge(): number {
-    return this.overdrives[this.playerIndex].charge;
+  /**
+   * Each paddle's Overdrive meter, in the order of the match's paddles: its charges,
+   * 0..OVERDRIVE.CHARGE, or null where it has none (the CPU's, every one under rules without
+   * Overdrive, and in the demo).
+   */
+  public get overdriveCharges(): (number | null)[] {
+    return this.overdrives.map((overdrive, i) =>
+      this._rules.overdrive && !this.isDemo && this.lineup[i]?.overdrive ? overdrive.charge : null,
+    );
   }
 
   /** Points each side has won in the match being played (or just finished). */
@@ -262,6 +268,18 @@ export class MatchFlow {
     }));
   }
 
+  /**
+   * Two people at one device, one a side: each steers with their own controls (see InputHandler)
+   * and charges their own Overdrive.
+   * @param inputs each side's controls, [left, right]
+   */
+  public twoPlayers(inputs: readonly [PlayerInput, PlayerInput]): Lineup {
+    return this.paddles.map(({ side }) => ({
+      controller: new HumanController(inputs[side]),
+      overdrive: true,
+    }));
+  }
+
   /** Whether a person plays this paddle (an index into the match's paddles) in this match. */
   public isPlayerPaddle(index: number): boolean {
     return this.lineup[index]?.controller instanceof HumanController;
@@ -271,6 +289,16 @@ export class MatchFlow {
   public get playerSide(): Side | null {
     const index = this.paddles.findIndex((_, i) => this.isPlayerPaddle(i));
     return index < 0 ? null : this.paddles[index].side;
+  }
+
+  /** Whether a person plays for this side in this match. */
+  public isPlayerSide(side: Side): boolean {
+    return this.paddles.some((paddle, i) => paddle.side === side && this.isPlayerPaddle(i));
+  }
+
+  /** Two people play the match on court, one a side; there is no CPU and no "the player". */
+  public get isTwoPlayer(): boolean {
+    return this.isPlayerSide(0) && this.isPlayerSide(1);
   }
 
   /** The left side's first paddle, which the player plays in the usual match. */
@@ -557,8 +585,9 @@ export class MatchFlow {
     this._phase = 'finale';
     this.finaleWinner = winner;
     this.finaleElapsed = 0;
-    // The player's win is celebrated longer than their loss (no player: the left side's)
-    const isPlayerWin = winner === (this.playerSide ?? 0);
+    // The player's win is celebrated longer than their loss (no player: the left side's); with
+    // two players someone at the device always wins
+    const isPlayerWin = this.playerSide === null ? winner === 0 : this.isPlayerSide(winner);
     this.finaleDuration = isPlayerWin ? FINALE.WIN_DURATION : FINALE.LOSS_DURATION;
 
     this.emit({ type: 'finaleStart', winnerIndex: winner, ballY, scores: [...this._scores] });

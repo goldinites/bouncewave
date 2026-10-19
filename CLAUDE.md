@@ -65,8 +65,10 @@ Rules that keep it clean (the first two are enforced by `tests/architecture.test
 - Every new string exists in both languages; every new screen effect honours
   `prefers-reduced-motion`; everything works on a phone in either orientation (`isRotated`: the
   stage is turned in CSS on a portrait phone).
-- Outside the match the left side is still taken to be the player (whose win the finale and
-  menus show, whose Overdrive meter is drawn), until local multiplayer (3.2).
+- Every person's paddle draws its Overdrive meter (`flow.overdriveCharges`). In a match of two
+  (`Game`'s `isTwoPlayers`, `flow.isTwoPlayer`) the end names the winner and is always a win;
+  otherwise outside the match the left side is still taken to be the player (whose win the
+  finale and menus show).
 
 ## Code style
 

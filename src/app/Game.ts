@@ -13,7 +13,7 @@ import { Ball } from '@/match/Ball';
 import { ChallengeJudge, ChallengeVerdict } from '@/match/ChallengeJudge';
 import { ChallengeId, CHALLENGES, isChallengeId } from '@/match/challenges';
 import { COURT, PADDLE } from '@/match/config';
-import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
+import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
@@ -35,6 +35,9 @@ import { UIManager } from '@/ui/UIManager';
 
 // Longest step the simulation takes in one frame (e.g. after a hitch)
 const MAX_FRAME_DT = 0.033;
+// The level a match of two players is played at: no CPU, so it only sets the ball's pace, the
+// default level's (Medium)
+const TWO_PLAYER_PACE = DifficultyLevel.NORMAL;
 
 /**
  * Composition root and main loop. Wires the match (MatchFlow), its presentation
@@ -52,6 +55,11 @@ export class Game {
   private readonly challengeJudge: ChallengeJudge;
   /** The challenge the match on court (and its restarts) is an attempt at; null for a quick match. */
   private challenge: ChallengeId | null = null;
+  /**
+   * Whether the match being played (or just finished) is two people's at one device. Kept here,
+   * not asked of the match: by its end the match has already handed the paddles back to the demo.
+   */
+  private isTwoPlayers = false;
   /**
    * The backdrop the match on court asked for when it started: a challenge's (or, in stage 8, a
    * story chapter's) own; null plays it on the player's. Set by whatever starts the match.
@@ -172,6 +180,7 @@ export class Game {
       paddles: this.paddles,
       translate: (key) => this.i18n.t(key),
       matchScene: () => this.matchScene,
+      isTwoPlayer: () => this.isTwoPlayers,
     });
 
     this.flow = new MatchFlow({
@@ -191,13 +200,21 @@ export class Game {
         onStartGame: () => this.start(),
         onStartQuickMatch: () => {
           this.challenge = this.pinnedChallenge;
+          this.isTwoPlayers = false;
           this.start();
         },
         onStartChallenge: (challenge) => {
           this.challenge = challenge;
+          this.isTwoPlayers = false;
+          this.start();
+        },
+        onStartTwoPlayers: () => {
+          this.challenge = null;
+          this.isTwoPlayers = true;
           this.start();
         },
         isChallengeMatch: () => this.challenge !== null,
+        isTwoPlayerMatch: () => this.isTwoPlayers,
         onResumeGame: () => this.resume(),
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
@@ -215,7 +232,8 @@ export class Game {
       profile: this.profile,
       match: this.flow,
       getDifficulty: () => this.flow.difficulty,
-      isCounted: () => this.challenge === null,
+      // The player's record is the player's: neither challenges nor two people's matches count
+      isCounted: () => this.challenge === null && !this.isTwoPlayers,
     });
 
     this.challengeJudge = new ChallengeJudge({
@@ -343,8 +361,8 @@ export class Game {
   }
 
   /**
-   * Starts a match: the challenge being played, or else a quick match set up as the player last
-   * chose (the settings keep it). Restart and play again start the same.
+   * Starts a match: the challenge being played, a match of two players, or else a quick match set
+   * up as the player last chose (the settings keep it). Restart and play again start the same.
    */
   public start(): void {
     this.challengeJudge.judge(this.challenge);
@@ -354,6 +372,14 @@ export class Game {
       const { rules, paddles, difficulty, scene } = CHALLENGES[this.challenge];
       this.matchScene = scene;
       this.flow.startMatch(rules, this.flow.playerVsCpu(paddles), difficulty);
+    } else if (this.isTwoPlayers) {
+      // No CPU to set a level for: the ball plays at the default one's pace
+      this.matchScene = null;
+      this.flow.startMatch(
+        quickMatchRules(this.settings.current.matchPoints),
+        this.flow.twoPlayers(this.inputHandler.players),
+        TWO_PLAYER_PACE,
+      );
     } else {
       this.matchScene = null;
       this.flow.startMatch(quickMatchRules(this.settings.current.matchPoints));
@@ -557,7 +583,8 @@ export class Game {
       zoom: this.effects.cameraZoom,
       climax: this.effects.climaxLevel,
       paddleGlow: this.effects.paddleGlow,
-      overdriveCharge: this.flow.rules.overdrive ? this.flow.overdriveCharge : null,
+      overdriveCharges: this.flow.overdriveCharges,
+      sideLabels: this.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
     };
   }
 

@@ -147,10 +147,32 @@ describe('a match played by its lineup', () => {
     flow.startMatch(STANDARD_RULES, lineup);
 
     for (let i = 0; i < OVERDRIVE.CHARGE; i++) perfectHit(0);
-    expect(flow.overdriveCharge).toBe(0);
+    expect(flow.overdriveCharges).toEqual([null, 0]); // the left one has no meter
 
     for (let i = 0; i < OVERDRIVE.CHARGE; i++) perfectHit(1);
     const charged = events.filter((e) => e.type === 'paddleHit' && e.chargedOverdrive);
     expect(charged).toEqual([expect.objectContaining({ paddleIndex: 1 })]);
+  });
+
+  it('plays two people, each with their own controls and their own Overdrive', () => {
+    const { flow, keys, events, perfectHit } = setup();
+    const [left, right] = [input(), input()];
+
+    flow.startMatch(STANDARD_RULES, flow.twoPlayers([left, right]));
+    flow.update(0.01);
+    expect(keys.pollPlayerMovement).not.toHaveBeenCalled();
+    expect(left.pollPlayerMovement).toHaveBeenCalledTimes(1);
+    expect(right.pollPlayerMovement).toHaveBeenCalledTimes(1);
+    expect(flow.isTwoPlayer).toBe(true);
+    expect(flow.overdriveCharges).toEqual([0, 0]);
+
+    for (let i = 0; i < OVERDRIVE.CHARGE; i++) perfectHit(1);
+    expect(flow.overdriveCharges).toEqual([0, OVERDRIVE.CHARGE]);
+    expect(events.some((e) => e.type === 'paddleHit' && e.chargedOverdrive)).toBe(true);
+
+    // Against the CPU there is one person, and one meter
+    flow.startMatch();
+    expect(flow.isTwoPlayer).toBe(false);
+    expect(flow.overdriveCharges).toEqual([0, null]);
   });
 });

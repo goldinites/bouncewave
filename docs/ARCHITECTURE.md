@@ -184,7 +184,8 @@ drawing layer (4.3), a back stack for the screens and the old menus moved onto P
   `AbortController`.
 - Every new string exists in both languages; every new screen effect honours
   `prefers-reduced-motion`; everything works on a phone in either orientation.
-- Outside the match the left side is still taken to be the player: whose win the finale and the
-  menus show, whose Overdrive meter is drawn. Local multiplayer (3.2) changes that.
+- Every person's paddle draws its Overdrive meter (`flow.overdriveCharges`, null for the CPU's).
+  A match of two (`flow.twoPlayers`) ends in a win, the winner named; otherwise, outside the
+  match, the left side is still taken to be the player: whose win the finale and the menus show.
 - If a feature needs `Game.ts`, `MatchFlow.ts`, `RenderFrame` and `EffectsDirector` changed all at
   once, a building block is missing: add it first, then the feature.

@@ -58,8 +58,16 @@ export interface TranslationSchema {
   /** Wiping the statistics: the button, and what it asks before it does. */
   resetStats: string;
   resetStatsConfirm: string;
-  /** Local multiplayer, on the main menu before it is playable (stage 3). */
+  /** Local multiplayer, on the main menu. */
   multiplayer: string;
+  /** Two players on one device: the setup's title, and how each steers under it. */
+  twoPlayers: string;
+  twoPlayersHint: string;
+  /** Who won a match of two players, in place of `win` / `lose`. */
+  player1Wins: string;
+  player2Wins: string;
+  /** Each side's label under its score in a match of two players: [left, right]. */
+  playerLabels: [string, string];
   /**
    * The challenges' screens; a text's `{placeholders}` are filled by `I18nManager.format`.
    * The list's count and the statistics' heading and row, as "PASSED: 4 / 9".
@@ -136,6 +144,11 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     resetStats: 'RESET',
     resetStatsConfirm: 'SURE? RESET',
     multiplayer: 'MULTIPLAYER',
+    twoPlayers: '2 PLAYERS',
+    twoPlayersHint: 'Left: W/S, right: arrows. On a touch screen, each on their own half',
+    player1Wins: 'PLAYER 1 WINS',
+    player2Wins: 'PLAYER 2 WINS',
+    playerLabels: ['P1', 'P2'],
     challengesHeading: 'CHALLENGES',
     challengesPassed: 'PASSED',
     attemptPassed: 'PASSED!',
@@ -223,6 +236,12 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     resetStats: 'СБРОСИТЬ',
     resetStatsConfirm: 'ТОЧНО СБРОСИТЬ?',
     multiplayer: 'МУЛЬТИПЛЕЕР',
+    twoPlayers: '2 ИГРОКА',
+    twoPlayersHint: 'Левый — W/S, правый — стрелки. На сенсорном экране — каждый на своей половине',
+    // In English, as the finale's YOU WIN is
+    player1Wins: 'PLAYER 1 WINS',
+    player2Wins: 'PLAYER 2 WINS',
+    playerLabels: ['P1', 'P2'],
     challengesHeading: 'ИСПЫТАНИЯ',
     challengesPassed: 'ПРОЙДЕНО',
     attemptPassed: 'ПРОЙДЕНО!',

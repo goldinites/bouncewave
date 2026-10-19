@@ -99,12 +99,12 @@ describe('a match under its rules', () => {
     const withOverdrive = setup();
     withOverdrive.flow.startMatch(STANDARD_RULES);
     for (let i = 0; i < OVERDRIVE.CHARGE; i++) withOverdrive.perfectHit();
-    expect(withOverdrive.flow.overdriveCharge).toBe(OVERDRIVE.CHARGE);
+    expect(withOverdrive.flow.overdriveCharges[0]).toBe(OVERDRIVE.CHARGE);
 
     const without = setup();
     without.flow.startMatch(NO_OVERDRIVE);
     for (let i = 0; i <= OVERDRIVE.CHARGE; i++) without.perfectHit();
-    expect(without.flow.overdriveCharge).toBe(0);
+    expect(without.flow.overdriveCharges).toEqual([null, null]); // no meter at all
     expect(
       without.events.some(
         (event) => event.type === 'paddleHit' && (event.isPowerShot || event.chargedOverdrive),

@@ -55,6 +55,13 @@ export interface GameMenuActions {
   onStartQuickMatch: () => void;
   /** Starts an attempt at a challenge. */
   onStartChallenge: (challenge: ChallengeId) => void;
+  /** Starts a match of two players, as they last set it up (the settings keep the setup). */
+  onStartTwoPlayers?: () => void;
+  /**
+   * Whether two people play the match on court: its end names the winner instead of "you win" or
+   * "game over". Nobody does when left out.
+   */
+  isTwoPlayerMatch?: () => boolean;
   /**
    * Whether the match on court is an attempt at a challenge: its end shows the attempt's result
    * (`showChallengeResult`) instead of the game-over menu. No match is when left out.
@@ -133,6 +140,13 @@ const SETTINGS_MENU: SettingsMenuEntry[] = [
     values: () => LANGUAGES.map((language) => TRANSLATIONS[language].lang_name),
   },
 ];
+
+/**
+ * The choices of a match of two players: the quick match's, but its difficulty, which sets how
+ * well the CPU plays. They share the settings with it: the backdrop and length the players like.
+ */
+const TWO_PLAYER_SETUP = (): ChoiceEntry[] =>
+  QUICK_MATCH_SETUP.filter((entry) => entry.key !== 'difficulty');
 
 /**
  * The quick match's choices, top to bottom. They are kept with the settings, so the next quick
@@ -242,11 +256,9 @@ export class MenuController {
           action: () => this.showPlayMenu(),
         },
         {
-          // Local multiplayer comes in stage 3; until then it is on the menu, switched off
           label: this.i18n.t('multiplayer'),
           color: 'green',
-          disabled: true,
-          action: () => {},
+          action: () => this.showTwoPlayerSetup(),
         },
         {
           label: this.i18n.t('stats'),
@@ -474,6 +486,31 @@ export class MenuController {
     );
   }
 
+  /**
+   * The setup of a match of two players on one device: backdrop and length, as last chosen; how
+   * each steers stands under the title. START plays it.
+   */
+  public showTwoPlayerSetup(): void {
+    const back = () => this.showMainMenu();
+    this.open(back, () => this.showTwoPlayerSetup(), true);
+    const settings = this.settings.current;
+    this.uiManager.showScreen(
+      this.i18n.t('twoPlayers'),
+      this.i18n.t('twoPlayersHint'),
+      h(QuickMatchSetup, {
+        options: TWO_PLAYER_SETUP().map((entry) => this.choiceOf(entry, settings)),
+        previousLabel: this.i18n.t('previousChoice'),
+        nextLabel: this.i18n.t('nextChoice'),
+        startLabel: this.i18n.t('start'),
+        backLabel: this.i18n.t('back'),
+        onStart: () => this.actions.onStartTwoPlayers?.(),
+        onBack: back,
+      }),
+      this.actions.onUnlockAudio,
+      'twoPlayers',
+    );
+  }
+
   public showPauseMenu(): void {
     this.open();
     this.uiManager.showMenu(
@@ -520,8 +557,10 @@ export class MenuController {
 
   public showGameOverMenu(winnerIndex: number, scores: [number, number]): void {
     this.open();
-    const isPlayerWin = winnerIndex === 0;
-    const title = this.i18n.t(isPlayerWin ? 'win' : 'lose');
+    // With two players the winner is named; otherwise the left side is the player
+    const title = this.actions.isTwoPlayerMatch?.()
+      ? this.i18n.t(winnerIndex === 0 ? 'player1Wins' : 'player2Wins')
+      : this.i18n.t(winnerIndex === 0 ? 'win' : 'lose');
     const subtitle = `${scores[0]} : ${scores[1]}`;
 
     this.uiManager.showMenu(
@@ -548,7 +587,7 @@ export class MenuController {
   }
 
   /**
-   * Esc in the settings, the statistics, the PLAY menu, the quick match's setup or a challenge's
+   * Esc in the settings, the statistics, the PLAY menu, a match's setup (quick, two players) or a challenge's
    * screen (the list, a card): back to
    * where it was opened from, as its BACK button does.
    * @returns whether it went back (false anywhere else)
