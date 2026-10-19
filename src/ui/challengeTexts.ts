@@ -30,6 +30,8 @@ export interface ConditionMatch {
  */
 export interface Condition {
   readonly text: string;
+  /** The player's lives after the text, drawn as hearts: those left, of them all; null for none. */
+  readonly lives: { readonly left: number; readonly total: number } | null;
   readonly isUrgent: boolean;
   readonly replacesScore: boolean;
 }
@@ -37,7 +39,7 @@ export interface Condition {
 /**
  * What the player needs to see of a challenge's condition while playing it, in one line: the
  * rally toward its goal, the Overdrive shots, the points toward an uneven winning score with the
- * lives left as hearts, and the clock. Null when there is nothing to show (a standard match,
+ * lives left (the HUD draws them as hearts), and the clock. Null when there is nothing to show (a standard match,
  * whose score says it all).
  * @param goal the challenge's goal; null in a quick match
  * @param progress the judge's count toward it (the Overdrive shots)
@@ -49,6 +51,7 @@ export function describeCondition(
   progress: number | null,
 ): Condition | null {
   const parts: string[] = [];
+  let lives: Condition['lives'] = null;
   let replacesScore = goal?.type === 'rally';
   if (goal?.type === 'rally')
     parts.push(i18n.format('hudRally', { n: match.rally, target: goal.hits }));
@@ -64,8 +67,7 @@ export function describeCondition(
     const [mine, theirs] = [match.rules.winningScores[side], match.rules.winningScores[opponent]];
     if (mine !== theirs && Number.isFinite(mine) && Number.isFinite(theirs)) {
       parts.push(i18n.format('hudPoints', { n: match.scores[side], target: mine }));
-      const left = Math.max(0, theirs - match.scores[opponent]);
-      parts.push('♥'.repeat(left) + '♡'.repeat(theirs - left));
+      lives = { left: Math.max(0, theirs - match.scores[opponent]), total: theirs };
       replacesScore = true;
     }
   }
@@ -74,6 +76,7 @@ export function describeCondition(
   if (parts.length === 0) return null;
   return {
     text: parts.join(' · '),
+    lives,
     isUrgent: match.timeLeft !== null && match.timeLeft < CLOCK_URGENT_BELOW,
     replacesScore,
   };

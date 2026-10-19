@@ -60,19 +60,25 @@ describe("a challenge's condition in the HUD", () => {
     const { rules, goal } = CHALLENGES.longRally;
     expect(
       describeCondition(ru, match(rules, [0, 0], { rally: 12, timeLeft: 41 }), goal, 0),
-    ).toEqual({ text: 'РОЗЫГРЫШ 12 / 20 · 0:41', isUrgent: false, replacesScore: true });
+    ).toEqual({
+      text: 'РОЗЫГРЫШ 12 / 20 · 0:41',
+      lives: null,
+      isUrgent: false,
+      replacesScore: true,
+    });
   });
 
   it('shows the points toward an uneven score, and the lives left as hearts, in the score’s place', () => {
     const { rules, goal } = CHALLENGES.survival;
     expect(describeCondition(ru, match(rules, [7, 1]), goal, 7)).toEqual({
-      text: 'ОЧКИ 7 / 10 · ♥♥♡',
+      text: 'ОЧКИ 7 / 10',
+      lives: { left: 2, total: 3 },
       isUrgent: false,
       replacesScore: true,
     });
     const shutout = CHALLENGES.shutout;
     expect(describeCondition(en, match(shutout.rules, [2, 0]), shutout.goal, 2)?.text).toBe(
-      'POINTS 2 / 3 · ♥',
+      'POINTS 2 / 3',
     );
   });
 
@@ -80,6 +86,7 @@ describe("a challenge's condition in the HUD", () => {
     const { rules, goal } = CHALLENGES.overload;
     expect(describeCondition(en, match(rules), goal, 2)).toEqual({
       text: 'OVERDRIVE 2 / 5',
+      lives: null,
       isUrgent: false,
       replacesScore: false,
     });
@@ -89,6 +96,7 @@ describe("a challenge's condition in the HUD", () => {
     const { rules, goal } = CHALLENGES.blitz;
     expect(describeCondition(en, match(rules, [3, 1], { timeLeft: 84 }), goal, 3)).toEqual({
       text: '1:24',
+      lives: null,
       isUrgent: false,
       replacesScore: false,
     });
@@ -111,6 +119,7 @@ describe('the condition line on the court', () => {
   ];
   const draw = (condition: HudCondition, reduced = false) => {
     const { ctx, spies } = fakeContext();
+    spies.measureText.mockReturnValue({ width: 50 });
     const fills: string[] = [];
     spies.fillText.mockImplementation(() => fills.push(String(ctx.fillStyle)));
     new HudRenderer(() => reduced).render(
@@ -131,16 +140,49 @@ describe('the condition line on the court', () => {
   };
 
   it('draws the line under the scores, pink when urgent', () => {
-    const line = draw({ text: '1:24', isUrgent: false, replacesScore: false });
+    const line = draw({ text: '1:24', lives: null, isUrgent: false, replacesScore: false });
     expect(line.call).toBeDefined();
     expect(line.color).toBe(COLORS.WHITE);
     expect(line.scores).toBe(2);
-    expect(draw({ text: '0:09', isUrgent: true, replacesScore: false }).color).toBe(COLORS.PINK);
+    expect(draw({ text: '0:09', lives: null, isUrgent: true, replacesScore: false }).color).toBe(
+      COLORS.PINK,
+    );
   });
 
   it('leaves the scores out where the line takes their place', () => {
-    const line = draw({ text: 'POINTS 7 / 10 · ♥♥♡', isUrgent: false, replacesScore: true });
+    const line = draw({
+      text: 'POINTS 7 / 10',
+      lives: { left: 2, total: 3 },
+      isUrgent: false,
+      replacesScore: true,
+    });
     expect(line.call).toBeDefined();
     expect(line.scores).toBe(0);
+  });
+
+  it('draws the lives as red hearts, those lost as faint outlines', () => {
+    const { ctx, spies } = fakeContext();
+    spies.measureText.mockReturnValue({ width: 100 });
+    const hearts: { fill: boolean; color: string; alpha: number }[] = [];
+    spies.fill.mockImplementation(() =>
+      hearts.push({ fill: true, color: String(ctx.fillStyle), alpha: ctx.globalAlpha }),
+    );
+    spies.stroke.mockImplementation(() =>
+      hearts.push({ fill: false, color: String(ctx.strokeStyle), alpha: ctx.globalAlpha }),
+    );
+    const condition = {
+      text: 'POINTS 7 / 10',
+      lives: { left: 2, total: 3 },
+      isUrgent: false,
+      replacesScore: true,
+    };
+    new HudRenderer().render(ctx, 0, paddles(), [7, 1], 0, '', 0, false, false, condition);
+
+    expect(hearts.map((h) => [h.fill, h.color])).toEqual([
+      [true, COLORS.RED],
+      [true, COLORS.RED],
+      [false, COLORS.RED],
+    ]);
+    expect(hearts[2].alpha).toBeLessThan(hearts[0].alpha);
   });
 });

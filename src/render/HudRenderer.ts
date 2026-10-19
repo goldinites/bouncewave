@@ -13,9 +13,14 @@ const READY_GLOW = 6;
 // A challenge's condition line, under the scores or in their place. Drawn as plain text, not a
 // cached sprite: its clock changes every second
 const CONDITION = {
-  FONT: gameFont(700, 26),
+  SIZE: 26, // px
   /** In the scores' place, larger: it is all the HUD shows. */
-  FONT_ALONE: gameFont(700, 32),
+  SIZE_ALONE: 32, // px
+  // Hearts for lives after the text: their size, the gap before them and between them, in ems
+  HEART: 0.8,
+  HEART_LEAD: 0.6,
+  HEART_GAP: 0.25,
+  LOST_HEART_ALPHA: 0.35, // a life lost stays as a faint outline
   Y: 142, // court px, the line's center under the scores
   Y_ALONE: 82, // court px, where the scores stand
   // Portrait phone: the turned line starts this far from the court's top edge, and sits this far
@@ -31,9 +36,21 @@ const CONDITION = {
 /** A challenge's condition line, as `describeCondition` (ui/challengeTexts.ts) words it. */
 export interface HudCondition {
   readonly text: string;
+  /** Lives drawn as hearts after the text: those left, of them all. */
+  readonly lives: { readonly left: number; readonly total: number } | null;
   readonly isUrgent: boolean;
   /** Shown in place of the scores, which it makes useless. */
   readonly replacesScore: boolean;
+}
+
+/** A heart `size` across, centered on (x, y). */
+function heartPath(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
+  const s = size / 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + s * 0.85);
+  ctx.bezierCurveTo(x - s * 1.25, y - s * 0.05, x - s * 0.65, y - s * 1.05, x, y - s * 0.4);
+  ctx.bezierCurveTo(x + s * 0.65, y - s * 1.05, x + s * 1.25, y - s * 0.05, x, y + s * 0.85);
+  ctx.closePath();
 }
 
 export class HudRenderer {
@@ -151,11 +168,8 @@ export class HudRenderer {
   ): void {
     ctx.save();
     const alone = condition.replacesScore;
-    ctx.font = classic
-      ? `700 ${alone ? 28 : 22}px 'Courier New', monospace`
-      : alone
-        ? CONDITION.FONT_ALONE
-        : CONDITION.FONT;
+    const size = alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
+    ctx.font = classic ? `700 ${size - 4}px 'Courier New', monospace` : gameFont(700, size);
     ctx.textBaseline = 'middle';
     const isUrgent = condition.isUrgent && !classic;
     ctx.fillStyle = isUrgent ? COLORS.PINK : COLORS.WHITE;
@@ -170,12 +184,35 @@ export class HudRenderer {
       const offset = alone ? CONDITION.ROTATED_OFFSET_ALONE : CONDITION.ROTATED_OFFSET;
       ctx.translate(COURT.WIDTH / 2 - offset, CONDITION.ROTATED_START);
       ctx.rotate(Math.PI / 2);
-      ctx.textAlign = 'left';
     } else {
       ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
-      ctx.textAlign = 'center';
     }
-    ctx.fillText(condition.text, 0, 0);
+
+    // Laid out by hand, text then hearts: centered on the court, or from the top edge when turned
+    const { lives } = condition;
+    const textWidth = ctx.measureText(condition.text).width;
+    const heart = size * CONDITION.HEART;
+    const heartGap = size * CONDITION.HEART_GAP;
+    const heartsWidth = lives
+      ? size * CONDITION.HEART_LEAD + lives.total * heart + (lives.total - 1) * heartGap
+      : 0;
+    const start = isRotated ? 0 : -(textWidth + heartsWidth) / 2;
+    ctx.textAlign = 'left';
+    ctx.fillText(condition.text, start, 0);
+
+    if (lives) {
+      const first = start + textWidth + size * CONDITION.HEART_LEAD + heart / 2;
+      ctx.fillStyle = ctx.strokeStyle = classic ? COLORS.WHITE : COLORS.RED;
+      ctx.lineWidth = 2;
+      const alpha = ctx.globalAlpha;
+      for (let i = 0; i < lives.total; i++) {
+        const isLeft = i < lives.left;
+        ctx.globalAlpha = isLeft ? alpha : alpha * CONDITION.LOST_HEART_ALPHA;
+        heartPath(ctx, first + i * (heart + heartGap), 0, heart);
+        if (isLeft) ctx.fill();
+        else ctx.stroke();
+      }
+    }
     ctx.restore();
   }
 
