@@ -152,7 +152,9 @@ describe('the challenges in the menus', () => {
     button('GIANT').click();
 
     expect(title()).toBe('GIANT');
-    expect(subtitle()).toBe('Win to 5 against a Normal CPU whose paddle is half as long again');
+    expect(subtitle()).toBe(
+      'Win to 5 against a Normal opponent whose paddle is half as long again',
+    );
     expect(text('.challenge-card__passed')).toBeUndefined();
 
     button('START').click();

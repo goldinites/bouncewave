@@ -45,7 +45,7 @@ const through = <T>(list: readonly T[]) => ({
  */
 export const SETTINGS: { [K in keyof UserSettings]: SettingDefinition<UserSettings[K]> } = {
   difficulty: {
-    defaultValue: DifficultyLevel.EASY,
+    defaultValue: DifficultyLevel.NORMAL,
     isValid: isDifficultyLevel,
     ...through(DIFFICULTY_LEVELS),
   },

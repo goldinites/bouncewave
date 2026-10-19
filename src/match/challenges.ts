@@ -51,9 +51,9 @@ export const CHALLENGES = {
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
   },
-  // When the two minutes are up, the side ahead wins: the player has to be ahead by then
+  // Five points within two minutes: when they are up, the player has lost, whatever the score
   blitz: {
-    rules: { ...STANDARD_RULES, winningScores: firstTo(5), timeLimit: 120 },
+    rules: { ...STANDARD_RULES, winningScores: firstTo(5), timeLimit: 120, timeUp: 'opponent' },
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },

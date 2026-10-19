@@ -36,7 +36,7 @@ export const INITIAL_MUSIC_STATE: MusicState = {
   scores: [0, 0],
   winningScores: STANDARD_RULES.winningScores,
   isMuted: false,
-  difficulty: DifficultyLevel.EASY,
+  difficulty: DifficultyLevel.NORMAL,
 };
 
 const MENU_INTENSITY = 0.35;

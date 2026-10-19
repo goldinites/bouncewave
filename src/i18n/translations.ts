@@ -167,17 +167,17 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     },
     challenges: {
       warmUp: ['WARM-UP', 'Win a match to 3 points'],
-      blitz: ['BLITZ', 'Win in two minutes: first to 5, or ahead when time is up'],
+      blitz: ['BLITZ', 'Win to 5 before the two minutes are up'],
       longRally: ['LONG RALLY', 'Keep a rally going for 20 hits within a minute'],
       shutout: ['SHUTOUT', 'Win to 3 without losing a single point'],
       twoBalls: ['TWO BALLS', 'Win to 5 with two balls in play at once'],
       survival: [
         'SURVIVAL',
-        'Score 15 before you lose three lives; the CPU grows stronger every point',
+        'Score 15 before you lose three lives; the opponent grows stronger every point',
       ],
-      giant: ['GIANT', 'Win to 5 against a Normal CPU whose paddle is half as long again'],
-      overload: ['OVERLOAD', 'Beat a Normal CPU to 7, landing 5 Overdrive shots'],
-      insanity: ['INSANITY', 'Win to 5 against the Insane CPU'],
+      giant: ['GIANT', 'Win to 5 against a Normal opponent whose paddle is half as long again'],
+      overload: ['OVERLOAD', 'Beat a Normal opponent to 7, landing 5 Overdrive shots'],
+      insanity: ['INSANITY', 'Win to 5 against an Insane opponent'],
     },
   },
   ru: {
@@ -253,23 +253,23 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     },
     challenges: {
       warmUp: ['РАЗМИНКА', 'Выиграй матч до 3 очков'],
-      blitz: ['БЛИЦ', 'Выиграй за две минуты: до 5 очков или по счёту в конце'],
+      blitz: ['БЛИЦ', 'Выиграй до 5 очков, пока не прошли две минуты'],
       longRally: ['ДОЛГИЙ РОЗЫГРЫШ', 'Розыгрыш в 20 ударов за минуту'],
       shutout: ['ВСУХУЮ', 'Выиграй до 3 очков, не пропустив ни одного'],
       twoBalls: ['ДВА МЯЧА', 'Выиграй до 5 очков, когда в игре сразу два мяча'],
       survival: [
         'ВЫЖИВАНИЕ',
-        'Набери 15 очков, пока не кончились три жизни; CPU сильнее с каждым очком',
+        'Набери 15 очков, пока не кончились три жизни; противник сильнее с каждым очком',
       ],
       giant: [
         'ВЕЛИКАН',
-        'Выиграй до 5 очков у CPU средней сложности с ракеткой в полтора раза длиннее',
+        'Выиграй до 5 очков у противника средней сложности с ракеткой в полтора раза длиннее',
       ],
       overload: [
         'ПЕРЕГРУЗКА',
-        'Выиграй у CPU средней сложности до 7 очков, сделав 5 ударов Overdrive',
+        'Выиграй у противника средней сложности до 7 очков, сделав 5 ударов Overdrive',
       ],
-      insanity: ['БЕЗУМИЕ', 'Выиграй до 5 очков у безумного CPU'],
+      insanity: ['БЕЗУМИЕ', 'Выиграй до 5 очков у безумного противника'],
     },
   },
 };

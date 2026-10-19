@@ -541,12 +541,15 @@ export class MatchFlow {
   }
 
   /**
-   * The match clock has run out: the match ends where it stands, mid-rally or not. The side
-   * ahead wins; on a level score the player loses (with no player, the right side wins).
+   * The match clock has run out: the match ends where it stands, mid-rally or not. As the rules
+   * say, the side ahead wins (on a level score the player loses), or the player's opponent does
+   * whatever the score. With no player, the right side stands for the opponent.
    */
   private endOnTime(): void {
     const [left, right] = this._scores;
-    const winner: Side = left === right ? otherSide(this.playerSide ?? 0) : left > right ? 0 : 1;
+    const opponent = otherSide(this.playerSide ?? 0);
+    const winner: Side =
+      this._rules.timeUp === 'opponent' || left === right ? opponent : left > right ? 0 : 1;
     this.beginFinale(winner, this.leadBall.y);
   }
 
