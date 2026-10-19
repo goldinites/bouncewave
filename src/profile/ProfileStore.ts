@@ -1,3 +1,4 @@
+import { Signal, signal } from '@preact/signals-core';
 import { LEGACY_SETTINGS_KEY, loadProfile } from '@/profile/migrations';
 import { Profile, PROFILE_VERSION } from '@/profile/Profile';
 import { SettingsPersistence } from '@/settings/SettingsStore';
@@ -18,34 +19,35 @@ function browserStorage(): Storage | null {
 /**
  * The player's profile: read once at start (migrated from whatever version it was saved in),
  * held in memory, and written whole on every change. Storage that fails, full or blocked, never
- * stops the game: it plays on with the profile in memory.
+ * stops the game: it plays on with the profile in memory. `current` is a signal's value, so a
+ * screen drawn in an effect (the statistics) is drawn again by itself when the profile changes.
  */
 export class ProfileStore {
-  private profile: Profile;
+  private readonly profile: Signal<Readonly<Profile>>;
   private readonly storage: Storage | null;
 
   constructor(storage: Storage | null = browserStorage()) {
     this.storage = storage;
     const { profile, isCurrent } = this.read();
-    this.profile = profile;
+    this.profile = signal<Readonly<Profile>>(profile);
     // Brought up from an older version (or the settings before profiles): saved at once in this
     // one, so the migration runs only the once
     if (!isCurrent) this.write();
   }
 
   public get current(): Readonly<Profile> {
-    return this.profile;
+    return this.profile.value;
   }
 
   /** Replaces parts of the profile and saves it. */
   public update(patch: Partial<Omit<Profile, 'version'>>): void {
-    this.profile = { ...this.profile, ...patch };
+    this.profile.value = { ...this.profile.value, ...patch };
     this.write();
   }
 
   private write(): void {
     try {
-      this.storage?.setItem(PROFILE_KEY, JSON.stringify(this.profile));
+      this.storage?.setItem(PROFILE_KEY, JSON.stringify(this.profile.value));
     } catch {
       // Full or blocked: the change holds until the page is closed
     }
@@ -54,7 +56,7 @@ export class ProfileStore {
   /** The settings' part of it, for the SettingsStore. */
   public get settings(): SettingsPersistence {
     return {
-      load: () => this.profile.settings,
+      load: () => this.profile.value.settings,
       save: (settings) => this.update({ settings }),
     };
   }

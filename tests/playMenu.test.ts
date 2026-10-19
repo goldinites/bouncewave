@@ -144,7 +144,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
+      <div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   afterEach(() => {
@@ -168,9 +168,6 @@ describe('the PLAY menu and the setup, in the menus', () => {
     };
     const store = new SettingsStore({ load: getDefaultSettings, save: () => {} });
     const menu = new MenuController(ui, i18n, {} as SoundEffects, store, actions);
-    const menuButtons = () => [
-      ...document.querySelectorAll<HTMLButtonElement>('#gameButtons button'),
-    ];
     const screenButtons = () => [
       ...document.querySelectorAll<HTMLButtonElement>('#gameScreen button'),
     ];
@@ -199,7 +196,6 @@ describe('the PLAY menu and the setup, in the menus', () => {
       actions,
       calls,
       store,
-      menuButtons,
       screenButtons,
       keyButtons,
       arrows,
@@ -211,12 +207,11 @@ describe('the PLAY menu and the setup, in the menus', () => {
   };
 
   it('opens from PLAY: the story switched off, the quick match and the challenges on', () => {
-    const { menu, menuButtons, screenButtons, labels, title } = setup('ru');
+    const { menu, screenButtons, labels, title } = setup('ru');
     menu.showMainMenu();
-    menuButtons()[0].click();
+    screenButtons()[0].click();
 
     expect(title()).toBe('РЕЖИМ ИГРЫ');
-    expect(menuButtons()).toEqual([]);
     expect(labels()).toEqual(['СЮЖЕТ', 'БЫСТРЫЙ МАТЧ', 'ИСПЫТАНИЕ', 'НАЗАД']);
     expect(screenButtons().map((b) => b.disabled)).toEqual([true, false, false, false]);
   });
@@ -282,22 +277,22 @@ describe('the PLAY menu and the setup, in the menus', () => {
   });
 
   it('starts the match from START once the audio is unlocked, and again from PLAY AGAIN', () => {
-    const { menu, actions, calls, keyButtons, menuButtons } = setup();
+    const { menu, actions, calls, keyButtons, screenButtons } = setup();
     menu.showQuickMatchSetup();
 
     keyButtons()[3].click(); // start
     expect(calls).toEqual(['unlock', 'start']);
 
     menu.showGameOverMenu(1, [2, 5]);
-    menuButtons()[0].click(); // play again
+    screenButtons()[0].click(); // play again
     expect(calls).toEqual(['unlock', 'start', 'unlock', 'again']);
     expect(actions.onStartQuickMatch).toHaveBeenCalledOnce();
   });
 
   it('sets up two players from MULTIPLAYER: background and points, no difficulty', () => {
-    const { menu, menuButtons, labels, title, subtitle, keyButtons, calls } = setup('ru');
+    const { menu, screenButtons, labels, title, subtitle, keyButtons, calls } = setup('ru');
     menu.showMainMenu();
-    menuButtons()[1].click(); // multiplayer
+    screenButtons()[1].click(); // multiplayer
 
     expect(title()).toBe('2 ИГРОКА');
     expect(subtitle()).toBe(
@@ -308,7 +303,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     keyButtons()[2].click();
     expect(calls).toEqual(['unlock', 'unlock', 'two players']);
     expect(menu.goBack()).toBe(true);
-    expect(menuButtons()[1].textContent).toBe('МУЛЬТИПЛЕЕР'); // back on the main menu
+    expect(screenButtons()[1].textContent).toBe('МУЛЬТИПЛЕЕР'); // back on the main menu
   });
 
   it('names the winner at the end of a match of two', () => {
@@ -323,13 +318,13 @@ describe('the PLAY menu and the setup, in the menus', () => {
   });
 
   it('steps back on Esc: setup, PLAY menu, main menu', () => {
-    const { menu, menuButtons, title } = setup();
+    const { menu, screenButtons, title } = setup();
     menu.showQuickMatchSetup();
 
     expect(menu.goBack()).toBe(true);
     expect(title()).toBe('GAME MODE');
     expect(menu.goBack()).toBe(true);
-    expect(menuButtons().map((b) => b.textContent)).toEqual([
+    expect(screenButtons().map((b) => b.textContent)).toEqual([
       'PLAY',
       'MULTIPLAYER',
       'STATISTICS',
@@ -339,11 +334,11 @@ describe('the PLAY menu and the setup, in the menus', () => {
   });
 
   it('walks the keyboard past the modes that are switched off', () => {
-    const { menu, menuButtons, screenButtons, press } = setup();
+    const { menu, screenButtons, press } = setup();
     menu.showMainMenu();
 
-    menuButtons()[0].focus();
-    menuButtons()[0].click(); // play
+    screenButtons()[0].focus();
+    screenButtons()[0].click(); // play
     expect(document.activeElement).toBe(screenButtons()[1]); // quick match, the first on
 
     press('ArrowDown');
@@ -357,7 +352,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
   });
 
   it('keeps the focus on a choice as it steps, and moves it on between screens', () => {
-    const { menu, menuButtons, screenButtons, keyButtons, arrows, labels, press } = setup();
+    const { menu, screenButtons, keyButtons, arrows, labels, press } = setup();
     menu.showPlayMenu();
     screenButtons()[1].focus();
     screenButtons()[1].click(); // quick match
@@ -377,7 +372,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     keyButtons()[4].click(); // back to the PLAY menu
     expect(document.activeElement).toBe(screenButtons()[1]);
     screenButtons()[3].click(); // back to the main menu
-    expect(document.activeElement).toBe(menuButtons()[0]);
+    expect(document.activeElement).toBe(screenButtons()[0]);
   });
 });
 
@@ -385,7 +380,7 @@ describe('telling the game the quick match setup is on screen', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
+      <div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   it('says so as it opens and as it gives way, not as it is redrawn', () => {

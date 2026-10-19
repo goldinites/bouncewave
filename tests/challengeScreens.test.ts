@@ -86,7 +86,7 @@ describe('the challenges in the menus', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
+      <div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   afterEach(() => {
@@ -179,7 +179,7 @@ describe('the challenges in the menus', () => {
     const events = new EventBus<MatchEvent>();
     menu.listenTo(events);
     events.emit({ type: 'gameOver', winnerIndex: 0, scores: [3, 1] });
-    expect(document.querySelectorAll('#gameButtons button')).toHaveLength(0);
+    expect(document.querySelectorAll('#gameScreen button')).toHaveLength(0);
 
     menu.showChallengeResult({
       verdict: { challenge: 'warmUp', isPassed: true, progress: 3, target: 3 },
