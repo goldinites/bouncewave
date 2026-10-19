@@ -17,7 +17,7 @@ const VARIANTS = [
 ] as const;
 
 // The challenges' own backgrounds too, as they arrive (steps 2.7–2.9)
-for (const scene of [...SCENES, 'warehouse']) {
+for (const scene of [...SCENES, 'warehouse', 'dojo']) {
   for (const variant of VARIANTS) {
     test(`${scene} ${variant.name}`, async ({ page }) => {
       await page.goto(`e2e/stand/index.html?bg=${scene}&${variant.query}`);
