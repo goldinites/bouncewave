@@ -45,9 +45,10 @@ interface DifficultySignature {
 }
 
 const DIFFICULTY_SIGNATURES: Record<DifficultyLevel, DifficultySignature> = {
-  [DifficultyLevel.NORMAL]: { leadBrightness: 1, stutter: false },
-  [DifficultyLevel.HARD]: { leadBrightness: 1.3, stutter: false },
-  [DifficultyLevel.INSANE]: { leadBrightness: 1.6, stutter: true },
+  [DifficultyLevel.EASY]: { leadBrightness: 1, stutter: false },
+  [DifficultyLevel.NORMAL]: { leadBrightness: 1.3, stutter: false },
+  [DifficultyLevel.HARD]: { leadBrightness: 1.6, stutter: true },
+  [DifficultyLevel.INSANE]: { leadBrightness: 1.9, stutter: true },
 };
 
 // Registers: bass roots in E1–D#2 (the SFX tune to these too), arpeggios from A3

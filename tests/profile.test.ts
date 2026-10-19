@@ -166,7 +166,7 @@ describe('settings saved before the profile (version 0)', () => {
 
   it('come into the profile under their names', () => {
     expect(legacy({ d: 2, p: 7, b: 'fuji', m: true, u: false, l: 'ru' })).toEqual({
-      difficulty: DifficultyLevel.HARD,
+      difficulty: DifficultyLevel.NORMAL,
       matchPoints: 7,
       matchBackground: 'fuji',
       soundMuted: true,
@@ -214,9 +214,9 @@ describe('settings saved before the profile (version 0)', () => {
     });
   });
 
-  it('move a removed level (Easy), an out of range one or a fraction to the default', () => {
+  it('move a removed level (the Easy of 1.1), an out of range one or a fraction to the default', () => {
     for (const d of [0, 99, 1.5]) {
-      expect(legacy({ d }).difficulty).toBe(DifficultyLevel.NORMAL);
+      expect(legacy({ d }).difficulty).toBe(DifficultyLevel.EASY);
     }
   });
 

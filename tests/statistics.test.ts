@@ -265,6 +265,7 @@ describe('the statistics screen', () => {
       'LONGEST RALLY 14',
       'PERFECT HITS 9',
       'OVERDRIVE SHOTS 3',
+      'EASY 0 / 0',
       'NORMAL 1 / 2',
       'HARD 1 / 1',
       'INSANE 0 / 0',

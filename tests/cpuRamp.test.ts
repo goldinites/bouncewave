@@ -10,7 +10,7 @@ import { AiPaddleController } from '@/match/PaddleController';
 import { cpuRank, paceAt } from '@/match/ramp';
 import { MatchRules, STANDARD_RULES } from '@/match/rules';
 
-const { NORMAL, HARD, INSANE } = DifficultyLevel;
+const { EASY, NORMAL, HARD, INSANE } = DifficultyLevel;
 const RAMP = { perPoint: 0.2, maxRank: 2.8 };
 const SURVIVAL: MatchRules = { ...STANDARD_RULES, winningScores: [15, 3], cpuRamp: RAMP };
 const RALLY_OF_4: MatchRules = { ...STANDARD_RULES, rallyGoal: 4 };
@@ -26,7 +26,7 @@ const setup = () => {
     paddles,
     ball,
     input: { pollPlayerMovement: () => {} },
-    getDifficulty: () => NORMAL,
+    getDifficulty: () => EASY,
     onEvent: (event) => events.push(event),
     random: () => 0.25,
   });
@@ -61,18 +61,18 @@ const setup = () => {
 
 describe('a CPU growing stronger with the score', () => {
   it('ranks from the match’s level up by its opponent’s points, to its ceiling', () => {
-    expect(cpuRank(NORMAL, RAMP, 0)).toBe(0);
-    expect(cpuRank(NORMAL, RAMP, 5)).toBeCloseTo(1);
-    expect(cpuRank(NORMAL, RAMP, 10)).toBeCloseTo(2);
-    expect(cpuRank(NORMAL, RAMP, 14)).toBeCloseTo(2.8);
-    expect(cpuRank(NORMAL, RAMP, 30)).toBe(2.8);
-    expect(cpuRank(HARD, RAMP, 0)).toBe(1);
+    expect(cpuRank(EASY, RAMP, 0)).toBe(0);
+    expect(cpuRank(EASY, RAMP, 5)).toBeCloseTo(1);
+    expect(cpuRank(EASY, RAMP, 10)).toBeCloseTo(2);
+    expect(cpuRank(EASY, RAMP, 14)).toBeCloseTo(2.8);
+    expect(cpuRank(EASY, RAMP, 30)).toBe(2.8);
+    expect(cpuRank(NORMAL, RAMP, 0)).toBe(1);
   });
 
   it('plays at that rank on every serve, with no form', () => {
     const cpu = new AiPaddleController(
       () => 0.5,
-      () => NORMAL,
+      () => EASY,
     );
     const paddle = new Paddle(1, 700, '#fff');
 
@@ -80,24 +80,26 @@ describe('a CPU growing stronger with the score', () => {
     expect(cpu.skill).toEqual(skillAt(0));
     cpu.onServe(paddle, [5, 0], SURVIVAL);
     expect(cpu.skill).toEqual(skillAt(1));
-    // Past Insane its play stays Insane's
+    // Near its ceiling it plays between Hard and Insane
     cpu.onServe(paddle, [14, 0], SURVIVAL);
-    expect(cpu.skill).toEqual(skillAt(2));
-    expect(cpu.skill.speed).toBe(DIFFICULTY_CONFIGS[INSANE].speed);
+    expect(cpu.skill).toEqual(skillAt(2.8));
+    expect(cpu.skill.speed).toBeGreaterThan(DIFFICULTY_CONFIGS[HARD].speed);
+    expect(cpu.skill.speed).toBeLessThan(DIFFICULTY_CONFIGS[INSANE].speed);
   });
 
   it('quickens the ball along the levels, and past the hardest', () => {
     for (const [rank, level] of [
-      [0, NORMAL],
-      [1, HARD],
-      [2, INSANE],
+      [0, EASY],
+      [1, NORMAL],
+      [2, HARD],
+      [3, INSANE],
     ] as const) {
       expect(paceAt(rank)).toEqual({
         acceleration: DIFFICULTY_CONFIGS[level].acceleration,
         maxSpeed: DIFFICULTY_CONFIGS[level].maxSpeed,
       });
     }
-    const beyond = paceAt(2.8);
+    const beyond = paceAt(3.5);
     expect(beyond.maxSpeed).toBeGreaterThan(DIFFICULTY_CONFIGS[INSANE].maxSpeed);
     expect(beyond.acceleration).toBeGreaterThan(DIFFICULTY_CONFIGS[INSANE].acceleration);
   });
@@ -106,7 +108,7 @@ describe('a CPU growing stronger with the score', () => {
     const { flow, ball, scoreFor, hitWith } = setup();
     flow.startMatch(SURVIVAL);
     hitWith(0, 5000);
-    expect(ball.speed).toBeCloseTo(DIFFICULTY_CONFIGS[NORMAL].maxSpeed);
+    expect(ball.speed).toBeCloseTo(DIFFICULTY_CONFIGS[EASY].maxSpeed);
 
     for (let i = 0; i < 14; i++) scoreFor(0);
     hitWith(0, 5000);

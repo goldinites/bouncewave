@@ -160,6 +160,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       jungle: 'JUNGLE',
     },
     d: {
+      [DifficultyLevel.EASY]: ['EASY', 'vs CPU: a calm opponent to warm up on'],
       [DifficultyLevel.NORMAL]: ['NORMAL', 'vs CPU: a balanced opponent'],
       [DifficultyLevel.HARD]: ['HARD', 'vs CPU: fast and accurate'],
       [DifficultyLevel.INSANE]: ['INSANE', 'vs CPU: barely makes mistakes'],
@@ -174,8 +175,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         'SURVIVAL',
         'Score 15 before you lose three lives; the CPU grows stronger every point',
       ],
-      giant: ['GIANT', 'Win to 5 against a hard CPU whose paddle is half as long again'],
-      overload: ['OVERLOAD', 'Beat a hard CPU to 7, landing 5 Overdrive shots'],
+      giant: ['GIANT', 'Win to 5 against a Normal CPU whose paddle is half as long again'],
+      overload: ['OVERLOAD', 'Beat a Normal CPU to 7, landing 5 Overdrive shots'],
       insanity: ['INSANITY', 'Win to 5 against the Insane CPU'],
     },
   },
@@ -245,6 +246,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       jungle: 'ДЖУНГЛИ',
     },
     d: {
+      [DifficultyLevel.EASY]: ['ЛЁГКАЯ', 'Против CPU: спокойный соперник, чтобы освоиться'],
       [DifficultyLevel.NORMAL]: ['СРЕДНЯЯ', 'Против CPU: сбалансированный соперник'],
       [DifficultyLevel.HARD]: ['СЛОЖНАЯ', 'Против CPU: быстрый и точный'],
       [DifficultyLevel.INSANE]: ['БЕЗУМИЕ', 'Против CPU: почти не ошибается'],
@@ -259,8 +261,14 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         'ВЫЖИВАНИЕ',
         'Набери 15 очков, пока не кончились три жизни; CPU сильнее с каждым очком',
       ],
-      giant: ['ВЕЛИКАН', 'Выиграй до 5 очков у сложного CPU с ракеткой в полтора раза длиннее'],
-      overload: ['ПЕРЕГРУЗКА', 'Выиграй у сложного CPU до 7 очков, сделав 5 ударов Overdrive'],
+      giant: [
+        'ВЕЛИКАН',
+        'Выиграй до 5 очков у CPU средней сложности с ракеткой в полтора раза длиннее',
+      ],
+      overload: [
+        'ПЕРЕГРУЗКА',
+        'Выиграй у CPU средней сложности до 7 очков, сделав 5 ударов Overdrive',
+      ],
       insanity: ['БЕЗУМИЕ', 'Выиграй до 5 очков у безумного CPU'],
     },
   },

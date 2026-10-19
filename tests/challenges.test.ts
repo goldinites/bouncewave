@@ -32,7 +32,7 @@ const setup = () => {
     paddles,
     ball,
     input: { pollPlayerMovement: () => {} },
-    getDifficulty: () => DifficultyLevel.NORMAL,
+    getDifficulty: () => DifficultyLevel.EASY,
     onEvent: (event) => events.push(event),
     random,
   });
@@ -154,7 +154,7 @@ describe('the match clock', () => {
 describe('a match’s own difficulty and paddles', () => {
   it('plays at the level it was started at, else at the chosen one', () => {
     const { flow } = setup();
-    expect(flow.difficulty).toBe(DifficultyLevel.NORMAL);
+    expect(flow.difficulty).toBe(DifficultyLevel.EASY);
     flow.startMatch(STANDARD_RULES, flow.playerVsCpu(), DifficultyLevel.INSANE);
     expect(flow.difficulty).toBe(DifficultyLevel.INSANE);
 
@@ -165,11 +165,11 @@ describe('a match’s own difficulty and paddles', () => {
       [flow.playerVsCpu()[0], { controller: cpu, overdrive: false }],
       DifficultyLevel.INSANE,
     );
-    expect(cpu.skill.speed).toBe(640);
+    expect(cpu.skill.speed).toBe(720);
 
     flow.returnToMenu();
     flow.startMatch();
-    expect(flow.difficulty).toBe(DifficultyLevel.NORMAL);
+    expect(flow.difficulty).toBe(DifficultyLevel.EASY);
   });
 
   it('gives each paddle the one its player brings, and the standard one back in the demo', () => {
