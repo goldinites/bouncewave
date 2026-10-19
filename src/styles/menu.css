@@ -196,37 +196,63 @@
   outline-offset: 3px;
 }
 
-/* A choice of the quick match's setup: its value between an arrow back and an arrow on, the
-   row as wide as the buttons under it */
-/* The setup's column takes the court's width up to a limit, so a choice's value fits between
-   its arrows on a phone too */
+/* The quick match's setup and the settings: columns of choices and buttons. Every control in
+   them is one height, the arrows square, so the column reads as one piece; the gaps between them
+   are wider than the menus' and a little wider still before the buttons */
+.screen-buttons--wide,
+.screen-buttons--settings {
+  --control-height: 46px;
+
+  gap: 14px;
+}
+
 .screen-buttons--wide {
-  width: min(100%, 380px);
+  width: min(100%, 340px);
+}
+
+.screen-buttons--wide .game-button,
+.screen-buttons--settings .game-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: var(--control-height);
+  padding-block: 0;
+}
+
+/* The last choice keeps some room from the buttons under it */
+.screen-buttons--wide > .option-row:last-of-type {
+  margin-bottom: 6px;
 }
 
 .option-row {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
 }
 
-/* The choice's name and value on one line, a size up from the buttons' text. No button: the
-   arrows step it, this only shows it, in the row's color with the buttons' glow */
+/* The choice between its arrows: its name small and dim on top, its value under it, a size up
+   from the buttons' text. No button: the arrows step it, this only shows it, in the row's color
+   with the buttons' glow. A long value may break onto a second line */
 .option-row__value {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5em;
+  gap: 2px;
 
   flex: 1;
   min-width: 0;
-  padding: 0.4em 0.3em;
+  padding: 2px 4px;
   border-radius: 8px;
 
   color: var(--button-color, var(--cyan));
-  font-size: clamp(13px, 2.4vw, 18px);
+  font-size: clamp(13px, 2.2vw, 17px);
   font-weight: 700;
   letter-spacing: 0.08em;
-  white-space: nowrap;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
   text-shadow: 0 0 3px var(--button-color, var(--cyan));
 }
 
@@ -234,6 +260,13 @@
 .option-row__value:focus-visible {
   outline: 2px solid var(--button-color, var(--cyan));
   outline-offset: 2px;
+}
+
+/* The name over the value, small, spaced out and a little dimmer than what it names */
+.option-row__name {
+  font-size: max(10px, 0.62em);
+  letter-spacing: 0.16em;
+  opacity: 0.7;
 }
 
 /* The value shown and invisible copies of every other in one cell: it takes the widest's room,
@@ -251,39 +284,22 @@
   visibility: hidden;
 }
 
-/* The name a little dimmer than the value it names */
-.option-row__name {
-  opacity: 0.75;
-}
-
-/* An arrow is as tall as the buttons under the row: their vertical padding (whatever the
-   layout gives them) around one line of their text, held by an invisible character, so a row
-   of choices and a button line up as one column */
+/* A square arrow, as tall as every other control in the column */
 .screen-buttons .option-row__arrow {
-  display: grid;
-  place-items: center;
-
   flex: none;
-  width: 2.8em;
-  padding-inline: 0;
-}
-
-.option-row__arrow::before {
-  content: '\200b';
-}
-
-.option-row__arrow::before,
-.option-row__arrow > * {
-  grid-area: 1 / 1;
+  width: var(--control-height);
+  height: var(--control-height);
+  min-height: 0;
+  padding: 0;
 }
 
 .option-row__chevron {
-  width: 0.8em;
-  height: 0.8em;
+  width: 1.8em;
+  height: 1.4em;
 
   fill: none;
   stroke: currentColor;
-  stroke-width: 2.5;
+  stroke-width: 3.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -495,13 +511,20 @@
     padding: 0.6em 1.2em;
   }
 
-  /* On a phone the settings and the quick match's setup are only as wide as their widest row:
-     across the whole court they looked stretched next to the menu they open from. Each row
-     keeps its widest value's room, so nothing jumps as the choices step */
+  /* On a phone the settings and the quick match's setup are only as wide as their widest row
+     (each row keeps its widest value's room, so nothing jumps as the choices step), and never
+     wider than most of the court: across the whole of it they looked stretched */
   .screen-buttons--settings,
   .screen-buttons--wide {
+    --control-height: 40px;
+
+    gap: 8px;
     width: max-content;
-    max-width: 100%;
+    max-width: 88%;
+  }
+
+  .screen-buttons--wide > .option-row:last-of-type {
+    margin-bottom: 4px;
   }
 
   /* The challenges' list narrower on a phone too (a long name breaks onto two lines), its
@@ -531,8 +554,22 @@
 
 /* The court is on its side here (stage.css), so the menu is turned back upright over it */
 @media (orientation: portrait) and (max-width: 900px) {
+  /* A phone held upright is too narrow for three names a row: two, the odd last one centered */
   .challenge-list__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: 90%;
+  }
+
+  /* The challenges and BACK under them one size, so the screen reads as one set of buttons */
+  .challenge-list .game-button {
+    padding: 0.85em 0.6em;
+    font-size: 14px;
+  }
+
+  .challenge-list__item:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc(50% - 5px);
   }
 
   .game__ui {
@@ -562,13 +599,16 @@
   }
 
   .option-row__value {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .screen-buttons--settings,
   .screen-buttons--wide {
+    --control-height: 48px;
+
+    gap: 12px;
     width: max-content;
-    max-width: 100%;
+    max-width: 88%;
   }
 }
 

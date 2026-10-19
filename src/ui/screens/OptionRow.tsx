@@ -70,7 +70,7 @@ export function OptionRow({ choice, previousLabel, nextLabel }: OptionRowProps) 
         aria-valuetext={choice.value}
         onKeyDown={step}
       >
-        <span class="option-row__name">{choice.name}:</span>
+        <span class="option-row__name">{choice.name}</span>
         {/* The value over invisible copies of every other, which hold the widest one's room */}
         <span class="option-row__current">
           <span>{choice.value}</span>

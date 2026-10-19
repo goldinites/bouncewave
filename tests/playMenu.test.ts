@@ -106,7 +106,9 @@ describe('the PLAY menu and the setup, as screens', () => {
     const value = screen.getByRole('spinbutton', { name: 'POINTS' });
     expect(value.getAttribute('aria-valuetext')).toBe('5');
     expect(value.tabIndex).toBe(0);
-    expect(value.textContent).toBe('POINTS:5');
+    // Its name over its value, as two lines
+    expect(value.querySelector('.option-row__name')?.textContent).toBe('POINTS');
+    expect(value.querySelector('.option-row__current > span')?.textContent).toBe('5');
   });
 
   it('steps a choice back or on by its arrows and the left and right keys, not by its value', () => {
