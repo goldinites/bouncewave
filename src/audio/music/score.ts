@@ -3,6 +3,7 @@ import {
   BassPatternName,
   DrumFillName,
   DrumPatternName,
+  GlitchPatternName,
   StabPatternName,
 } from '@/audio/music/patterns';
 import { Chord, parseChord, parseNote } from '@/audio/music/theory';
@@ -49,6 +50,8 @@ export interface SectionDef {
   stabs?: StabPatternName;
   /** A noise sweep rising over the whole section, into what follows. */
   riser?: boolean;
+  /** Faults on the whole mix over the section's last bar, for a song that breaks down. */
+  glitch?: GlitchPatternName;
 }
 
 export interface SongDef {

@@ -11,6 +11,12 @@ const ECHO_FEEDBACK = 0.4;
 const ECHO_TIME_TOLERANCE = 0.002; // s
 const ANALYSER_FFT_SIZE = 256;
 const ANALYSER_SMOOTHING = 0.75;
+// Faults of a song that breaks down (GLITCH_PATTERNS)
+const GLITCH = {
+  EDGE: 0.004, // s the level takes to cut out and come back, short enough to sound like a drop
+  REWIND_DEPTH: 0.15, // s the rewind's delay swells to: the pitch sags, then shrieks up
+  REWIND_SAG: 0.7, // share of the rewind spent sagging; the rest is the shriek
+} as const;
 
 /**
  * The music's audio graph and the effects applied to the whole mix.
@@ -19,12 +25,14 @@ const ANALYSER_SMOOTHING = 0.75;
  * aux ─┬─────────────────────────┐
  *      └─ echo ⇄ feedback ─ echo ─┤
  *                                 bus → toneFilter → compressor → dramaFilter
- *   → tapeDelay → duckGain ─┬─ master → destination
- *                           └─ analyser
+ *   → glitchDelay → tapeDelay → glitchGain → duckGain ─┬─ master → destination
+ *                                                     └─ analyser
  * ```
  * - toneFilter follows the game state (muffled in menus and pause), set per step
  * - dramaFilter muffles on match point; separate so it never fights the tone filter
  * - tapeDelay sits at 0 ms until a tape stop sweeps it to bend the pitch down
+ * - glitchDelay and glitchGain are the rewinds and drop-outs of a song that breaks down; their
+ *   own nodes, so they never overlap the tape stop's automation
  * - duckGain dips the music under end-of-match stings, independent of the mute gain
  *
  * Parameters are only automated when their value changes: every automation call adds an event
@@ -44,6 +52,8 @@ export class MusicGraph {
   private readonly toneFilter: BiquadFilterNode;
   private readonly dramaFilter: BiquadFilterNode;
   private readonly tapeDelay: DelayNode;
+  private readonly glitchDelay: DelayNode;
+  private readonly glitchGain: GainNode;
   private readonly duckGain: GainNode;
   private readonly master: GainNode;
   private dramaLevel = 0;
@@ -71,6 +81,8 @@ export class MusicGraph {
     this.toneFilter = ac.createBiquadFilter();
     this.dramaFilter = ac.createBiquadFilter();
     this.tapeDelay = ac.createDelay(1);
+    this.glitchDelay = ac.createDelay(1);
+    this.glitchGain = ac.createGain();
     this.duckGain = ac.createGain();
     this.master = ac.createGain();
     this.analyser = ac.createAnalyser();
@@ -82,6 +94,7 @@ export class MusicGraph {
     this.toneFilter.frequency.value = 2800;
     this.dramaFilter.frequency.value = DRAMA_FILTER_MAX_FREQ;
     this.tapeDelay.delayTime.value = 0;
+    this.glitchDelay.delayTime.value = 0;
     this.master.gain.value = 0;
     this.analyser.fftSize = ANALYSER_FFT_SIZE;
     this.analyser.smoothingTimeConstant = ANALYSER_SMOOTHING;
@@ -94,8 +107,10 @@ export class MusicGraph {
     this.bus.connect(this.toneFilter);
     this.toneFilter.connect(compressor);
     compressor.connect(this.dramaFilter);
-    this.dramaFilter.connect(this.tapeDelay);
-    this.tapeDelay.connect(this.duckGain);
+    this.dramaFilter.connect(this.glitchDelay);
+    this.glitchDelay.connect(this.tapeDelay);
+    this.tapeDelay.connect(this.glitchGain);
+    this.glitchGain.connect(this.duckGain);
     this.duckGain.connect(this.master);
     this.duckGain.connect(this.analyser);
     this.master.connect(ac.destination);
@@ -135,6 +150,41 @@ export class MusicGraph {
     const frequency =
       DRAMA_FILTER_MAX_FREQ * Math.pow(DRAMA_FILTER_MIN_FREQ / DRAMA_FILTER_MAX_FREQ, clamped);
     this.dramaFilter.frequency.setTargetAtTime(frequency, this.now, 0.03);
+  }
+
+  /** The music cuts out from `time` for `duration` seconds, as a dropped connection does. */
+  public cutOut(time: number, duration: number): void {
+    try {
+      const gain = this.glitchGain.gain;
+      gain.setValueAtTime(1, time);
+      gain.linearRampToValueAtTime(0, time + GLITCH.EDGE);
+      gain.setValueAtTime(0, time + duration - GLITCH.EDGE);
+      gain.linearRampToValueAtTime(1, time + duration);
+    } catch {
+      // Play on uncut rather than break audio
+    }
+  }
+
+  /**
+   * A tape rewind from `time` over `duration` seconds: the delay swells slowly, which sags the
+   * pitch, then collapses, which shrieks it up, and is back at 0 when the next bar comes.
+   */
+  public rewind(time: number, duration: number): void {
+    const steps = 32;
+    const curve = new Float32Array(steps);
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const share =
+        t < GLITCH.REWIND_SAG
+          ? (t / GLITCH.REWIND_SAG) ** 2
+          : 1 - ((t - GLITCH.REWIND_SAG) / (1 - GLITCH.REWIND_SAG)) ** 2;
+      curve[i] = GLITCH.REWIND_DEPTH * share;
+    }
+    try {
+      this.glitchDelay.delayTime.setValueCurveAtTime(curve, time, duration);
+    } catch {
+      // Play on unbent rather than break audio
+    }
   }
 
   /** Dip the music so the victory sting sits on top; stays down until `recover`. */

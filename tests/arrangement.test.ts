@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Arrangement } from '@/audio/music/Arrangement';
 import { Conductor } from '@/audio/music/Conductor';
 import { Instruments } from '@/audio/music/Instruments';
@@ -44,5 +44,48 @@ describe('Arrangement', () => {
         }
       });
     });
+  });
+
+  it('cuts the music out and rewinds it over the last bar of a section that breaks down', () => {
+    const { ctx } = fakeAudioContext();
+    const graph = new MusicGraph(ctx);
+    const cutOut = vi.spyOn(graph, 'cutOut');
+    const rewind = vi.spyOn(graph, 'rewind');
+    const arrangement = new Arrangement(new Instruments(graph), graph);
+    const song = SONGS.find((s) => s.title === 'No Carrier')!;
+    const step = 60 / song.bpm / 4;
+
+    const playLastBar = (name: string, isLastBar = true) => {
+      const section = song.sections.find((s) => s.name === name)!;
+      for (let stepInBar = 0; stepInBar < STEPS_PER_BAR; stepInBar++) {
+        arrangement.playStep({
+          time: stepInBar * step,
+          stepDuration: step,
+          song,
+          section,
+          bar: section.bars - 1,
+          stepInBar,
+          isLastBar,
+          nextBarChord: section.chords[0],
+          intensity: 1,
+          climaxLevel: 0,
+          difficulty: DifficultyLevel.NORMAL,
+        });
+      }
+    };
+
+    // The intro drops out over '..........xx.xxx': two runs, each one cut
+    playLastBar('intro');
+    expect(cutOut.mock.calls).toEqual([
+      [10 * step, 2 * step],
+      [13 * step, 3 * step],
+    ]);
+    // The build rewinds from the bar's middle to its end
+    playLastBar('build');
+    expect(rewind.mock.calls).toEqual([[8 * step, 8 * step]]);
+    // Not the last bar: it plays as written
+    cutOut.mockClear();
+    playLastBar('intro', false);
+    expect(cutOut).not.toHaveBeenCalled();
   });
 });
