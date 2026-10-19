@@ -277,6 +277,11 @@ export class Renderer {
     return this.background.scene;
   }
 
+  /** Every backdrop there is a background for: the pickable ones, then the modes' own. */
+  public get scenes(): SceneId[] {
+    return this.background.scenes;
+  }
+
   /**
    * Switches to another background (the match's own scene if it has one, else the chosen one,
    * if the player chose one), flicking through a few channels in static first (a plain cut with

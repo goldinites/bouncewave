@@ -127,7 +127,10 @@ export class Game {
     // the debug overlay shows how the last attempt went
     const challenge = new URLSearchParams(window.location.search).get('challenge');
     if (isChallengeId(challenge)) this.pinnedChallenge = challenge;
-    this.backgroundMenu = new BackgroundMenu((scene) => this.pickBackground(scene));
+    this.backgroundMenu = new BackgroundMenu(
+      (scene) => this.pickBackground(scene),
+      this.renderer.scenes,
+    );
     this.fpsMeter = new FpsMeter((isVisible) => this.backgroundMenu.setVisible(isVisible));
     // The music opens with the song of whichever backdrop comes up first
     this.audio.music.enterScene(this.renderer.scene);

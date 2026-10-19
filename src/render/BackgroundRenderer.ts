@@ -8,6 +8,7 @@ import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
 import { MysteryBackground } from '@/render/backgrounds/MysteryBackground';
 import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
 import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
+import { WarehouseBackground } from '@/render/backgrounds/WarehouseBackground';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp } from '@/shared/math';
 import { isPickableScene, SceneId } from '@/shared/scenes';
@@ -27,7 +28,10 @@ interface Surf {
   channels: number[];
 }
 
-/** Every background the game rotates through; add new ones here. */
+/**
+ * Every background there is; add new ones here. The quick match rotates through the pickable
+ * ones; a mode's own (a challenge's) is shown only when a match asks for it.
+ */
 const createBackgrounds = (): Background[] => [
   new LaserBackground(),
   new MemphisBackground(),
@@ -35,6 +39,7 @@ const createBackgrounds = (): Background[] => [
   new NeonCityBackground(),
   new FujiBackground(),
   new JungleBackground(),
+  new WarehouseBackground(),
 ];
 
 /**
@@ -105,6 +110,11 @@ export class BackgroundRenderer {
     const scale = this.layerScale;
     this.layerScale = 0;
     this.setScale(scale);
+  }
+
+  /** Every backdrop there is a background for, in order. */
+  public get scenes(): SceneId[] {
+    return this.backgrounds.map((background) => background.scene);
   }
 
   /** The backdrop on screen. */

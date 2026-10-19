@@ -756,6 +756,76 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  {
+    // E minor with a phrygian F: the Warehouse, the challenges' first tier. A heavy square bass
+    // under a broken beat, stabs off the beat like steel doors slamming, the crowd's chant on top
+    title: 'Iron Floor',
+    bpm: 112,
+    swing: 0,
+    voices: { lead: 'square', counter: 'pluck', arp: 'sawtooth', bass: 'square' },
+    scene: 'warehouse',
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Em | Fmaj7 | Em | D',
+        counter: `E5 . . . . . B4 . | F5 . . . . . C5 . | E5 . . . . . G5 . | F#5 . . . . . D5 .`,
+        bass: 'long',
+        arp: 'sparse',
+        drums: 'pulse',
+        pad: 'swell',
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Em | Em | Fmaj7 | D | Em | Em | C | Bsus4 B',
+        lead: `E5 . E5 . G5 - F5 E5 | B4 - - - G4 - - - | C5 . C5 . E5 - D5 C5 | D5 - - - . . . .
+             | E5 . E5 . G5 - A5 G5 | G5 - E5 - B4 - - - | C5 - E5 - G5 - E5 - | F#5 - - - D#5 - - -`,
+        bass: 'sync',
+        arp: 'broken',
+        drums: 'break',
+        fill: 'stop',
+        pad: 'hold',
+        stabs: 'offbeat',
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'C | D',
+        lead: `C5 - E5 - G5 - C6 - | D5 - F#5 - A5 - D6 -`,
+        bass: 'eighths',
+        arp: 'up',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Em | C | D | Bsus4 B | Em | C | Am7 | Bsus4',
+        lead: `B5 - - - G5 - E5 - | G5 - - - E5 - C5 - | A5 - - - F#5 - D5 - | B4 - - - D#5 - F#5 -
+             | B5 - - - G5 - E5 - | C6 - - - G5 - E5 - | A5 - G5 - E5 - C5 - | B4 - - - - - - -`,
+        leadVoice: 'saw',
+        bass: 'drive',
+        arp: 'updown',
+        drums: 'drive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Cmaj7 | Bsus4 | Em | D',
+        counter: `G5 . . . E5 . . . | F#5 . . . B4 . . . | G5 . . . B5 . . . | A5 . . . F#5 . . .`,
+        bass: 'long',
+        arp: 'pulse',
+        drums: 'halftime',
+        pad: 'swell',
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);
