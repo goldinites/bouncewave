@@ -77,8 +77,7 @@ export class HudRenderer {
    *   prompt at all — the original scoreboard never had one
    * @param condition a challenge's condition line, under the scores or in their place; urgent, it
    *   turns pink and throbs
-   * @param sideLabels each side's label under its score, [left, right], in a match of two players;
-   *   null for none. With them, on a portrait phone the right side's score faces the top player
+   * @param sideLabels each side's label under its score, [left, right] (two players); null for none
    */
   public render(
     ctx: CanvasRenderingContext2D,
@@ -127,10 +126,8 @@ export class HudRenderer {
 
       ctx.translate(posX, posY);
 
-      // Turned upright for a phone held portrait; with two players round the phone (on a table
-      // between them) the right side's, at the top of the screen, faces its own player
       if (isRotated) {
-        ctx.rotate(sideLabels && index === 1 ? -Math.PI / 2 : Math.PI / 2);
+        ctx.rotate(Math.PI / 2);
       }
 
       // Under the score as the player reads it, turned with it on a portrait phone; it doesn't pop
