@@ -256,13 +256,25 @@
   opacity: 0.75;
 }
 
+/* An arrow is as tall as the buttons under the row: their vertical padding (whatever the
+   layout gives them) around one line of their text, held by an invisible character, so a row
+   of choices and a button line up as one column */
 .screen-buttons .option-row__arrow {
   display: grid;
   place-items: center;
 
   flex: none;
   width: 2.8em;
-  padding: 0;
+  padding-inline: 0;
+}
+
+.option-row__arrow::before {
+  content: '\200b';
+}
+
+.option-row__arrow::before,
+.option-row__arrow > * {
+  grid-area: 1 / 1;
 }
 
 .option-row__chevron {
