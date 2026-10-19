@@ -606,6 +606,17 @@
     transform: translate(-50%, -50%) rotate(90deg);
   }
 
+  /* Two players' match is shown in landscape (Game.setLandscape): its menus stay on their side
+     with the court, read with the phone held sideways */
+  .game--landscape .game__ui {
+    inset: 0;
+
+    width: auto;
+    height: auto;
+
+    transform: none;
+  }
+
   .game__title {
     font-size: clamp(30px, 11vw, 52px);
   }

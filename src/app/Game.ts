@@ -61,6 +61,11 @@ export class Game {
    */
   private isTwoPlayers = false;
   /**
+   * Two players on a phone held upright: their match (its pause and its end too) is shown in
+   * landscape, the phone held sideways between them. Off again back on the main menu.
+   */
+  private isLandscape = false;
+  /**
    * The backdrop the match on court asked for when it started: a challenge's (or, in stage 8, a
    * story chapter's) own; null plays it on the player's. Set by whatever starts the match.
    */
@@ -365,6 +370,7 @@ export class Game {
    * up as the player last chose (the settings keep it). Restart and play again start the same.
    */
   public start(): void {
+    this.setLandscape(this.isTwoPlayers);
     this.challengeJudge.judge(this.challenge);
     // The scene is set before the match starts: the effects ask for it on its matchStart
     if (this.challenge) {
@@ -389,9 +395,37 @@ export class Game {
   }
 
   public toMenu(): void {
+    this.setLandscape(false);
     this.flow.returnToMenu();
     this.uiManager.setPauseButtonVisibility(false);
     this.menuController.showMainMenu();
+  }
+
+  /**
+   * Whether the picture is drawn upright for a phone held portrait. The stage is turned on such a
+   * phone either way (the court's long side along the screen's); in landscape the picture is left
+   * as it is, so it reads with the phone held sideways.
+   */
+  private get isPortraitView(): boolean {
+    return this.inputHandler.isRotated && !this.isLandscape;
+  }
+
+  /**
+   * Turns two players' match to landscape, or back. An installed app may lock the screen to it;
+   * a browser tab refuses, and the turned picture and menus (`game--landscape`) do instead.
+   */
+  private setLandscape(isOn: boolean): void {
+    if (isOn === this.isLandscape) return;
+    this.isLandscape = isOn;
+    document.getElementById('gameContainer')?.classList.toggle('game--landscape', isOn);
+    const orientation = (typeof screen === 'undefined' ? undefined : screen.orientation) as
+      (ScreenOrientation & { lock?: (orientation: string) => Promise<void> }) | undefined;
+    try {
+      if (isOn) orientation?.lock?.('landscape').catch(() => {});
+      else orientation?.unlock?.();
+    } catch {
+      // No orientation lock here: the turned picture stands in for it
+    }
   }
 
   public togglePause(): void {
@@ -470,7 +504,7 @@ export class Game {
           this.challenge ? CHALLENGES[this.challenge].goal : null,
           this.challengeJudge.progress,
         );
-    this.conditionBar.update(condition, this.inputHandler.isRotated);
+    this.conditionBar.update(condition, this.isPortraitView);
     const frame = this.buildRenderFrame(condition);
     if (!isPaused) {
       this.renderer.update(realDt, frame);
@@ -578,7 +612,7 @@ export class Game {
       rally: this.flow.rally,
       readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
       condition,
-      isRotated: this.inputHandler.isRotated,
+      isRotated: this.isPortraitView,
       vignette: this.effects.vignette,
       zoom: this.effects.cameraZoom,
       climax: this.effects.climaxLevel,
