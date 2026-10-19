@@ -26,6 +26,12 @@ export interface MatchRules {
    */
   readonly timeUp: 'leader' | 'opponent';
   /**
+   * When a point is the deciding one (its drama, MATCH POINT, the CPU's form held steady): when
+   * `both` sides are a point from winning, or when `either` is (Survival: every point on the
+   * last life, and the last point to score).
+   */
+  readonly decider: 'both' | 'either';
+  /**
    * Hits in one rally that end the match at once, won by the player (the left side when no one
    * plays); null when rallies end only in points.
    */
@@ -59,6 +65,7 @@ export const STANDARD_RULES: MatchRules = {
   winningScores: [WINNING_SCORE, WINNING_SCORE],
   timeLimit: null,
   timeUp: 'leader',
+  decider: 'both',
   rallyGoal: null,
   cpuRamp: null,
   overdrive: true,
@@ -68,7 +75,11 @@ export const STANDARD_RULES: MatchRules = {
 /** The same winning score for both sides. */
 export const firstTo = (points: number): Scores => [points, points];
 
-/** Both sides are one point from winning: the next point decides the match. */
+/**
+ * The next point can decide the match: both sides are one point from winning, or either is, as
+ * the rules' `decider` says.
+ */
 export function isDecidingPoint(scores: Scores, rules: MatchRules): boolean {
-  return scores.every((score, side) => score === rules.winningScores[side] - 1);
+  const isMatchPoint = (score: number, side: number) => score === rules.winningScores[side] - 1;
+  return rules.decider === 'either' ? scores.some(isMatchPoint) : scores.every(isMatchPoint);
 }

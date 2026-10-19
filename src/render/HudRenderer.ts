@@ -10,10 +10,41 @@ const SCORE_FONT = gameFont(700, 64);
 const SCORE_GLOW = 22;
 const READY_FONT = gameFont(700, 22);
 const READY_GLOW = 6;
+// A challenge's condition line, under the scores or in their place. Drawn as plain text, not a
+// cached sprite: its clock changes every second
+const CONDITION = {
+  FONT: gameFont(700, 26),
+  /** In the scores' place, larger: it is all the HUD shows. */
+  FONT_ALONE: gameFont(700, 32),
+  Y: 142, // court px, the line's center under the scores
+  Y_ALONE: 82, // court px, where the scores stand
+  // Portrait phone: the turned line starts this far from the court's top edge, and sits this far
+  // off the net toward the left side's score, so it reads between the scores without the net's
+  // dashes running through it; alone, it stands where the player's score would
+  ROTATED_START: 40, // court px
+  ROTATED_OFFSET: 40, // court px
+  ROTATED_OFFSET_ALONE: 90, // court px
+  ALPHA: 0.8,
+  URGENT_PULSE: 7, // 1/s, the urgent clock's throb
+} as const;
+
+/** A challenge's condition line, as `describeCondition` (ui/challengeTexts.ts) words it. */
+export interface HudCondition {
+  readonly text: string;
+  readonly isUrgent: boolean;
+  /** Shown in place of the scores, which it makes useless. */
+  readonly replacesScore: boolean;
+}
 
 export class HudRenderer {
   private displayedScores: [number, number] = [-1, -1];
   private scorePop: [number, number] = [0, 0];
+  private readonly isMotionReduced: () => boolean;
+
+  /** @param isMotionReduced whether the urgent clock should hold still instead of throbbing */
+  constructor(isMotionReduced: () => boolean = () => false) {
+    this.isMotionReduced = isMotionReduced;
+  }
 
   /**
    * @param ctx
@@ -26,6 +57,8 @@ export class HudRenderer {
    * @param isRotated
    * @param classic plain white blocky digits with no pop, color or glow, and no "get ready"
    *   prompt at all — the original scoreboard never had one
+   * @param condition a challenge's condition line, under the scores or in their place; urgent, it
+   *   turns pink and throbs
    */
   public render(
     ctx: CanvasRenderingContext2D,
@@ -37,6 +70,7 @@ export class HudRenderer {
     time: number,
     isRotated: boolean,
     classic = false,
+    condition: HudCondition | null = null,
   ): void {
     scores.forEach((score, index) => {
       if (this.displayedScores[index] === -1) {
@@ -54,8 +88,9 @@ export class HudRenderer {
     ctx.textBaseline = 'middle';
     ctx.font = classic ? "700 56px 'Courier New', monospace" : SCORE_FONT;
 
-    // Each side's score, in its color
-    scores.forEach((score, index) => {
+    // Each side's score, in its color (unless the condition line stands in for them)
+    const shownScores = condition?.replacesScore ? [] : scores;
+    shownScores.forEach((score, index) => {
       const color = paddles.find((p) => p.side === (index as Side))!.color;
       const pop = classic ? 0 : Math.sin((1 - this.scorePop[index]) * Math.PI);
       const scale = 1 + pop * 0.5;
@@ -95,6 +130,8 @@ export class HudRenderer {
       ctx.restore();
     });
 
+    if (condition) this.renderCondition(ctx, condition, time, isRotated, classic);
+
     // "GET READY" indicator — the original had no such prompt, so classic mode stays silent
     if (serveTime > 0 && !classic) {
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
@@ -102,6 +139,43 @@ export class HudRenderer {
       this.renderReadyText(ctx, readyText, COURT.WIDTH / 2, COURT.HEIGHT / 2 + 8, isRotated);
     }
 
+    ctx.restore();
+  }
+
+  private renderCondition(
+    ctx: CanvasRenderingContext2D,
+    condition: HudCondition,
+    time: number,
+    isRotated: boolean,
+    classic: boolean,
+  ): void {
+    ctx.save();
+    const alone = condition.replacesScore;
+    ctx.font = classic
+      ? `700 ${alone ? 28 : 22}px 'Courier New', monospace`
+      : alone
+        ? CONDITION.FONT_ALONE
+        : CONDITION.FONT;
+    ctx.textBaseline = 'middle';
+    const isUrgent = condition.isUrgent && !classic;
+    ctx.fillStyle = isUrgent ? COLORS.PINK : COLORS.WHITE;
+    const throb = isUrgent && !this.isMotionReduced();
+    ctx.globalAlpha = throb
+      ? 0.6 + 0.4 * Math.abs(Math.sin(time * CONDITION.URGENT_PULSE))
+      : CONDITION.ALPHA;
+
+    // On a portrait phone the court is turned: the line runs down from the top edge, between the
+    // two scores, so it reads across the screen without crossing them
+    if (isRotated) {
+      const offset = alone ? CONDITION.ROTATED_OFFSET_ALONE : CONDITION.ROTATED_OFFSET;
+      ctx.translate(COURT.WIDTH / 2 - offset, CONDITION.ROTATED_START);
+      ctx.rotate(Math.PI / 2);
+      ctx.textAlign = 'left';
+    } else {
+      ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
+      ctx.textAlign = 'center';
+    }
+    ctx.fillText(condition.text, 0, 0);
     ctx.restore();
   }
 

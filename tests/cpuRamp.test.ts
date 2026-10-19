@@ -116,7 +116,7 @@ describe('a CPU growing stronger with the score', () => {
   });
 
   it('is the Survival challenge’s CPU', () => {
-    expect(CHALLENGES.survival.rules.cpuRamp).toEqual(RAMP);
+    expect(CHALLENGES.survival.rules.cpuRamp).toEqual({ perPoint: 0.15, maxRank: 3 });
   });
 });
 

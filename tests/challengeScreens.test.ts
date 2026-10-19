@@ -27,7 +27,7 @@ describe('progress through the challenges', () => {
       CHALLENGE_IDS.slice(0, 4).map((id) => challengeState(progress, id));
 
     expect(states(progressOf())).toEqual(['open', 'open', 'open', 'open']);
-    expect(states(progressOf('blitz', 'shutout'))).toEqual(['open', 'passed', 'open', 'passed']);
+    expect(states(progressOf('longRally', 'blitz'))).toEqual(['open', 'passed', 'open', 'passed']);
   });
 
   it('keeps the passed ones once each, in the order of the list', () => {
@@ -41,7 +41,7 @@ describe('progress through the challenges', () => {
   });
 
   it('knows which comes next, and that none comes after the last', () => {
-    expect(nextChallenge('warmUp')).toBe('blitz');
+    expect(nextChallenge('warmUp')).toBe('longRally');
     expect(nextChallenge(CHALLENGE_IDS[CHALLENGE_IDS.length - 1])).toBeNull();
   });
 
@@ -130,18 +130,18 @@ describe('the challenges in the menus', () => {
     const items = screenButtons().slice(0, CHALLENGE_IDS.length);
     expect(items.map((b) => b.textContent)).toEqual([
       'WARM-UP',
-      'BLITZ',
       'LONG RALLY',
-      'SHUTOUT',
       'TWO BALLS',
-      'SURVIVAL',
+      'BLITZ',
+      'SHUTOUT',
       'GIANT',
+      'SURVIVAL',
       'OVERLOAD',
       'INSANITY',
     ]);
     expect(items.every((b) => !b.disabled)).toBe(true);
     expect(items[0].classList).toContain('challenge-list__item--passed');
-    expect(items[6].classList).toContain('challenge-list__item--passed');
+    expect(items[5].classList).toContain('challenge-list__item--passed');
     expect(items[8].classList).toContain('challenge-list__item--open');
     expect(screenButtons().at(-1)?.textContent).toBe('BACK');
   });
@@ -192,7 +192,7 @@ describe('the challenges in the menus', () => {
 
     button('NEXT').click();
     expect(actions.onReturnToMainMenu).toHaveBeenCalledOnce();
-    expect(title()).toBe('BLITZ');
+    expect(title()).toBe('LONG RALLY');
   });
 
   it('shows a failed attempt: what it fell short by, TRY AGAIN and the list', () => {

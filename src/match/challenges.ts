@@ -33,27 +33,21 @@ export interface Challenge {
 const STANDARD_PADDLES = [STANDARD_PADDLE, STANDARD_PADDLE] as const;
 
 // Survival: the CPU's three winning points are the player's lives. The CPU starts at the
-// challenge's level (Easy, rank 0) and gains a fifth of a level per point the player wins:
-// Hard at 10, and on the last points it closes in on Insane
-const SURVIVAL = { POINTS: 15, LIVES: 3, RAMP: { perPoint: 0.2, maxRank: 2.8 } } as const;
+// challenge's level (Easy, rank 0) and gains 0.15 of a level per point the player wins: past
+// Normal by the last points (step 2.5: 15 points at +0.2 was out of reach even for a strong player)
+const SURVIVAL = { POINTS: 10, LIVES: 3, RAMP: { perPoint: 0.15, maxRank: 3 } } as const;
 // Giant: the CPU's paddle is this much longer than the standard one
 const GIANT_HEIGHT = 1.5;
 
 /**
- * Every challenge, in the order they open one after another (docs/CHALLENGES.md). A new one is an
- * entry here and its name and description in both languages; the compiler insists on them.
- * The numbers are starting points for playtesting (step 2.5).
+ * Every challenge, easiest first (docs/CHALLENGES.md): all are open from the start, so the order is
+ * the difficulty curve, set in step 2.5 by simulating each with an AI in the player's place. A
+ * new one is an entry here and its name and description in both languages; the compiler insists
+ * on them. The numbers are starting points for playtesting.
  */
 export const CHALLENGES = {
   warmUp: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(3) },
-    difficulty: DifficultyLevel.EASY,
-    paddles: STANDARD_PADDLES,
-    goal: { type: 'win' },
-  },
-  // Five points within two minutes: when they are up, the player has lost, whatever the score
-  blitz: {
-    rules: { ...STANDARD_RULES, winningScores: firstTo(5), timeLimit: 120, timeUp: 'opponent' },
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
@@ -65,27 +59,26 @@ export const CHALLENGES = {
     paddles: STANDARD_PADDLES,
     goal: { type: 'rally', hits: 20 },
   },
-  shutout: {
-    rules: { ...STANDARD_RULES, winningScores: firstTo(3) },
-    difficulty: DifficultyLevel.EASY,
-    paddles: STANDARD_PADDLES,
-    goal: { type: 'shutout' },
-  },
   twoBalls: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(5), balls: 2 },
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
   },
-  survival: {
-    rules: {
-      ...STANDARD_RULES,
-      winningScores: [SURVIVAL.POINTS, SURVIVAL.LIVES],
-      cpuRamp: SURVIVAL.RAMP,
-    },
+  // Three points within two minutes: when they are up, the player has lost, whatever the score.
+  // Five were hardly ever scored in time (step 2.5)
+  blitz: {
+    rules: { ...STANDARD_RULES, winningScores: firstTo(3), timeLimit: 120, timeUp: 'opponent' },
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
+  },
+  // The first point lost ends the attempt: the CPU wins on 1, the player's one life
+  shutout: {
+    rules: { ...STANDARD_RULES, winningScores: [3, 1] },
+    difficulty: DifficultyLevel.EASY,
+    paddles: STANDARD_PADDLES,
+    goal: { type: 'shutout' },
   },
   giant: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(5) },
@@ -94,6 +87,18 @@ export const CHALLENGES = {
       STANDARD_PADDLE,
       { ...STANDARD_PADDLE, height: STANDARD_PADDLE.height * GIANT_HEIGHT },
     ],
+    goal: { type: 'win' },
+  },
+  survival: {
+    rules: {
+      ...STANDARD_RULES,
+      winningScores: [SURVIVAL.POINTS, SURVIVAL.LIVES],
+      cpuRamp: SURVIVAL.RAMP,
+      // Every point on the last life is a deciding one, and so is the last point to score
+      decider: 'either',
+    },
+    difficulty: DifficultyLevel.EASY,
+    paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
   },
   overload: {
@@ -112,7 +117,7 @@ export const CHALLENGES = {
 
 export type ChallengeId = keyof typeof CHALLENGES;
 
-/** Every challenge, in the order they open. */
+/** Every challenge, easiest first. */
 export const CHALLENGE_IDS = Object.keys(CHALLENGES) as ChallengeId[];
 
 export const isChallengeId = (value: unknown): value is ChallengeId =>

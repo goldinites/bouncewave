@@ -29,6 +29,7 @@ import { COLORS } from '@/shared/palette';
 import { BackgroundChoice, isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
 import { NowPlaying } from '@/ui/NowPlaying';
+import { describeCondition } from '@/ui/challengeTexts';
 import { UIManager } from '@/ui/UIManager';
 
 // Longest step the simulation takes in one frame (e.g. after a hitch)
@@ -509,6 +510,14 @@ export class Game {
       serveTime: this.flow.serveTime,
       rally: this.flow.rally,
       readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
+      condition: this.flow.isDemo
+        ? null
+        : describeCondition(
+            this.i18n,
+            this.flow,
+            this.challenge ? CHALLENGES[this.challenge].goal : null,
+            this.challengeJudge.progress,
+          ),
       isRotated: this.inputHandler.isRotated,
       vignette: this.effects.vignette,
       zoom: this.effects.cameraZoom,
