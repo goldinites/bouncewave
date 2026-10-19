@@ -278,14 +278,17 @@ export class Renderer {
   }
 
   /**
-   * Switches to another background (the chosen one, if the player chose one), flicking through
-   * a few channels in static first (a plain cut with reduced motion).
+   * Switches to another background (the match's own scene if it has one, else the chosen one,
+   * if the player chose one), flicking through a few channels in static first (a plain cut with
+   * reduced motion).
    * @param isAnimated false cuts straight over (the game opening on the chosen background)
+   * @param scene the backdrop the match asks for (a challenge's); null for the player's
    * @returns the backdrop on screen now
    */
-  public switchChannel(isAnimated = true): SceneId {
+  public switchChannel(isAnimated = true, scene: SceneId | null = null): SceneId {
     return this.background.switchChannel(
       isAnimated && !this.reducedMotion.matches && !this.isClassicMode,
+      scene,
     );
   }
 

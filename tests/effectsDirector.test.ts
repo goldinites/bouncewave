@@ -6,6 +6,7 @@ import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import type { Renderer } from '@/render/Renderer';
 import { COLORS } from '@/shared/palette';
+import { SceneId } from '@/shared/scenes';
 
 const makeRenderer = () => ({
   addShake: vi.fn(),
@@ -49,7 +50,7 @@ const makeAudio = () => ({
 const fakeFlow = (overrides: Partial<MatchFlow> = {}): MatchFlow =>
   ({ phase: 'finale', rally: 0, isBallLive: false, ...overrides }) as unknown as MatchFlow;
 
-const makeDirector = () => {
+const makeDirector = (matchScene?: () => SceneId | null) => {
   const renderer = makeRenderer();
   const audio = makeAudio();
   const particles = new ParticleSystem();
@@ -65,6 +66,7 @@ const makeDirector = () => {
     particles,
     paddles,
     translate,
+    matchScene,
   });
 
   return { effects, renderer, audio, particles, paddles };
@@ -103,6 +105,17 @@ describe('EffectsDirector.handle', () => {
     expect(renderer.switchChannel).toHaveBeenCalledOnce();
     expect(audio.music.enterScene).toHaveBeenCalledExactlyOnceWith('outrun');
     expect(audio.sfx.playChannelSurf).toHaveBeenCalledOnce();
+  });
+
+  it('plays a match that asks for its own backdrop on it (a challenge), else on the player’s', () => {
+    let scene: SceneId | null = 'warehouse';
+    const { effects, renderer } = makeDirector(() => scene);
+
+    handle(effects, { type: 'matchStart' });
+    expect(renderer.switchChannel).toHaveBeenLastCalledWith(true, 'warehouse');
+    scene = null;
+    handle(effects, { type: 'matchStart' });
+    expect(renderer.switchChannel).toHaveBeenLastCalledWith(true, null);
   });
 
   it('keeps the background on returnToMenu', () => {

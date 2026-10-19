@@ -160,6 +160,8 @@ export class Game {
       particles: this.particles,
       paddles: this.paddles,
       translate: (key) => this.i18n.t(key),
+      // A challenge is played on its tier's own backdrop
+      matchScene: () => (this.challenge ? CHALLENGES[this.challenge].scene : null),
     });
 
     this.flow = new MatchFlow({

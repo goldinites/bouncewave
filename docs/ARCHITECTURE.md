@@ -106,6 +106,9 @@ the quick match's setup offers it from then on. Draw for both orientations (`isR
 `laserIntensity` through a floor so play stays lit; warm the palette with the heat (`climax`,
 `celebration`). Run
 `npm run test:visual -- --update-snapshots` for its new baselines, and look at them.
+A challenges' own background is the same, but its id goes to `CHALLENGE_SCENES`, not `SCENES`, and it
+needs no name: the quick match never offers it, nor does random deal it; a challenge plays on it
+by its `scene` (`match/challenges.ts`), which the effects ask `switchChannel` for on `matchStart`.
 
 **A song.** An entry in `SONG_DEFS` (`audio/music/songs.ts`); its `scene` ties it to a background,
 which then plays it first.
