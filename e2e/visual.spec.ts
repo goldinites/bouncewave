@@ -16,8 +16,8 @@ const VARIANTS = [
   { name: 'portrait', query: 'mode=menu&rotated=1' },
 ] as const;
 
-// The challenges' own backgrounds too, as they arrive (steps 2.7–2.9)
-for (const scene of [...SCENES, 'warehouse', 'dojo']) {
+// The challenges' own backgrounds too, as they arrive (steps 2.7–2.9: all three now)
+for (const scene of [...SCENES, 'warehouse', 'dojo', 'brokenNet']) {
   for (const variant of VARIANTS) {
     test(`${scene} ${variant.name}`, async ({ page }) => {
       await page.goto(`e2e/stand/index.html?bg=${scene}&${variant.query}`);

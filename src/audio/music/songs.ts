@@ -896,6 +896,79 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  {
+    // C minor, the Broken Net, the challenges' last tier: the classic synthwave of the quick
+    // match, but the signal won't hold. Every section ends in a fault: the line drops out, the
+    // beat is chopped up, the tape rewinds into the chorus
+    title: 'No Carrier',
+    bpm: 104,
+    swing: 0,
+    voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'sawtooth' },
+    scene: 'brokenNet',
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Cm | Abmaj7 | Eb | Bb',
+        counter: `G5 . . . . . C5 . | Eb5 . . . . . Ab4 . | G5 . . . . . Bb4 . | F5 . . . . . D5 .`,
+        bass: 'long',
+        arp: 'sparse',
+        drums: 'pulse',
+        pad: 'swell',
+        glitch: 'dropout',
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Cm | Ab | Eb | Bb | Cm | Ab | Fm | Gsus4 G',
+        lead: `G5 - - Eb5 C5 - D5 - | Eb5 - C5 - Ab4 - - - | G4 - Bb4 - Eb5 - G5 - | F5 - - - D5 - - -
+             | G5 - - Eb5 C5 - D5 - | Eb5 - F5 - Ab5 - G5 - | G5 - F5 - C5 - Ab4 - | D5 - - - B4 - - -`,
+        bass: 'octave',
+        arp: 'broken',
+        drums: 'four',
+        fill: 'stop',
+        pad: 'hold',
+        glitch: 'stutter',
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Fm | Gsus4 G',
+        lead: `F4 - Ab4 - C5 - F5 - | G5 - - - B5 - D6 -`,
+        bass: 'eighths',
+        arp: 'up',
+        drums: 'drive',
+        pad: 'hold',
+        riser: true,
+        glitch: 'rewind',
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Ab | Bb | Gm7 Cm | Cm | Ab | Bb | Gsus4 | G',
+        lead: `C6 - - Bb5 Ab5 - G5 - | F5 - - - D5 - F5 - | G5 - Bb5 - D6 - C6 - | D6 - C6 - - - . .
+             | C6 - - Bb5 Ab5 - G5 - | F5 - - - Bb5 - - - | C6 - Bb5 - G5 - F5 - | G5 - - - D5 - B4 -`,
+        bass: 'drive',
+        arp: 'updown',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        stabs: 'push',
+        glitch: 'stutter',
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Abmaj7 | Bb | Cm | Gsus4',
+        counter: `C5 . Eb5 . G5 . . . | D5 . F5 . Bb5 . . . | Eb5 . G5 . C6 . . . | D5 . . . G4 . . .`,
+        bass: 'long',
+        arp: 'pulse',
+        drums: 'halftime',
+        pad: 'swell',
+        glitch: 'rewind',
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);

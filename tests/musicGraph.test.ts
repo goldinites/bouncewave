@@ -50,4 +50,21 @@ describe('MusicGraph', () => {
     const [gainRamp] = callsOf(calls, 'linearRampToValueAtTime').slice(-1);
     expect(gainRamp.args).toEqual([1, 10.6]);
   });
+
+  it('brings the music back after a drop-out, and a rewind back to its pitch', () => {
+    const { ctx, calls } = fakeAudioContext(10);
+    const graph = new MusicGraph(ctx);
+
+    graph.cutOut(12, 0.5);
+    const [comeBack] = callsOf(calls, 'linearRampToValueAtTime').slice(-1);
+    expect(comeBack.args).toEqual([1, 12.5]);
+
+    graph.rewind(13, 1);
+    const [curve] = callsOf(calls, 'setValueCurveAtTime').slice(-1);
+    const values = curve.args[0] as Float32Array;
+    expect(curve.args.slice(1)).toEqual([13, 1]);
+    expect(values[0]).toBe(0);
+    expect(values[values.length - 1]).toBeCloseTo(0);
+    expect(Math.max(...values)).toBeGreaterThan(0.1);
+  });
 });

@@ -60,14 +60,15 @@ export function describeCondition(
   }
 
   // An uneven match (Survival, Shutout): the player's points toward theirs, the opponent's
-  // winning score as the player's lives
+  // winning score as the player's lives. A single life (Shutout) says nothing the goal doesn't,
+  // so it isn't drawn
   const side = match.playerSide;
   if (side !== null) {
     const opponent = otherSide(side);
     const [mine, theirs] = [match.rules.winningScores[side], match.rules.winningScores[opponent]];
     if (mine !== theirs && Number.isFinite(mine) && Number.isFinite(theirs)) {
       parts.push(i18n.format('hudPoints', { n: match.scores[side], target: mine }));
-      lives = { left: Math.max(0, theirs - match.scores[opponent]), total: theirs };
+      if (theirs > 1) lives = { left: Math.max(0, theirs - match.scores[opponent]), total: theirs };
       replacesScore = true;
     }
   }

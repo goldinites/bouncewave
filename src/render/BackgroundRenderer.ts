@@ -1,6 +1,7 @@
 import { COURT } from '@/match/config';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { Background, BackgroundMood } from '@/render/backgrounds/Background';
+import { BrokenNetBackground } from '@/render/backgrounds/BrokenNetBackground';
 import { DojoBackground } from '@/render/backgrounds/DojoBackground';
 import { FujiBackground } from '@/render/backgrounds/FujiBackground';
 import { JungleBackground } from '@/render/backgrounds/JungleBackground';
@@ -42,6 +43,7 @@ const createBackgrounds = (): Background[] => [
   new JungleBackground(),
   new WarehouseBackground(),
   new DojoBackground(),
+  new BrokenNetBackground(),
 ];
 
 /**

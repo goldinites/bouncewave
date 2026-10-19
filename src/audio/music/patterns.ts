@@ -119,3 +119,20 @@ export const STAB_PATTERNS = {
 } satisfies Record<string, string>;
 
 export type StabPatternName = keyof typeof STAB_PATTERNS;
+
+/**
+ * Signal faults on the whole mix, over a section's last bar (16 steps), for a song that
+ * breaks down: x cuts the music out for that step, as a dropped connection does; r rewinds
+ * the tape from that step, the pitch sagging and then shrieking up, over the steps marked -
+ * after it; . plays as written.
+ */
+export const GLITCH_PATTERNS = {
+  // The line drops out twice before the next section
+  dropout: '..........xx.xxx',
+  // Chopped to pieces on the last beats
+  stutter: '........x.x.x.xx',
+  // A rewind into the next section
+  rewind: '........r-------',
+} satisfies Record<string, string>;
+
+export type GlitchPatternName = keyof typeof GLITCH_PATTERNS;

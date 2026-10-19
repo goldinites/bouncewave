@@ -77,10 +77,16 @@ describe("a challenge's condition in the HUD", () => {
       isUrgent: false,
       replacesScore: true,
     });
-    const shutout = CHALLENGES.shutout;
-    expect(describeCondition(en, match(shutout.rules, [2, 0]), shutout.goal, 2)?.text).toBe(
-      'POINTS 2 / 3',
-    );
+  });
+
+  it('shows Shutout’s points without a lone heart: one life says nothing its goal doesn’t', () => {
+    const { rules, goal } = CHALLENGES.shutout;
+    expect(describeCondition(en, match(rules, [2, 0]), goal, 2)).toEqual({
+      text: 'POINTS 2 / 3',
+      lives: null,
+      isUrgent: false,
+      replacesScore: true,
+    });
   });
 
   it('shows the Overdrive shots toward their goal, under the score that also counts', () => {

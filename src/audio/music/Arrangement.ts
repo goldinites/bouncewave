@@ -7,6 +7,7 @@ import {
   DRUM_PATTERNS,
   DrumFill,
   DrumPattern,
+  GLITCH_PATTERNS,
   HIT_VELOCITY,
   STAB_PATTERNS,
 } from '@/audio/music/patterns';
@@ -120,6 +121,7 @@ function heldSteps(pattern: string, step: number): number {
  */
 export class Arrangement {
   private readonly play: Instruments;
+  private readonly graph: MusicGraph;
   private readonly bus: AudioNode;
   private readonly aux: AudioNode;
   /** The pad's last voicing, so the next chord moves as little as possible from it. */
@@ -127,6 +129,7 @@ export class Arrangement {
 
   constructor(instruments: Instruments, graph: MusicGraph) {
     this.play = instruments;
+    this.graph = graph;
     this.bus = graph.bus;
     this.aux = graph.aux;
   }
@@ -171,6 +174,24 @@ export class Arrangement {
 
     if (context.climaxLevel > 0.01) {
       this.playClimaxLayers(time, chord, context);
+    }
+    if (section.glitch && context.isLastBar) this.playGlitch(context.time, context);
+  }
+
+  /** The section's faults on the whole mix, over its last bar: drop-outs and a rewind. */
+  private playGlitch(time: number, context: StepContext): void {
+    const { section, stepInBar: s, stepDuration } = context;
+    const pattern = GLITCH_PATTERNS[section.glitch!];
+    // A fault and the steps it lasts for: a run of x is one drop-out, r holds over its -
+    const fault = pattern[s];
+    if ((fault !== 'x' && fault !== 'r') || (fault === 'x' && pattern[s - 1] === 'x')) return;
+    const hold = fault === 'x' ? 'x' : '-';
+    let steps = 1;
+    while (pattern[s + steps] === hold) steps++;
+    if (fault === 'x') {
+      this.graph.cutOut(time, steps * stepDuration);
+    } else {
+      this.graph.rewind(time, steps * stepDuration);
     }
   }
 
