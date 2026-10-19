@@ -12,6 +12,7 @@ import { Side } from '@/match/side';
 import { Renderer } from '@/render/Renderer';
 import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
+import { SceneId } from '@/shared/scenes';
 
 // Screen shake per event (px); a paddle hit shakes
 // base + (ball speed − serve speed) / divisor, plus a bonus when perfect
@@ -79,6 +80,11 @@ export interface EffectsDirectorDeps {
   particles: ParticleSystem;
   paddles: readonly Paddle[];
   translate: (key: 'win' | 'lose') => string;
+  /**
+   * The backdrop the match starting asks for (a challenge's own); null, or left out, for the
+   * player's.
+   */
+  matchScene?: () => SceneId | null;
 }
 
 /**
@@ -97,6 +103,7 @@ export class EffectsDirector {
   private readonly particles: ParticleSystem;
   private readonly paddles: readonly Paddle[];
   private readonly translate: EffectsDirectorDeps['translate'];
+  private readonly matchScene: () => SceneId | null;
 
   constructor(deps: EffectsDirectorDeps) {
     this.renderer = deps.renderer;
@@ -105,6 +112,7 @@ export class EffectsDirector {
     this.paddles = deps.paddles;
     this.paddleFx = new PaddleEffects(deps.paddles.length);
     this.translate = deps.translate;
+    this.matchScene = deps.matchScene ?? (() => null);
   }
 
   /** Simulation speed requested by the match-point slow motion (1 = normal). */
@@ -191,8 +199,9 @@ export class EffectsDirector {
   public handle(event: MatchEvent): void {
     switch (event.type) {
       case 'matchStart':
-        // Every match is played on another backdrop, found by flicking through the channels
-        this.audio.music.enterScene(this.renderer.switchChannel());
+        // Every match is played on another backdrop, found by flicking through the channels:
+        // its own, if it asks for one, else the player's
+        this.audio.music.enterScene(this.renderer.switchChannel(true, this.matchScene()));
         this.audio.sfx.playChannelSurf();
         this.renderer.addFlash(FLASH.START);
         this.paddleFx.reset();

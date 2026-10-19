@@ -1,6 +1,7 @@
 import { DifficultyLevel } from '@/match/difficulty';
 import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { firstTo, MatchRules, STANDARD_RULES } from '@/match/rules';
+import { ExclusiveSceneId } from '@/shared/scenes';
 
 /**
  * What the player has to do in a challenge's match to pass it. The judge (step 2.2) reads it
@@ -28,9 +29,15 @@ export interface Challenge {
   /** What each side plays with: [player, CPU]. */
   readonly paddles: readonly [player: PaddleSpec, cpu: PaddleSpec];
   readonly goal: ChallengeGoal;
+  /** The backdrop (and its song) it is played on: its tier's, one of the challenges' own. */
+  readonly scene: ExclusiveSceneId<'challenges'>;
 }
 
 const STANDARD_PADDLES = [STANDARD_PADDLE, STANDARD_PADDLE] as const;
+
+// The list's three tiers, three challenges each, and the backdrop each is played on: together a
+// road from an underground league, through an exam of mastery, to a world losing its connection
+const TIER_SCENES = { FIRST: 'warehouse', SECOND: 'dojo', THIRD: 'brokenNet' } as const;
 
 // Survival: the CPU's three winning points are the player's lives. The CPU starts at the
 // challenge's level (Easy, rank 0) and gains 0.15 of a level per point the player wins: past
@@ -51,6 +58,7 @@ export const CHALLENGES = {
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
+    scene: TIER_SCENES.FIRST,
   },
   // Points don't end this one: the clock does, or the rally of 20 that passes it
   longRally: {
@@ -58,12 +66,14 @@ export const CHALLENGES = {
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'rally', hits: 20 },
+    scene: TIER_SCENES.FIRST,
   },
   twoBalls: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(5), balls: 2 },
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
+    scene: TIER_SCENES.FIRST,
   },
   // Three points within two minutes: when they are up, the player has lost, whatever the score.
   // Five were hardly ever scored in time (step 2.5)
@@ -72,6 +82,7 @@ export const CHALLENGES = {
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
+    scene: TIER_SCENES.SECOND,
   },
   // The first point lost ends the attempt: the CPU wins on 1, the player's one life
   shutout: {
@@ -79,6 +90,7 @@ export const CHALLENGES = {
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'shutout' },
+    scene: TIER_SCENES.SECOND,
   },
   giant: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(5) },
@@ -88,6 +100,7 @@ export const CHALLENGES = {
       { ...STANDARD_PADDLE, height: STANDARD_PADDLE.height * GIANT_HEIGHT },
     ],
     goal: { type: 'win' },
+    scene: TIER_SCENES.SECOND,
   },
   survival: {
     rules: {
@@ -100,18 +113,21 @@ export const CHALLENGES = {
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
+    scene: TIER_SCENES.THIRD,
   },
   overload: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(7) },
     difficulty: DifficultyLevel.NORMAL,
     paddles: STANDARD_PADDLES,
     goal: { type: 'powerShots', count: 5 },
+    scene: TIER_SCENES.THIRD,
   },
   insanity: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(5) },
     difficulty: DifficultyLevel.INSANE,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
+    scene: TIER_SCENES.THIRD,
   },
 } as const satisfies Record<string, Challenge>;
 

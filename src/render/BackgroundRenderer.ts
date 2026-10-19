@@ -10,7 +10,7 @@ import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
 import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp } from '@/shared/math';
-import { SceneId } from '@/shared/scenes';
+import { isPickableScene, SceneId } from '@/shared/scenes';
 
 // Dark tint over the background so the court reads clearly on top of it
 const OVERLAY_TINT_RGB = '10, 2, 32';
@@ -64,11 +64,19 @@ export class BackgroundRenderer {
 
   private layer: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null = null;
   private layerScale = 0;
+  /**
+   * The backgrounds a quick match may get, by index: the pickable ones. The challenges' own are
+   * shown only when a match asks for them by name, never dealt nor flicked past.
+   */
+  private readonly pickable: number[];
 
   constructor(backgrounds: Background[] = createBackgrounds(), random: () => number = Math.random) {
     this.backgrounds = backgrounds;
     this.random = random;
-    this.backgroundIndex = Math.floor(random() * backgrounds.length);
+    this.pickable = backgrounds.flatMap((background, i) =>
+      isPickableScene(background.scene) ? [i] : [],
+    );
+    this.backgroundIndex = this.pickable[Math.floor(random() * this.pickable.length)] ?? 0;
   }
 
   /**
@@ -114,29 +122,35 @@ export class BackgroundRenderer {
   }
 
   /**
-   * Switches to another background (at the start of every match): the one the player chose, or
-   * else one dealt from a shuffled deck, where every one comes up once before any comes up
-   * again, and never the same one twice running. Already on the chosen one, it stays.
+   * Switches to another background (at the start of every match): the scene the match asks for
+   * (a challenge's own), else the one the player chose, or else one dealt from a shuffled deck,
+   * where every one comes up once before any comes up again, and never the same one twice
+   * running. Already on the one it would switch to, it stays.
    * @param isAnimated flick through a few channels in static first; off, it just cuts over
+   * @param scene the backdrop the match is to be played on; when there is no background for it
+   *   (yet), the match gets the player's as if none were asked for
    * @returns the backdrop the match is played on
    */
-  public switchChannel(isAnimated: boolean): SceneId {
+  public switchChannel(isAnimated: boolean, scene: SceneId | null = null): SceneId {
     if (this._isPinned) return this.scene;
     const wasMystery = this._isShowingMystery;
     this._isShowingMystery = false;
-    const count = this.backgrounds.length;
     const previous = this.backgroundIndex;
-    // Already on the chosen one (and showing it, not the mystery): it stays
-    if (this.chosen === previous && !wasMystery) return this.scene;
-    this.backgroundIndex = this.chosen ?? this.deal();
+    const asked = this.backgrounds.findIndex((background) => background.scene === scene);
+    const target = asked >= 0 ? asked : this.chosen;
+    // Already on it (and showing it, not the mystery): it stays
+    if (target === previous && !wasMystery) return this.scene;
+    this.backgroundIndex = target ?? this.deal();
 
-    if (isAnimated && count > 1) {
-      // Channels flicking past, each unlike the one before, ending on the match's own
+    // Channels flicking past are the pickable ones, each unlike the one before, ending on the
+    // match's own
+    const others = this.pickable.length;
+    if (isAnimated && others > 1) {
       const channels: number[] = [];
       let last = previous;
       for (let i = 1; i < CHANNEL_SURF.CHANNELS; i++) {
-        let next = Math.floor(this.random() * (count - 1));
-        if (next >= last) next++;
+        const choices = this.pickable.filter((index) => index !== last);
+        const next = choices[Math.floor(this.random() * choices.length)];
         channels.push(next);
         last = next;
       }
@@ -183,7 +197,7 @@ export class BackgroundRenderer {
   /** The next background off the deck, shuffling a new one when it runs out. */
   private deal(): number {
     if (this.deck.length === 0) {
-      this.deck = this.backgrounds.map((_, i) => i);
+      this.deck = [...this.pickable];
       for (let i = this.deck.length - 1; i > 0; i--) {
         const j = Math.floor(this.random() * (i + 1));
         [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
