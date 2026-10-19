@@ -194,7 +194,7 @@ describe('the condition line on the court', () => {
   });
 });
 
-describe('the condition under the court, on a phone held upright', () => {
+describe('the condition in the strip above the court', () => {
   beforeEach(() => {
     document.body.innerHTML = '<p id="gameCondition"></p>';
   });
@@ -235,6 +235,17 @@ describe('the condition under the court, on a phone held upright', () => {
     const first = document.querySelector('#gameCondition span');
     bar.update({ ...line }, true);
     expect(document.querySelector('#gameCondition span')).toBe(first);
+  });
+
+  it('is left to the strip above the court, which still takes the scores’ place', () => {
+    const { ctx, spies } = fakeContext();
+    spies.measureText.mockReturnValue({ width: 50 });
+    const paddles = [new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN), new Paddle(1, 700, COLORS.PINK)];
+    const alone = { ...line, replacesScore: true };
+    new HudRenderer().render(ctx, 0, paddles, [0, 0], 0, '', 0, false, true, alone, null, false);
+    const texts = spies.fillText.mock.calls.map(([text]) => text);
+    expect(texts).not.toContain(line.text);
+    expect(texts).not.toContain('0');
   });
 
   it('is not drawn on the turned court', () => {

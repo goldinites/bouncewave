@@ -1,5 +1,5 @@
-/* The strips of the court's width above and below it: the controls on top, and underneath, on a
-   phone held upright, a challenge's condition */
+/* The strip of the court's width above it: the pause on a touch screen, and in the middle a
+   challenge's condition */
 
 .game-bar {
   flex: none;
@@ -9,15 +9,12 @@
   padding-inline: 8px;
 }
 
-/* Only a phone held upright has the bottom strip (below); elsewhere the HUD draws the condition
-   on the court */
-.game-bar--bottom {
-  display: none;
-}
-
 /* A challenge's condition, as the court's HUD writes it: white, the lives as red hearts, the
-   clock pink and throbbing in its last seconds */
+   clock pink and throbbing in its last seconds. Centered over the court whether or not the pause
+   is beside it */
 .game-condition {
+  grid-column: 2;
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,32 +67,32 @@
   }
 }
 
+/* The pause in the left column, the condition in the middle one; the right column balances the
+   left so the middle stays over the court's center line */
 .game-bar--top {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 12px;
+
+  /* The room the controls always had, so the court stands where it did with nothing to show */
+  min-height: 32px;
 }
 
-/* A phone on its side: the top bar becomes a dock in the right-hand margin beside the court,
-   holding the chip in its corner (the pause is pinned to the bottom corner in pause.css) */
-@media (max-height: 520px) and (orientation: landscape) {
-  .game-bar--top {
-    position: fixed;
-    top: calc(12px + env(safe-area-inset-top, 0px));
-    right: calc(12px + env(safe-area-inset-right, 0px));
-    z-index: 5;
+.game-bar--top .game-pause {
+  justify-self: start;
+}
 
-    width: auto;
-    padding-inline: 0;
+/* A phone on its side has no room above the court: the pause is pinned in the margin beside it
+   (pause.css) and the HUD draws the condition on the court (ui/ConditionBar, SIDE_DOCK_QUERY) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .game-condition {
+    display: none;
   }
 }
 
 @media (orientation: portrait) and (max-width: 900px) {
   .game-bar {
     width: var(--game-width);
-  }
-
-  .game-bar--bottom {
-    display: block;
   }
 }

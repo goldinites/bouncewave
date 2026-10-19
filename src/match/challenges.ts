@@ -60,9 +60,15 @@ export const CHALLENGES = {
     goal: { type: 'win' },
     scene: TIER_SCENES.FIRST,
   },
-  // Points don't end this one: the clock does, or the rally of 20 that passes it
+  // Points don't end this one: the rally of 20 does, won, or the clock, lost whatever the score
   longRally: {
-    rules: { ...STANDARD_RULES, winningScores: firstTo(Infinity), timeLimit: 60, rallyGoal: 20 },
+    rules: {
+      ...STANDARD_RULES,
+      winningScores: firstTo(Infinity),
+      timeLimit: 60,
+      timeUp: 'opponent',
+      rallyGoal: 20,
+    },
     difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'rally', hits: 20 },

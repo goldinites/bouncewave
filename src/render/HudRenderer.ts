@@ -78,6 +78,8 @@ export class HudRenderer {
    * @param condition a challenge's condition line, under the scores or in their place; urgent, it
    *   turns pink and throbs
    * @param sideLabels each side's label under its score, [left, right] (two players); null for none
+   * @param isConditionOnCourt whether the condition's line is drawn here; elsewhere the strip above
+   *   the court shows it (ui/ConditionBar), and the court only leaves out the scores it replaces
    */
   public render(
     ctx: CanvasRenderingContext2D,
@@ -91,6 +93,7 @@ export class HudRenderer {
     classic = false,
     condition: HudCondition | null = null,
     sideLabels: readonly [string, string] | null = null,
+    isConditionOnCourt = true,
   ): void {
     scores.forEach((score, index) => {
       if (this.displayedScores[index] === -1) {
@@ -161,8 +164,11 @@ export class HudRenderer {
       ctx.restore();
     });
 
-    // A phone held upright has it under the court instead (ui/ConditionBar), out of the ball's way
-    if (condition && !isRotated) this.renderCondition(ctx, condition, time, classic);
+    // Only a phone on its side, with no strip above the court, has the line drawn here; across a
+    // turned court it would cross the ball's path
+    if (condition && isConditionOnCourt && !isRotated) {
+      this.renderCondition(ctx, condition, time, classic);
+    }
 
     // "GET READY" indicator — the original had no such prompt, so classic mode stays silent
     if (serveTime > 0 && !classic) {

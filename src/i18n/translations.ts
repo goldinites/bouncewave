@@ -20,8 +20,6 @@ export interface TranslationSchema {
   diff: string;
   sound: string;
   music: string;
-  /** The now-playing chip's skip button. */
-  next: string;
   on: string;
   off: string;
   lang: string;
@@ -114,7 +112,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     diff: 'DIFFICULTY',
     sound: 'SOUND EFFECTS',
     music: 'MUSIC',
-    next: 'NEXT TRACK',
     on: 'ON',
     off: 'OFF',
     lang: 'LANGUAGE',
@@ -206,7 +203,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     diff: 'СЛОЖНОСТЬ',
     sound: 'ЗВУКОВЫЕ ЭФФЕКТЫ',
     music: 'МУЗЫКА',
-    next: 'СЛЕДУЮЩИЙ ТРЕК',
     on: 'ВКЛ',
     off: 'ВЫКЛ',
     lang: 'ЯЗЫК',

@@ -327,23 +327,3 @@
     background-color: rgba(0, 0, 0, 0.85);
   }
 }
-
-/* The now-playing record turning */
-@keyframes now-playing-spin {
-  to {
-    transform: rotate(1turn);
-  }
-}
-
-/* A new song's title slides in */
-@keyframes now-playing-enter {
-  from {
-    opacity: 0;
-    transform: translateX(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}

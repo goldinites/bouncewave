@@ -253,6 +253,14 @@ describe('the challenges', () => {
     expect(CHALLENGES.longRally.rules.timeLimit).toBe(60);
   });
 
+  it('are all lost when their clock runs out, whatever the score', () => {
+    // A clock is a limit to pass the challenge within: running out is never a win to celebrate
+    for (const id of CHALLENGE_IDS) {
+      const { rules } = CHALLENGES[id];
+      if (rules.timeLimit !== null) expect(rules.timeUp, id).toBe('opponent');
+    }
+  });
+
   it('each have a name and a goal in every language', () => {
     for (const translation of Object.values(TRANSLATIONS)) {
       for (const id of CHALLENGE_IDS) {

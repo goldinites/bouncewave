@@ -143,28 +143,3 @@ body.classic-mode .game-pause:focus-visible .game-pause__bar {
   background: var(--black);
   box-shadow: none;
 }
-
-/* Flat black and white, like the pause button */
-body.classic-mode .now-playing {
-  --chip-fill: var(--black);
-
-  border: 1px solid var(--white);
-  border-radius: 0;
-  background: var(--black);
-  box-shadow: none;
-}
-
-body.classic-mode .now-playing__toggle {
-  color: var(--white);
-}
-
-body.classic-mode .now-playing__record {
-  background: repeating-radial-gradient(circle, var(--black) 0 1px, #555 1px 2px);
-  box-shadow: 0 0 0 1px var(--white);
-}
-
-body.classic-mode .now-playing__record::after {
-  background:
-    radial-gradient(circle, var(--black) 0 1px, transparent 1.5px),
-    conic-gradient(var(--white) 0 50%, #888 0);
-}

@@ -22,13 +22,12 @@ First to 10 points wins.
 - Three perfect shots in a row charge **Overdrive**: your next hit becomes a power shot — faster and much harder to read.
 - The angle of your return depends on where the ball meets the paddle and on how the paddle is moving.
 
-| Action       | Keyboard          | Touch          |
-| ------------ | ----------------- | -------------- |
-| Move         | `W` `S` / `↑` `↓` | Drag           |
-| Pause        | `Esc` / `P`       | Pause button   |
-| Music on/off | `M`               | Tap the record |
-| Next track   | `N`               | `▸▸` button    |
-| Fullscreen   | `F`               | —              |
+| Action       | Keyboard          | Touch        |
+| ------------ | ----------------- | ------------ |
+| Move         | `W` `S` / `↑` `↓` | Drag         |
+| Pause        | `Esc` / `P`       | Pause button |
+| Music on/off | `M`               | Settings     |
+| Fullscreen   | `F`               | —            |
 
 **Two players** on one device (**Multiplayer** on the main menu): the left one steers with `W` `S`, the right one with `↑` `↓`; on a touch screen each drags on their own half of the court.
 

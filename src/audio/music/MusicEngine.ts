@@ -139,7 +139,7 @@ export class MusicEngine {
     if (isChanging && this.currentStep === 0) this.skipSong();
   }
 
-  /** The player's skip: another song, at random, from the next bar line. */
+  /** Another song, at random, from the next bar line. */
   public skipSong(): void {
     const { conductor } = this;
     conductor.skip(

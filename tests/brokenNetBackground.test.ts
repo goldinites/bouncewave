@@ -111,6 +111,52 @@ describe('BrokenNetBackground', () => {
     expect(mostOpen(1)).toBeGreaterThan(3);
   });
 
+  describe('the range breaking with the rally', () => {
+    /** A frame at a climax, on a canvas that can report its transform, as a browser's does. */
+    const breakFrame = (background: BrokenNetBackground, climax: number) => {
+      const { ctx, spies } = fakeContext();
+      spies.createLinearGradient.mockReturnValue({ addColorStop: vi.fn() });
+      spies.getTransform.mockReturnValue({ transformPoint: (point: DOMPointInit) => point });
+      const strokes: string[] = [];
+      spies.stroke.mockImplementation(() => strokes.push(String(ctx.strokeStyle)));
+      const spectrum = new AudioSpectrum();
+      spectrum.update(null);
+      const frame = { ctx, spectrum, pulse: 0, time: 3, isRotated: false, laserIntensity: 1 };
+      background.render({ ...frame, climax, celebration: 0 });
+      return {
+        corrupted: strokes.filter((color) => color === '#ff8ae6').length,
+        holes: spies.fill.mock.calls.length,
+        slabs: spies.drawImage.mock.calls.length,
+      };
+    };
+    const ran = () => {
+      const background = new BrokenNetBackground();
+      run(background, 3);
+      return background;
+    };
+
+    it('corrupts a few peaks at rest, and only at the height of a rally slides apart', () => {
+      const calm = breakFrame(ran(), 0);
+      const hot = breakFrame(ran(), 1);
+      expect(calm.corrupted).toBeGreaterThan(0);
+      expect(calm.slabs).toBe(0);
+      // Pieces of the slopes fall into the void, and bands down the edges slide apart
+      expect(hot.holes).toBeGreaterThan(calm.holes);
+      expect(hot.slabs).toBeGreaterThan(0);
+    });
+
+    it('holds whole for a moment when a point is won', () => {
+      const background = ran();
+      background.triggerDrop();
+      expect(breakFrame(background, 1)).toMatchObject({ corrupted: 0, slabs: 0 });
+    });
+
+    it('never slides apart with reduced motion', () => {
+      vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+      expect(breakFrame(ran(), 1).slabs).toBe(0);
+    });
+  });
+
   it('has its own song, which plays only behind it', () => {
     expect(SONGS.filter((song) => song.scene === 'brokenNet').map((song) => song.title)).toEqual([
       'No Carrier',

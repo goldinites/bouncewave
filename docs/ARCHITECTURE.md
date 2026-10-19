@@ -37,7 +37,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |
 | `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `fx/` (particle types), `shared/`         |
 | `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax | `match/`, `render/`, `audio/`, `shared/`            |
-| `ui/`                  | menus as Preact screens on a stack, now-playing chip, boot screen     | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
+| `ui/`                  | menus as Preact screens on a stack, challenge condition, boot screen  | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
 | `debug/`, `easterEgg/` | FPS overlay and background menu; Konami code, title taps              | `shared/`                                           |
 | `app/`                 | `Game` (composition root, frame loop), `FixedStep`                    | anything                                            |
 
