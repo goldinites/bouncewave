@@ -10,10 +10,58 @@ const SCORE_FONT = gameFont(700, 64);
 const SCORE_GLOW = 22;
 const READY_FONT = gameFont(700, 22);
 const READY_GLOW = 6;
+// A challenge's condition line, under the scores or in their place. Drawn as plain text, not a
+// cached sprite: its clock changes every second
+const CONDITION = {
+  SIZE: 26, // px
+  /** In the scores' place, larger: it is all the HUD shows. */
+  SIZE_ALONE: 32, // px
+  // Hearts for lives after the text: their size, the gap before them and between them, in ems
+  HEART: 0.8,
+  HEART_LEAD: 0.6,
+  HEART_GAP: 0.25,
+  LOST_HEART_ALPHA: 0.35, // a life lost stays as a faint outline
+  Y: 142, // court px, the line's center under the scores
+  Y_ALONE: 82, // court px, where the scores stand
+  // Portrait phone: the turned line starts this far from the court's top edge, and sits this far
+  // off the net toward the left side's score, so it reads between the scores without the net's
+  // dashes running through it; alone, it stands where the player's score would
+  ROTATED_START: 40, // court px
+  ROTATED_OFFSET: 40, // court px
+  ROTATED_OFFSET_ALONE: 90, // court px
+  ALPHA: 0.8,
+  URGENT_PULSE: 7, // 1/s, the urgent clock's throb
+} as const;
+
+/** A challenge's condition line, as `describeCondition` (ui/challengeTexts.ts) words it. */
+export interface HudCondition {
+  readonly text: string;
+  /** Lives drawn as hearts after the text: those left, of them all. */
+  readonly lives: { readonly left: number; readonly total: number } | null;
+  readonly isUrgent: boolean;
+  /** Shown in place of the scores, which it makes useless. */
+  readonly replacesScore: boolean;
+}
+
+/** A heart `size` across, centered on (x, y). */
+function heartPath(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
+  const s = size / 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + s * 0.85);
+  ctx.bezierCurveTo(x - s * 1.25, y - s * 0.05, x - s * 0.65, y - s * 1.05, x, y - s * 0.4);
+  ctx.bezierCurveTo(x + s * 0.65, y - s * 1.05, x + s * 1.25, y - s * 0.05, x, y + s * 0.85);
+  ctx.closePath();
+}
 
 export class HudRenderer {
   private displayedScores: [number, number] = [-1, -1];
   private scorePop: [number, number] = [0, 0];
+  private readonly isMotionReduced: () => boolean;
+
+  /** @param isMotionReduced whether the urgent clock should hold still instead of throbbing */
+  constructor(isMotionReduced: () => boolean = () => false) {
+    this.isMotionReduced = isMotionReduced;
+  }
 
   /**
    * @param ctx
@@ -26,6 +74,8 @@ export class HudRenderer {
    * @param isRotated
    * @param classic plain white blocky digits with no pop, color or glow, and no "get ready"
    *   prompt at all — the original scoreboard never had one
+   * @param condition a challenge's condition line, under the scores or in their place; urgent, it
+   *   turns pink and throbs
    */
   public render(
     ctx: CanvasRenderingContext2D,
@@ -37,6 +87,7 @@ export class HudRenderer {
     time: number,
     isRotated: boolean,
     classic = false,
+    condition: HudCondition | null = null,
   ): void {
     scores.forEach((score, index) => {
       if (this.displayedScores[index] === -1) {
@@ -54,8 +105,9 @@ export class HudRenderer {
     ctx.textBaseline = 'middle';
     ctx.font = classic ? "700 56px 'Courier New', monospace" : SCORE_FONT;
 
-    // Each side's score, in its color
-    scores.forEach((score, index) => {
+    // Each side's score, in its color (unless the condition line stands in for them)
+    const shownScores = condition?.replacesScore ? [] : scores;
+    shownScores.forEach((score, index) => {
       const color = paddles.find((p) => p.side === (index as Side))!.color;
       const pop = classic ? 0 : Math.sin((1 - this.scorePop[index]) * Math.PI);
       const scale = 1 + pop * 0.5;
@@ -95,6 +147,8 @@ export class HudRenderer {
       ctx.restore();
     });
 
+    if (condition) this.renderCondition(ctx, condition, time, isRotated, classic);
+
     // "GET READY" indicator — the original had no such prompt, so classic mode stays silent
     if (serveTime > 0 && !classic) {
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
@@ -102,6 +156,63 @@ export class HudRenderer {
       this.renderReadyText(ctx, readyText, COURT.WIDTH / 2, COURT.HEIGHT / 2 + 8, isRotated);
     }
 
+    ctx.restore();
+  }
+
+  private renderCondition(
+    ctx: CanvasRenderingContext2D,
+    condition: HudCondition,
+    time: number,
+    isRotated: boolean,
+    classic: boolean,
+  ): void {
+    ctx.save();
+    const alone = condition.replacesScore;
+    const size = alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
+    ctx.font = classic ? `700 ${size - 4}px 'Courier New', monospace` : gameFont(700, size);
+    ctx.textBaseline = 'middle';
+    const isUrgent = condition.isUrgent && !classic;
+    ctx.fillStyle = isUrgent ? COLORS.PINK : COLORS.WHITE;
+    const throb = isUrgent && !this.isMotionReduced();
+    ctx.globalAlpha = throb
+      ? 0.6 + 0.4 * Math.abs(Math.sin(time * CONDITION.URGENT_PULSE))
+      : CONDITION.ALPHA;
+
+    // On a portrait phone the court is turned: the line runs down from the top edge, between the
+    // two scores, so it reads across the screen without crossing them
+    if (isRotated) {
+      const offset = alone ? CONDITION.ROTATED_OFFSET_ALONE : CONDITION.ROTATED_OFFSET;
+      ctx.translate(COURT.WIDTH / 2 - offset, CONDITION.ROTATED_START);
+      ctx.rotate(Math.PI / 2);
+    } else {
+      ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
+    }
+
+    // Laid out by hand, text then hearts: centered on the court, or from the top edge when turned
+    const { lives } = condition;
+    const textWidth = ctx.measureText(condition.text).width;
+    const heart = size * CONDITION.HEART;
+    const heartGap = size * CONDITION.HEART_GAP;
+    const heartsWidth = lives
+      ? size * CONDITION.HEART_LEAD + lives.total * heart + (lives.total - 1) * heartGap
+      : 0;
+    const start = isRotated ? 0 : -(textWidth + heartsWidth) / 2;
+    ctx.textAlign = 'left';
+    ctx.fillText(condition.text, start, 0);
+
+    if (lives) {
+      const first = start + textWidth + size * CONDITION.HEART_LEAD + heart / 2;
+      ctx.fillStyle = ctx.strokeStyle = classic ? COLORS.WHITE : COLORS.RED;
+      ctx.lineWidth = 2;
+      const alpha = ctx.globalAlpha;
+      for (let i = 0; i < lives.total; i++) {
+        const isLeft = i < lives.left;
+        ctx.globalAlpha = isLeft ? alpha : alpha * CONDITION.LOST_HEART_ALPHA;
+        heartPath(ctx, first + i * (heart + heartGap), 0, heart);
+        if (isLeft) ctx.fill();
+        else ctx.stroke();
+      }
+    }
     ctx.restore();
   }
 

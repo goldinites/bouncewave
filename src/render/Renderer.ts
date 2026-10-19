@@ -9,7 +9,7 @@ import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer';
-import { HudRenderer } from '@/render/HudRenderer';
+import { HudCondition, HudRenderer } from '@/render/HudRenderer';
 import { sprites } from '@/render/SpriteCache';
 import { approach, clamp } from '@/shared/math';
 import { BackgroundChoice, SceneId } from '@/shared/scenes';
@@ -68,6 +68,8 @@ export interface RenderFrame {
   serveTime: number;
   rally: number;
   readyText: string;
+  /** A challenge's condition under the score ("RALLY 12 / 20 · 0:41"); null for none. */
+  condition: HudCondition | null;
   isRotated: boolean;
   /** Edge darkening from the deciding-point drama: 0 = none, may go above 1 on a heartbeat. */
   vignette: number;
@@ -97,7 +99,7 @@ export class Renderer {
   );
 
   private readonly background = new BackgroundRenderer();
-  private readonly hud = new HudRenderer();
+  private readonly hud = new HudRenderer(() => this.reducedMotion.matches);
   private screenShake = 0;
   private screenFlash = 0;
   private laserSurge = 0;
@@ -417,6 +419,8 @@ export class Renderer {
         frame.readyText,
         gameTime,
         isRotated,
+        false,
+        frame.condition,
       );
     }
 
@@ -508,6 +512,7 @@ export class Renderer {
         frame.time,
         isRotated,
         true,
+        frame.condition,
       );
     }
 

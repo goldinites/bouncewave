@@ -5,7 +5,7 @@ import { Ball } from '@/match/Ball';
 import { BALL, COURT, PADDLE } from '@/match/config';
 import { CHALLENGE_IDS, CHALLENGES } from '@/match/challenges';
 import { DifficultyLevel } from '@/match/difficulty';
-import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { FINALE, MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import { AiPaddleController } from '@/match/PaddleController';
 import { STANDARD_PADDLE } from '@/match/PaddleSpec';
@@ -54,6 +54,30 @@ const setup = () => {
 
   return { flow, paddles, events, random, scoreFor, finale };
 };
+
+describe('the finale', () => {
+  it('runs as long as the player’s win or loss, wherever the player stands', () => {
+    // Seconds of finale until the match is over, the left side winning 1–0
+    const finaleLength = (playerOnRight: boolean) => {
+      const { flow, events, scoreFor } = setup();
+      const [human, cpu] = flow.playerVsCpu();
+      flow.startMatch(
+        { ...STANDARD_RULES, winningScores: [1, 1] },
+        playerOnRight ? [cpu, human] : [human, cpu],
+      );
+      scoreFor(0);
+      let elapsed = 0;
+      while (!events.some((e) => e.type === 'gameOver')) {
+        flow.update(0.05);
+        elapsed += 0.05;
+      }
+      return elapsed;
+    };
+
+    expect(finaleLength(false)).toBeCloseTo(FINALE.WIN_DURATION, 1);
+    expect(finaleLength(true)).toBeCloseTo(FINALE.LOSS_DURATION, 1);
+  });
+});
 
 describe('each side’s own winning score', () => {
   it('ends the match when either side reaches its own', () => {
@@ -211,19 +235,20 @@ describe('a match’s own difficulty and paddles', () => {
 });
 
 describe('the challenges', () => {
-  it('are nine, the first nine of docs/CHALLENGES.md, in order', () => {
+  it('are nine, the first nine of docs/CHALLENGES.md, easiest first', () => {
     expect(CHALLENGE_IDS).toEqual([
       'warmUp',
-      'blitz',
       'longRally',
-      'shutout',
       'twoBalls',
-      'survival',
+      'blitz',
+      'shutout',
       'giant',
+      'survival',
       'overload',
       'insanity',
     ]);
-    expect(CHALLENGES.survival.rules.winningScores).toEqual([15, 3]);
+    expect(CHALLENGES.survival.rules.winningScores).toEqual([10, 3]);
+    expect(CHALLENGES.blitz.rules.winningScores).toEqual([3, 3]);
     expect(CHALLENGES.giant.paddles[1].height).toBe(PADDLE.HEIGHT * 1.5);
     expect(CHALLENGES.longRally.rules.timeLimit).toBe(60);
   });

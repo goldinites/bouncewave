@@ -12,4 +12,6 @@ export const COLORS = {
   PURPLE: '#b79bff',
   YELLOW: '#ffe53b',
   WHITE: '#ffffff',
+  /** Lives: a hot neon red, warm enough to read apart from the pink. */
+  RED: '#ff3b5c',
 } as const;

@@ -557,7 +557,9 @@ export class MatchFlow {
     this._phase = 'finale';
     this.finaleWinner = winner;
     this.finaleElapsed = 0;
-    this.finaleDuration = winner === 0 ? FINALE.WIN_DURATION : FINALE.LOSS_DURATION;
+    // The player's win is celebrated longer than their loss (no player: the left side's)
+    const isPlayerWin = winner === (this.playerSide ?? 0);
+    this.finaleDuration = isPlayerWin ? FINALE.WIN_DURATION : FINALE.LOSS_DURATION;
 
     this.emit({ type: 'finaleStart', winnerIndex: winner, ballY, scores: [...this._scores] });
   }
