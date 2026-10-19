@@ -826,6 +826,76 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  {
+    // D minor pentatonic, the Dojo exam, the challenges' second tier: a koto riff driving over a
+    // festival beat, taiko rolling into each section. Brisk and martial, unlike Fuji's still lake
+    title: 'Black Belt',
+    bpm: 118,
+    swing: 0,
+    voices: { lead: 'koto', counter: 'bell', arp: 'square', bass: 'sawtooth' },
+    scene: 'dojo',
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Dm | Bb | C | Asus4',
+        counter: `D5 . . . . . A4 . | D5 . . . . . F4 . | C5 . . . . . G4 . | A4 . . . . . E5 .`,
+        bass: 'long',
+        arp: 'sparse',
+        drums: 'pulse',
+        fill: 'taiko',
+        pad: 'swell',
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Dm | Dm | Bb | C | Dm | Dm | Gm | Asus4 A',
+        lead: `D5 . F5 . A5 - G5 F5 | D5 - - - A4 - - - | D5 . D5 . F5 - D5 C5 | C5 - - - G4 - - -
+             | D5 . F5 . A5 - C6 A5 | A5 - G5 - F5 - - - | G5 - F5 - D5 - C5 - | E5 - - - C#5 - - -`,
+        bass: 'octave',
+        arp: 'broken',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Bb | C',
+        lead: `Bb4 - D5 - F5 - Bb5 - | C5 - E5 - G5 - C6 -`,
+        bass: 'eighths',
+        arp: 'up',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Dm | Bb | F | C | Dm | Bb | Gm | Asus4 A',
+        lead: `A5 - - - F5 - D5 - | F5 - - - D5 - Bb4 - | C6 - - - A5 - F5 - | G5 - - - E5 - C5 -
+             | D6 - - - A5 - F5 - | D6 - - - Bb5 - F5 - | G5 - Bb5 - D6 - Bb5 - | E5 - - - C#5 - - -`,
+        leadVoice: 'saw',
+        bass: 'drive',
+        arp: 'updown',
+        drums: 'tribal',
+        fill: 'taiko',
+        pad: 'hold',
+        stabs: 'push',
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Bbmaj7 | Asus4 | Dm | C',
+        counter: `F5 . . . D5 . . . | E5 . . . A4 . . . | F5 . . . A5 . . . | E5 . . . G5 . . .`,
+        bass: 'long',
+        arp: 'pulse',
+        drums: 'halftime',
+        pad: 'swell',
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);
