@@ -25,9 +25,80 @@ const makeHandler = () => {
   return { handler, callbacks, canvas };
 };
 
+const touch = (clientX: number, clientY: number, pointerType = 'touch') =>
+  document.body.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, clientX, clientY, pointerType }),
+  );
+
+/** Where each paddle heads after a step of the given controls: [solo, left, right]. */
+const targets = (handler: InputHandler) => {
+  const paddles = [0, 1, 2].map(() => new Paddle(0, 0, '#19f0ff'));
+  handler.pollPlayerMovement(paddles[0], 0.1);
+  handler.players[0].pollPlayerMovement(paddles[1], 0.1);
+  handler.players[1].pollPlayerMovement(paddles[2], 0.1);
+  return paddles.map((paddle) => paddle.targetY - COURT.HEIGHT / 2);
+};
+
 describe('InputHandler', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  describe('two players on one device', () => {
+    it('gives the left player W/S and the right one the arrows; alone, either moves', () => {
+      const { handler } = makeHandler();
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS' }));
+      const [solo, left, right] = targets(handler);
+      expect(solo).toBeGreaterThan(0);
+      expect(left).toBeGreaterThan(0);
+      expect(right).toBe(0);
+
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyS' }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowUp' }));
+      const [soloUp, leftStill, rightUp] = targets(handler);
+      expect(soloUp).toBeLessThan(0);
+      expect(leftStill).toBe(0);
+      expect(rightUp).toBeLessThan(0);
+      handler.dispose();
+    });
+
+    it('steers each paddle by touches on its own half of the court', () => {
+      const { handler } = makeHandler();
+
+      touch(100, 400); // left half, low
+      touch(700, 50); // right half, high
+      const [, left, right] = targets(handler);
+      expect(left).toBeGreaterThan(0);
+      expect(right).toBeLessThan(0);
+      handler.dispose();
+    });
+
+    it('takes the bottom half of a portrait phone’s screen for the left player', () => {
+      vi.spyOn(window, 'matchMedia').mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+      } as unknown as MediaQueryList);
+      const { handler } = makeHandler();
+
+      // The court is turned a quarter left: its left side at the bottom, its top at the left
+      touch(700, 450); // bottom of the screen, toward its right: the left player, low on court
+      const [, left, right] = targets(handler);
+      expect(left).toBeGreaterThan(0);
+      expect(right).toBe(0);
+      handler.dispose();
+    });
+
+    it('lets the mouse steer only a player who is alone', () => {
+      const { handler } = makeHandler();
+
+      touch(100, 400, 'mouse');
+      const [solo, left, right] = targets(handler);
+      expect(solo).toBeGreaterThan(0);
+      expect([left, right]).toEqual([0, 0]);
+      handler.dispose();
+    });
   });
 
   it('steers the paddle toward a tap on the court', () => {
