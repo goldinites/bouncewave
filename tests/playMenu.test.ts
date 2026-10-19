@@ -244,6 +244,25 @@ describe('the PLAY menu and the setup, in the menus', () => {
     expect(subtitle()).toBe('Opponent: fast and accurate');
   });
 
+  it('keeps every value’s room in its row, so the row never jumps as the choice steps', () => {
+    const { menu } = setup('ru');
+    menu.showQuickMatchSetup();
+    const sizers = (name: string) =>
+      [...document.querySelectorAll(`[aria-label="${name}"] .option-row__sizer`)].map(
+        (sizer) => sizer.textContent,
+      );
+
+    expect(sizers('ФОН')).toEqual(
+      BACKGROUND_CHOICES.map((choice) => TRANSLATIONS.ru.backgrounds[choice]),
+    );
+    expect(sizers('ОЧКИ')).toEqual(['3', '5', '7']);
+    expect(
+      [...document.querySelectorAll('.option-row__sizer')].every(
+        (sizer) => sizer.getAttribute('aria-hidden') === 'true',
+      ),
+    ).toBe(true);
+  });
+
   it('steps each choice back and on by its arrows, wrapping around', () => {
     const { menu, arrows, labels, store } = setup();
     menu.showQuickMatchSetup();

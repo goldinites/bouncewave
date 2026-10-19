@@ -236,6 +236,21 @@
   outline-offset: 2px;
 }
 
+/* The value shown and invisible copies of every other in one cell: it takes the widest's room,
+   so the row never jumps as the choice steps */
+.option-row__current {
+  display: inline-grid;
+  justify-items: center;
+}
+
+.option-row__current > * {
+  grid-area: 1 / 1;
+}
+
+.option-row__sizer {
+  visibility: hidden;
+}
+
 /* The name a little dimmer than the value it names */
 .option-row__name {
   opacity: 0.75;
@@ -335,16 +350,19 @@
   align-items: center;
   gap: 12px;
 
-  width: min(100%, 640px);
+  max-width: 100%;
   margin-bottom: auto;
 }
 
+/* Three equal columns only as wide as the longest name needs (up to the court's width, where a
+   long name breaks onto two lines) */
 .challenge-list__grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
 }
 
 .challenge-list .screen-buttons {
@@ -465,12 +483,24 @@
     padding: 0.6em 1.2em;
   }
 
-  /* On a phone the settings column is only as wide as its longest row: across the whole court
-     it looked stretched next to the menu it opens from. The quick match's setup keeps its
-     width, so its value doesn't jump about as the choices step */
-  .screen-buttons--settings {
+  /* On a phone the settings and the quick match's setup are only as wide as their widest row:
+     across the whole court they looked stretched next to the menu they open from. Each row
+     keeps its widest value's room, so nothing jumps as the choices step */
+  .screen-buttons--settings,
+  .screen-buttons--wide {
     width: max-content;
     max-width: 100%;
+  }
+
+  /* The challenges' list narrower on a phone too (a long name breaks onto two lines), its
+     buttons as low as the menus' here */
+  .challenge-list__grid {
+    max-width: 78%;
+    gap: 8px;
+  }
+
+  .challenge-list__item {
+    padding-block: 0.6em;
   }
 
   /* Short of height: the sections side by side, the rows tighter */
@@ -489,6 +519,10 @@
 
 /* The court is on its side here (stage.css), so the menu is turned back upright over it */
 @media (orientation: portrait) and (max-width: 900px) {
+  .challenge-list__grid {
+    max-width: 90%;
+  }
+
   .game__ui {
     inset: auto;
 
@@ -519,7 +553,8 @@
     font-size: 17px;
   }
 
-  .screen-buttons--settings {
+  .screen-buttons--settings,
+  .screen-buttons--wide {
     width: max-content;
     max-width: 100%;
   }
