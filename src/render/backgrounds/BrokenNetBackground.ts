@@ -223,6 +223,8 @@ export class BrokenNetBackground implements Background {
   /** The sun's last layout, where the loose pixels fall from. */
   private sunAt: { x: number; y: number; radius: number; cell: number } | null = null;
   private skyKey = '';
+  /** The canvas copied for the sliding bands, kept so a frame doesn't make a new one. */
+  private snapshot: HTMLCanvasElement | null = null;
   private sky: CanvasGradient | null = null;
 
   public triggerDrop(): void {
@@ -651,7 +653,9 @@ export class BrokenNetBackground implements Background {
    * At the height of a rally the picture slides apart: bands down the edges, from the peaks to
    * the bottom, show what lies further along, like a picture that lost its packets. Copied from
    * the canvas as drawn so far (only the background), through its transform, so it holds on a
-   * turned or zoomed court. Never across the middle, where the ball is.
+   * turned or zoomed court. Never across the middle, where the ball is. The canvas is copied once
+   * into a snapshot and the bands are taken from that: a canvas drawn into itself is copied whole
+   * for every band, which cost a phone's whole frame at the height of a rally.
    */
   private renderSlabs(ctx: CanvasRenderingContext2D, layout: Layout): void {
     const matrix = ctx.getTransform?.();
@@ -673,6 +677,8 @@ export class BrokenNetBackground implements Background {
       return [Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y)];
     };
 
+    const source = this.snapshotOf(ctx.canvas);
+
     ctx.save();
     for (let y = horizon - SLABS.TOP, n = 0; y < height; n++) {
       const h = shortest + (tallest - shortest) * hash(n, epoch);
@@ -690,7 +696,7 @@ export class BrokenNetBackground implements Background {
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.globalAlpha = 1;
           ctx.globalCompositeOperation = 'source-over';
-          ctx.drawImage(ctx.canvas, sx, sy, sw, sh, dx, dy, dw, dh);
+          ctx.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh);
           ctx.setTransform(matrix);
           ctx.globalCompositeOperation = 'lighter';
           ctx.globalAlpha = SLABS.SEAM_ALPHA;
@@ -701,6 +707,24 @@ export class BrokenNetBackground implements Background {
       y += h;
     }
     ctx.restore();
+  }
+
+  /**
+   * The canvas as drawn so far, copied once into a canvas of its own (kept between frames); the
+   * canvas itself where no other can be had.
+   */
+  private snapshotOf(
+    canvas: CanvasImageSource & { width: number; height: number },
+  ): CanvasImageSource {
+    if (typeof document === 'undefined') return canvas;
+    this.snapshot ??= document.createElement('canvas');
+    const snapshot = this.snapshot;
+    if (snapshot.width !== canvas.width) snapshot.width = canvas.width;
+    if (snapshot.height !== canvas.height) snapshot.height = canvas.height;
+    const context = snapshot.getContext('2d');
+    if (!context || !snapshot.width || !snapshot.height) return canvas;
+    context.drawImage(canvas, 0, 0);
+    return snapshot;
   }
 
   /**
