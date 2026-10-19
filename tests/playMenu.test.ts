@@ -223,7 +223,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     screenButtons()[1].click(); // quick match
 
     expect(title()).toBe('QUICK MATCH');
-    expect(subtitle()).toBe('vs CPU: a balanced opponent');
+    expect(subtitle()).toBe('Opponent: balanced');
     expect(labels()).toEqual([
       'BACKGROUND: RANDOM',
       'DIFFICULTY: NORMAL',
@@ -241,7 +241,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
       matchPoints: 7,
     });
     expect(labels().slice(0, 3)).toEqual(['BACKGROUND: LASERS', 'DIFFICULTY: HARD', 'POINTS: 7']);
-    expect(subtitle()).toBe('vs CPU: fast and accurate');
+    expect(subtitle()).toBe('Opponent: fast and accurate');
   });
 
   it('steps each choice back and on by its arrows, wrapping around', () => {

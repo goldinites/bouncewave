@@ -160,10 +160,10 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       jungle: 'JUNGLE',
     },
     d: {
-      [DifficultyLevel.EASY]: ['EASY', 'vs CPU: a calm opponent to warm up on'],
-      [DifficultyLevel.NORMAL]: ['NORMAL', 'vs CPU: a balanced opponent'],
-      [DifficultyLevel.HARD]: ['HARD', 'vs CPU: fast and accurate'],
-      [DifficultyLevel.INSANE]: ['INSANE', 'vs CPU: barely makes mistakes'],
+      [DifficultyLevel.EASY]: ['EASY', 'Opponent: calm, to warm up on'],
+      [DifficultyLevel.NORMAL]: ['NORMAL', 'Opponent: balanced'],
+      [DifficultyLevel.HARD]: ['HARD', 'Opponent: fast and accurate'],
+      [DifficultyLevel.INSANE]: ['INSANE', 'Opponent: barely makes mistakes'],
     },
     challenges: {
       warmUp: ['WARM-UP', 'Win a match to 3 points'],
@@ -246,10 +246,10 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       jungle: 'ДЖУНГЛИ',
     },
     d: {
-      [DifficultyLevel.EASY]: ['ЛЁГКАЯ', 'Против CPU: спокойный соперник, чтобы освоиться'],
-      [DifficultyLevel.NORMAL]: ['СРЕДНЯЯ', 'Против CPU: сбалансированный соперник'],
-      [DifficultyLevel.HARD]: ['СЛОЖНАЯ', 'Против CPU: быстрый и точный'],
-      [DifficultyLevel.INSANE]: ['БЕЗУМИЕ', 'Против CPU: почти не ошибается'],
+      [DifficultyLevel.EASY]: ['ЛЁГКАЯ', 'Противник: спокойный, чтобы освоиться'],
+      [DifficultyLevel.NORMAL]: ['СРЕДНЯЯ', 'Противник: сбалансированный'],
+      [DifficultyLevel.HARD]: ['СЛОЖНАЯ', 'Противник: быстрый и точный'],
+      [DifficultyLevel.INSANE]: ['БЕЗУМИЕ', 'Противник: почти не ошибается'],
     },
     challenges: {
       warmUp: ['РАЗМИНКА', 'Выиграй матч до 3 очков'],
