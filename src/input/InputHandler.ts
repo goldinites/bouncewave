@@ -1,10 +1,28 @@
 import { COURT } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
+import { PlayerInput } from '@/match/PaddleController';
+import { Side } from '@/match/side';
 import { clamp } from '@/shared/math';
 
 const PADDLE_SPEED = 500; // px/s under keyboard control, for a paddle of standard speed
 // Two taps closer than this make iOS zoom in; a little over its own double-tap window
 const DOUBLE_TAP_MS = 350;
+
+/**
+ * Who a set of controls steers: the one player of a single-player match, or the player at one
+ * side when two share the device.
+ */
+type Seat = 'solo' | Side;
+
+/** Up and down keys of each seat: alone, a player may use either set; two players get one each. */
+const SEAT_KEYS: Record<Seat, readonly (readonly [up: string, down: string])[]> = {
+  solo: [
+    ['KeyW', 'KeyS'],
+    ['ArrowUp', 'ArrowDown'],
+  ],
+  0: [['KeyW', 'KeyS']],
+  1: [['ArrowUp', 'ArrowDown']],
+};
 
 /** A tap that landed on a UI button (pause, menu) rather than the court itself. */
 const isUiTarget = (target: EventTarget | null): boolean =>
@@ -20,7 +38,13 @@ export interface InputHandlerCallbacks {
   onPress: () => void;
 }
 
-export class InputHandler {
+/**
+ * The keyboard, mouse and touch, read for one player or for two. Alone, the player steers with
+ * either set of keys and a pointer anywhere; two players get W/S and the arrows, and each steers
+ * by touching their own half of the court (on a portrait phone, where the court is turned, the
+ * bottom and the top half of the screen). The mouse is one person's, so it steers only alone.
+ */
+export class InputHandler implements PlayerInput {
   private keys: Record<string, boolean> = {};
   private canvas: HTMLCanvasElement;
   private isPortraitRotated = false;
@@ -28,6 +52,12 @@ export class InputHandler {
   private mediaQuery: MediaQueryList;
   /** Aborting it removes every listener this handler added. */
   private readonly listeners = new AbortController();
+  /** Where each seat last pointed on the court, as a paddle's y; null until it does. */
+  private readonly pointerY: Record<Seat, number | null> = { solo: null, 0: null, 1: null };
+  /** The controls of each side's player, when two share the device: [left, right]. */
+  public readonly players: readonly [PlayerInput, PlayerInput] = [0, 1].map((side) => ({
+    pollPlayerMovement: (paddle: Paddle, dt: number) => this.poll(side as Side, paddle, dt),
+  })) as [PlayerInput, PlayerInput];
 
   constructor(canvas: HTMLCanvasElement, callbacks: InputHandlerCallbacks) {
     this.canvas = canvas;
@@ -132,11 +162,18 @@ export class InputHandler {
       const rect = this.canvas.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
 
-      const normalizedY = this.isPortraitRotated
+      // On a portrait phone the stage is turned a quarter left: the court's top is the screen's
+      // left, its left side the screen's bottom
+      const across = this.isPortraitRotated
+        ? 1 - (e.clientY - rect.top) / rect.height
+        : (e.clientX - rect.left) / rect.width;
+      const down = this.isPortraitRotated
         ? (e.clientX - rect.left) / rect.width
         : (e.clientY - rect.top) / rect.height;
+      const y = down * COURT.HEIGHT;
 
-      this.lastPointerY = normalizedY * COURT.HEIGHT;
+      this.pointerY.solo = y;
+      if (e.pointerType !== 'mouse') this.pointerY[across < 0.5 ? 0 : 1] = y;
     };
 
     window.addEventListener('pointermove', handlePointer, { signal });
@@ -168,19 +205,27 @@ export class InputHandler {
     window.addEventListener('gesturestart', (e) => e.preventDefault(), { signal });
   }
 
-  private lastPointerY: number | null = null;
-
+  /** The single player's controls: either set of keys, a pointer anywhere. */
   public pollPlayerMovement(playerPaddle: Paddle, dt: number): void {
-    const keyDir1 = (this.keys['KeyS'] ? 1 : 0) - (this.keys['KeyW'] ? 1 : 0);
-    const keyDir2 = (this.keys['ArrowDown'] ? 1 : 0) - (this.keys['ArrowUp'] ? 1 : 0);
-    const combinedKeyDir = clamp(keyDir1 + keyDir2, -1, 1);
+    this.poll('solo', playerPaddle, dt);
+  }
 
-    if (combinedKeyDir !== 0) {
-      const speed = PADDLE_SPEED * playerPaddle.spec.speed;
-      playerPaddle.setTargetY(playerPaddle.targetY + combinedKeyDir * speed * dt);
-      this.lastPointerY = null; // Keyboard overrides pointer target
-    } else if (this.lastPointerY !== null) {
-      playerPaddle.setTargetY(this.lastPointerY);
+  private poll(seat: Seat, paddle: Paddle, dt: number): void {
+    const direction = clamp(
+      SEAT_KEYS[seat].reduce(
+        (sum, [up, down]) => sum + (this.keys[down] ? 1 : 0) - (this.keys[up] ? 1 : 0),
+        0,
+      ),
+      -1,
+      1,
+    );
+
+    if (direction !== 0) {
+      const speed = PADDLE_SPEED * paddle.spec.speed;
+      paddle.setTargetY(paddle.targetY + direction * speed * dt);
+      this.pointerY[seat] = null; // Keyboard overrides pointer target
+    } else if (this.pointerY[seat] !== null) {
+      paddle.setTargetY(this.pointerY[seat]);
     }
   }
 }

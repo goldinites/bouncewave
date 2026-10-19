@@ -76,6 +76,23 @@ test('starts a match, pauses, resumes and goes back to the menu', async ({ page,
   await expect(button(page, 'PLAY')).toBeVisible();
 });
 
+test('plays a match of two from MULTIPLAYER, both steering at once', async ({ page }) => {
+  await page.goto('');
+
+  await button(page, 'MULTIPLAYER').click();
+  await expect(choice(page, 'POINTS')).toBeVisible();
+  await expectOnCourt(page, button(page, 'START'));
+  await button(page, 'START').click();
+  await expect(menu(page)).toHaveClass(/game__ui--hidden/);
+
+  // W/S and the arrows held together, each for its own paddle
+  await page.keyboard.down('KeyW');
+  await page.keyboard.down('ArrowDown');
+  await page.waitForTimeout(SETTLE_MS);
+  await page.keyboard.up('KeyW');
+  await page.keyboard.up('ArrowDown');
+});
+
 test('lists the modes behind PLAY, the ones still to come switched off', async ({ page }) => {
   await page.goto('');
 

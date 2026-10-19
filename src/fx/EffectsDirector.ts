@@ -79,12 +79,17 @@ export interface EffectsDirectorDeps {
   audio: AudioEngine;
   particles: ParticleSystem;
   paddles: readonly Paddle[];
-  translate: (key: 'win' | 'lose') => string;
+  translate: (key: 'win' | 'lose' | 'player1Wins' | 'player2Wins') => string;
   /**
    * The backdrop the match starting asks for (a challenge's own); null, or left out, for the
    * player's.
    */
   matchScene?: () => SceneId | null;
+  /**
+   * Whether two people play the match on court: its end is always someone's win, celebrated in
+   * the winner's color, never the defeat. Nobody does when left out.
+   */
+  isTwoPlayer?: () => boolean;
 }
 
 /**
@@ -105,6 +110,8 @@ export class EffectsDirector {
   private readonly translate: EffectsDirectorDeps['translate'];
   private readonly matchScene: () => SceneId | null;
 
+  private readonly isTwoPlayer: () => boolean;
+
   constructor(deps: EffectsDirectorDeps) {
     this.renderer = deps.renderer;
     this.audio = deps.audio;
@@ -113,6 +120,7 @@ export class EffectsDirector {
     this.paddleFx = new PaddleEffects(deps.paddles.length);
     this.translate = deps.translate;
     this.matchScene = deps.matchScene ?? (() => null);
+    this.isTwoPlayer = deps.isTwoPlayer ?? (() => false);
   }
 
   /** Simulation speed requested by the match-point slow motion (1 = normal). */
@@ -308,7 +316,9 @@ export class EffectsDirector {
    */
   private onFinaleStart(finale: Extract<MatchEvent, { type: 'finaleStart' }>): void {
     this.resetTension();
-    const playerWon = finale.winnerIndex === 0;
+    const isTwoPlayer = this.isTwoPlayer();
+    // Outside a match of two the left side is the player
+    const playerWon = isTwoPlayer || finale.winnerIndex === 0;
 
     if (playerWon) {
       this.renderer.triggerVictoryEffect();
@@ -316,11 +326,11 @@ export class EffectsDirector {
       this.renderer.addFlash(FLASH.FINALE_WIN);
       this.renderer.addShake(SHAKE.FINALE_WIN);
 
-      // The winning ball went into the right-hand goal (skipped in classic mode: no particles
-      // are drawn there, and the shots' pop sound would otherwise still play on every frame)
+      // The winning ball went into the loser's goal (skipped in classic mode: no particles are
+      // drawn there, and the shots' pop sound would otherwise still play on every frame)
       if (!this.renderer.classicMode) {
-        this.fireworks = new VictoryFireworks(1, finale.ballY, [
-          this.colorOf(0),
+        this.fireworks = new VictoryFireworks(finale.winnerIndex === 0 ? 1 : -1, finale.ballY, [
+          this.colorOf(finale.winnerIndex),
           COLORS.WHITE,
           COLORS.YELLOW,
         ]);
@@ -338,7 +348,15 @@ export class EffectsDirector {
 
     this.renderer.showFinalScore({
       scores: finale.scores,
-      label: this.translate(playerWon ? 'win' : 'lose'),
+      label: this.translate(
+        isTwoPlayer
+          ? finale.winnerIndex === 0
+            ? 'player1Wins'
+            : 'player2Wins'
+          : playerWon
+            ? 'win'
+            : 'lose',
+      ),
       color: this.colorOf(finale.winnerIndex),
       isWin: playerWon,
     });

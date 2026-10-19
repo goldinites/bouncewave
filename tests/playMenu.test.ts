@@ -160,6 +160,8 @@ describe('the PLAY menu and the setup, in the menus', () => {
       onStartGame: vi.fn(() => calls.push('again')),
       onStartQuickMatch: vi.fn(() => calls.push('start')),
       onStartChallenge: vi.fn(),
+      onStartTwoPlayers: vi.fn(() => calls.push('two players')),
+      isTwoPlayerMatch: vi.fn(() => false),
       onResumeGame: vi.fn(),
       onReturnToMainMenu: vi.fn(),
       onUnlockAudio: vi.fn(() => calls.push('unlock')),
@@ -290,6 +292,34 @@ describe('the PLAY menu and the setup, in the menus', () => {
     menuButtons()[0].click(); // play again
     expect(calls).toEqual(['unlock', 'start', 'unlock', 'again']);
     expect(actions.onStartQuickMatch).toHaveBeenCalledOnce();
+  });
+
+  it('sets up two players from MULTIPLAYER: background and points, no difficulty', () => {
+    const { menu, menuButtons, labels, title, subtitle, keyButtons, calls } = setup('ru');
+    menu.showMainMenu();
+    menuButtons()[1].click(); // multiplayer
+
+    expect(title()).toBe('2 ИГРОКА');
+    expect(subtitle()).toBe(
+      'Левый — W/S, правый — стрелки. На сенсорном экране — каждый на своей половине',
+    );
+    expect(labels()).toEqual(['ФОН: СЛУЧАЙНЫЙ', 'ОЧКИ: 5', 'НАЧАТЬ', 'НАЗАД']);
+
+    keyButtons()[2].click();
+    expect(calls).toEqual(['unlock', 'unlock', 'two players']);
+    expect(menu.goBack()).toBe(true);
+    expect(menuButtons()[1].textContent).toBe('МУЛЬТИПЛЕЕР'); // back on the main menu
+  });
+
+  it('names the winner at the end of a match of two', () => {
+    const { menu, actions, title } = setup();
+    actions.isTwoPlayerMatch.mockReturnValue(true);
+    menu.showGameOverMenu(1, [2, 5]);
+    expect(title()).toBe('PLAYER 2 WINS');
+
+    actions.isTwoPlayerMatch.mockReturnValue(false);
+    menu.showGameOverMenu(1, [2, 5]);
+    expect(title()).toBe('GAME OVER');
   });
 
   it('steps back on Esc: setup, PLAY menu, main menu', () => {

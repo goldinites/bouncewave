@@ -10,6 +10,13 @@ const SCORE_FONT = gameFont(700, 64);
 const SCORE_GLOW = 22;
 const READY_FONT = gameFont(700, 22);
 const READY_GLOW = 6;
+// Each side's label under its score with two players, which says whose score is whose
+const SIDE_LABEL = {
+  FONT: gameFont(700, 18),
+  CLASSIC_FONT: "700 16px 'Courier New', monospace",
+  OFFSET: 46, // px under the score's center
+  ALPHA: 0.75,
+} as const;
 // A challenge's condition line, under the scores or in their place. Drawn as plain text, not a
 // cached sprite: its clock changes every second
 const CONDITION = {
@@ -70,6 +77,7 @@ export class HudRenderer {
    *   prompt at all — the original scoreboard never had one
    * @param condition a challenge's condition line, under the scores or in their place; urgent, it
    *   turns pink and throbs
+   * @param sideLabels each side's label under its score, [left, right] (two players); null for none
    */
   public render(
     ctx: CanvasRenderingContext2D,
@@ -82,6 +90,7 @@ export class HudRenderer {
     isRotated: boolean,
     classic = false,
     condition: HudCondition | null = null,
+    sideLabels: readonly [string, string] | null = null,
   ): void {
     scores.forEach((score, index) => {
       if (this.displayedScores[index] === -1) {
@@ -119,6 +128,17 @@ export class HudRenderer {
 
       if (isRotated) {
         ctx.rotate(Math.PI / 2);
+      }
+
+      // Under the score as the player reads it, turned with it on a portrait phone; it doesn't pop
+      const label = sideLabels?.[index];
+      if (label) {
+        ctx.save();
+        ctx.font = classic ? SIDE_LABEL.CLASSIC_FONT : SIDE_LABEL.FONT;
+        ctx.fillStyle = classic ? '#ffffff' : color;
+        ctx.globalAlpha = SIDE_LABEL.ALPHA;
+        ctx.fillText(label, 0, SIDE_LABEL.OFFSET);
+        ctx.restore();
       }
 
       ctx.scale(scale, scale);

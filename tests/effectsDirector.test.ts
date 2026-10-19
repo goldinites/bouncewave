@@ -50,7 +50,7 @@ const makeAudio = () => ({
 const fakeFlow = (overrides: Partial<MatchFlow> = {}): MatchFlow =>
   ({ phase: 'finale', rally: 0, isBallLive: false, ...overrides }) as unknown as MatchFlow;
 
-const makeDirector = (matchScene?: () => SceneId | null) => {
+const makeDirector = (matchScene?: () => SceneId | null, isTwoPlayer?: () => boolean) => {
   const renderer = makeRenderer();
   const audio = makeAudio();
   const particles = new ParticleSystem();
@@ -58,7 +58,13 @@ const makeDirector = (matchScene?: () => SceneId | null) => {
     new Paddle(0, 34, COLORS.CYAN),
     new Paddle(1, 750, COLORS.PINK),
   ];
-  const translate = (key: 'win' | 'lose') => (key === 'win' ? 'YOU WIN' : 'YOU LOSE');
+  const translate = (key: 'win' | 'lose' | 'player1Wins' | 'player2Wins') =>
+    ({
+      win: 'YOU WIN',
+      lose: 'YOU LOSE',
+      player1Wins: 'PLAYER 1 WINS',
+      player2Wins: 'PLAYER 2 WINS',
+    })[key];
 
   const effects = new EffectsDirector({
     renderer: renderer as unknown as Renderer,
@@ -67,6 +73,7 @@ const makeDirector = (matchScene?: () => SceneId | null) => {
     paddles,
     translate,
     matchScene,
+    isTwoPlayer,
   });
 
   return { effects, renderer, audio, particles, paddles };
@@ -259,6 +266,21 @@ describe('EffectsDirector.handle', () => {
       label: 'YOU LOSE',
       color: COLORS.PINK,
       isWin: false,
+    });
+  });
+
+  it('celebrates the right player’s win as a win, in their color, in a match of two', () => {
+    const { effects, renderer, audio } = makeDirector(undefined, () => true);
+
+    handle(effects, { type: 'finaleStart', winnerIndex: 1, ballY: 250, scores: [3, 5] });
+
+    expect(renderer.triggerVictoryEffect).toHaveBeenCalledOnce();
+    expect(audio.music.tapeStop).not.toHaveBeenCalled();
+    expect(renderer.showFinalScore).toHaveBeenCalledWith({
+      scores: [3, 5],
+      label: 'PLAYER 2 WINS',
+      color: COLORS.PINK,
+      isWin: true,
     });
   });
 

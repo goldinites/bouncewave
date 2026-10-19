@@ -42,4 +42,15 @@ describe('HudRenderer', () => {
     expect(latin.font).toBe(gameFont(700, 22));
     expect(drawReady('ГОТОВЬСЬ')).toEqual(latin);
   });
+
+  it('labels whose score is whose only when two players have labels', () => {
+    const labelsDrawn = (sideLabels: [string, string] | null) => {
+      const { ctx, spies } = fakeContext();
+      new HudRenderer().render(ctx, 0, paddles(), [0, 0], 0, '', 0, false, false, null, sideLabels);
+      return spies.fillText.mock.calls.map(([text]) => text).filter((text) => /^P/.test(text));
+    };
+
+    expect(labelsDrawn(['P1', 'P2'])).toEqual(['P1', 'P2']);
+    expect(labelsDrawn(null)).toEqual([]);
+  });
 });

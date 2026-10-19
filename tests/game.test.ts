@@ -94,6 +94,23 @@ describe('Game', () => {
     expect(isMenuOpen()).toBe(false);
   });
 
+  it('shows two players’ match in landscape until the main menu, a quick match never', () => {
+    const isLandscape = () => $('#gameContainer').classList.contains('game--landscape');
+    buttons()[1].click(); // multiplayer
+    expect($('#gameTitle').textContent).toBe('2 PLAYERS');
+    expect(isLandscape()).toBe(false);
+
+    screenButton('START').click();
+    expect(isLandscape()).toBe(true);
+    press('Escape'); // the pause stays in landscape with it
+    expect(isLandscape()).toBe(true);
+    buttons()[3].click(); // main menu
+    expect(isLandscape()).toBe(false);
+
+    play();
+    expect(isLandscape()).toBe(false);
+  });
+
   it('steps back from the settings to the pause menu on Esc', () => {
     play();
     press('Escape'); // pause
