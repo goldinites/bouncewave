@@ -12,6 +12,27 @@ description: Carry out one step of the BounceWave development plan (docs/ROADMAP
   there are binding.
 - If the step's scope is unclear or conflicts with the code as it is now, ask before writing code.
 
+## 1a. Review it as a game designer
+
+Before building, review the step's requirements, and every new requirement the user adds along
+the way, as a professional game designer would. Look at what the player will feel and do:
+
+- **Clarity**: can the player tell what to do, why they won or lost, what a choice will cost?
+  Rules the player can't see (a hidden clock, an unexplained condition) are unfair.
+- **Difficulty and pacing**: the first minutes, the curve across modes and challenges, spikes,
+  walls, attempts that take too long to retry.
+- **Motivation**: rewards, progression, a reason to come back; nothing that feels like a grind
+  or a trap.
+- **Fairness and consistency**: with the agreed decisions in `docs/ROADMAP.md`, with the rest of
+  the game's rules and words, and on a phone in either orientation.
+- **Cost**: scope and risk against what the player gains.
+
+Say plainly when a requirement is objectively bad (it hurts the player experience by a
+recognised principle, not by taste): what goes wrong for the player, why, and a better option.
+Keep taste apart from problems, and keep it short; no remarks for the sake of remarks. Flag it
+before writing code; if the user keeps the requirement, build it as asked and record the decision
+in the roadmap.
+
 ## 2. Branch
 
 From an up-to-date `main` (`git fetch origin && git switch main && git merge --ff-only

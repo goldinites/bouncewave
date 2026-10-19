@@ -1,9 +1,12 @@
-// The values are what saved settings store. 0 was Easy, since removed: a saved 0 no longer
-// passes isDifficultyLevel and loads as the default instead. Never reuse it for another level.
+// The values are what saved settings store. 0 was an Easy of 1.1, since removed: a saved 0 no
+// longer passes isDifficultyLevel and loads as the default instead. Never reuse it for another
+// level. Step 2.4 moved every level a step down, its numbers and play kept (Normal became Easy,
+// Hard Normal, Insane Hard), and added a harder Insane on top.
 export enum DifficultyLevel {
-  NORMAL = 1,
-  HARD = 2,
-  INSANE = 3,
+  EASY = 1,
+  NORMAL = 2,
+  HARD = 3,
+  INSANE = 4,
 }
 
 export interface DifficultyConfig {
@@ -49,7 +52,7 @@ export const DEMO_AI_SKILL: AiSkill = {
 };
 
 export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
-  [DifficultyLevel.NORMAL]: {
+  [DifficultyLevel.EASY]: {
     speed: 440,
     reaction: 0.2,
     error: 45,
@@ -60,7 +63,7 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     acceleration: 0.075,
     maxSpeed: 840,
   },
-  [DifficultyLevel.HARD]: {
+  [DifficultyLevel.NORMAL]: {
     speed: 560,
     reaction: 0.14,
     error: 28,
@@ -71,7 +74,7 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     acceleration: 0.095,
     maxSpeed: 920,
   },
-  [DifficultyLevel.INSANE]: {
+  [DifficultyLevel.HARD]: {
     speed: 640,
     reaction: 0.1,
     error: 20,
@@ -81,6 +84,19 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     adaptivity: 0,
     acceleration: 0.115,
     maxSpeed: 1000,
+  },
+  // A step past Hard, as each level is past the one below: quicker, sharper, steadier, and a ball
+  // that speeds up harder to a higher top speed. A starting point for playtesting
+  [DifficultyLevel.INSANE]: {
+    speed: 720,
+    reaction: 0.07,
+    error: 13,
+    errorPerBounce: 30,
+    angleShots: 0.55,
+    nerves: 0.4,
+    adaptivity: 0,
+    acceleration: 0.135,
+    maxSpeed: 1080,
   },
 };
 

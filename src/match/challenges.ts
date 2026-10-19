@@ -33,8 +33,8 @@ export interface Challenge {
 const STANDARD_PADDLES = [STANDARD_PADDLE, STANDARD_PADDLE] as const;
 
 // Survival: the CPU's three winning points are the player's lives. The CPU starts at the
-// challenge's level (Normal, rank 0) and gains a fifth of a level per point the player wins:
-// Insane at 10, and on the last points the ball quickens past Insane's
+// challenge's level (Easy, rank 0) and gains a fifth of a level per point the player wins:
+// Hard at 10, and on the last points it closes in on Insane
 const SURVIVAL = { POINTS: 15, LIVES: 3, RAMP: { perPoint: 0.2, maxRank: 2.8 } } as const;
 // Giant: the CPU's paddle is this much longer than the standard one
 const GIANT_HEIGHT = 1.5;
@@ -42,38 +42,38 @@ const GIANT_HEIGHT = 1.5;
 /**
  * Every challenge, in the order they open one after another (docs/CHALLENGES.md). A new one is an
  * entry here and its name and description in both languages; the compiler insists on them.
- * The numbers are starting points for playtesting (step 2.4).
+ * The numbers are starting points for playtesting (step 2.5).
  */
 export const CHALLENGES = {
   warmUp: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(3) },
-    difficulty: DifficultyLevel.NORMAL,
+    difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
   },
-  // When the two minutes are up, the side ahead wins: the player has to be ahead by then
+  // Five points within two minutes: when they are up, the player has lost, whatever the score
   blitz: {
-    rules: { ...STANDARD_RULES, winningScores: firstTo(5), timeLimit: 120 },
-    difficulty: DifficultyLevel.NORMAL,
+    rules: { ...STANDARD_RULES, winningScores: firstTo(5), timeLimit: 120, timeUp: 'opponent' },
+    difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
   },
   // Points don't end this one: the clock does, or the rally of 20 that passes it
   longRally: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(Infinity), timeLimit: 60, rallyGoal: 20 },
-    difficulty: DifficultyLevel.NORMAL,
+    difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'rally', hits: 20 },
   },
   shutout: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(3) },
-    difficulty: DifficultyLevel.NORMAL,
+    difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'shutout' },
   },
   twoBalls: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(5), balls: 2 },
-    difficulty: DifficultyLevel.NORMAL,
+    difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
   },
@@ -83,13 +83,13 @@ export const CHALLENGES = {
       winningScores: [SURVIVAL.POINTS, SURVIVAL.LIVES],
       cpuRamp: SURVIVAL.RAMP,
     },
-    difficulty: DifficultyLevel.NORMAL,
+    difficulty: DifficultyLevel.EASY,
     paddles: STANDARD_PADDLES,
     goal: { type: 'win' },
   },
   giant: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(5) },
-    difficulty: DifficultyLevel.HARD,
+    difficulty: DifficultyLevel.NORMAL,
     paddles: [
       STANDARD_PADDLE,
       { ...STANDARD_PADDLE, height: STANDARD_PADDLE.height * GIANT_HEIGHT },
@@ -98,7 +98,7 @@ export const CHALLENGES = {
   },
   overload: {
     rules: { ...STANDARD_RULES, winningScores: firstTo(7) },
-    difficulty: DifficultyLevel.HARD,
+    difficulty: DifficultyLevel.NORMAL,
     paddles: STANDARD_PADDLES,
     goal: { type: 'powerShots', count: 5 },
   },

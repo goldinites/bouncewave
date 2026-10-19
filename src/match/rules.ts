@@ -16,9 +16,15 @@ export interface MatchRules {
   /**
    * Seconds of play the match lasts, or null for no clock. The clock runs while a point is served
    * and played, not while the match is paused. When it runs out, the match ends at once, mid-rally
-   * if need be: the side ahead wins it, and a level score is the player's loss.
+   * if need be, won as `timeUp` says.
    */
   readonly timeLimit: number | null;
+  /**
+   * Who wins when the clock runs out: `leader`, the side ahead (a level score is the player's
+   * loss); `opponent`, the player's opponent whatever the score, so the clock is a limit to win
+   * within (Blitz). With no player, the right side.
+   */
+  readonly timeUp: 'leader' | 'opponent';
   /**
    * Hits in one rally that end the match at once, won by the player (the left side when no one
    * plays); null when rallies end only in points.
@@ -52,6 +58,7 @@ export interface CpuRamp {
 export const STANDARD_RULES: MatchRules = {
   winningScores: [WINNING_SCORE, WINNING_SCORE],
   timeLimit: null,
+  timeUp: 'leader',
   rallyGoal: null,
   cpuRamp: null,
   overdrive: true,

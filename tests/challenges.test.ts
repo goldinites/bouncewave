@@ -32,7 +32,7 @@ const setup = () => {
     paddles,
     ball,
     input: { pollPlayerMovement: () => {} },
-    getDifficulty: () => DifficultyLevel.NORMAL,
+    getDifficulty: () => DifficultyLevel.EASY,
     onEvent: (event) => events.push(event),
     random,
   });
@@ -133,6 +133,19 @@ describe('the match clock', () => {
     expect(finale()).toMatchObject({ winnerIndex: 0, scores: [2, 1] });
   });
 
+  it('is the player’s loss whatever the score when the rules say so (Blitz)', () => {
+    const { flow, scoreFor, finale } = setup();
+    flow.startMatch({ ...ONE_MINUTE, timeLimit: 10, timeUp: 'opponent' });
+    for (let i = 0; i < 3; i++) scoreFor(0);
+    while (flow.phase !== 'finale') flow.update(0.1);
+
+    // Well ahead when the clock runs out, and the match is still the opponent's
+    const { winnerIndex, scores } = finale() as { winnerIndex: number; scores: number[] };
+    expect(winnerIndex).toBe(1);
+    expect(scores[0]).toBeGreaterThan(scores[1]);
+    expect(CHALLENGES.blitz.rules).toMatchObject({ timeLimit: 120, timeUp: 'opponent' });
+  });
+
   it('makes a level score the player’s loss', () => {
     const { flow, scoreFor, finale } = setup();
     flow.startMatch({ ...ONE_MINUTE, timeLimit: 10 });
@@ -154,7 +167,7 @@ describe('the match clock', () => {
 describe('a match’s own difficulty and paddles', () => {
   it('plays at the level it was started at, else at the chosen one', () => {
     const { flow } = setup();
-    expect(flow.difficulty).toBe(DifficultyLevel.NORMAL);
+    expect(flow.difficulty).toBe(DifficultyLevel.EASY);
     flow.startMatch(STANDARD_RULES, flow.playerVsCpu(), DifficultyLevel.INSANE);
     expect(flow.difficulty).toBe(DifficultyLevel.INSANE);
 
@@ -165,11 +178,11 @@ describe('a match’s own difficulty and paddles', () => {
       [flow.playerVsCpu()[0], { controller: cpu, overdrive: false }],
       DifficultyLevel.INSANE,
     );
-    expect(cpu.skill.speed).toBe(640);
+    expect(cpu.skill.speed).toBe(720);
 
     flow.returnToMenu();
     flow.startMatch();
-    expect(flow.difficulty).toBe(DifficultyLevel.NORMAL);
+    expect(flow.difficulty).toBe(DifficultyLevel.EASY);
   });
 
   it('gives each paddle the one its player brings, and the standard one back in the demo', () => {

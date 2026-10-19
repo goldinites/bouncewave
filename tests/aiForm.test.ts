@@ -3,7 +3,7 @@ import { AiForm, skillAt } from '@/match/AiForm';
 import { WINNING_SCORE } from '@/match/config';
 import { DIFFICULTY_CONFIGS, DIFFICULTY_LEVELS, DifficultyLevel } from '@/match/difficulty';
 
-const { NORMAL, HARD, INSANE } = DifficultyLevel;
+const { EASY, NORMAL, INSANE } = DifficultyLevel;
 
 /** Plays serves at a fixed score until the form settles. */
 const settle = (form: AiForm, scores: [number, number], adaptivity: number) => {
@@ -27,21 +27,21 @@ describe('skillAt', () => {
   });
 
   it('blends the neighbouring levels in between', () => {
+    const easy = DIFFICULTY_CONFIGS[EASY];
     const normal = DIFFICULTY_CONFIGS[NORMAL];
-    const hard = DIFFICULTY_CONFIGS[HARD];
-    const between = skillAt(0.25); // Normal is the easiest level, Hard the next
+    const between = skillAt(0.25); // Easy is the easiest level, Normal the next
 
-    expect(between.speed).toBeCloseTo(normal.speed + (hard.speed - normal.speed) * 0.25);
-    expect(between.error).toBeCloseTo(normal.error + (hard.error - normal.error) * 0.25);
+    expect(between.speed).toBeCloseTo(easy.speed + (normal.speed - easy.speed) * 0.25);
+    expect(between.error).toBeCloseTo(easy.error + (normal.error - easy.error) * 0.25);
   });
 
   it('keeps getting weaker below the easiest level, down to a floor, and stops at the hardest', () => {
-    const normal = DIFFICULTY_CONFIGS[NORMAL];
-    const belowNormal = skillAt(-0.5);
-    expect(belowNormal.speed).toBeLessThan(normal.speed);
-    expect(belowNormal.error).toBeGreaterThan(normal.error);
-    expect(belowNormal.reaction).toBeGreaterThan(normal.reaction);
-    expect(belowNormal.angleShots).toBe(0);
+    const easy = DIFFICULTY_CONFIGS[EASY];
+    const belowEasy = skillAt(-0.5);
+    expect(belowEasy.speed).toBeLessThan(easy.speed);
+    expect(belowEasy.error).toBeGreaterThan(easy.error);
+    expect(belowEasy.reaction).toBeGreaterThan(easy.reaction);
+    expect(belowEasy.angleShots).toBe(0);
 
     expect(skillAt(-10)).toEqual(skillAt(-1));
     expect(skillAt(10)).toEqual(skillAt(DIFFICULTY_LEVELS.indexOf(INSANE)));
@@ -96,6 +96,6 @@ describe('AiForm', () => {
     form.reset();
 
     expect(form.shift).toBe(0);
-    expect(form.skillFor(HARD)).toEqual(skillAt(DIFFICULTY_LEVELS.indexOf(HARD)));
+    expect(form.skillFor(NORMAL)).toEqual(skillAt(DIFFICULTY_LEVELS.indexOf(NORMAL)));
   });
 });
