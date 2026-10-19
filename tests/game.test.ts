@@ -204,7 +204,6 @@ describe('Game', () => {
 
     expect(document.documentElement.lang).toBe('ru');
     expect($('#pauseButton').getAttribute('aria-label')).toBe('Пауза');
-    expect($('#gameHint').textContent).toMatch(/пауза/);
   });
 
   it('stops answering the keyboard once disposed', () => {

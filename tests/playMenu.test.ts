@@ -142,7 +142,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><p id="gameHint"></p><button id="pauseButton"></button>`;
+      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   afterEach(() => {
@@ -334,7 +334,7 @@ describe('telling the game the quick match setup is on screen', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><p id="gameHint"></p><button id="pauseButton"></button>`;
+      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   it('says so as it opens and as it gives way, not as it is redrawn', () => {

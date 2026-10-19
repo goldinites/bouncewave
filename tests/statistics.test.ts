@@ -189,7 +189,7 @@ describe('the statistics screen', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
-      <div id="gameButtons"></div><div id="gameScreen"></div><p id="gameHint"></p><button id="pauseButton"></button>`;
+      <div id="gameButtons"></div><div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
   afterEach(() => {

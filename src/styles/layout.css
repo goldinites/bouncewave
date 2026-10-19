@@ -9,7 +9,7 @@
      browser tab, the status bar and the home indicator in an iPhone home-screen app */
   --safe-y: calc(env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
 
-  /* The court's width, shared with the control bars above and below it so they line up */
+  /* The court's width, shared with the control bar above it so they line up */
   --stage-width: min(96vw, calc(80 * var(--vh) * 1.45));
 }
 
@@ -55,8 +55,8 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* The whole point of fullscreen is a bigger court: the hint is hidden (bars.css), so the
-   stage's own width/height caps relax to use almost the entire screen instead of ~80%. */
+/* The whole point of fullscreen is a bigger court: the stage's own width/height caps relax to
+   use almost the entire screen instead of ~80%. */
 :fullscreen {
   --stage-width: min(99vw, calc(95 * var(--vh) * 1.45));
 }
@@ -82,8 +82,8 @@ body {
 @media (orientation: portrait) and (max-width: 900px) {
   :root {
     /* The rotated court keeps its real 8:5 shape, so width and height grow together. On most
-       phones the height is what binds: the court takes what's left once the safe areas, the
-       controls above it and the hint below (with the gaps between) are given their room. */
-    --game-width: min(98vw, calc((100 * var(--vh) - var(--safe-y) - 136px) / 1.6));
+       phones the height is what binds: the court takes what's left once the safe areas and
+       the controls above it (with the gap and a margin below) are given their room. */
+    --game-width: min(98vw, calc((100 * var(--vh) - var(--safe-y) - 100px) / 1.6));
   }
 }

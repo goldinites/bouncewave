@@ -43,10 +43,8 @@ export class UIManager {
   private screenId: string | null = null;
   /** Runs before any click on the screen on show, as `onAnyClick` does for menu buttons. */
   private onScreenClick: (() => void) | null = null;
-  private hintElement: HTMLElement;
   private pauseButton: HTMLButtonElement;
   private i18n: I18nManager;
-  private isCoarsePointer: boolean;
   /** The main menu's title, as index.html shows it before any script runs. */
   public readonly gameTitle: string;
   private readonly listeners = new AbortController();
@@ -60,10 +58,8 @@ export class UIManager {
     this.subtitleElement = getRequiredElement<HTMLElement>('gameSubtitle');
     this.buttonsContainer = getRequiredElement<HTMLElement>('gameButtons');
     this.screenElement = getRequiredElement<HTMLElement>('gameScreen');
-    this.hintElement = getRequiredElement<HTMLElement>('gameHint');
     this.pauseButton = getRequiredElement<HTMLButtonElement>('pauseButton');
 
-    this.isCoarsePointer = window.matchMedia('(pointer:coarse)').matches;
     this.updateTexts();
 
     window.addEventListener('keydown', (e) => this.onKeyDown(e), {
@@ -240,7 +236,6 @@ export class UIManager {
 
   /** The texts outside the menus, in the current language. */
   public updateTexts(): void {
-    this.hintElement.innerHTML = this.i18n.t(this.isCoarsePointer ? 'hintT' : 'hintK');
     this.pauseButton.setAttribute('aria-label', this.i18n.t('pauseButton'));
   }
 }
