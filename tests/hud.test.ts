@@ -53,4 +53,15 @@ describe('HudRenderer', () => {
     expect(labelsDrawn(['P1', 'P2'])).toEqual(['P1', 'P2']);
     expect(labelsDrawn(null)).toEqual([]);
   });
+
+  it('turns the top score to its own player on a portrait phone, with two players only', () => {
+    const turns = (sideLabels: [string, string] | null) => {
+      const { ctx, spies } = fakeContext();
+      new HudRenderer().render(ctx, 0, paddles(), [0, 0], 0, '', 0, true, false, null, sideLabels);
+      return spies.rotate.mock.calls.map(([angle]) => angle);
+    };
+
+    expect(turns(['P1', 'P2'])).toEqual([Math.PI / 2, -Math.PI / 2]);
+    expect(turns(null)).toEqual([Math.PI / 2, Math.PI / 2]);
+  });
 });
