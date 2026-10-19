@@ -1,6 +1,7 @@
 import { ComponentChild, render } from 'preact';
 import { I18nManager } from '@/i18n/I18nManager';
 import { getRequiredElement } from '@/ui/dom';
+import { Look } from '@/shared/look';
 
 const CSS_CLASSES = {
   GAME_UI_HIDDEN: 'game__ui--hidden',
@@ -153,9 +154,9 @@ export class UIManager {
     this.pauseButton.classList.toggle(CSS_CLASSES.GAME_PAUSE_HIDDEN, !visible);
   }
 
-  /** The classic-mode easter egg: flat monochrome chrome, no neon border or button glow. */
-  public setClassicMode(enabled: boolean): void {
-    document.body.classList.toggle('classic-mode', enabled);
+  /** The menus' chrome in a look: the classic one flat monochrome, no neon border or glow. */
+  public setLook(look: Look): void {
+    document.body.classList.toggle('classic-mode', look === 'classic');
   }
 
   public bindPauseButton(onClick: () => void): void {

@@ -11,6 +11,13 @@ export const FINAL_SIGN = {
   UNLIT_ALPHA: 0.1, // dark tubes stay faintly visible
 } as const;
 
+/** Where the sign's two lines stand, px from the court's center, whatever the look. */
+export const FINAL_SIGN_LAYOUT = { LABEL_Y: -62, SCORE_Y: 22 } as const;
+
+/** "7 : 4", the final score as the sign writes it. */
+export const finalScoreText = (sign: FinalScoreSign): string =>
+  `${sign.scores[0]} : ${sign.scores[1]}`;
+
 export interface FinalScoreSign {
   scores: [number, number];
   label: string;
@@ -57,19 +64,16 @@ export class FinalScoreRenderer {
    * @param sign
    * @param age
    * @param isRotated
-   * @param classic plain white text, shown at once with no delay, flicker or hum — the
-   *   original hardware had no ignition cutscene, it just printed the final score
    */
   public static render(
     ctx: CanvasRenderingContext2D,
     sign: FinalScoreSign,
     age: number,
     isRotated: boolean,
-    classic = false,
   ): void {
-    const brightness = classic ? 1 : this.getBrightness(age, sign.isWin);
-    const scoreText = `${sign.scores[0]} : ${sign.scores[1]}`;
-    const color = classic ? '#ffffff' : sign.color;
+    const brightness = this.getBrightness(age, sign.isWin);
+    const scoreText = finalScoreText(sign);
+    const color = sign.color;
 
     ctx.save();
     ctx.translate(COURT.WIDTH / 2, COURT.HEIGHT / 2);
@@ -82,20 +86,18 @@ export class FinalScoreRenderer {
     this.renderTube(
       ctx,
       sign.label,
-      classic ? "700 26px 'Courier New', monospace" : gameFont(700, 30),
-      -62,
+      gameFont(700, 30),
+      FINAL_SIGN_LAYOUT.LABEL_Y,
       color,
       brightness,
-      classic,
     );
     this.renderTube(
       ctx,
       scoreText,
-      classic ? "700 96px 'Courier New', monospace" : gameFont(700, 104),
-      22,
+      gameFont(700, 104),
+      FINAL_SIGN_LAYOUT.SCORE_Y,
       color,
       brightness,
-      classic,
     );
 
     ctx.restore();
@@ -109,17 +111,9 @@ export class FinalScoreRenderer {
     y: number,
     color: string,
     brightness: number,
-    classic: boolean,
   ): void {
     ctx.font = font;
     ctx.shadowBlur = 0;
-
-    if (classic) {
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = color;
-      ctx.fillText(text, 0, y);
-      return;
-    }
 
     // Unlit glass is always faintly visible
     ctx.globalAlpha = FINAL_SIGN.UNLIT_ALPHA;

@@ -2,10 +2,16 @@ import { COURT } from '@/match/config';
 import { glowMargin, sprites } from '@/render/SpriteCache';
 import { COLORS } from '@/shared/palette';
 
-const RAIL_THICKNESS = 4; // glowing strip along the inner edge of each wall
+/** The court's lines, whatever the look draws them in. */
+export const COURT_LINES = {
+  RAIL_THICKNESS: 4, // px, the strip along the inner edge of each wall
+  NET_WIDTH: 3, // px
+  NET_DASH: [12, 14], // px on, px off
+} as const;
+const RAIL_THICKNESS = COURT_LINES.RAIL_THICKNESS;
 const RAIL_GLOW = 14;
-const NET_LINE_WIDTH = 3;
-const NET_DASH_PATTERN = [12, 14];
+const NET_LINE_WIDTH = COURT_LINES.NET_WIDTH;
+const NET_DASH_PATTERN = COURT_LINES.NET_DASH;
 
 export class CourtRenderer {
   public static render(ctx: CanvasRenderingContext2D): void {
@@ -56,25 +62,5 @@ export class CourtRenderer {
         spriteCtx.fillRect(0, 0, COURT.WIDTH, RAIL_THICKNESS);
       },
     );
-  }
-
-  /** Flat white rails and net, no glow — the court as it looked on a vintage arcade monitor. */
-  public static renderClassic(ctx: CanvasRenderingContext2D): void {
-    ctx.save();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, COURT.TOP_WALL - RAIL_THICKNESS, COURT.WIDTH, RAIL_THICKNESS);
-    ctx.fillRect(0, COURT.HEIGHT - COURT.BOTTOM_WALL, COURT.WIDTH, RAIL_THICKNESS);
-
-    ctx.setLineDash(NET_DASH_PATTERN);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = NET_LINE_WIDTH;
-
-    ctx.beginPath();
-    ctx.moveTo(COURT.WIDTH / 2, COURT.TOP_WALL + RAIL_THICKNESS);
-    ctx.lineTo(COURT.WIDTH / 2, COURT.HEIGHT - COURT.BOTTOM_WALL - RAIL_THICKNESS);
-    ctx.stroke();
-
-    ctx.restore();
   }
 }

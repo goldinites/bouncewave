@@ -326,9 +326,9 @@ export class EffectsDirector {
       this.renderer.addFlash(FLASH.FINALE_WIN);
       this.renderer.addShake(SHAKE.FINALE_WIN);
 
-      // The winning ball went into the loser's goal (skipped in classic mode: no particles are
-      // drawn there, and the shots' pop sound would otherwise still play on every frame)
-      if (!this.renderer.classicMode) {
+      // The winning ball went into the loser's goal (skipped in a look without effects: no
+      // particles are drawn there, and the shots' pop sound would otherwise still play)
+      if (this.renderer.showsEffects) {
         this.fireworks = new VictoryFireworks(finale.winnerIndex === 0 ? 1 : -1, finale.ballY, [
           this.colorOf(finale.winnerIndex),
           COLORS.WHITE,

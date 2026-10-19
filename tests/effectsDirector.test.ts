@@ -18,7 +18,7 @@ const makeRenderer = () => ({
   switchChannel: vi.fn(() => 'outrun'),
   hideFinalScore: vi.fn(),
   showFinalScore: vi.fn(),
-  classicMode: false,
+  showsEffects: true,
 });
 
 const makeAudio = () => ({
@@ -284,9 +284,9 @@ describe('EffectsDirector.handle', () => {
     });
   });
 
-  it('skips the victory fireworks entirely in classic mode', () => {
+  it('skips the victory fireworks entirely in a look without effects (classic)', () => {
     const { effects, renderer, audio } = makeDirector();
-    renderer.classicMode = true;
+    renderer.showsEffects = false;
 
     handle(effects, { type: 'finaleStart', winnerIndex: 0, ballY: 250, scores: [10, 7] });
     effects.afterSimulation(0, fakeFlow());

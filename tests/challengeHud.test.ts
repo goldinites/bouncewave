@@ -129,18 +129,7 @@ describe('the condition line on the court', () => {
     spies.measureText.mockReturnValue({ width: 50 });
     const fills: string[] = [];
     spies.fillText.mockImplementation(() => fills.push(String(ctx.fillStyle)));
-    new HudRenderer(() => reduced).render(
-      ctx,
-      0,
-      paddles(),
-      [0, 0],
-      0,
-      '',
-      0.3,
-      false,
-      false,
-      condition,
-    );
+    new HudRenderer(() => reduced).render(ctx, 0, paddles(), [0, 0], 0, '', 0.3, false, condition);
     const call = spies.fillText.mock.calls.find(([text]) => text === condition.text);
     // Each score is drawn scaled for its pop; the condition line never is
     return { call, color: fills.at(-1), scores: spies.scale.mock.calls.length };
@@ -183,7 +172,7 @@ describe('the condition line on the court', () => {
       isUrgent: false,
       replacesScore: true,
     };
-    new HudRenderer().render(ctx, 0, paddles(), [7, 1], 0, '', 0, false, false, condition);
+    new HudRenderer().render(ctx, 0, paddles(), [7, 1], 0, '', 0, false, condition);
 
     expect(hearts.map((h) => [h.fill, h.color])).toEqual([
       [true, COLORS.RED],
@@ -242,17 +231,18 @@ describe('the condition in the strip above the court', () => {
     spies.measureText.mockReturnValue({ width: 50 });
     const paddles = [new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN), new Paddle(1, 700, COLORS.PINK)];
     const alone = { ...line, replacesScore: true };
-    new HudRenderer().render(ctx, 0, paddles, [0, 0], 0, '', 0, false, true, alone, null, false);
+    new HudRenderer().render(ctx, 0, paddles, [0, 0], 0, '', 0, false, alone, null, false);
     const texts = spies.fillText.mock.calls.map(([text]) => text);
     expect(texts).not.toContain(line.text);
-    expect(texts).not.toContain('0');
+    // Each score is drawn scaled for its pop: none is drawn
+    expect(spies.scale).not.toHaveBeenCalled();
   });
 
   it('is not drawn on the turned court', () => {
     const { ctx, spies } = fakeContext();
     spies.measureText.mockReturnValue({ width: 50 });
     const paddles = [new Paddle(0, PADDLE.OFFSET_X, COLORS.CYAN), new Paddle(1, 700, COLORS.PINK)];
-    new HudRenderer().render(ctx, 0, paddles, [0, 0], 0, '', 0, true, false, line);
+    new HudRenderer().render(ctx, 0, paddles, [0, 0], 0, '', 0, true, line);
     expect(spies.fillText.mock.calls.some(([text]) => text === line.text)).toBe(false);
   });
 });

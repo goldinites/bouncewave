@@ -1,14 +1,18 @@
+import { MusicState } from '@/audio/music/intensity';
 import { MusicEngine } from '@/audio/music/MusicEngine';
 import { Ps1MusicEngine } from '@/audio/music/Ps1MusicEngine';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
+import { Look } from '@/shared/look';
 
 /** Owns the AudioContext (created on the first user gesture) and the music and SFX on it. */
 export class AudioEngine {
   private audioContext: AudioContext | null = null;
   public readonly sfx: SoundEffects;
   public readonly music = new MusicEngine();
-  /** The classic-mode easter egg's own loop, independent of the synthwave mix. */
-  public readonly classicMusic = new Ps1MusicEngine();
+  /** The classic look's own loop, independent of the synthwave mix. */
+  private readonly classicMusic = new Ps1MusicEngine();
+  /** The look the music follows: the classic one plays its loop in place of the synthwave mix. */
+  private look: Look = 'neon';
   private readonly listeners = new AbortController();
 
   /**
@@ -47,6 +51,20 @@ export class AudioEngine {
     this.classicMusic.dispose();
     void this.audioContext?.close();
     this.audioContext = null;
+  }
+
+  public setLook(look: Look): void {
+    this.look = look;
+  }
+
+  /**
+   * The music for this frame: the synthwave mix building with the match, or in the classic look
+   * its own loop with the mix kept silent. Read on the music's own scheduler tick.
+   */
+  public playMusic(state: MusicState): void {
+    const isClassic = this.look === 'classic';
+    this.music.setState(isClassic ? { ...state, isMuted: true } : state);
+    this.classicMusic.setActive(isClassic && !state.isMuted);
   }
 
   public unlock(): void {

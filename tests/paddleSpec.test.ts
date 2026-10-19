@@ -5,7 +5,8 @@ import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
 import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Physics } from '@/match/Physics';
-import { EntityRenderer } from '@/render/EntityRenderer';
+import { ClassicScene } from '@/render/ClassicScene';
+import { RenderFrame } from '@/render/Renderer';
 import { fakeContext } from './helpers/fakeContext';
 
 const NORMAL = DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL];
@@ -94,7 +95,8 @@ describe('PaddleSpec', () => {
     const { ctx, spies } = fakeContext();
     const wide = new Paddle(0, 34, '#fff', spec({ width: 30, height: 140 }));
 
-    EntityRenderer.renderClassicPaddle(ctx, wide);
+    const frame = { isDemo: true, paddles: [wide], balls: [], overdriveCharges: [null] };
+    new ClassicScene().render(ctx, frame as unknown as RenderFrame, null, 0);
 
     expect(spies.fillRect).toHaveBeenCalledWith(34, wide.drawY - 70, 30, 140);
   });

@@ -1,5 +1,5 @@
 /* Classic-mode easter egg: flat black and white, no neon, no glow, no motion on the chrome
-   around the canvas (the canvas itself switches in Renderer.renderClassic). Imported last, so
+   around the canvas (the canvas itself is drawn by render/ClassicScene). Imported last, so
    it lays over every component's own look. */
 body.classic-mode {
   background: var(--black);

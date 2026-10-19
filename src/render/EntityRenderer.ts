@@ -86,32 +86,40 @@ export class EntityRenderer {
   }
 
   /**
-   * The player's Overdrive meter: segments stacked along the goal side of their paddle.
-   * @param classic plain white blocks, no glow or pulse
+   * Where each segment of a paddle's Overdrive meter stands: stacked along its goal side, filled
+   * from the bottom up. Whatever the look draws them as.
    */
+  public static meterSegments(paddle: Paddle): { x: number; y: number }[] {
+    const { GAP, SEGMENT } = OVERDRIVE_METER;
+    const x =
+      paddle.side === 0 ? paddle.x - GAP - SEGMENT.WIDTH : paddle.x + paddle.spec.width + GAP;
+    const columnHeight = OVERDRIVE.CHARGE * SEGMENT.HEIGHT + (OVERDRIVE.CHARGE - 1) * SEGMENT.GAP;
+    return Array.from({ length: OVERDRIVE.CHARGE }, (_, i) => ({
+      x,
+      y: paddle.drawY + columnHeight / 2 - SEGMENT.HEIGHT - i * (SEGMENT.HEIGHT + SEGMENT.GAP),
+    }));
+  }
+
+  /** A meter segment's size, px. */
+  public static readonly METER_SEGMENT = OVERDRIVE_METER.SEGMENT;
+
+  /** The player's Overdrive meter: segments along the goal side of their paddle, glowing. */
   public static renderOverdriveMeter(
     ctx: CanvasRenderingContext2D,
     paddle: Paddle,
     charge: number,
     time: number,
-    classic = false,
   ): void {
-    const { GAP, SEGMENT, HALO, PULSE_SPEED } = OVERDRIVE_METER;
+    const { SEGMENT, HALO, PULSE_SPEED } = OVERDRIVE_METER;
     const isFull = charge >= OVERDRIVE.CHARGE;
-    const pulse = isFull && !classic ? 0.5 + 0.5 * Math.sin(time * PULSE_SPEED) : 1;
-    const color = classic ? '#ffffff' : isFull ? COLORS.YELLOW : paddle.color;
-    const x =
-      paddle.side === 0 ? paddle.x - GAP - SEGMENT.WIDTH : paddle.x + paddle.spec.width + GAP;
-    const columnHeight = OVERDRIVE.CHARGE * SEGMENT.HEIGHT + (OVERDRIVE.CHARGE - 1) * SEGMENT.GAP;
+    const pulse = isFull ? 0.5 + 0.5 * Math.sin(time * PULSE_SPEED) : 1;
+    const color = isFull ? COLORS.YELLOW : paddle.color;
 
     ctx.save();
-    for (let i = 0; i < OVERDRIVE.CHARGE; i++) {
-      // Filled from the bottom up
-      const y =
-        paddle.drawY + columnHeight / 2 - SEGMENT.HEIGHT - i * (SEGMENT.HEIGHT + SEGMENT.GAP);
+    this.meterSegments(paddle).forEach(({ x, y }, i) => {
       const isLit = i < charge;
 
-      if (isLit && !classic) {
+      if (isLit) {
         // Halo as a wider faint block rather than shadowBlur
         ctx.globalAlpha = 0.18 + 0.17 * pulse;
         ctx.fillStyle = color;
@@ -121,7 +129,7 @@ export class EntityRenderer {
       ctx.globalAlpha = isLit ? 0.7 + 0.3 * pulse : 0.18;
       ctx.fillStyle = isLit ? color : '#ffffff';
       ctx.fillRect(x, y, SEGMENT.WIDTH, SEGMENT.HEIGHT);
-    }
+    });
     ctx.restore();
   }
 
@@ -129,21 +137,6 @@ export class EntityRenderer {
   public static overdrivePulse(charge: number, time: number): number {
     if (charge < OVERDRIVE.CHARGE) return 0;
     return 0.5 + 0.5 * Math.sin(time * OVERDRIVE_METER.PULSE_SPEED);
-  }
-
-  /** Flat white block, no glow or rounded corners — a paddle as it looked in 1972. */
-  public static renderClassicPaddle(ctx: CanvasRenderingContext2D, paddle: Paddle): void {
-    const { width, height } = paddle.spec;
-    const topY = paddle.drawY - height / 2;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(paddle.x, topY, width, height);
-  }
-
-  /** The ball as a plain white square, the way the original hardware drew it. */
-  public static renderClassicBall(ctx: CanvasRenderingContext2D, ball: Ball): void {
-    const size = ball.radius * 2;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(ball.drawX - ball.radius, ball.drawY - ball.radius, size, size);
   }
 
   public static renderBall(
