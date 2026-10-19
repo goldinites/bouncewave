@@ -2,7 +2,7 @@ import { h } from 'preact';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { ChallengeVerdict } from '@/match/ChallengeJudge';
-import { CHALLENGE_IDS, ChallengeId } from '@/match/challenges';
+import { CHALLENGE_IDS, ChallengeId, CHALLENGES } from '@/match/challenges';
 import { MatchEvent } from '@/match/MatchFlow';
 import { MODE_IDS, ModeId, MODES } from '@/match/modes';
 import { DIFFICULTY_LEVELS } from '@/match/difficulty';
@@ -16,6 +16,7 @@ import { getEmptyStatistics, Statistics } from '@/profile/Statistics';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
+import { SceneId } from '@/shared/scenes';
 import { describeShortfall } from '@/ui/challengeTexts';
 import { ChallengeCard } from '@/ui/screens/ChallengeCard';
 import { ChallengeList } from '@/ui/screens/ChallengeList';
@@ -63,6 +64,12 @@ export interface GameMenuActions {
   onUnlockAudio: () => void;
   /** The quick match's setup came on screen (true) or gave way to another (false). */
   onQuickMatchSetup?: (isShown: boolean) => void;
+  /**
+   * A menu came on screen that wants a backdrop behind it: a challenge's card its challenge's
+   * own, the main menu, the PLAY menu and the challenges' list the player's (null). Menus that
+   * belong to a match (pause, its end, an attempt's result) leave the backdrop as it is.
+   */
+  onMenuScene?: (scene: SceneId | null) => void;
 }
 
 /** An on/off setting: a toggle, filled while on; picking it switches it. */
@@ -198,11 +205,14 @@ export class MenuController {
   /**
    * Forgets where BACK and Esc led: called by every menu and screen as it opens, and says when
    * the quick match's setup comes on screen or goes (not when it is merely redrawn).
+   * @param scene the backdrop the screen wants behind it (null for the player's); left out, the
+   *   backdrop stays as it is
    */
   private open(
     back: (() => void) | null = null,
     redraw: (() => void) | null = null,
     isQuickMatchSetup = false,
+    scene?: SceneId | null,
   ): void {
     this.back = back;
     this.redraw = redraw;
@@ -210,10 +220,11 @@ export class MenuController {
       this.isQuickMatchSetupShown = isQuickMatchSetup;
       this.actions.onQuickMatchSetup?.(isQuickMatchSetup);
     }
+    if (scene !== undefined) this.actions.onMenuScene?.(scene);
   }
 
   public showMainMenu(): void {
-    this.open();
+    this.open(null, null, false, null);
     this.uiManager.showMenu(
       this.uiManager.gameTitle,
       '',
@@ -300,7 +311,7 @@ export class MenuController {
   /** The PLAY menu: a button per mode, those not playable yet switched off. */
   public showPlayMenu(): void {
     const back = () => this.showMainMenu();
-    this.open(back);
+    this.open(back, null, false, null);
     this.uiManager.showScreen(
       this.i18n.t('mode'),
       '',
@@ -333,7 +344,7 @@ export class MenuController {
   /** Every challenge in the order they open, the count of those passed under the title. */
   public showChallengeList(): void {
     const back = () => this.showPlayMenu();
-    this.open(back);
+    this.open(back, null, false, null);
     const progress = this.challenges.get();
     this.uiManager.showScreen(
       this.i18n.getModeName('challenges'),
@@ -360,7 +371,8 @@ export class MenuController {
    */
   public showChallengeCard(challenge: ChallengeId): void {
     const back = () => this.showChallengeList();
-    this.open(back);
+    // The card shows the challenge on its own backdrop, its song with it
+    this.open(back, null, false, CHALLENGES[challenge].scene);
     const [name, description] = this.i18n.getChallengeInfo(challenge);
     const isPassed = challengeState(this.challenges.get(), challenge) === 'passed';
     this.uiManager.showScreen(

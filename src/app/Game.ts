@@ -26,7 +26,7 @@ import { Renderer, RenderFrame } from '@/render/Renderer';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
-import { BackgroundChoice, isSceneId, SceneId } from '@/shared/scenes';
+import { BackgroundChoice, isPickableScene, isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
 import { NowPlaying } from '@/ui/NowPlaying';
 import { describeCondition } from '@/ui/challengeTexts';
@@ -199,6 +199,7 @@ export class Game {
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
         onQuickMatchSetup: (isShown) => this.onQuickMatchSetup(isShown),
+        onMenuScene: (scene) => this.showMenuScene(scene),
       },
       {
         get: () => this.profile.current.stats,
@@ -454,16 +455,30 @@ export class Game {
   /**
    * The quick match's setup shows its background behind it: the one chosen when it opens, and
    * the unknown channel for random. Left with the unknown channel on, a real backdrop is drawn at
-   * random, flicking through the channels.
+   * random and cut straight in: the channels flick past only when a match starts.
    */
   private onQuickMatchSetup(isShown: boolean): void {
     if (isShown) {
       this.previewBackground(this.settings.current.matchBackground);
     } else if (this.renderer.isShowingMystery) {
-      this.audio.music.enterScene(this.renderer.switchChannel());
-      this.audio.sfx.playChannelSurf();
+      this.audio.music.enterScene(this.renderer.switchChannel(false));
       this.showDebugDetail();
     }
+  }
+
+  /**
+   * The backdrop behind a menu, cut straight in with its song. A challenge's card shows its own;
+   * the others the player's: a mode's own backdrop left from a challenge gives way to the chosen
+   * one, or with random to one drawn at random, and a pickable one already there stays. Never
+   * during a match, nor over a developer's pin.
+   */
+  private showMenuScene(scene: SceneId | null): void {
+    if (this.flow.phase !== 'attract') return;
+    const current = this.renderer.scene;
+    const isPlayers = isPickableScene(current) && !this.renderer.isShowingMystery;
+    if (scene === null ? isPlayers : current === scene) return;
+    this.audio.music.enterScene(this.renderer.switchChannel(false, scene));
+    this.showDebugDetail();
   }
 
   /**
