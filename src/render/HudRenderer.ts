@@ -23,12 +23,11 @@ const CONDITION = {
   LOST_HEART_ALPHA: 0.35, // a life lost stays as a faint outline
   Y: 142, // court px, the line's center under the scores
   Y_ALONE: 82, // court px, where the scores stand
-  // Portrait phone: the turned line starts this far from the court's top edge, and sits this far
-  // off the net toward the left side's score, so it reads between the scores without the net's
-  // dashes running through it; alone, it stands where the player's score would
-  ROTATED_START: 40, // court px
-  ROTATED_OFFSET: 40, // court px
-  ROTATED_OFFSET_ALONE: 90, // court px
+  // Portrait phone: across the screen it would cross the ball's path wherever it stood, so it
+  // runs along the top edge instead, behind the opponent's paddle, where the ball only goes when
+  // the opponent misses: this far in from the court's end, a size down to fit the strip
+  ROTATED_EDGE: 17, // court px, the line's middle from the end of the court behind the right side
+  ROTATED_SIZE: 22, // px
   ALPHA: 0.8,
   URGENT_PULSE: 7, // 1/s, the urgent clock's throb
 } as const;
@@ -168,7 +167,7 @@ export class HudRenderer {
   ): void {
     ctx.save();
     const alone = condition.replacesScore;
-    const size = alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
+    const size = isRotated ? CONDITION.ROTATED_SIZE : alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
     ctx.font = classic ? `700 ${size - 4}px 'Courier New', monospace` : gameFont(700, size);
     ctx.textBaseline = 'middle';
     const isUrgent = condition.isUrgent && !classic;
@@ -178,17 +177,16 @@ export class HudRenderer {
       ? 0.6 + 0.4 * Math.abs(Math.sin(time * CONDITION.URGENT_PULSE))
       : CONDITION.ALPHA;
 
-    // On a portrait phone the court is turned: the line runs down from the top edge, between the
-    // two scores, so it reads across the screen without crossing them
+    // On a portrait phone the court is turned: the line is turned back to read across the screen,
+    // along its top edge behind the opponent's paddle
     if (isRotated) {
-      const offset = alone ? CONDITION.ROTATED_OFFSET_ALONE : CONDITION.ROTATED_OFFSET;
-      ctx.translate(COURT.WIDTH / 2 - offset, CONDITION.ROTATED_START);
+      ctx.translate(COURT.WIDTH - CONDITION.ROTATED_EDGE, COURT.HEIGHT / 2);
       ctx.rotate(Math.PI / 2);
     } else {
       ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
     }
 
-    // Laid out by hand, text then hearts: centered on the court, or from the top edge when turned
+    // Laid out by hand, text then hearts, centered
     const { lives } = condition;
     const textWidth = ctx.measureText(condition.text).width;
     const heart = size * CONDITION.HEART;
@@ -196,7 +194,7 @@ export class HudRenderer {
     const heartsWidth = lives
       ? size * CONDITION.HEART_LEAD + lives.total * heart + (lives.total - 1) * heartGap
       : 0;
-    const start = isRotated ? 0 : -(textWidth + heartsWidth) / 2;
+    const start = -(textWidth + heartsWidth) / 2;
     ctx.textAlign = 'left';
     ctx.fillText(condition.text, start, 0);
 
