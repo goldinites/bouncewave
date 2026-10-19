@@ -211,6 +211,8 @@ describe('the statistics screen', () => {
       new SettingsStore({ load: getDefaultSettings, save: () => {} }),
       {
         onStartGame: vi.fn(),
+        onStartQuickMatch: vi.fn(),
+        onStartChallenge: vi.fn(),
         onResumeGame: vi.fn(),
         onReturnToMainMenu: vi.fn(),
         onUnlockAudio: vi.fn(),
@@ -221,6 +223,7 @@ describe('the statistics screen', () => {
           stats = getEmptyStatistics();
         },
       },
+      { get: () => ({ passed: ['warmUp', 'blitz'] }) },
     );
     const rows = () =>
       [...document.querySelectorAll('#gameScreen .stats__row')].map(
@@ -250,7 +253,7 @@ describe('the statistics screen', () => {
     expect(document.getElementById('gameTitle')?.textContent).toBe('STATISTICS');
   });
 
-  it('shows the record, then the wins at each difficulty', () => {
+  it('shows the record, then the wins at each difficulty, then the challenges passed', () => {
     const { menu, rows } = setup();
     menu.showStatistics();
 
@@ -265,8 +268,12 @@ describe('the statistics screen', () => {
       'NORMAL 1 / 2',
       'HARD 1 / 1',
       'INSANE 0 / 0',
+      'PASSED 2 / 9',
     ]);
-    expect(document.querySelector('.stats__heading')?.textContent).toBe('WINS BY DIFFICULTY');
+    expect([...document.querySelectorAll('.stats__heading')].map((h) => h.textContent)).toEqual([
+      'WINS BY DIFFICULTY',
+      'CHALLENGES',
+    ]);
   });
 
   it('wipes the statistics only on a second press of RESET', () => {

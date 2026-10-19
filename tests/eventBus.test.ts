@@ -134,6 +134,8 @@ describe('listening to the match', () => {
       new SettingsStore({ load: getDefaultSettings, save: () => {} }),
       {
         onStartGame: vi.fn(),
+        onStartQuickMatch: vi.fn(),
+        onStartChallenge: vi.fn(),
         onResumeGame: vi.fn(),
         onReturnToMainMenu: vi.fn(),
         onUnlockAudio: vi.fn(),

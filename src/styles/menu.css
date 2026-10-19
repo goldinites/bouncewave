@@ -328,6 +328,112 @@
   min-width: clamp(170px, 38%, 280px);
 }
 
+/* The challenges: three to a row, so all nine and BACK fit a short phone's court unscrolled */
+.challenge-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  width: min(100%, 640px);
+  margin-bottom: auto;
+}
+
+.challenge-list__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+
+  width: 100%;
+}
+
+.challenge-list .screen-buttons {
+  margin-top: 0;
+}
+
+.challenge-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+
+  /* A long name (LONG RALLY) and its mark break onto two lines on a phone rather than spill out */
+  padding-inline: 0.6em;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-wrap: balance;
+}
+
+/* A tick after a passed one's name, drawn in the button's color */
+.challenge-list__mark {
+  flex: none;
+  width: 1em;
+  height: 1em;
+
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A challenge's card and an attempt's result: a line over their buttons */
+.challenge-card,
+.challenge-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  width: min(100%, 520px);
+  margin-bottom: auto;
+}
+
+.challenge-card__passed,
+.challenge-result__message {
+  margin: 0;
+
+  color: var(--green);
+  font-size: clamp(12px, 2vw, 16px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 4px var(--green);
+}
+
+.challenge-result__message:empty {
+  display: none;
+}
+
+/* What a failed attempt fell short by, in the menus' pink */
+.challenge-result__message:not(.challenge-result__message--celebration) {
+  color: var(--pink-soft);
+  text-shadow: 0 0 4px var(--pink-soft);
+}
+
+/* Every challenge passed: the news flares up as it comes in */
+.challenge-result__message--celebration {
+  animation: challenge-celebration 0.9s ease-out both;
+}
+
+@keyframes challenge-celebration {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+    text-shadow: 0 0 0 var(--green);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+    text-shadow: 0 0 16px var(--green);
+  }
+
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 4px var(--green);
+  }
+}
+
 /* A button that can't be pressed yet (a mode still to come): dimmed, no glow, no reaction */
 .game-button:disabled {
   opacity: 0.35;
@@ -422,7 +528,8 @@
 @media (prefers-reduced-motion: reduce) {
   .game__title,
   .game-button:hover,
-  .game__buttons button:hover {
+  .game__buttons button:hover,
+  .challenge-result__message--celebration {
     animation: none !important;
   }
 }

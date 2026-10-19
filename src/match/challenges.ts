@@ -18,7 +18,8 @@ export type ChallengeGoal =
 
 /**
  * A challenge: a match set up in advance, plus one goal. The player is the left side against the
- * CPU on the right. Its name and description live in the translations.
+ * CPU on the right. Its name and description live in the translations; the description is all its
+ * card says, so it names the goal and whatever sets the match apart (points, clock, level, paddles).
  */
 export interface Challenge {
   readonly rules: MatchRules;

@@ -77,6 +77,15 @@ body.classic-mode .stats__row dd {
   font-family: 'Courier New', monospace;
 }
 
+/* The challenges' card and an attempt's result: white monospace, no neon, no flourish */
+body.classic-mode .challenge-card__passed,
+body.classic-mode .challenge-result__message {
+  color: var(--white);
+  font-family: 'Courier New', monospace;
+  text-shadow: none;
+  animation: none;
+}
+
 body.classic-mode .game__buttons button[aria-pressed='true'],
 body.classic-mode .screen-buttons button[aria-pressed='true'] {
   background: var(--white);

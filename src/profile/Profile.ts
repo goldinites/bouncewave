@@ -1,4 +1,5 @@
 import * as v from 'valibot';
+import { challengeProgressSchema, getEmptyChallengeProgress } from '@/profile/ChallengeProgress';
 import { getEmptyStatistics, statisticsSchema } from '@/profile/Statistics';
 import { getDefaultSettings, SETTING_KEYS, SETTINGS, UserSettings } from '@/settings/UserSettings';
 
@@ -6,7 +7,7 @@ import { getDefaultSettings, SETTING_KEYS, SETTINGS, UserSettings } from '@/sett
  * The version of the saved profile this build writes. Raise it with every change to what is
  * saved, and add the step from the version before to MIGRATIONS (profile/migrations.ts).
  */
-export const PROFILE_VERSION = 2;
+export const PROFILE_VERSION = 3;
 
 /**
  * Each setting as a saved one is checked: whatever is missing or invalid falls back to its
@@ -29,10 +30,17 @@ export const profileSchema = v.object({
   settings: v.fallback(settingsSchema, getDefaultSettings),
   // From version 2
   stats: statisticsSchema,
+  // From version 3
+  challenges: challengeProgressSchema,
 });
 
 export type Profile = v.InferOutput<typeof profileSchema>;
 
 export function getDefaultProfile(): Profile {
-  return { version: PROFILE_VERSION, settings: getDefaultSettings(), stats: getEmptyStatistics() };
+  return {
+    version: PROFILE_VERSION,
+    settings: getDefaultSettings(),
+    stats: getEmptyStatistics(),
+    challenges: getEmptyChallengeProgress(),
+  };
 }
