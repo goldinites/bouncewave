@@ -29,7 +29,8 @@ import { COLORS } from '@/shared/palette';
 import { BackgroundChoice, isPickableScene, isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
 import { NowPlaying } from '@/ui/NowPlaying';
-import { describeCondition } from '@/ui/challengeTexts';
+import { Condition, describeCondition } from '@/ui/challengeTexts';
+import { ConditionBar } from '@/ui/ConditionBar';
 import { UIManager } from '@/ui/UIManager';
 
 // Longest step the simulation takes in one frame (e.g. after a hitch)
@@ -67,6 +68,8 @@ export class Game {
   private readonly inputHandler: InputHandler;
   private readonly menuController: MenuController;
   private readonly nowPlaying: NowPlaying;
+  /** A challenge's condition under the court, on a phone held upright. */
+  private readonly conditionBar: ConditionBar;
 
   private readonly paddles: readonly Paddle[];
   private readonly ball = new Ball();
@@ -231,6 +234,7 @@ export class Game {
     this.challengeJudge.listenTo(this.matchEvents);
     this.storagePersistence.listenTo(this.matchEvents);
 
+    this.conditionBar = new ConditionBar();
     this.nowPlaying = new NowPlaying(this.i18n, {
       onToggle: () => this.toggleMusic(),
       onNext: () => this.nextTrack(),
@@ -431,7 +435,17 @@ export class Game {
       this.settings.current.musicMuted,
     );
 
-    const frame = this.buildRenderFrame();
+    // A challenge's condition: on the court, or under it on a phone held upright
+    const condition = this.flow.isDemo
+      ? null
+      : describeCondition(
+          this.i18n,
+          this.flow,
+          this.challenge ? CHALLENGES[this.challenge].goal : null,
+          this.challengeJudge.progress,
+        );
+    this.conditionBar.update(condition, this.inputHandler.isRotated);
+    const frame = this.buildRenderFrame(condition);
     if (!isPaused) {
       this.renderer.update(realDt, frame);
     }
@@ -521,7 +535,7 @@ export class Game {
     };
   }
 
-  private buildRenderFrame(): RenderFrame {
+  private buildRenderFrame(condition: Condition | null): RenderFrame {
     return {
       gameState: this.flow.gameState,
       isDemo: this.flow.isDemo,
@@ -537,14 +551,7 @@ export class Game {
       serveTime: this.flow.serveTime,
       rally: this.flow.rally,
       readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
-      condition: this.flow.isDemo
-        ? null
-        : describeCondition(
-            this.i18n,
-            this.flow,
-            this.challenge ? CHALLENGES[this.challenge].goal : null,
-            this.challengeJudge.progress,
-          ),
+      condition,
       isRotated: this.inputHandler.isRotated,
       vignette: this.effects.vignette,
       zoom: this.effects.cameraZoom,

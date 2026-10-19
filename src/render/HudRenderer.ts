@@ -23,11 +23,6 @@ const CONDITION = {
   LOST_HEART_ALPHA: 0.35, // a life lost stays as a faint outline
   Y: 142, // court px, the line's center under the scores
   Y_ALONE: 82, // court px, where the scores stand
-  // Portrait phone: across the screen it would cross the ball's path wherever it stood, so it
-  // runs along the top edge instead, behind the opponent's paddle, where the ball only goes when
-  // the opponent misses: this far in from the court's end, a size down to fit the strip
-  ROTATED_EDGE: 17, // court px, the line's middle from the end of the court behind the right side
-  ROTATED_SIZE: 22, // px
   ALPHA: 0.8,
   URGENT_PULSE: 7, // 1/s, the urgent clock's throb
 } as const;
@@ -146,7 +141,8 @@ export class HudRenderer {
       ctx.restore();
     });
 
-    if (condition) this.renderCondition(ctx, condition, time, isRotated, classic);
+    // A phone held upright has it under the court instead (ui/ConditionBar), out of the ball's way
+    if (condition && !isRotated) this.renderCondition(ctx, condition, time, classic);
 
     // "GET READY" indicator — the original had no such prompt, so classic mode stays silent
     if (serveTime > 0 && !classic) {
@@ -162,12 +158,11 @@ export class HudRenderer {
     ctx: CanvasRenderingContext2D,
     condition: HudCondition,
     time: number,
-    isRotated: boolean,
     classic: boolean,
   ): void {
     ctx.save();
     const alone = condition.replacesScore;
-    const size = isRotated ? CONDITION.ROTATED_SIZE : alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
+    const size = alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
     ctx.font = classic ? `700 ${size - 4}px 'Courier New', monospace` : gameFont(700, size);
     ctx.textBaseline = 'middle';
     const isUrgent = condition.isUrgent && !classic;
@@ -177,14 +172,7 @@ export class HudRenderer {
       ? 0.6 + 0.4 * Math.abs(Math.sin(time * CONDITION.URGENT_PULSE))
       : CONDITION.ALPHA;
 
-    // On a portrait phone the court is turned: the line is turned back to read across the screen,
-    // along its top edge behind the opponent's paddle
-    if (isRotated) {
-      ctx.translate(COURT.WIDTH - CONDITION.ROTATED_EDGE, COURT.HEIGHT / 2);
-      ctx.rotate(Math.PI / 2);
-    } else {
-      ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
-    }
+    ctx.translate(COURT.WIDTH / 2, alone ? CONDITION.Y_ALONE : CONDITION.Y);
 
     // Laid out by hand, text then hearts, centered
     const { lives } = condition;

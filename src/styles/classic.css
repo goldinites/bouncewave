@@ -34,6 +34,21 @@ body.classic-mode .game__title {
   animation: none;
 }
 
+body.classic-mode .game-condition {
+  color: var(--white);
+  font-family: 'Courier New', monospace;
+  animation: none;
+}
+
+body.classic-mode .game-condition__heart {
+  fill: var(--white);
+}
+
+body.classic-mode .game-condition__heart--lost {
+  fill: none;
+  stroke: var(--white);
+}
+
 body.classic-mode .game__subtitle {
   color: var(--white);
   text-shadow: none;

@@ -82,8 +82,9 @@ body {
 @media (orientation: portrait) and (max-width: 900px) {
   :root {
     /* The rotated court keeps its real 8:5 shape, so width and height grow together. On most
-       phones the height is what binds: the court takes what's left once the safe areas and
-       the controls above it (with the gap and a margin below) are given their room. */
-    --game-width: min(98vw, calc((100 * var(--vh) - var(--safe-y) - 100px) / 1.6));
+       phones the height is what binds: the court takes what's left once the safe areas, the
+       controls above it and a challenge's condition below (with the gaps between) are given
+       their room. */
+    --game-width: min(98vw, calc((100 * var(--vh) - var(--safe-y) - 124px) / 1.6));
   }
 }

@@ -1,4 +1,5 @@
-/* The strip of the court's width above it, with the controls */
+/* The strips of the court's width above and below it: the controls on top, and underneath, on a
+   phone held upright, a challenge's condition */
 
 .game-bar {
   flex: none;
@@ -6,6 +7,67 @@
   width: var(--stage-width);
   /* Pulled in a little from the court's rounded corners */
   padding-inline: 8px;
+}
+
+/* Only a phone held upright has the bottom strip (below); elsewhere the HUD draws the condition
+   on the court */
+.game-bar--bottom {
+  display: none;
+}
+
+/* A challenge's condition, as the court's HUD writes it: white, the lives as red hearts, the
+   clock pink and throbbing in its last seconds */
+.game-condition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+
+  /* One line's room, kept while empty, so the court never shifts */
+  min-height: 1.4em;
+  margin: 0;
+
+  color: var(--white);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+.game-condition--urgent {
+  color: var(--pink);
+  animation: condition-throb 0.45s ease-in-out infinite alternate;
+}
+
+@keyframes condition-throb {
+  to {
+    opacity: 0.6;
+  }
+}
+
+.game-condition__hearts {
+  display: inline-flex;
+  gap: 0.25em;
+}
+
+.game-condition__heart {
+  width: 0.9em;
+  height: 0.9em;
+
+  fill: var(--red);
+}
+
+.game-condition__heart--lost {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1.2;
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-condition--urgent {
+    animation: none;
+  }
 }
 
 .game-bar--top {
@@ -31,5 +93,9 @@
 @media (orientation: portrait) and (max-width: 900px) {
   .game-bar {
     width: var(--game-width);
+  }
+
+  .game-bar--bottom {
+    display: block;
   }
 }
