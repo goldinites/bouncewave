@@ -35,7 +35,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | `i18n/`                | texts in every language                                               | `match/` (difficulty, modes)                        |
 | `input/`               | keyboard, pointer, touch, portrait rotation                           | `match/`, `shared/`                                 |
 | `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |
-| `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `fx/` (particle types), `shared/`         |
+| `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `shared/`                                 |
 | `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax | `match/`, `render/`, `audio/`, `shared/`            |
 | `ui/`                  | menus as Preact screens on a stack, challenge condition, boot screen  | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
 | `debug/`, `easterEgg/` | FPS overlay and background menu; the classic look's switch            | `shared/`                                           |
@@ -44,9 +44,8 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 The rules that matter most are checked by `tests/architecture.test.ts`: `match/` imports only
 `match/` and `shared/`, and `shared/` imports nothing from the project.
 
-Known coupling to undo: `fx/` drives the `Renderer` directly (shake, flash, stage effects) and
-`render/` reads the particle types from `fx/`. Roadmap step 4.2 (rendering in layers) removes the
-loop.
+`render/` never imports `fx/` (checked too): the effects drive the `Renderer` (shake, flash, stage
+effects) and fill in the particles, whose types (`render/particles.ts`) belong to what draws them.
 
 ## One frame
 
@@ -61,7 +60,13 @@ loop.
    particles, paddle sparks, embers, fireworks.
 4. **Interpolation** (`flow.interpolate`): balls and paddles get a draw position between the last
    two steps, so motion stays smooth at any refresh rate.
-5. **Music** reads a `MusicState` snapshot; **the renderer** draws a `RenderFrame` snapshot.
+5. **Music** reads a `MusicState` snapshot; **the renderer** draws a `RenderFrame` snapshot
+   (`render/scene.ts`), grouped by who reads it: `court` (what is on it), `hud` (what is written
+   over it), `drama` (climax, vignette, zoom, glow). The `Renderer` keeps what lasts between frames
+   (shake, flash, the final score, the dimming, the backdrop's mood in `BackdropMood`) and hands
+   the frame to the look's `Scene`. The neon one (`NeonScene`) is an ordered list of layers, each
+   drawn in its space: `backdrop` under the camera's zoom, `court` under the zoom and the shake,
+   `screen` fixed over everything (dimming, vignette, flash).
 
 Everything freezes while paused except the menu dimming. Because the steps are fixed and the
 simulation's randomness is injected, the same seed and inputs replay the same match
@@ -183,8 +188,13 @@ that draws it, and its chrome.
 `listenTo(events: EventBus<MatchEvent>)` that subscribes, called where `Game` wires the effects and
 the menus. It never changes the match.
 
-**Planned, not there yet** (see the roadmap): modifiers that hook into the simulation and add a
-drawing layer (4.3), dialogue through Ink (8.1).
+**Something drawn on the court** (a modifier's darkness, a skill's hint). A `Layer` in
+`NeonScene`'s list, in the space and place it belongs; what it reads goes into the `RenderFrame`
+group it belongs to. The classic look draws its own `ClassicScene` and leaves out what it has no
+place for.
+
+**Planned, not there yet** (see the roadmap): modifiers and skills that hook into the simulation
+and add their layers (4.3), dialogue through Ink (8.1).
 
 ## Rules of thumb
 

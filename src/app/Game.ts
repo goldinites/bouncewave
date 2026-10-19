@@ -22,7 +22,8 @@ import { ProfileStore } from '@/profile/ProfileStore';
 import { getEmptyStatistics } from '@/profile/Statistics';
 import { StatsRecorder } from '@/profile/StatsRecorder';
 import { StoragePersistence } from '@/profile/StoragePersistence';
-import { Renderer, RenderFrame } from '@/render/Renderer';
+import { Renderer } from '@/render/Renderer';
+import { RenderFrame } from '@/render/scene';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { EventBus } from '@/shared/EventBus';
 import { Look } from '@/shared/look';
@@ -594,29 +595,35 @@ export class Game {
 
   private buildRenderFrame(condition: Condition | null): RenderFrame {
     return {
-      gameState: this.flow.gameState,
-      isDemo: this.flow.isDemo,
-      paddles: this.paddles,
-      scores: this.flow.scores,
-      balls: this.flow.balls,
-      ball: this.flow.leadBall,
+      court: {
+        gameState: this.flow.gameState,
+        isDemo: this.flow.isDemo,
+        paddles: this.paddles,
+        scores: this.flow.scores,
+        balls: this.flow.balls,
+        ball: this.flow.leadBall,
+        // The moment the ball and paddles are drawn at, between the last two steps (never before
+        // the clock starts: a tape counter would read -1)
+        time: Math.max(0, this.flow.time - this.simulation.lag),
+        serveTime: this.flow.serveTime,
+        rally: this.flow.rally,
+      },
+      hud: {
+        readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
+        condition,
+        isConditionOnCourt: this.isConditionOnCourt,
+        sideLabels: this.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
+        overdriveCharges: this.flow.overdriveCharges,
+      },
+      drama: {
+        climax: this.effects.climaxLevel,
+        vignette: this.effects.vignette,
+        zoom: this.effects.cameraZoom,
+        paddleGlow: this.effects.paddleGlow,
+      },
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),
-      // The moment the ball and paddles are drawn at, between the last two steps (never before
-      // the clock starts: a tape counter would read -1)
-      time: Math.max(0, this.flow.time - this.simulation.lag),
-      serveTime: this.flow.serveTime,
-      rally: this.flow.rally,
-      readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
-      condition,
-      isConditionOnCourt: this.isConditionOnCourt,
       isRotated: this.isPortraitView,
-      vignette: this.effects.vignette,
-      zoom: this.effects.cameraZoom,
-      climax: this.effects.climaxLevel,
-      paddleGlow: this.effects.paddleGlow,
-      overdriveCharges: this.flow.overdriveCharges,
-      sideLabels: this.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
     };
   }
 

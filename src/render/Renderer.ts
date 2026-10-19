@@ -1,40 +1,22 @@
-import { ParticleSystem } from '@/fx/ParticleSystem';
-import { Ball } from '@/match/Ball';
 import { COURT } from '@/match/config';
-import { GameState } from '@/match/GameState';
-import { Paddle } from '@/match/Paddle';
-import { Scores } from '@/match/side';
 import { AdaptiveResolution } from '@/render/AdaptiveResolution';
+import { BackdropMood } from '@/render/BackdropMood';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
 import { ClassicScene } from '@/render/ClassicScene';
-import { CourtRenderer } from '@/render/CourtRenderer';
-import { EntityRenderer } from '@/render/EntityRenderer';
-import { FinalScoreRenderer, FinalScoreSign } from '@/render/FinalScoreRenderer';
-import { HudCondition, HudRenderer } from '@/render/HudRenderer';
+import { FinalScoreSign } from '@/render/FinalScoreRenderer';
+import { NeonScene } from '@/render/NeonScene';
+import { RenderFrame, Scene, SceneState } from '@/render/scene';
 import { sprites } from '@/render/SpriteCache';
 import { Look } from '@/shared/look';
-import { approach, clamp } from '@/shared/math';
+import { approach } from '@/shared/math';
 import { BackgroundChoice, SceneId } from '@/shared/scenes';
 
-// Lightweight scene dimming for menu and pause overlays
-const MENU_DIM = { RGB: '8, 2, 26', ALPHA: 0.6, SPEED: 8.6 } as const;
-// Deciding-point vignette
-const VIGNETTE = { RGB: '4, 0, 14', MAX_ALPHA: 0.6 } as const;
+// The scene dims behind the menus and the pause, easing in and out
+const MENU_DIM = { ALPHA: 0.6, SPEED: 8.6 } as const;
 // Screen shake fades exponentially, flash linearly (1/s)
 const SHAKE_DECAY = 9;
 const FLASH_DECAY = 3;
-
-// Laser background during play: at full climax lasers only rise to CLIMAX_MAX so the court
-// stays readable; surges add on top and fade out
-const LASERS = {
-  CLIMAX_MAX: 0.6,
-  CLIMAX_SURGE: 0.2, // on the climax drop
-  CELEBRATION_SURGE: 1.0,
-  SURGE_DECAY: 1.5, // 1/s
-  EASE: 2.55, // 1/s toward the brightness the moment calls for
-} as const;
-const CLIMAX_FLASH = 0.2; // soft flash on the drop, no screen shake
-const CELEBRATION_DECAY = 0.45; // 1/s, linear
+const CLIMAX_FLASH = 0.2; // soft flash when the climax peaks, no screen shake
 
 // Sharpest canvas pixel ratio; phones report 3, which costs more fill rate than it shows
 const MAX_PIXEL_RATIO = 2;
@@ -51,47 +33,12 @@ const STAGE_CLASSES = {
 } as const;
 type StageClass = (typeof STAGE_CLASSES)[keyof typeof STAGE_CLASSES];
 
-/** Everything the renderer needs to draw (and animate toward) one frame. */
-export interface RenderFrame {
-  gameState: GameState;
-  /** The AI-vs-AI demo behind the menus (no HUD). */
-  isDemo: boolean;
-  /** Every paddle on the court; the player plays the left side's first. */
-  paddles: readonly Paddle[];
-  /** Points each side has won. */
-  scores: Scores;
-  /** Every ball on court. */
-  balls: readonly Ball[];
-  /** The one the camera closes in on: the ball about to decide the point. */
-  ball: Ball;
-  particles: ParticleSystem;
-  analyser: AnalyserNode | null;
-  time: number;
-  serveTime: number;
-  rally: number;
-  readyText: string;
-  /** A challenge's condition under the score ("RALLY 12 / 20 · 0:41"); null for none. */
-  condition: HudCondition | null;
-  /** Whether its line is drawn on the court; elsewhere the strip above it shows the line. */
-  isConditionOnCourt: boolean;
-  isRotated: boolean;
-  /** Edge darkening from the deciding-point drama: 0 = none, may go above 1 on a heartbeat. */
-  vignette: number;
-  /** Camera zoom centered on the ball (1 = none). */
-  zoom: number;
-  /** Rally climax intensity in [0, 1]: lasers stay lit and the ball burns hotter. */
-  climax: number;
-  /** Hit glow of each paddle in [0, 1], in the order of `paddles`. */
-  paddleGlow: readonly number[];
-  /**
-   * Charges in each paddle's Overdrive meter (0..OVERDRIVE.CHARGE), in the order of `paddles`;
-   * null for a paddle that shows none (the CPU's, every one under rules without Overdrive).
-   */
-  overdriveCharges: readonly (number | null)[];
-  /** Each side's label under its score, [left, right]; null to show none (only two players have them). */
-  sideLabels: readonly [string, string] | null;
-}
-
+/**
+ * Draws the game on the canvas: fits it to the screen, keeps what lasts between frames (shake,
+ * flash, the final score, the dimming, the backdrop's mood) and hands each frame to the look's
+ * scene, the neon one built from layers or the classic one. Takes the feedback the effects ask for
+ * (shake, flashes, surges, the stage's CSS effects), unless the look shows none.
+ */
 export class Renderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -105,15 +52,9 @@ export class Renderer {
   );
 
   private readonly background = new BackgroundRenderer();
-  private readonly hud = new HudRenderer(() => this.reducedMotion.matches);
+  private readonly mood = new BackdropMood();
   private screenShake = 0;
   private screenFlash = 0;
-  private laserSurge = 0;
-  /** Laser brightness, eased toward a target that depends on what is happening. */
-  private laserIntensity = 1.0;
-  /** Victory celebration in [0, 1]: lasers sweep through hues, Memphis heats up. */
-  private celebration = 0;
-  private vignetteGradient: CanvasGradient;
 
   private finalSign: FinalScoreSign | null = null;
   private finalSignAge = 0;
@@ -127,7 +68,17 @@ export class Renderer {
   /** How the game looks: the classic look draws its own flat scene and silences every flashy
    * feedback method below. */
   private look: Look = 'neon';
-  private readonly classicScene = new ClassicScene();
+  private readonly looks: Record<Look, Scene>;
+  /** What the scene draws with this frame; one object, filled anew each frame. */
+  private readonly state: SceneState = {
+    finalSign: null,
+    finalSignAge: 0,
+    menuDim: MENU_DIM.ALPHA,
+    shake: 0,
+    flash: 0,
+    mood: { laserIntensity: 1, climax: 0, celebration: 0 },
+    realDt: 0,
+  };
   /**
    * The player asked the system for less motion: no screen shake, white flashes or camera zoom.
    * Read live, so changing the setting mid-game takes effect at once. The stage's CSS effects
@@ -146,18 +97,10 @@ export class Renderer {
     }
 
     this.ctx = context;
-
-    // Built once in game coordinates; strength is applied via globalAlpha
-    this.vignetteGradient = context.createRadialGradient(
-      COURT.WIDTH / 2,
-      COURT.HEIGHT / 2,
-      COURT.HEIGHT * 0.35,
-      COURT.WIDTH / 2,
-      COURT.HEIGHT / 2,
-      COURT.WIDTH * 0.62,
-    );
-    this.vignetteGradient.addColorStop(0, `rgba(${VIGNETTE.RGB}, 0)`);
-    this.vignetteGradient.addColorStop(1, `rgba(${VIGNETTE.RGB}, 1)`);
+    this.looks = {
+      neon: new NeonScene(context, this.background, () => this.reducedMotion.matches),
+      classic: new ClassicScene(),
+    };
 
     // Refitting reallocates the background layer and every sprite. An iPhone turning around
     // reports several sizes in a row, and iOS caps the memory all canvases share: after a few
@@ -267,16 +210,14 @@ export class Renderer {
    */
   public triggerClimaxSurge(): void {
     if (!this.showsEffects) return;
-    // Raises the laser target rather than the value, so the swell eases in
-    this.laserSurge = LASERS.CLIMAX_SURGE;
+    this.mood.swell();
     this.addFlash(CLIMAX_FLASH);
   }
 
   /** Victory: lasers flare and sweep through hues, Memphis shapes burst outward and heat up. */
   public celebrate(): void {
     if (!this.showsEffects) return;
-    this.laserSurge = LASERS.CELEBRATION_SURGE;
-    this.celebration = 1;
+    this.mood.celebrate();
     this.background.triggerDrop();
   }
 
@@ -348,28 +289,15 @@ export class Renderer {
 
   public hideFinalScore(): void {
     this.finalSign = null;
-    this.celebration = 0;
+    this.mood.calm();
   }
 
-  /** Advances time-based effects (shake, flash, lasers). Not called while paused. */
+  /** Advances time-based effects (shake, flash, the backdrop's mood). Not called while paused. */
   public update(dt: number, frame: RenderFrame): void {
-    const { gameState, serveTime, climax } = frame;
-    this.laserSurge *= Math.exp(-dt * LASERS.SURGE_DECAY);
+    const { gameState, serveTime } = frame.court;
+    this.mood.update(dt, gameState, serveTime, frame.drama.climax);
     this.finalSignAge += dt;
-
-    this.celebration = Math.max(0, this.celebration - dt * CELEBRATION_DECAY);
-
-    // During play the climax lights lasers only part-way so the court stays readable;
-    // the victory celebration (no play happening) may go all the way
-    const climaxLasers = (LASERS.CLIMAX_MAX - 0.12) * climax;
-    const celebrationLasers = 0.88 * this.celebration;
-    const playLaserIntensity = 0.12 + Math.max(climaxLasers, celebrationLasers) + this.laserSurge;
-    const targetLaserIntensity = gameState === 'menu' || serveTime > 0 ? 1.0 : playLaserIntensity;
-
-    this.laserIntensity = approach(this.laserIntensity, targetLaserIntensity, LASERS.EASE, dt);
-
     this.screenShake *= Math.exp(-dt * SHAKE_DECAY);
-
     this.screenFlash = Math.max(0, this.screenFlash - dt * FLASH_DECAY);
   }
 
@@ -378,10 +306,6 @@ export class Renderer {
    * included, for the few things that keep moving behind the pause menu.
    */
   public render(frame: RenderFrame, realDt: number): void {
-    const { gameState, isDemo, paddles, ball, particles, serveTime, isRotated } = frame;
-    const gameTime = frame.time;
-    const ctx = this.ctx;
-
     if (this.needsFit) {
       this.needsFit = false;
       this.fitToDisplay();
@@ -391,128 +315,22 @@ export class Renderer {
     // zero scale would size the sprites' glow margins at infinity, so their canvases at zero
     if (this.canvas.width === 0 || this.canvas.height === 0) return;
 
-    const dimTarget = gameState === 'play' ? 0 : MENU_DIM.ALPHA;
-
+    const dimTarget = frame.court.gameState === 'play' ? 0 : MENU_DIM.ALPHA;
     this.menuDim = approach(this.menuDim, dimTarget, MENU_DIM.SPEED, realDt);
 
     // Reset transform for high-DPI displays
-    ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    this.ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     sprites.setScale(this.scale);
 
-    if (this.look === 'classic') {
-      this.classicScene.render(ctx, frame, this.finalSign, this.menuDim);
-      return;
-    }
-
-    // Camera: everything up to the screen overlays zooms in on the ball
-    ctx.save();
-    this.applyZoom(frame.zoom, ball.drawX, ball.drawY);
-
-    // Animated background
-    this.background.render(ctx, frame.analyser, gameTime, this.screenShake, isRotated, {
-      laserIntensity: this.laserIntensity,
-      climax: frame.climax,
-      celebration: this.celebration,
-    });
-
-    ctx.save();
-
-    // Screen shake
-    if (this.screenShake > 0.2) {
-      const shakeX = (Math.random() - 0.5) * this.screenShake;
-      const shakeY = (Math.random() - 0.5) * this.screenShake;
-
-      ctx.translate(shakeX, shakeY);
-    }
-
-    // Court boundaries
-    CourtRenderer.render(ctx);
-
-    // HUD (the final-score sign takes its place at the end of a match)
-    if (!isDemo && !this.finalSign) {
-      this.hud.render(
-        ctx,
-        realDt,
-        paddles,
-        frame.scores,
-        serveTime,
-        frame.readyText,
-        gameTime,
-        isRotated,
-        frame.condition,
-        frame.sideLabels,
-        frame.isConditionOnCourt,
-      );
-    }
-
-    // Paddles; each person's carries their Overdrive meter (only in a match that has Overdrive)
-    paddles.forEach((paddle, i) => {
-      const charge = isDemo ? null : (frame.overdriveCharges[i] ?? null);
-      const pulse = charge === null ? 0 : EntityRenderer.overdrivePulse(charge, gameTime);
-      EntityRenderer.renderPaddle(ctx, paddle, frame.paddleGlow[i], pulse);
-      if (charge !== null && !this.finalSign) {
-        EntityRenderer.renderOverdriveMeter(ctx, paddle, charge, gameTime);
-      }
-    });
-
-    // Balls; a power shot burns as hot as the full rally climax
-    for (const each of frame.balls) {
-      const ballHeat = Math.max(frame.climax, each.isPowerShot ? 1 : 0);
-      EntityRenderer.renderBall(ctx, each, frame.rally, gameTime, serveTime, ballHeat);
-    }
-
-    // Particles and shockwaves
-    EntityRenderer.renderParticles(ctx, particles.particles);
-
-    EntityRenderer.renderShockwaves(ctx, particles.rings);
-
-    if (this.finalSign) {
-      FinalScoreRenderer.render(ctx, this.finalSign, this.finalSignAge, isRotated);
-    }
-
-    ctx.restore();
-    ctx.restore();
-
-    // Reset alpha and blend mode
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-
-    // Lightweight menu / pause overlay
-    // No canvas filters, extra buffers, or blur passes
-    if (this.menuDim > 0.003) {
-      ctx.fillStyle = `rgba(${MENU_DIM.RGB}, ${this.menuDim})`;
-      ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
-    }
-
-    // Deciding-point vignette
-    if (frame.vignette > 0.01) {
-      // Canvas ignores a globalAlpha above 1 instead of clamping it
-      ctx.globalAlpha = Math.min(1, frame.vignette * VIGNETTE.MAX_ALPHA);
-      ctx.fillStyle = this.vignetteGradient;
-      ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
-      ctx.globalAlpha = 1;
-    }
-
-    // Screen flash
-    if (this.screenFlash > 0) {
-      ctx.fillStyle = `rgba(255, 255, 255, ${this.screenFlash * 0.25})`;
-
-      ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
-    }
-  }
-
-  /**
-   * Scales the scene around a focus point. The focus is kept on the court, so the zoomed scene
-   * always covers the whole canvas even when the ball is already past the goal line.
-   */
-  private applyZoom(zoom: number, focusX: number, focusY: number): void {
-    if (zoom <= 1.001 || this.reducedMotion.matches) return;
-
-    const x = clamp(focusX, 0, COURT.WIDTH);
-    const y = clamp(focusY, 0, COURT.HEIGHT);
-    this.ctx.translate(x, y);
-    this.ctx.scale(zoom, zoom);
-    this.ctx.translate(-x, -y);
+    const { state } = this;
+    state.finalSign = this.finalSign;
+    state.finalSignAge = this.finalSignAge;
+    state.menuDim = this.menuDim;
+    state.shake = this.screenShake;
+    state.flash = this.screenFlash;
+    state.mood = this.mood.current(frame.drama.climax);
+    state.realDt = realDt;
+    this.looks[this.look].render(this.ctx, frame, state);
   }
 
   public dispose(): void {

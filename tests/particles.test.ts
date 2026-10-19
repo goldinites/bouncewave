@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Particle, ParticleSystem } from '@/fx/ParticleSystem';
+import { ParticleSystem } from '@/fx/ParticleSystem';
+import { Particle } from '@/render/particles';
 
 const particle = (life: number, id: number): Particle => ({
   x: id,
