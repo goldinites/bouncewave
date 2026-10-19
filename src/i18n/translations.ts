@@ -63,6 +63,37 @@ export interface TranslationSchema {
   resetStatsConfirm: string;
   /** Local multiplayer, on the main menu before it is playable (stage 3). */
   multiplayer: string;
+  /**
+   * The challenges' screens; a text's `{placeholders}` are filled by `I18nManager.format`.
+   * The list's count and the statistics' heading and row, as "PASSED: 4 / 9".
+   */
+  challengesHeading: string;
+  challengesPassed: string;
+  /** A challenge's card: its match, its reward, and what that reward opens. */
+  challengeMatch: string;
+  challengeReward: string;
+  challengeUnlocks: string;
+  /** A challenge's match, piece by piece: its length, the player's lives, its clock, and so on. */
+  ruleFirstTo: string;
+  ruleLives: string;
+  ruleTime: string;
+  ruleBalls: string;
+  ruleCpuPaddle: string;
+  ruleRamp: string;
+  /** An attempt's outcome: passed or not, what passing it opened, and its buttons. */
+  attemptPassed: string;
+  attemptFailed: string;
+  attemptUnlocked: string;
+  attemptAllPassed: string;
+  nextChallenge: string;
+  tryAgain: string;
+  toChallenges: string;
+  /** What a failed attempt fell short by: how far it got toward the goal, or what spoilt it. */
+  shortRally: string;
+  shortPoints: string;
+  shortPowerShots: string;
+  shortConceded: string;
+  shortLost: string;
   /** Every backdrop's name, and random's, by choice. */
   backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
@@ -115,6 +146,29 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     resetStats: 'RESET',
     resetStatsConfirm: 'SURE? RESET',
     multiplayer: 'MULTIPLAYER',
+    challengesHeading: 'CHALLENGES',
+    challengesPassed: 'PASSED',
+    challengeMatch: 'MATCH',
+    challengeReward: 'REWARD',
+    challengeUnlocks: 'unlocks {name}',
+    ruleFirstTo: 'first to {n}',
+    ruleLives: '{n} lives',
+    ruleTime: '{time} on the clock',
+    ruleBalls: '{n} balls',
+    ruleCpuPaddle: 'CPU paddle ×{n}',
+    ruleRamp: 'CPU stronger every point',
+    attemptPassed: 'PASSED!',
+    attemptFailed: 'NOT PASSED',
+    attemptUnlocked: 'UNLOCKED: {name}',
+    attemptAllPassed: 'EVERY CHALLENGE PASSED',
+    nextChallenge: 'NEXT',
+    tryAgain: 'TRY AGAIN',
+    toChallenges: 'ALL CHALLENGES',
+    shortRally: 'RALLY: {n} OF {target}',
+    shortPoints: 'POINTS: {n} OF {target}',
+    shortPowerShots: 'OVERDRIVE SHOTS: {n} OF {target}',
+    shortConceded: 'A POINT WAS LOST',
+    shortLost: 'THE MATCH WAS LOST',
     backgrounds: {
       random: 'RANDOM',
       lasers: 'LASERS',
@@ -184,6 +238,29 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     resetStats: 'СБРОСИТЬ',
     resetStatsConfirm: 'ТОЧНО СБРОСИТЬ?',
     multiplayer: 'МУЛЬТИПЛЕЕР',
+    challengesHeading: 'ИСПЫТАНИЯ',
+    challengesPassed: 'ПРОЙДЕНО',
+    challengeMatch: 'МАТЧ',
+    challengeReward: 'НАГРАДА',
+    challengeUnlocks: 'открывает «{name}»',
+    ruleFirstTo: 'до {n} очков',
+    ruleLives: 'жизней: {n}',
+    ruleTime: 'на время: {time}',
+    ruleBalls: 'мячей: {n}',
+    ruleCpuPaddle: 'ракетка CPU ×{n}',
+    ruleRamp: 'CPU сильнее с каждым очком',
+    attemptPassed: 'ПРОЙДЕНО!',
+    attemptFailed: 'НЕ ПРОЙДЕНО',
+    attemptUnlocked: 'ОТКРЫТО: {name}',
+    attemptAllPassed: 'ВСЕ ИСПЫТАНИЯ ПРОЙДЕНЫ',
+    nextChallenge: 'СЛЕДУЮЩЕЕ',
+    tryAgain: 'ЕЩЁ РАЗ',
+    toChallenges: 'К СПИСКУ',
+    shortRally: 'РОЗЫГРЫШ: {n} ИЗ {target}',
+    shortPoints: 'ОЧКИ: {n} ИЗ {target}',
+    shortPowerShots: 'УДАРЫ OVERDRIVE: {n} ИЗ {target}',
+    shortConceded: 'ПРОПУЩЕНО ОЧКО',
+    shortLost: 'МАТЧ ПРОИГРАН',
     backgrounds: {
       random: 'СЛУЧАЙНЫЙ',
       lasers: 'ЛАЗЕРНЫЙ',

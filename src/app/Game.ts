@@ -17,6 +17,7 @@ import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
+import { challengeState, markPassed, nextChallenge } from '@/profile/ChallengeProgress';
 import { ProfileStore } from '@/profile/ProfileStore';
 import { getEmptyStatistics } from '@/profile/Statistics';
 import { StatsRecorder } from '@/profile/StatsRecorder';
@@ -47,9 +48,11 @@ export class Game {
   private readonly statsRecorder: StatsRecorder;
   /** Says whether each finished attempt at a challenge passed. */
   private readonly challengeJudge: ChallengeJudge;
-  /** The challenge the matches started are attempts at; null for the quick match. */
+  /** The challenge the match on court (and its restarts) is an attempt at; null for a quick match. */
   private challenge: ChallengeId | null = null;
-  /** How the last attempt at a challenge went, for the debug overlay until its screen (2.3). */
+  /** For developers: the challenge ?challenge= makes every quick match an attempt at. */
+  private pinnedChallenge: ChallengeId | null = null;
+  /** How the last attempt at a challenge went, for the debug overlay. */
   private lastVerdict: ChallengeVerdict | null = null;
   private readonly i18n: I18nManager;
   private readonly audio: AudioEngine;
@@ -114,10 +117,10 @@ export class Game {
     // debug overlay comes with a menu of them all
     const pinned = new URLSearchParams(window.location.search).get('bg');
     if (pinned && isSceneId(pinned)) this.renderer.pinBackground(pinned);
-    // ?challenge=survival makes every match an attempt at that challenge, until the challenge
-    // screens (2.3) start them; the debug overlay shows how the last attempt went
+    // ?challenge=survival makes every quick match an attempt at that challenge, locked or not;
+    // the debug overlay shows how the last attempt went
     const challenge = new URLSearchParams(window.location.search).get('challenge');
-    if (isChallengeId(challenge)) this.challenge = challenge;
+    if (isChallengeId(challenge)) this.pinnedChallenge = challenge;
     this.backgroundMenu = new BackgroundMenu((scene) => this.pickBackground(scene));
     this.fpsMeter = new FpsMeter((isVisible) => this.backgroundMenu.setVisible(isVisible));
     // The music opens with the song of whichever backdrop comes up first
@@ -173,6 +176,15 @@ export class Game {
       this.settings,
       {
         onStartGame: () => this.start(),
+        onStartQuickMatch: () => {
+          this.challenge = this.pinnedChallenge;
+          this.start();
+        },
+        onStartChallenge: (challenge) => {
+          this.challenge = challenge;
+          this.start();
+        },
+        isChallengeMatch: () => this.challenge !== null,
         onResumeGame: () => this.resume(),
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
@@ -182,6 +194,7 @@ export class Game {
         get: () => this.profile.current.stats,
         reset: () => this.profile.update({ stats: getEmptyStatistics() }),
       },
+      { get: () => this.profile.current.challenges },
     );
 
     this.statsRecorder = new StatsRecorder({
@@ -196,6 +209,7 @@ export class Game {
       onVerdict: (verdict) => {
         this.lastVerdict = verdict;
         this.showDebugDetail();
+        this.recordVerdict(verdict);
       },
     });
 
@@ -295,6 +309,25 @@ export class Game {
       : document.documentElement.requestFullscreen();
 
     request.catch((error: unknown) => this.fpsMeter.reportError(error));
+  }
+
+  /**
+   * Keeps a passed challenge in the profile (which opens the next one) and shows the attempt's
+   * result in place of the game-over menu.
+   */
+  private recordVerdict(verdict: ChallengeVerdict): void {
+    const progress = this.profile.current.challenges;
+    const isFirstPass =
+      verdict.isPassed && challengeState(progress, verdict.challenge) !== 'passed';
+    if (isFirstPass) {
+      this.profile.update({ challenges: markPassed(progress, verdict.challenge) });
+    }
+    const next = nextChallenge(verdict.challenge);
+    this.menuController.showChallengeResult({
+      verdict,
+      unlocked: isFirstPass ? next : null,
+      isAllPassed: isFirstPass && next === null,
+    });
   }
 
   /**

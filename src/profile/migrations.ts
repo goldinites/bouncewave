@@ -1,5 +1,6 @@
 import * as v from 'valibot';
 import { getDefaultProfile, Profile, PROFILE_VERSION, profileSchema } from '@/profile/Profile';
+import { getEmptyChallengeProgress } from '@/profile/ChallengeProgress';
 import { getEmptyStatistics } from '@/profile/Statistics';
 import { UserSettings } from '@/settings/UserSettings';
 
@@ -33,6 +34,8 @@ const MIGRATIONS: ((saved: Record<string, unknown>) => Record<string, unknown>)[
   }),
   // 1 → 2: statistics begin, from nothing
   (saved) => ({ ...saved, version: 2, stats: getEmptyStatistics() }),
+  // 2 → 3: the challenges begin, none passed
+  (saved) => ({ ...saved, version: 3, challenges: getEmptyChallengeProgress() }),
 ];
 
 /** The saved data's version: whatever lacks one predates profiles. */

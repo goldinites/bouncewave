@@ -139,8 +139,11 @@ paddles and a goal; its name and goal in both languages (`challenges` in
 `i18n/translations.ts`). The list is in the order they open. A new kind of goal is a case in
 `ChallengeGoal` and in `ChallengeJudge` (`match/ChallengeJudge.ts`), which counts what goals need
 from the match's events and gives a verdict on every finished attempt; it never changes the
-match. `Game.start` plays the current challenge (`?challenge=<id>` for developers); challenges stay
-out of the statistics (`StatsRecorder`'s `isCounted`).
+match. The menus start one (`onStartChallenge`), `Game.start` plays it and its restarts
+(`?challenge=<id>` makes every quick match one, for developers); the verdict goes to the profile
+(`challenges.passed`, `profile/ChallengeProgress.ts`, which also says what is open) and to the
+result screen in place of the game-over menu. Challenges stay out of the statistics
+(`StatsRecorder`'s `isCounted`).
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
 in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/MenuController.ts`).
@@ -165,7 +168,7 @@ the menus. It never changes the match.
 
 **Planned, not there yet** (see the roadmap): modifiers that hook into the simulation and add a
 drawing layer (4.3), a back stack for the screens and the old menus moved onto Preact (4.1), a versioned player profile
-(1.4), dialogue through Ink (7.1).
+(1.4), dialogue through Ink (8.1).
 
 ## Rules of thumb
 

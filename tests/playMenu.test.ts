@@ -155,7 +155,9 @@ describe('the PLAY menu and the setup, in the menus', () => {
     managers.push(ui);
     const calls: string[] = [];
     const actions = {
-      onStartGame: vi.fn(() => calls.push('start')),
+      onStartGame: vi.fn(() => calls.push('again')),
+      onStartQuickMatch: vi.fn(() => calls.push('start')),
+      onStartChallenge: vi.fn(),
       onResumeGame: vi.fn(),
       onReturnToMainMenu: vi.fn(),
       onUnlockAudio: vi.fn(() => calls.push('unlock')),
@@ -204,7 +206,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     };
   };
 
-  it('opens from PLAY: the story and the challenges switched off, the quick match on', () => {
+  it('opens from PLAY: the story switched off, the quick match and the challenges on', () => {
     const { menu, menuButtons, screenButtons, labels, title } = setup('ru');
     menu.showMainMenu();
     menuButtons()[0].click();
@@ -212,7 +214,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     expect(title()).toBe('РЕЖИМ ИГРЫ');
     expect(menuButtons()).toEqual([]);
     expect(labels()).toEqual(['СЮЖЕТ', 'БЫСТРЫЙ МАТЧ', 'ИСПЫТАНИЕ', 'НАЗАД']);
-    expect(screenButtons().map((b) => b.disabled)).toEqual([true, false, true, false]);
+    expect(screenButtons().map((b) => b.disabled)).toEqual([true, false, false, false]);
   });
 
   it('sets up the quick match: background, difficulty and points, as last chosen', () => {
@@ -264,7 +266,8 @@ describe('the PLAY menu and the setup, in the menus', () => {
 
     menu.showGameOverMenu(1, [2, 5]);
     menuButtons()[0].click(); // play again
-    expect(actions.onStartGame).toHaveBeenCalledTimes(2);
+    expect(calls).toEqual(['unlock', 'start', 'unlock', 'again']);
+    expect(actions.onStartQuickMatch).toHaveBeenCalledOnce();
   });
 
   it('steps back on Esc: setup, PLAY menu, main menu', () => {
@@ -291,6 +294,8 @@ describe('the PLAY menu and the setup, in the menus', () => {
     menuButtons()[0].click(); // play
     expect(document.activeElement).toBe(screenButtons()[1]); // quick match, the first on
 
+    press('ArrowDown');
+    expect(document.activeElement).toBe(screenButtons()[2]); // challenges
     press('ArrowDown');
     expect(document.activeElement).toBe(screenButtons()[3]); // back
     press('ArrowDown');
@@ -337,6 +342,8 @@ describe('telling the game the quick match setup is on screen', () => {
     const store = new SettingsStore({ load: getDefaultSettings, save: () => {} });
     const menu = new MenuController(ui, new I18nManager('en'), {} as SoundEffects, store, {
       onStartGame: vi.fn(),
+      onStartQuickMatch: vi.fn(),
+      onStartChallenge: vi.fn(),
       onResumeGame: vi.fn(),
       onReturnToMainMenu: vi.fn(),
       onUnlockAudio: vi.fn(),

@@ -1,0 +1,248 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SoundEffects } from '@/audio/sfx/SoundEffects';
+import { I18nManager } from '@/i18n/I18nManager';
+import { ChallengeVerdict } from '@/match/ChallengeJudge';
+import { CHALLENGE_IDS, ChallengeId } from '@/match/challenges';
+import { MatchEvent } from '@/match/MatchFlow';
+import {
+  ChallengeProgress,
+  challengeState,
+  markPassed,
+  nextChallenge,
+} from '@/profile/ChallengeProgress';
+import { loadProfile } from '@/profile/migrations';
+import { SettingsStore } from '@/settings/SettingsStore';
+import { getDefaultSettings } from '@/settings/UserSettings';
+import { EventBus } from '@/shared/EventBus';
+import { clockTime, describeMatch, describeShortfall } from '@/ui/challengeTexts';
+import { MenuController } from '@/ui/MenuController';
+import { UIManager } from '@/ui/UIManager';
+
+const progressOf = (...passed: ChallengeId[]): ChallengeProgress => ({ passed });
+
+describe('progress through the challenges', () => {
+  it('opens the first, and each next one once the one before is passed', () => {
+    const states = (progress: ChallengeProgress) =>
+      CHALLENGE_IDS.slice(0, 4).map((id) => challengeState(progress, id));
+
+    expect(states(progressOf())).toEqual(['open', 'locked', 'locked', 'locked']);
+    expect(states(progressOf('warmUp', 'blitz'))).toEqual(['passed', 'passed', 'open', 'locked']);
+  });
+
+  it('keeps the passed ones once each, in the order they open', () => {
+    let progress = progressOf();
+    progress = markPassed(progress, 'blitz');
+    progress = markPassed(progress, 'warmUp');
+    expect(markPassed(progress, 'blitz')).toBe(progress);
+    expect(progress.passed).toEqual(['warmUp', 'blitz']);
+  });
+
+  it('knows which comes next, and that none comes after the last', () => {
+    expect(nextChallenge('warmUp')).toBe('blitz');
+    expect(nextChallenge(CHALLENGE_IDS[CHALLENGE_IDS.length - 1])).toBeNull();
+  });
+
+  it('loads the passed ones it knows, and forgets the rest', () => {
+    const load = (challenges: unknown) => loadProfile({ version: 3, challenges }).challenges;
+
+    expect(load({ passed: ['blitz', 'moon', 'warmUp', 'blitz', 7] })).toEqual({
+      passed: ['warmUp', 'blitz'],
+    });
+    expect(load({ passed: 'warmUp' })).toEqual({ passed: [] });
+    expect(load('everything')).toEqual({ passed: [] });
+  });
+});
+
+describe('the challenges in words', () => {
+  const en = new I18nManager('en');
+  const ru = new I18nManager('ru');
+
+  it('fills a text in, numbers as the language writes them', () => {
+    expect(en.format('ruleCpuPaddle', { n: 1.5 })).toBe('CPU paddle ×1.5');
+    expect(ru.format('ruleCpuPaddle', { n: 1.5 })).toBe('ракетка CPU ×1,5');
+    expect(en.format('shortRally', { n: 18 })).toBe('RALLY: 18 OF {target}');
+  });
+
+  it('tells each match by what sets it apart, its level always', () => {
+    expect(clockTime(120)).toBe('2:00');
+    expect(clockTime(45)).toBe('0:45');
+    expect(describeMatch(en, 'warmUp')).toBe('first to 3 · NORMAL');
+    expect(describeMatch(en, 'blitz')).toBe('first to 5 · 2:00 on the clock · NORMAL');
+    expect(describeMatch(en, 'longRally')).toBe('1:00 on the clock · NORMAL');
+    expect(describeMatch(en, 'twoBalls')).toBe('first to 5 · 2 balls · NORMAL');
+    expect(describeMatch(en, 'survival')).toBe('3 lives · CPU stronger every point · NORMAL');
+    expect(describeMatch(ru, 'giant')).toBe('до 5 очков · ракетка CPU ×1,5 · СЛОЖНАЯ');
+  });
+
+  it('says what a failed attempt fell short by', () => {
+    const verdict = (challenge: ChallengeId, progress: number, target: number) =>
+      ({ challenge, isPassed: false, progress, target }) satisfies ChallengeVerdict;
+
+    expect(describeShortfall(en, verdict('longRally', 18, 20))).toBe('RALLY: 18 OF 20');
+    expect(describeShortfall(ru, verdict('survival', 7, 15))).toBe('ОЧКИ: 7 ИЗ 15');
+    expect(describeShortfall(en, verdict('overload', 3, 5))).toBe('OVERDRIVE SHOTS: 3 OF 5');
+    // The goal reached, the attempt spoilt another way
+    expect(describeShortfall(en, verdict('overload', 5, 5))).toBe('THE MATCH WAS LOST');
+    expect(describeShortfall(en, verdict('shutout', 3, 3))).toBe('A POINT WAS LOST');
+    expect(describeShortfall(en, verdict('shutout', 1, 3))).toBe('POINTS: 1 OF 3');
+  });
+});
+
+describe('the challenges in the menus', () => {
+  const managers: UIManager[] = [];
+
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
+      <div id="gameButtons"></div><div id="gameScreen"></div><p id="gameHint"></p><button id="pauseButton"></button>`;
+  });
+
+  afterEach(() => {
+    managers.splice(0).forEach((manager) => manager.dispose());
+  });
+
+  const setup = (passed: ChallengeId[] = [], isChallengeMatch = true) => {
+    const i18n = new I18nManager('en');
+    const ui = new UIManager(i18n);
+    managers.push(ui);
+    const actions = {
+      onStartGame: vi.fn(),
+      onStartQuickMatch: vi.fn(),
+      onStartChallenge: vi.fn(),
+      onResumeGame: vi.fn(),
+      onReturnToMainMenu: vi.fn(),
+      onUnlockAudio: vi.fn(),
+      isChallengeMatch: () => isChallengeMatch,
+    };
+    const store = new SettingsStore({ load: getDefaultSettings, save: () => {} });
+    const menu = new MenuController(ui, i18n, {} as SoundEffects, store, actions, undefined, {
+      get: () => ({ passed }),
+    });
+    const screenButtons = () => [
+      ...document.querySelectorAll<HTMLButtonElement>('#gameScreen button'),
+    ];
+    const button = (label: string) => screenButtons().find((b) => b.textContent === label)!;
+    const title = () => document.getElementById('gameTitle')?.textContent;
+    const subtitle = () => document.getElementById('gameSubtitle')?.textContent;
+    const text = (selector: string) => document.querySelector(selector)?.textContent;
+    return { menu, actions, screenButtons, button, title, subtitle, text };
+  };
+
+  it('opens the list from PLAY: the passed ones ticked, the next open, the rest locked', () => {
+    const { menu, screenButtons, button, title, subtitle } = setup(['warmUp', 'blitz']);
+    menu.showPlayMenu();
+    button('CHALLENGE').click();
+
+    expect(title()).toBe('CHALLENGE');
+    expect(subtitle()).toBe('PASSED: 2 / 9');
+    const items = screenButtons().slice(0, CHALLENGE_IDS.length);
+    expect(items.map((b) => b.textContent)).toEqual([
+      'WARM-UP',
+      'BLITZ',
+      'LONG RALLY',
+      'SHUTOUT',
+      'TWO BALLS',
+      'SURVIVAL',
+      'GIANT',
+      'OVERLOAD',
+      'INSANITY',
+    ]);
+    expect(items.map((b) => b.disabled)).toEqual([...Array(3).fill(false), ...Array(6).fill(true)]);
+    expect(items[0].classList).toContain('challenge-list__item--passed');
+    expect(items[2].classList).toContain('challenge-list__item--open');
+    expect(screenButtons().at(-1)?.textContent).toBe('BACK');
+  });
+
+  it("shows a challenge's card, starts it, and steps back on Esc to the list and PLAY", () => {
+    const { menu, actions, button, title, subtitle, text } = setup();
+    menu.showChallengeList();
+    button('WARM-UP').click();
+
+    expect(title()).toBe('WARM-UP');
+    expect(subtitle()).toBe('Win the match');
+    expect(
+      [...document.querySelectorAll('.challenge-card__row')].map((row) => row.textContent),
+    ).toEqual(['MATCHfirst to 3 · NORMAL', 'REWARDunlocks BLITZ']);
+    expect(text('.challenge-card__passed')).toBeUndefined();
+
+    button('START').click();
+    expect(actions.onStartChallenge).toHaveBeenCalledWith('warmUp');
+    expect(actions.onUnlockAudio).toHaveBeenCalled();
+
+    expect(menu.goBack()).toBe(true);
+    expect(title()).toBe('CHALLENGE');
+    expect(menu.goBack()).toBe(true);
+    expect(title()).toBe('GAME MODE');
+  });
+
+  it('marks a passed challenge on its card, and gives the last no reward', () => {
+    const { menu, text } = setup([...CHALLENGE_IDS]);
+    menu.showChallengeCard('insanity');
+
+    expect(text('.challenge-card__passed')).toBe('PASSED!');
+    expect(document.querySelectorAll('.challenge-card__row')).toHaveLength(1);
+  });
+
+  it('shows a passed attempt in place of the game-over menu: what it opened, then NEXT', () => {
+    const { menu, actions, screenButtons, button, title, subtitle, text } = setup(['warmUp']);
+    const events = new EventBus<MatchEvent>();
+    menu.listenTo(events);
+    events.emit({ type: 'gameOver', winnerIndex: 0, scores: [3, 1] });
+    expect(document.querySelectorAll('#gameButtons button')).toHaveLength(0);
+
+    menu.showChallengeResult({
+      verdict: { challenge: 'warmUp', isPassed: true, progress: 3, target: 3 },
+      unlocked: 'blitz',
+      isAllPassed: false,
+    });
+    expect(title()).toBe('PASSED!');
+    expect(subtitle()).toBe('WARM-UP');
+    expect(text('.challenge-result__message--unlock')).toBe('UNLOCKED: BLITZ');
+    expect(screenButtons().map((b) => b.textContent)).toEqual(['NEXT', 'ALL CHALLENGES']);
+
+    button('NEXT').click();
+    expect(actions.onReturnToMainMenu).toHaveBeenCalledOnce();
+    expect(title()).toBe('BLITZ');
+  });
+
+  it('shows a failed attempt: what it fell short by, TRY AGAIN and the list', () => {
+    const { menu, actions, screenButtons, button, title, text } = setup();
+    menu.showChallengeResult({
+      verdict: { challenge: 'longRally', isPassed: false, progress: 18, target: 20 },
+      unlocked: null,
+      isAllPassed: false,
+    });
+
+    expect(title()).toBe('NOT PASSED');
+    expect(text('.challenge-result__message')).toBe('RALLY: 18 OF 20');
+    expect(document.querySelector('.challenge-result__message--unlock')).toBeNull();
+    expect(screenButtons().map((b) => b.textContent)).toEqual(['TRY AGAIN', 'ALL CHALLENGES']);
+
+    button('TRY AGAIN').click();
+    expect(actions.onStartGame).toHaveBeenCalledOnce();
+    button('ALL CHALLENGES').click();
+    expect(actions.onReturnToMainMenu).toHaveBeenCalledOnce();
+    expect(title()).toBe('CHALLENGE');
+  });
+
+  it('celebrates the last challenge passed, and offers only the list after it', () => {
+    const { menu, screenButtons, text } = setup([...CHALLENGE_IDS]);
+    menu.showChallengeResult({
+      verdict: { challenge: 'insanity', isPassed: true, progress: 5, target: 5 },
+      unlocked: null,
+      isAllPassed: true,
+    });
+
+    expect(text('.challenge-result__message--unlock')).toBe('EVERY CHALLENGE PASSED');
+    expect(screenButtons().map((b) => b.textContent)).toEqual(['ALL CHALLENGES']);
+  });
+
+  it('still shows the game-over menu after a quick match', () => {
+    const { menu } = setup([], false);
+    const events = new EventBus<MatchEvent>();
+    menu.listenTo(events);
+    events.emit({ type: 'gameOver', winnerIndex: 0, scores: [5, 1] });
+
+    expect(document.getElementById('gameTitle')?.textContent).toBe('YOU WIN');
+  });
+});

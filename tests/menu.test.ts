@@ -29,6 +29,8 @@ const setup = () => {
   const sfx = { playSettingsClick: vi.fn() } as unknown as SoundEffects;
   const actions = {
     onStartGame: vi.fn(),
+    onStartQuickMatch: vi.fn(),
+    onStartChallenge: vi.fn(),
     onResumeGame: vi.fn(),
     onReturnToMainMenu: vi.fn(),
     onUnlockAudio: vi.fn(),

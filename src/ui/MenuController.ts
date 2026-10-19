@@ -1,13 +1,25 @@
 import { h } from 'preact';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
+import { ChallengeVerdict } from '@/match/ChallengeJudge';
+import { CHALLENGE_IDS, ChallengeId } from '@/match/challenges';
 import { MatchEvent } from '@/match/MatchFlow';
 import { MODE_IDS, ModeId, MODES } from '@/match/modes';
 import { DIFFICULTY_LEVELS } from '@/match/difficulty';
+import {
+  ChallengeProgress,
+  challengeState,
+  getEmptyChallengeProgress,
+  nextChallenge,
+} from '@/profile/ChallengeProgress';
 import { getEmptyStatistics, Statistics } from '@/profile/Statistics';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
+import { describeMatch, describeShortfall } from '@/ui/challengeTexts';
+import { ChallengeCard } from '@/ui/screens/ChallengeCard';
+import { ChallengeList } from '@/ui/screens/ChallengeList';
+import { ChallengeResult, ChallengeResultAction } from '@/ui/screens/ChallengeResult';
 import { PlayMenu } from '@/ui/screens/PlayMenu';
 import { Choice } from '@/ui/screens/OptionRow';
 import { QuickMatchSetup } from '@/ui/screens/QuickMatchSetup';
@@ -22,9 +34,32 @@ export interface StatisticsAccess {
   reset(): void;
 }
 
+/** How far the player has got through the challenges, as the profile keeps it. */
+export interface ChallengeProgressAccess {
+  get(): ChallengeProgress;
+}
+
+/** How an attempt at a challenge went, as its result screen shows it. */
+export interface ChallengeOutcome {
+  verdict: ChallengeVerdict;
+  /** The challenge this attempt opened, passing it for the first time; null for none. */
+  unlocked: ChallengeId | null;
+  /** Whether it was the last challenge, passed for the first time: every one is passed now. */
+  isAllPassed: boolean;
+}
+
 export interface GameMenuActions {
-  /** Starts a quick match, as the player last set it up (the settings keep the setup). */
+  /** Starts the same match again from 0:0, set up as it was (restart, play again). */
   onStartGame: () => void;
+  /** Starts a quick match, as the player last set it up (the settings keep the setup). */
+  onStartQuickMatch: () => void;
+  /** Starts an attempt at a challenge. */
+  onStartChallenge: (challenge: ChallengeId) => void;
+  /**
+   * Whether the match on court is an attempt at a challenge: its end shows the attempt's result
+   * (`showChallengeResult`) instead of the game-over menu. No match is when left out.
+   */
+  isChallengeMatch?: () => boolean;
   onResumeGame: () => void;
   onReturnToMainMenu: () => void;
   onUnlockAudio: () => void;
@@ -125,6 +160,8 @@ export class MenuController {
   private actions: GameMenuActions;
   /** The player's record, as the profile keeps it, for the statistics screen. */
   private readonly statistics: StatisticsAccess;
+  /** Which challenges the player has passed, for their screens and the statistics. */
+  private readonly challenges: ChallengeProgressAccess;
   /** Where Esc leads from what is on screen (the settings, the PLAY menu, the setup). */
   private back: (() => void) | null = null;
   /** Whether the quick match's setup is the last screen opened. */
@@ -140,6 +177,7 @@ export class MenuController {
     settings: SettingsStore,
     actions: GameMenuActions,
     statistics: StatisticsAccess = { get: getEmptyStatistics, reset: () => {} },
+    challenges: ChallengeProgressAccess = { get: getEmptyChallengeProgress },
   ) {
     this.uiManager = uiManager;
     this.i18n = i18n;
@@ -147,6 +185,7 @@ export class MenuController {
     this.settings = settings;
     this.actions = actions;
     this.statistics = statistics;
+    this.challenges = challenges;
 
     // A setting may also change from outside the menu (the music chip, the M key)
     this.unsubscribe = settings.subscribe(() => {
@@ -207,7 +246,10 @@ export class MenuController {
     );
   }
 
-  /** The player's record: the overall one, then wins at each difficulty. */
+  /**
+   * The player's record: the overall one, then wins at each difficulty, then the challenges
+   * passed (they don't count toward the rest).
+   */
   public showStatistics(): void {
     const back = () => this.showMainMenu();
     this.open(back);
@@ -237,6 +279,10 @@ export class MenuController {
               const { played, won } = stats.byDifficulty[level];
               return { label: this.i18n.getDifficultyInfo(level)[0], value: `${won} / ${played}` };
             }),
+          },
+          {
+            heading: t('challengesHeading'),
+            rows: [{ label: t('challengesPassed'), value: this.passedCount() }],
           },
         ],
         resetLabel: t('resetStats'),
@@ -278,6 +324,125 @@ export class MenuController {
 
   private pickMode(mode: ModeId): void {
     if (mode === 'quick') this.showQuickMatchSetup();
+    if (mode === 'challenges') this.showChallengeList();
+  }
+
+  /** "4 / 9": the challenges passed, of them all. */
+  private passedCount(): string {
+    return `${this.challenges.get().passed.length} / ${CHALLENGE_IDS.length}`;
+  }
+
+  /** Every challenge in the order they open, the count of those passed under the title. */
+  public showChallengeList(): void {
+    const back = () => this.showPlayMenu();
+    this.open(back);
+    const progress = this.challenges.get();
+    this.uiManager.showScreen(
+      this.i18n.getModeName('challenges'),
+      `${this.i18n.t('challengesPassed')}: ${this.passedCount()}`,
+      h(ChallengeList, {
+        challenges: CHALLENGE_IDS.map((id) => ({
+          id,
+          name: this.i18n.getChallengeInfo(id)[0],
+          state: challengeState(progress, id),
+        })),
+        backLabel: this.i18n.t('back'),
+        onPick: (id) => this.showChallengeCard(id),
+        onBack: back,
+      }),
+      this.actions.onUnlockAudio,
+      'challenges',
+    );
+  }
+
+  /**
+   * A challenge's card: its name and goal, its match and reward, START and BACK. A passed one is
+   * marked so, and can be played again.
+   */
+  public showChallengeCard(challenge: ChallengeId): void {
+    const back = () => this.showChallengeList();
+    this.open(back);
+    const [name, goal] = this.i18n.getChallengeInfo(challenge);
+    const next = nextChallenge(challenge);
+    const isPassed = challengeState(this.challenges.get(), challenge) === 'passed';
+    const rows = [
+      { label: this.i18n.t('challengeMatch'), value: describeMatch(this.i18n, challenge) },
+    ];
+    // Until there is money (stage 6), passing one opens the next: the last has no reward yet
+    if (next) {
+      rows.push({
+        label: this.i18n.t('challengeReward'),
+        value: this.i18n.format('challengeUnlocks', { name: this.i18n.getChallengeInfo(next)[0] }),
+      });
+    }
+    this.uiManager.showScreen(
+      name,
+      goal,
+      h(ChallengeCard, {
+        rows,
+        passedLabel: isPassed ? this.i18n.t('attemptPassed') : null,
+        startLabel: this.i18n.t('start'),
+        backLabel: this.i18n.t('back'),
+        onStart: () => this.actions.onStartChallenge(challenge),
+        onBack: back,
+      }),
+      this.actions.onUnlockAudio,
+      `challenge:${challenge}`,
+    );
+  }
+
+  /**
+   * How an attempt went, in place of the game-over menu. Passed: what it opened, NEXT (on to the
+   * next one's card) and the list. Not passed: what it fell short by, TRY AGAIN and the list.
+   */
+  public showChallengeResult({ verdict, unlocked, isAllPassed }: ChallengeOutcome): void {
+    this.open();
+    const { challenge, isPassed } = verdict;
+    const next = nextChallenge(challenge);
+    // Out of the finished match, back to the menus, and on to a challenge's screen
+    const leave = (show: () => void) => () => {
+      this.actions.onReturnToMainMenu();
+      show();
+    };
+    const toList: ChallengeResultAction = {
+      id: 'list',
+      label: this.i18n.t('toChallenges'),
+      color: 'purple',
+      onClick: leave(() => this.showChallengeList()),
+    };
+    const actions: ChallengeResultAction[] = [];
+    if (!isPassed) {
+      actions.push({
+        id: 'again',
+        label: this.i18n.t('tryAgain'),
+        color: 'cyan',
+        onClick: () => this.actions.onStartGame(),
+      });
+    } else if (next) {
+      actions.push({
+        id: 'next',
+        label: this.i18n.t('nextChallenge'),
+        color: 'cyan',
+        onClick: leave(() => this.showChallengeCard(next)),
+      });
+    }
+    actions.push(toList);
+
+    let message = '';
+    if (!isPassed) message = describeShortfall(this.i18n, verdict);
+    else if (unlocked) {
+      message = this.i18n.format('attemptUnlocked', {
+        name: this.i18n.getChallengeInfo(unlocked)[0],
+      });
+    } else if (isAllPassed) message = this.i18n.t('attemptAllPassed');
+
+    this.uiManager.showScreen(
+      this.i18n.t(isPassed ? 'attemptPassed' : 'attemptFailed'),
+      this.i18n.getChallengeInfo(challenge)[0],
+      h(ChallengeResult, { message, isUnlock: unlocked !== null || isAllPassed, actions }),
+      this.actions.onUnlockAudio,
+      'challengeResult',
+    );
   }
 
   /**
@@ -297,7 +462,7 @@ export class MenuController {
         nextLabel: this.i18n.t('nextChoice'),
         startLabel: this.i18n.t('start'),
         backLabel: this.i18n.t('back'),
-        onStart: () => this.actions.onStartGame(),
+        onStart: () => this.actions.onStartQuickMatch(),
         onBack: back,
       }),
       this.actions.onUnlockAudio,
@@ -337,12 +502,14 @@ export class MenuController {
   }
 
   /**
-   * Opens the game-over menu (and puts the pause button away) whenever a match ends.
+   * Opens the game-over menu (and puts the pause button away) whenever a match ends; after an
+   * attempt at a challenge, its result comes instead, told by `showChallengeResult`.
    * @returns a function that stops it
    */
   public listenTo(events: EventBus<MatchEvent>): () => void {
     return events.on('gameOver', ({ winnerIndex, scores }) => {
       this.uiManager.setPauseButtonVisibility(false);
+      if (this.actions.isChallengeMatch?.()) return;
       this.showGameOverMenu(winnerIndex, scores);
     });
   }
@@ -377,7 +544,8 @@ export class MenuController {
   }
 
   /**
-   * Esc in the settings, the statistics, the PLAY menu or the quick match's setup: back to
+   * Esc in the settings, the statistics, the PLAY menu, the quick match's setup or a challenge's
+   * screen (the list, a card): back to
    * where it was opened from, as its BACK button does.
    * @returns whether it went back (false anywhere else)
    */

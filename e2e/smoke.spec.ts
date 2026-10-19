@@ -81,7 +81,7 @@ test('lists the modes behind PLAY, the ones still to come switched off', async (
 
   await button(page, 'PLAY').click();
   await expect(button(page, 'STORY')).toBeDisabled();
-  await expect(button(page, 'CHALLENGE')).toBeDisabled();
+  await expect(button(page, 'CHALLENGE')).toBeEnabled();
   await expect(button(page, 'QUICK MATCH')).toBeEnabled();
   // Down to BACK, on the court in every orientation (on a portrait phone both are turned)
   await expectOnCourt(page, button(page, 'BACK'));
@@ -106,6 +106,27 @@ test('sets up a quick match, its background coming up behind the menu', async ({
   await expectOnCourt(page, button(page, 'Next').first());
   await page.waitForTimeout(SETTLE_MS);
 
+  await button(page, 'START').click();
+  await expect(menu(page)).toHaveClass(/game__ui--hidden/);
+  await page.waitForTimeout(SETTLE_MS);
+});
+
+test('lists the challenges on the court and starts the first from its card', async ({ page }) => {
+  await page.goto('');
+
+  await button(page, 'PLAY').click();
+  await button(page, 'CHALLENGE').click();
+  await expect(page.locator('#gameSubtitle')).toHaveText('PASSED: 0 / 9');
+  await expect(button(page, 'WARM-UP')).toBeEnabled();
+  await expect(button(page, 'INSANITY')).toBeDisabled();
+  // Every challenge and BACK, on the court in every orientation
+  await expectOnCourt(page, button(page, 'WARM-UP'));
+  await expectOnCourt(page, button(page, 'INSANITY'));
+  await expectOnCourt(page, button(page, 'BACK'));
+
+  await button(page, 'WARM-UP').click();
+  await expect(page.locator('#gameSubtitle')).toHaveText('Win the match');
+  await expectOnCourt(page, button(page, 'BACK'));
   await button(page, 'START').click();
   await expect(menu(page)).toHaveClass(/game__ui--hidden/);
   await page.waitForTimeout(SETTLE_MS);
@@ -161,7 +182,7 @@ test('brings settings saved before the profile into it', async ({ page }) => {
   await button(page, 'БЫСТРЫЙ МАТЧ').click();
   await expect(choice(page, 'ОЧКИ')).toHaveAttribute('aria-valuetext', '7');
   const profile = await page.evaluate(() => localStorage.getItem('bouncewave_profile'));
-  expect(JSON.parse(profile ?? '{}')).toMatchObject({ version: 2 });
+  expect(JSON.parse(profile ?? '{}')).toMatchObject({ version: 3 });
 });
 
 test('shows the statistics on the court, and comes back', async ({ page }) => {
