@@ -9,21 +9,23 @@ export interface ChallengeResultAction {
 }
 
 export interface ChallengeResultProps {
-  /** What the attempt came to: what passing it opened, or what it fell short by. */
+  /** What the attempt came to: what it fell short by, or that every challenge is passed. */
   message: string;
-  /** Whether the message announces something just opened, which comes in with a flourish. */
-  isUnlock: boolean;
+  /** Whether the message celebrates (every challenge passed): it comes in with a flourish. */
+  isCelebration: boolean;
   actions: readonly ChallengeResultAction[];
 }
 
 /**
  * How an attempt went, in place of the game-over menu, under PASSED! or NOT PASSED (the screen's
- * title): what it opened or fell short by, then the way on. Texts come in ready to show.
+ * title): what it fell short by, if anything, then the way on. Texts come in ready to show.
  */
-export function ChallengeResult({ message, isUnlock, actions }: ChallengeResultProps) {
+export function ChallengeResult({ message, isCelebration, actions }: ChallengeResultProps) {
   return (
     <div class="challenge-result">
-      <p class={`challenge-result__message${isUnlock ? ' challenge-result__message--unlock' : ''}`}>
+      <p
+        class={`challenge-result__message${isCelebration ? ' challenge-result__message--celebration' : ''}`}
+      >
         {message}
       </p>
       <div class="screen-buttons">

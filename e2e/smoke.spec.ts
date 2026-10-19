@@ -117,8 +117,9 @@ test('lists the challenges on the court and starts the first from its card', asy
   await button(page, 'PLAY').click();
   await button(page, 'CHALLENGE').click();
   await expect(page.locator('#gameSubtitle')).toHaveText('PASSED: 0 / 9');
+  // Every challenge is open from the start
   await expect(button(page, 'WARM-UP')).toBeEnabled();
-  await expect(button(page, 'INSANITY')).toBeDisabled();
+  await expect(button(page, 'INSANITY')).toBeEnabled();
   // Every challenge and BACK, on the court in every orientation
   await expectOnCourt(page, button(page, 'WARM-UP'));
   await expectOnCourt(page, button(page, 'INSANITY'));

@@ -17,7 +17,7 @@ import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
-import { challengeState, markPassed, nextChallenge } from '@/profile/ChallengeProgress';
+import { challengeState, isEveryChallengePassed, markPassed } from '@/profile/ChallengeProgress';
 import { ProfileStore } from '@/profile/ProfileStore';
 import { getEmptyStatistics } from '@/profile/Statistics';
 import { StatsRecorder } from '@/profile/StatsRecorder';
@@ -117,7 +117,7 @@ export class Game {
     // debug overlay comes with a menu of them all
     const pinned = new URLSearchParams(window.location.search).get('bg');
     if (pinned && isSceneId(pinned)) this.renderer.pinBackground(pinned);
-    // ?challenge=survival makes every quick match an attempt at that challenge, locked or not;
+    // ?challenge=survival makes every quick match an attempt at that challenge;
     // the debug overlay shows how the last attempt went
     const challenge = new URLSearchParams(window.location.search).get('challenge');
     if (isChallengeId(challenge)) this.pinnedChallenge = challenge;
@@ -312,21 +312,18 @@ export class Game {
   }
 
   /**
-   * Keeps a passed challenge in the profile (which opens the next one) and shows the attempt's
-   * result in place of the game-over menu.
+   * Keeps a passed challenge in the profile (its reward comes with the money, stage 6) and shows
+   * the attempt's result in place of the game-over menu.
    */
   private recordVerdict(verdict: ChallengeVerdict): void {
     const progress = this.profile.current.challenges;
     const isFirstPass =
       verdict.isPassed && challengeState(progress, verdict.challenge) !== 'passed';
-    if (isFirstPass) {
-      this.profile.update({ challenges: markPassed(progress, verdict.challenge) });
-    }
-    const next = nextChallenge(verdict.challenge);
+    const after = isFirstPass ? markPassed(progress, verdict.challenge) : progress;
+    if (isFirstPass) this.profile.update({ challenges: after });
     this.menuController.showChallengeResult({
       verdict,
-      unlocked: isFirstPass ? next : null,
-      isAllPassed: isFirstPass && next === null,
+      isAllPassed: isFirstPass && isEveryChallengePassed(after),
     });
   }
 

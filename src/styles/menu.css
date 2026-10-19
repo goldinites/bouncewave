@@ -364,7 +364,7 @@
   text-wrap: balance;
 }
 
-/* A tick or a padlock after the name, drawn in the button's color */
+/* A tick after a passed one's name, drawn in the button's color */
 .challenge-list__mark {
   flex: none;
   width: 1em;
@@ -436,17 +436,17 @@
 }
 
 /* What a failed attempt fell short by, in the menus' pink */
-.challenge-result__message:not(.challenge-result__message--unlock) {
+.challenge-result__message:not(.challenge-result__message--celebration) {
   color: var(--pink-soft);
   text-shadow: 0 0 4px var(--pink-soft);
 }
 
-/* A challenge just opened flares up as it comes in */
-.challenge-result__message--unlock {
-  animation: challenge-unlock 0.9s ease-out both;
+/* Every challenge passed: the news flares up as it comes in */
+.challenge-result__message--celebration {
+  animation: challenge-celebration 0.9s ease-out both;
 }
 
-@keyframes challenge-unlock {
+@keyframes challenge-celebration {
   0% {
     opacity: 0;
     transform: scale(0.6);
@@ -560,7 +560,7 @@
   .game__title,
   .game-button:hover,
   .game__buttons button:hover,
-  .challenge-result__message--unlock {
+  .challenge-result__message--celebration {
     animation: none !important;
   }
 }

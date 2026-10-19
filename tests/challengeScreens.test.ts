@@ -7,6 +7,7 @@ import { MatchEvent } from '@/match/MatchFlow';
 import {
   ChallengeProgress,
   challengeState,
+  isEveryChallengePassed,
   markPassed,
   nextChallenge,
 } from '@/profile/ChallengeProgress';
@@ -21,20 +22,22 @@ import { UIManager } from '@/ui/UIManager';
 const progressOf = (...passed: ChallengeId[]): ChallengeProgress => ({ passed });
 
 describe('progress through the challenges', () => {
-  it('opens the first, and each next one once the one before is passed', () => {
+  it('has every challenge open from the start, in any order', () => {
     const states = (progress: ChallengeProgress) =>
       CHALLENGE_IDS.slice(0, 4).map((id) => challengeState(progress, id));
 
-    expect(states(progressOf())).toEqual(['open', 'locked', 'locked', 'locked']);
-    expect(states(progressOf('warmUp', 'blitz'))).toEqual(['passed', 'passed', 'open', 'locked']);
+    expect(states(progressOf())).toEqual(['open', 'open', 'open', 'open']);
+    expect(states(progressOf('blitz', 'shutout'))).toEqual(['open', 'passed', 'open', 'passed']);
   });
 
-  it('keeps the passed ones once each, in the order they open', () => {
+  it('keeps the passed ones once each, in the order of the list', () => {
     let progress = progressOf();
-    progress = markPassed(progress, 'blitz');
+    progress = markPassed(progress, 'insanity');
     progress = markPassed(progress, 'warmUp');
-    expect(markPassed(progress, 'blitz')).toBe(progress);
-    expect(progress.passed).toEqual(['warmUp', 'blitz']);
+    expect(markPassed(progress, 'insanity')).toBe(progress);
+    expect(progress.passed).toEqual(['warmUp', 'insanity']);
+    expect(isEveryChallengePassed(progress)).toBe(false);
+    expect(isEveryChallengePassed(progressOf(...CHALLENGE_IDS))).toBe(true);
   });
 
   it('knows which comes next, and that none comes after the last', () => {
@@ -128,8 +131,8 @@ describe('the challenges in the menus', () => {
     return { menu, actions, screenButtons, button, title, subtitle, text };
   };
 
-  it('opens the list from PLAY: the passed ones ticked, the next open, the rest locked', () => {
-    const { menu, screenButtons, button, title, subtitle } = setup(['warmUp', 'blitz']);
+  it('opens the list from PLAY: every challenge open, the passed ones ticked', () => {
+    const { menu, screenButtons, button, title, subtitle } = setup(['warmUp', 'giant']);
     menu.showPlayMenu();
     button('CHALLENGE').click();
 
@@ -147,26 +150,27 @@ describe('the challenges in the menus', () => {
       'OVERLOAD',
       'INSANITY',
     ]);
-    expect(items.map((b) => b.disabled)).toEqual([...Array(3).fill(false), ...Array(6).fill(true)]);
+    expect(items.every((b) => !b.disabled)).toBe(true);
     expect(items[0].classList).toContain('challenge-list__item--passed');
-    expect(items[2].classList).toContain('challenge-list__item--open');
+    expect(items[6].classList).toContain('challenge-list__item--passed');
+    expect(items[8].classList).toContain('challenge-list__item--open');
     expect(screenButtons().at(-1)?.textContent).toBe('BACK');
   });
 
   it("shows a challenge's card, starts it, and steps back on Esc to the list and PLAY", () => {
     const { menu, actions, button, title, subtitle, text } = setup();
     menu.showChallengeList();
-    button('WARM-UP').click();
+    button('GIANT').click();
 
-    expect(title()).toBe('WARM-UP');
-    expect(subtitle()).toBe('Win the match');
+    expect(title()).toBe('GIANT');
+    expect(subtitle()).toBe('Win against a CPU with a paddle half as long again');
     expect(
       [...document.querySelectorAll('.challenge-card__row')].map((row) => row.textContent),
-    ).toEqual(['MATCHfirst to 3 · NORMAL', 'REWARDunlocks BLITZ']);
+    ).toEqual(['MATCHfirst to 5 · CPU paddle ×1.5 · HARD']);
     expect(text('.challenge-card__passed')).toBeUndefined();
 
     button('START').click();
-    expect(actions.onStartChallenge).toHaveBeenCalledWith('warmUp');
+    expect(actions.onStartChallenge).toHaveBeenCalledWith('giant');
     expect(actions.onUnlockAudio).toHaveBeenCalled();
 
     expect(menu.goBack()).toBe(true);
@@ -175,15 +179,14 @@ describe('the challenges in the menus', () => {
     expect(title()).toBe('GAME MODE');
   });
 
-  it('marks a passed challenge on its card, and gives the last no reward', () => {
-    const { menu, text } = setup([...CHALLENGE_IDS]);
+  it('marks a passed challenge on its card', () => {
+    const { menu, text } = setup(['insanity']);
     menu.showChallengeCard('insanity');
 
     expect(text('.challenge-card__passed')).toBe('PASSED!');
-    expect(document.querySelectorAll('.challenge-card__row')).toHaveLength(1);
   });
 
-  it('shows a passed attempt in place of the game-over menu: what it opened, then NEXT', () => {
+  it('shows a passed attempt in place of the game-over menu, then NEXT', () => {
     const { menu, actions, screenButtons, button, title, subtitle, text } = setup(['warmUp']);
     const events = new EventBus<MatchEvent>();
     menu.listenTo(events);
@@ -192,12 +195,11 @@ describe('the challenges in the menus', () => {
 
     menu.showChallengeResult({
       verdict: { challenge: 'warmUp', isPassed: true, progress: 3, target: 3 },
-      unlocked: 'blitz',
       isAllPassed: false,
     });
     expect(title()).toBe('PASSED!');
     expect(subtitle()).toBe('WARM-UP');
-    expect(text('.challenge-result__message--unlock')).toBe('UNLOCKED: BLITZ');
+    expect(text('.challenge-result__message')).toBe('');
     expect(screenButtons().map((b) => b.textContent)).toEqual(['NEXT', 'ALL CHALLENGES']);
 
     button('NEXT').click();
@@ -209,13 +211,12 @@ describe('the challenges in the menus', () => {
     const { menu, actions, screenButtons, button, title, text } = setup();
     menu.showChallengeResult({
       verdict: { challenge: 'longRally', isPassed: false, progress: 18, target: 20 },
-      unlocked: null,
       isAllPassed: false,
     });
 
     expect(title()).toBe('NOT PASSED');
     expect(text('.challenge-result__message')).toBe('RALLY: 18 OF 20');
-    expect(document.querySelector('.challenge-result__message--unlock')).toBeNull();
+    expect(document.querySelector('.challenge-result__message--celebration')).toBeNull();
     expect(screenButtons().map((b) => b.textContent)).toEqual(['TRY AGAIN', 'ALL CHALLENGES']);
 
     button('TRY AGAIN').click();
@@ -225,15 +226,20 @@ describe('the challenges in the menus', () => {
     expect(title()).toBe('CHALLENGE');
   });
 
-  it('celebrates the last challenge passed, and offers only the list after it', () => {
+  it('celebrates every challenge passed, whichever was the last to go', () => {
     const { menu, screenButtons, text } = setup([...CHALLENGE_IDS]);
     menu.showChallengeResult({
-      verdict: { challenge: 'insanity', isPassed: true, progress: 5, target: 5 },
-      unlocked: null,
+      verdict: { challenge: 'blitz', isPassed: true, progress: 5, target: 5 },
       isAllPassed: true,
     });
+    expect(text('.challenge-result__message--celebration')).toBe('EVERY CHALLENGE PASSED');
+    expect(screenButtons().map((b) => b.textContent)).toEqual(['NEXT', 'ALL CHALLENGES']);
 
-    expect(text('.challenge-result__message--unlock')).toBe('EVERY CHALLENGE PASSED');
+    // After the last in the list there is no NEXT
+    menu.showChallengeResult({
+      verdict: { challenge: 'insanity', isPassed: true, progress: 5, target: 5 },
+      isAllPassed: false,
+    });
     expect(screenButtons().map((b) => b.textContent)).toEqual(['ALL CHALLENGES']);
   });
 

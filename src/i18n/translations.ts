@@ -69,10 +69,8 @@ export interface TranslationSchema {
    */
   challengesHeading: string;
   challengesPassed: string;
-  /** A challenge's card: its match, its reward, and what that reward opens. */
+  /** A challenge's card: its match. */
   challengeMatch: string;
-  challengeReward: string;
-  challengeUnlocks: string;
   /** A challenge's match, piece by piece: its length, the player's lives, its clock, and so on. */
   ruleFirstTo: string;
   ruleLives: string;
@@ -80,10 +78,9 @@ export interface TranslationSchema {
   ruleBalls: string;
   ruleCpuPaddle: string;
   ruleRamp: string;
-  /** An attempt's outcome: passed or not, what passing it opened, and its buttons. */
+  /** An attempt's outcome: passed or not, every challenge passed, and its buttons. */
   attemptPassed: string;
   attemptFailed: string;
-  attemptUnlocked: string;
   attemptAllPassed: string;
   nextChallenge: string;
   tryAgain: string;
@@ -149,8 +146,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     challengesHeading: 'CHALLENGES',
     challengesPassed: 'PASSED',
     challengeMatch: 'MATCH',
-    challengeReward: 'REWARD',
-    challengeUnlocks: 'unlocks {name}',
     ruleFirstTo: 'first to {n}',
     ruleLives: '{n} lives',
     ruleTime: '{time} on the clock',
@@ -159,7 +154,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     ruleRamp: 'CPU stronger every point',
     attemptPassed: 'PASSED!',
     attemptFailed: 'NOT PASSED',
-    attemptUnlocked: 'UNLOCKED: {name}',
     attemptAllPassed: 'EVERY CHALLENGE PASSED',
     nextChallenge: 'NEXT',
     tryAgain: 'TRY AGAIN',
@@ -241,8 +235,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     challengesHeading: 'ИСПЫТАНИЯ',
     challengesPassed: 'ПРОЙДЕНО',
     challengeMatch: 'МАТЧ',
-    challengeReward: 'НАГРАДА',
-    challengeUnlocks: 'открывает «{name}»',
     ruleFirstTo: 'до {n} очков',
     ruleLives: 'жизней: {n}',
     ruleTime: 'на время: {time}',
@@ -251,7 +243,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     ruleRamp: 'CPU сильнее с каждым очком',
     attemptPassed: 'ПРОЙДЕНО!',
     attemptFailed: 'НЕ ПРОЙДЕНО',
-    attemptUnlocked: 'ОТКРЫТО: {name}',
     attemptAllPassed: 'ВСЕ ИСПЫТАНИЯ ПРОЙДЕНЫ',
     nextChallenge: 'СЛЕДУЮЩЕЕ',
     tryAgain: 'ЕЩЁ РАЗ',

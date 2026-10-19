@@ -134,10 +134,9 @@ describe('Game', () => {
     expect($('#gameTitle').textContent).toBe('PAUSED');
   });
 
-  it('plays a challenge from its card, keeps it passed and opens the next one', () => {
+  it('plays a challenge from its card and keeps it passed', () => {
     buttons()[0].click(); // play
     screenButton('CHALLENGE').click();
-    expect(screenButton('BLITZ').disabled).toBe(true);
     screenButton('WARM-UP').click();
     screenButton('START').click();
     expect(isMenuOpen()).toBe(false);
@@ -146,14 +145,13 @@ describe('Game', () => {
     const { matchEvents } = game as unknown as { matchEvents: EventBus<MatchEvent> };
     matchEvents.emit({ type: 'gameOver', winnerIndex: 0, scores: [3, 0] });
     expect($('#gameTitle').textContent).toBe('PASSED!');
-    expect($('.challenge-result__message').textContent).toBe('UNLOCKED: BLITZ');
     expect(JSON.parse(localStorage.getItem('bouncewave_profile')!).challenges).toEqual({
       passed: ['warmUp'],
     });
 
     screenButton('ALL CHALLENGES').click();
     expect($('#gameSubtitle').textContent).toBe('PASSED: 1 / 9');
-    expect(screenButton('BLITZ').disabled).toBe(false);
+    expect(screenButton('WARM-UP').classList).toContain('challenge-list__item--passed');
 
     // A quick match after it is a quick match again: its end is the game-over menu
     press('Escape');

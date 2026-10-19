@@ -42,9 +42,7 @@ export interface ChallengeProgressAccess {
 /** How an attempt at a challenge went, as its result screen shows it. */
 export interface ChallengeOutcome {
   verdict: ChallengeVerdict;
-  /** The challenge this attempt opened, passing it for the first time; null for none. */
-  unlocked: ChallengeId | null;
-  /** Whether it was the last challenge, passed for the first time: every one is passed now. */
+  /** Whether this attempt passed the last challenge still to pass: every one is passed now. */
   isAllPassed: boolean;
 }
 
@@ -356,25 +354,17 @@ export class MenuController {
   }
 
   /**
-   * A challenge's card: its name and goal, its match and reward, START and BACK. A passed one is
-   * marked so, and can be played again.
+   * A challenge's card: its name and goal, its match, START and BACK. A passed one is marked so,
+   * and can be played again. Its reward (money) joins it with the economy (stage 6).
    */
   public showChallengeCard(challenge: ChallengeId): void {
     const back = () => this.showChallengeList();
     this.open(back);
     const [name, goal] = this.i18n.getChallengeInfo(challenge);
-    const next = nextChallenge(challenge);
     const isPassed = challengeState(this.challenges.get(), challenge) === 'passed';
     const rows = [
       { label: this.i18n.t('challengeMatch'), value: describeMatch(this.i18n, challenge) },
     ];
-    // Until there is money (stage 6), passing one opens the next: the last has no reward yet
-    if (next) {
-      rows.push({
-        label: this.i18n.t('challengeReward'),
-        value: this.i18n.format('challengeUnlocks', { name: this.i18n.getChallengeInfo(next)[0] }),
-      });
-    }
     this.uiManager.showScreen(
       name,
       goal,
@@ -392,10 +382,11 @@ export class MenuController {
   }
 
   /**
-   * How an attempt went, in place of the game-over menu. Passed: what it opened, NEXT (on to the
-   * next one's card) and the list. Not passed: what it fell short by, TRY AGAIN and the list.
+   * How an attempt went, in place of the game-over menu. Passed: NEXT (on to the next one's card)
+   * and the list, with a flourish once every challenge is passed. Not passed: what it fell short
+   * by, TRY AGAIN and the list.
    */
-  public showChallengeResult({ verdict, unlocked, isAllPassed }: ChallengeOutcome): void {
+  public showChallengeResult({ verdict, isAllPassed }: ChallengeOutcome): void {
     this.open();
     const { challenge, isPassed } = verdict;
     const next = nextChallenge(challenge);
@@ -430,16 +421,12 @@ export class MenuController {
 
     let message = '';
     if (!isPassed) message = describeShortfall(this.i18n, verdict);
-    else if (unlocked) {
-      message = this.i18n.format('attemptUnlocked', {
-        name: this.i18n.getChallengeInfo(unlocked)[0],
-      });
-    } else if (isAllPassed) message = this.i18n.t('attemptAllPassed');
+    else if (isAllPassed) message = this.i18n.t('attemptAllPassed');
 
     this.uiManager.showScreen(
       this.i18n.t(isPassed ? 'attemptPassed' : 'attemptFailed'),
       this.i18n.getChallengeInfo(challenge)[0],
-      h(ChallengeResult, { message, isUnlock: unlocked !== null || isAllPassed, actions }),
+      h(ChallengeResult, { message, isCelebration: isPassed && isAllPassed, actions }),
       this.actions.onUnlockAudio,
       'challengeResult',
     );

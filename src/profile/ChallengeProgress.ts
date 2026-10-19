@@ -2,9 +2,9 @@ import * as v from 'valibot';
 import { CHALLENGE_IDS, ChallengeId } from '@/match/challenges';
 
 /**
- * How far the player has got through the challenges: which they have passed. They open one
- * after another, so this also says which are open. Kept as an object so what comes with a
- * challenge later (its reward, stage 6) can lie beside it.
+ * How far the player has got through the challenges: which they have passed. Every challenge is
+ * open from the start; the later ones are hard enough to wait for the player's progression. Kept
+ * as an object so what comes with a challenge later (its money reward, stage 6) can lie beside it.
  */
 export interface ChallengeProgress {
   /** Every challenge passed at least once, in the order they open. */
@@ -30,17 +30,18 @@ export const challengeProgressSchema = v.fallback(
   getEmptyChallengeProgress,
 ) as unknown as v.GenericSchema<unknown, ChallengeProgress>;
 
-/** Where a challenge stands for the player: passed, open to play, or still locked. */
-export type ChallengeState = 'passed' | 'open' | 'locked';
+/** Where a challenge stands for the player: passed, or still to pass (every one is open). */
+export type ChallengeState = 'passed' | 'open';
 
-/** The first challenge is always open; each other one opens when the one before is passed. */
 export function challengeState(progress: ChallengeProgress, id: ChallengeId): ChallengeState {
-  if (progress.passed.includes(id)) return 'passed';
-  const index = CHALLENGE_IDS.indexOf(id);
-  return index === 0 || progress.passed.includes(CHALLENGE_IDS[index - 1]) ? 'open' : 'locked';
+  return progress.passed.includes(id) ? 'passed' : 'open';
 }
 
-/** The challenge after `id`, the one passing it opens; null after the last. */
+/** Whether the player has passed every challenge there is. */
+export const isEveryChallengePassed = (progress: ChallengeProgress): boolean =>
+  progress.passed.length === CHALLENGE_IDS.length;
+
+/** The challenge after `id` in the list, the one NEXT leads to; null after the last. */
 export function nextChallenge(id: ChallengeId): ChallengeId | null {
   return CHALLENGE_IDS[CHALLENGE_IDS.indexOf(id) + 1] ?? null;
 }

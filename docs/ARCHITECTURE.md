@@ -141,8 +141,8 @@ paddles and a goal; its name and goal in both languages (`challenges` in
 from the match's events and gives a verdict on every finished attempt; it never changes the
 match. The menus start one (`onStartChallenge`), `Game.start` plays it and its restarts
 (`?challenge=<id>` makes every quick match one, for developers); the verdict goes to the profile
-(`challenges.passed`, `profile/ChallengeProgress.ts`, which also says what is open) and to the
-result screen in place of the game-over menu. Challenges stay out of the statistics
+(`challenges.passed`, `profile/ChallengeProgress.ts`; every challenge is open from the start)
+and to the result screen in place of the game-over menu. Challenges stay out of the statistics
 (`StatsRecorder`'s `isCounted`).
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
