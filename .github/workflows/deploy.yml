@@ -14,11 +14,12 @@ on:
 permissions:
   contents: read
 
-# Deploys queue up and never cancel each other; a newer push to a pull request replaces the run
-# still checking the previous one
+# Only release tags deploy, so only they share the Pages queue: a check of main or of a pull
+# request queued behind a deploy would cancel it while it waits (GitHub keeps one pending run a
+# group). Checks get a queue per branch, where a newer push replaces the run checking the last
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'pages' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.ref_type == 'tag' && 'pages' || format('checks-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
   build:
