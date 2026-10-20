@@ -279,10 +279,18 @@ describe('Renderer', () => {
     expect(spin).toHaveBeenCalledWith(expect.anything(), ball, expect.any(Number));
     expect(tint).toHaveBeenCalledOnce();
 
+    // The paddle that slowed it leaves afterimages, which outlast it a moment
+    const afterimages = vi.spyOn(SkillRenderer, 'renderAfterimages');
+    renderer.render(
+      baseFrame({ court: { isDemo: false, balls: [ball], ball, timeWarp: warp } }),
+      0.05,
+    );
+    expect(afterimages.mock.calls.at(-1)![1].length).toBeGreaterThan(0);
+
     // Back to speed, the cast is gone a moment later
     renderer.render(baseFrame({ court: { isDemo: false, balls: [ball], ball } }), 1);
     renderer.render(baseFrame({ court: { isDemo: false, balls: [ball], ball } }), 0.016);
-    expect(tint).toHaveBeenCalledOnce();
+    expect(tint).toHaveBeenCalledTimes(2);
     vi.restoreAllMocks();
   });
 
@@ -311,7 +319,6 @@ describe('Renderer', () => {
       expect.anything(),
       shot,
       expect.objectContaining({ side: 0 }),
-      expect.any(Number),
       expect.any(Boolean),
     );
     expect(meter.mock.calls[0][5]).toBe(0.8);

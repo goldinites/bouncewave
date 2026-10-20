@@ -1,8 +1,8 @@
 import { Ball } from '@/match/Ball';
-import { Paddle } from '@/match/Paddle';
-import { ShotRead } from '@/match/skills/Skill';
 import { COURT } from '@/match/config';
+import { Paddle } from '@/match/Paddle';
 import { Arc } from '@/match/skills/Arc';
+import { ShotRead } from '@/match/skills/Skill';
 import { TWO_PI } from '@/shared/math';
 
 // Arc: two streaks circling a spinning ball, the way it spins; brighter the harder it does
@@ -29,27 +29,56 @@ export interface TrailPoint {
   age: number;
 }
 
-// Analyzer: a scan line sweeps the court from its owner, the read flight shows as a dashed
-// wireframe, then a sight stays on where the ball arrives. Machine green, unlike any other sign
-const SHOT_READ = {
-  COLOR: '#5dff9a',
-  SCAN_TIME: 0.25, // s the scan line takes across the court
-  SCAN_WIDTH: 3, // px
-  FRAME_TIME: 0.35, // s the wireframe shows for, fading out over its last third
-  FRAME_DASH: [6, 6],
-  FRAME_ALPHA: 0.8,
-  SIGHT_RADIUS: 13, // px
-  SIGHT_TICK: 6, // px of each tick outside the ring
-  SIGHT_PULSE: 9, // rad/s
+// Analyzer, a sonar: a ping rings out from its owner's paddle, a green grid shows wherever it
+// has passed, the read flight lights up as echoes when the ping reaches them, and a contact
+// stays on where the ball arrives, pinging, until it does. Machine green, unlike any other sign
+const SONAR = {
+  RGB: '93, 255, 154',
+  PING_TIME: 0.5, // s the ping takes to cross the whole court
+  REACH: Math.hypot(COURT.WIDTH, COURT.HEIGHT), // px the ping travels in that time
+  GRID: 40, // px between grid lines
+  GRID_ALPHA: 0.22,
+  GRID_TIME: 0.8, // s the grid shows for, fading
+  ECHO_GAP: 22, // px along the flight between two echoes
+  ECHO_RADIUS: 2.5, // px
+  ECHO_LIFE: 0.7, // s an echo glows for once the ping has found it
+  CONTACT_RADIUS: 4, // px of the contact's dot
+  CONTACT_RING: 22, // px a contact's ring grows to
+  CONTACT_PERIOD: 0.6, // s between its pings
 } as const;
 
-// Reflex: the slowed world turns blue and its balls split into red and cyan ghosts
-const TIME_WARP = {
-  TINT: '40, 110, 255',
-  TINT_ALPHA: 0.2, // at full strength
-  GHOST_OFFSET: 4, // px either side of the ball
-  GHOST_ALPHA: 0.45,
+// Reflex, after Cyberpunk 2077's Sandevistan: the world slows and its owner's paddle, moving at
+// full speed through it, leaves a trail of afterimages in shifting colors; the screen's edges
+// glow teal
+export const AFTERIMAGES = {
+  INTERVAL: 0.045, // s between two afterimages
+  LIFE: 0.4, // s one lasts, fading
+  // Outlines with a faint fill, laid over each other plainly: added up, the overlapping ones
+  // would melt into white
+  ALPHA: 0.9,
+  FILL_ALPHA: 0.18,
+  // px each drifts back toward its goal line over its life, so a paddle moving along its line
+  // fans its afterimages out rather than stacking them
+  DRIFT: 18,
+  COLORS: ['#ff2bd6', '#19f0ff', '#d4ff3b', '#8a5cff'],
 } as const;
+const TIME_WARP = {
+  EDGE_RGB: '0, 255, 196',
+  EDGE_ALPHA: 0.22, // at the screen's corners, at full strength
+  DIM_ALPHA: 0.1, // over the whole screen: the slowed world a shade darker
+} as const;
+
+/** An afterimage of a paddle (Reflex), and seconds since it was left. */
+export interface Afterimage {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  age: number;
+  /** Which way is back toward its goal line: -1 left, 1 right. */
+  back: number;
+}
 
 /** How skills look on the court (docs/PROGRESSION.md): each has a sign the player can read. */
 export class SkillRenderer {
@@ -98,91 +127,154 @@ export class SkillRenderer {
   }
 
   /**
-   * A shot read ahead for `paddle`: the scan line sweeping away from it, the wireframe of the
-   * flight, and the sight on the arrival.
-   * @param isMotionReduced no sweeping line for a player who asked for less motion
+   * A shot read ahead for `paddle`, as a sonar sees it: the ping ringing out, the grid it reveals,
+   * the flight's echoes and the contact where the ball arrives.
+   * @param isMotionReduced for a player who asked for less motion: nothing sweeps or pings, the
+   *   grid and the echoes simply show and fade
    */
   public static renderShotRead(
     ctx: CanvasRenderingContext2D,
     read: ShotRead,
     paddle: Paddle,
-    time: number,
     isMotionReduced: boolean,
   ): void {
     const { path, age } = read;
     const arrival = path.at(-1);
     if (!arrival) return;
+    const originX = paddle.x + paddle.spec.width / 2;
+    const originY = paddle.drawY;
+    // How far the ping has got, and when it reaches a point
+    const reach = isMotionReduced ? SONAR.REACH : (age / SONAR.PING_TIME) * SONAR.REACH;
+    const reachedAt = (x: number, y: number) =>
+      isMotionReduced ? 0 : (Math.hypot(x - originX, y - originY) / SONAR.REACH) * SONAR.PING_TIME;
+    const green = (alpha: number) => `rgba(${SONAR.RGB}, ${Math.max(0, alpha)})`;
+
     ctx.save();
-    ctx.strokeStyle = SHOT_READ.COLOR;
-    ctx.lineCap = 'round';
+    ctx.lineWidth = 1;
 
-    if (age < SHOT_READ.SCAN_TIME && !isMotionReduced) {
-      const share = age / SHOT_READ.SCAN_TIME;
-      const fromX = paddle.x + paddle.spec.width / 2;
-      const toX = paddle.side === 0 ? COURT.WIDTH : 0;
-      const x = fromX + (toX - fromX) * share;
-      ctx.globalAlpha = 0.9 * (1 - share);
-      ctx.lineWidth = SHOT_READ.SCAN_WIDTH;
+    // The grid, wherever the ping has passed
+    if (age < SONAR.GRID_TIME) {
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(x, COURT.TOP_WALL);
-      ctx.lineTo(x, COURT.HEIGHT - COURT.BOTTOM_WALL);
+      ctx.arc(originX, originY, reach, 0, TWO_PI);
+      ctx.clip();
+      ctx.strokeStyle = green(SONAR.GRID_ALPHA * (1 - age / SONAR.GRID_TIME));
+      ctx.beginPath();
+      for (let x = SONAR.GRID / 2; x < COURT.WIDTH; x += SONAR.GRID) {
+        ctx.moveTo(x, COURT.TOP_WALL);
+        ctx.lineTo(x, COURT.HEIGHT - COURT.BOTTOM_WALL);
+      }
+      for (
+        let y = COURT.TOP_WALL + SONAR.GRID / 2;
+        y < COURT.HEIGHT - COURT.BOTTOM_WALL;
+        y += SONAR.GRID
+      ) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(COURT.WIDTH, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // The ping itself, a bright ring with a faint one behind it
+    if (!isMotionReduced && age < SONAR.PING_TIME) {
+      const share = age / SONAR.PING_TIME;
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = green(0.9 * (1 - share));
+      ctx.beginPath();
+      ctx.arc(originX, originY, reach, 0, TWO_PI);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = green(0.4 * (1 - share));
+      ctx.beginPath();
+      ctx.arc(originX, originY, Math.max(0, reach - 30), 0, TWO_PI);
       ctx.stroke();
     }
 
-    if (age < SHOT_READ.FRAME_TIME) {
-      const fadeFrom = (SHOT_READ.FRAME_TIME * 2) / 3;
-      const fade = age < fadeFrom ? 1 : 1 - (age - fadeFrom) / (SHOT_READ.FRAME_TIME - fadeFrom);
-      ctx.globalAlpha = SHOT_READ.FRAME_ALPHA * fade;
+    // The flight's echoes, each lit as the ping finds it
+    let along = 0;
+    for (let i = 1; i < path.length; i++) {
+      along += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
+      if (along < SONAR.ECHO_GAP) continue;
+      along = 0;
+      const since = age - reachedAt(path[i].x, path[i].y);
+      if (since < 0 || since > SONAR.ECHO_LIFE) continue;
+      ctx.fillStyle = green(1 - since / SONAR.ECHO_LIFE);
+      ctx.beginPath();
+      ctx.arc(path[i].x, path[i].y, SONAR.ECHO_RADIUS, 0, TWO_PI);
+      ctx.fill();
+    }
+
+    // The contact where it arrives, once the ping has found it, pinging back until it gets there
+    const found = age - reachedAt(arrival.x, arrival.y);
+    if (found >= 0) {
+      ctx.fillStyle = green(1);
+      ctx.beginPath();
+      ctx.arc(arrival.x, arrival.y, SONAR.CONTACT_RADIUS, 0, TWO_PI);
+      ctx.fill();
       ctx.lineWidth = 1.5;
-      ctx.setLineDash(SHOT_READ.FRAME_DASH);
-      ctx.beginPath();
-      ctx.moveTo(path[0].x, path[0].y);
-      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      const rings = isMotionReduced ? [0.5] : [(found / SONAR.CONTACT_PERIOD) % 1];
+      for (const share of rings) {
+        ctx.strokeStyle = green(isMotionReduced ? 0.6 : 1 - share);
+        ctx.beginPath();
+        const radius = SONAR.CONTACT_RADIUS + (SONAR.CONTACT_RING - SONAR.CONTACT_RADIUS) * share;
+        ctx.arc(arrival.x, arrival.y, radius, 0, TWO_PI);
+        ctx.stroke();
+      }
     }
-
-    // The sight: a ring with four ticks, breathing a little
-    const radius = SHOT_READ.SIGHT_RADIUS * (1 + 0.08 * Math.sin(time * SHOT_READ.SIGHT_PULSE));
-    ctx.globalAlpha = 0.9;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(arrival.x, arrival.y, radius, 0, TWO_PI);
-    for (const [dx, dy] of [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
-    ]) {
-      ctx.moveTo(arrival.x + dx * (radius - 3), arrival.y + dy * (radius - 3));
-      ctx.lineTo(
-        arrival.x + dx * (radius + SHOT_READ.SIGHT_TICK),
-        arrival.y + dy * (radius + SHOT_READ.SIGHT_TICK),
-      );
-    }
-    ctx.stroke();
     ctx.restore();
   }
 
-  /** A blue cast over everything while the world is slowed, `level` in [0, 1]. */
-  public static renderTint(ctx: CanvasRenderingContext2D, level: number): void {
-    ctx.fillStyle = `rgba(${TIME_WARP.TINT}, ${TIME_WARP.TINT_ALPHA * level})`;
+  /**
+   * The slowed world's screen, `level` in [0, 1]: a shade darker, its edges glowing teal.
+   * @param edges a radial gradient from clear in the middle to EDGE_RGB at the corners
+   */
+  public static renderTint(
+    ctx: CanvasRenderingContext2D,
+    level: number,
+    edges: CanvasGradient,
+  ): void {
+    ctx.fillStyle = `rgba(0, 12, 14, ${TIME_WARP.DIM_ALPHA * level})`;
     ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+    ctx.globalAlpha = TIME_WARP.EDGE_ALPHA * level;
+    ctx.fillStyle = edges;
+    ctx.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+    ctx.globalAlpha = 1;
   }
 
-  /** A slowed ball's chromatic ghosts, drawn under it. */
-  public static renderGhosts(ctx: CanvasRenderingContext2D, ball: Ball, level: number): void {
+  /** A gradient for `renderTint`'s glowing edges, built once per canvas. */
+  public static warpEdges(ctx: CanvasRenderingContext2D): CanvasGradient {
+    const edges = ctx.createRadialGradient(
+      COURT.WIDTH / 2,
+      COURT.HEIGHT / 2,
+      COURT.HEIGHT * 0.55,
+      COURT.WIDTH / 2,
+      COURT.HEIGHT / 2,
+      COURT.WIDTH * 0.62,
+    );
+    edges.addColorStop(0, `rgba(${TIME_WARP.EDGE_RGB}, 0)`);
+    edges.addColorStop(1, `rgba(${TIME_WARP.EDGE_RGB}, 1)`);
+    return edges;
+  }
+
+  /** A paddle's afterimages, oldest first, each fading as it ages. */
+  public static renderAfterimages(
+    ctx: CanvasRenderingContext2D,
+    afterimages: readonly Afterimage[],
+  ): void {
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = TIME_WARP.GHOST_ALPHA * level;
-    for (const [dx, color] of [
-      [-TIME_WARP.GHOST_OFFSET, '#ff3355'],
-      [TIME_WARP.GHOST_OFFSET, '#33e0ff'],
-    ] as const) {
-      ctx.fillStyle = color;
+    ctx.lineWidth = 2;
+    for (const { x, y, width, height, color, age, back } of afterimages) {
+      const life = 1 - age / AFTERIMAGES.LIFE;
+      if (life <= 0) continue;
+      const drift = back * AFTERIMAGES.DRIFT * (1 - life);
+      ctx.fillStyle = ctx.strokeStyle = color;
       ctx.beginPath();
-      ctx.arc(ball.drawX + dx, ball.drawY, ball.radius, 0, TWO_PI);
+      ctx.roundRect(x + drift, y - height / 2, width, height, 5);
+      ctx.globalAlpha = AFTERIMAGES.FILL_ALPHA * life;
       ctx.fill();
+      ctx.globalAlpha = AFTERIMAGES.ALPHA * life;
+      ctx.stroke();
     }
     ctx.restore();
   }
