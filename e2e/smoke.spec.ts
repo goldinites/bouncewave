@@ -134,22 +134,22 @@ test('lists the challenges on the court and starts the first from its card', asy
   await button(page, 'PLAY').click();
   await button(page, 'CHALLENGE').click();
   await expect(page.locator('#gameSubtitle')).toHaveText('PASSED: 0 / 18');
-  // A stage at a time, every challenge open from the start: its six, the stage's arrows and BACK
-  // on the court in every orientation
-  await expect(button(page, 'WARM-UP')).toBeEnabled();
-  await expectOnCourt(page, button(page, 'WARM-UP'));
-  await expectOnCourt(page, button(page, 'TURBO'));
-  await expectOnCourt(page, button(page, 'Previous'));
-  await expectOnCourt(page, button(page, 'Next'));
+  // A tier at a time, every challenge open from the start: the tiers' tabs, its six and BACK on
+  // the court in every orientation
+  const tab = (name: string) => page.getByRole('tab', { name: new RegExp(`^${name}`) });
+  await expect(button(page, 'FIRST SERVE')).toBeEnabled();
+  await expectOnCourt(page, tab('ROOKIE'));
+  await expectOnCourt(page, tab('LEGEND'));
+  await expectOnCourt(page, button(page, 'FIRST SERVE'));
+  await expectOnCourt(page, button(page, 'OVERHEAT'));
   await expectOnCourt(page, button(page, 'BACK'));
-  // The last stage, back a step from the first
-  await button(page, 'Previous').click();
-  await expect(button(page, 'CHAOS')).toBeEnabled();
-  await expectOnCourt(page, button(page, 'CHAOS'));
-  await expectOnCourt(page, button(page, 'TWO ON ONE'));
-  await button(page, 'Next').click();
+  await tab('LEGEND').click();
+  await expect(button(page, 'SYSTEM CRASH')).toBeEnabled();
+  await expectOnCourt(page, button(page, 'SYSTEM CRASH'));
+  await expectOnCourt(page, button(page, 'TAG TEAM'));
+  await tab('ROOKIE').click();
 
-  await button(page, 'WARM-UP').click();
+  await button(page, 'FIRST SERVE').click();
   await expect(page.locator('#gameSubtitle')).toHaveText('Win a match to 3 points');
   await expectOnCourt(page, button(page, 'BACK'));
   await button(page, 'START').click();

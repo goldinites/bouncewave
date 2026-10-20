@@ -1,8 +1,7 @@
-import { ChallengeId } from '@/match/challenges';
+import { ChallengeId, ChallengeTier } from '@/match/challenges';
 import { ChallengeState } from '@/profile/ChallengeProgress';
 import { ButtonColor } from '@/ui/UIManager';
 import { MenuButton } from '@/ui/screens/MenuButton';
-import { Choice, OptionRow } from '@/ui/screens/OptionRow';
 
 export interface ChallengeListEntry {
   id: ChallengeId;
@@ -10,14 +9,22 @@ export interface ChallengeListEntry {
   state: ChallengeState;
 }
 
+/** A tier of the list, as its tab shows it. */
+export interface ChallengeTierTab {
+  id: ChallengeTier;
+  name: string;
+  /** Its challenges passed, of them all. */
+  passed: number;
+  total: number;
+}
+
 export interface ChallengeListProps {
-  /** The tier shown, stepped through as a choice: its backdrop's name. */
-  tier: Choice;
-  /** The tier's challenges, easiest first. */
+  /** Every tier, easiest first, and the one shown. */
+  tiers: readonly ChallengeTierTab[];
+  tier: ChallengeTier;
+  onTier: (tier: ChallengeTier) => void;
+  /** The shown tier's challenges, easiest first. */
   challenges: readonly ChallengeListEntry[];
-  /** The tier arrows' names for screen readers. */
-  previousLabel: string;
-  nextLabel: string;
   backLabel: string;
   onPick: (challenge: ChallengeId) => void;
   onBack: () => void;
@@ -39,21 +46,44 @@ const Mark = ({ state }: { state: ChallengeState }) =>
 
 /**
  * The challenges from easiest to hardest a tier at a time (six, on its backdrop), three to a row,
- * every one open, the passed ones ticked; arrows step from tier to tier. The count of passed ones
+ * every one open, the passed ones ticked. The tiers are tabs over them, all in sight with how many
+ * of each are passed: the whole road at a glance, any tier a tap away. The count of passed ones
  * is the screen's subtitle. Texts come in ready to show.
  */
 export function ChallengeList({
+  tiers,
   tier,
+  onTier,
   challenges,
-  previousLabel,
-  nextLabel,
   backLabel,
   onPick,
   onBack,
 }: ChallengeListProps) {
   return (
     <div class="challenge-list">
-      <OptionRow choice={tier} previousLabel={previousLabel} nextLabel={nextLabel} />
+      <div class="challenge-tabs" role="tablist">
+        {tiers.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={tab.id === tier}
+            class={[
+              'challenge-tabs__tab',
+              tab.id === tier && 'challenge-tabs__tab--current',
+              tab.passed === tab.total && 'challenge-tabs__tab--done',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            onClick={() => onTier(tab.id)}
+          >
+            {tab.name}{' '}
+            <span class="challenge-tabs__count">
+              {tab.passed}/{tab.total}
+            </span>
+          </button>
+        ))}
+      </div>
       <div class="challenge-list__grid">
         {challenges.map((challenge) => (
           <MenuButton

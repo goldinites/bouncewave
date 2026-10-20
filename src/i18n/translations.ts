@@ -73,8 +73,7 @@ export interface TranslationSchema {
    */
   challengesHeading: string;
   challengesPassed: string;
-  /** The challenges' list a tier at a time: the choice's name, and each tier's (its backdrop's). */
-  challengeTier: string;
+  /** The challenges' list a tier at a time: each tier's tab, a rank on the player's way. */
   challengeTiers: Record<ChallengeTier, string>;
   /** An attempt's outcome: passed or not, every challenge passed, and its buttons. */
   attemptPassed: string;
@@ -161,8 +160,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     playerLabels: ['P1', 'P2'],
     challengesHeading: 'CHALLENGES',
     challengesPassed: 'PASSED',
-    challengeTier: 'STAGE',
-    challengeTiers: { warehouse: 'WAREHOUSE', dojo: 'DOJO', brokenNet: 'BROKEN NET' },
+    challengeTiers: { warehouse: 'ROOKIE', dojo: 'MASTER', brokenNet: 'LEGEND' },
     attemptPassed: 'PASSED!',
     attemptFailed: 'NOT PASSED',
     attemptAllPassed: 'EVERY CHALLENGE PASSED',
@@ -205,40 +203,43 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       [DifficultyLevel.INSANE]: ['INSANE', 'Opponent: barely makes mistakes'],
     },
     challenges: {
-      warmUp: ['WARM-UP', 'Win a match to 3 points'],
-      twoBalls: ['TWO BALLS', 'Win to 5 with two balls in play at once'],
-      longRally: ['LONG RALLY', 'Keep a rally going for 20 hits within a minute'],
+      warmUp: ['FIRST SERVE', 'Win a match to 3 points'],
+      twoBalls: ['DOUBLE', 'Win to 5 with two balls in play at once'],
+      longRally: ['MARATHON', 'Keep a rally going for 20 hits within a minute'],
       bricks: [
-        'BRICKS',
+        'BREAKOUT',
         'Win to 5 against a Normal opponent through a wall of bricks the ball breaks',
       ],
       wind: [
-        'WIND',
+        'CROSSWIND',
         'Win to 5 against a Normal opponent in a gusting wind that turns now and then',
       ],
-      turbo: ['TURBO', 'Win to 5 against a Normal opponent: the ball speeds up in flight'],
+      turbo: ['OVERHEAT', 'Win to 5 against a Normal opponent: the ball speeds up in flight'],
       shrinkingPaddle: [
-        'MELTING PADDLE',
+        'MELTDOWN',
         'Keep a rally going for 20 hits within a minute; your paddle shrinks with every hit',
       ],
-      darkness: ['DARKNESS', 'Win to 5 against a Normal opponent on a court in the dark'],
-      blitz: ['BLITZ', 'Win to 3 before the two minutes are up'],
-      bumpers: ['BUMPERS', 'Win to 5 against a Hard opponent, posts standing on the centre line'],
-      ice: ['ICE', 'Win to 5 against a Hard opponent on ice: the paddles slide'],
-      ghost: ['GHOST', 'Win to 5 against a Hard opponent: the ball vanishes across the middle'],
+      darkness: ['BLACKOUT', 'Win to 5 against a Normal opponent on a court in the dark'],
+      blitz: ['COUNTDOWN', 'Win to 3 before the two minutes are up'],
+      bumpers: ['PINBALL', 'Win to 5 against a Hard opponent, posts standing on the centre line'],
+      ice: ['BLACK ICE', 'Win to 5 against a Hard opponent on ice: the paddles slide'],
+      ghost: [
+        'BLIND SPOT',
+        'Win to 5 against a Hard opponent: the ball vanishes across the middle',
+      ],
       twoOnOne: [
-        'TWO ON ONE',
+        'TAG TEAM',
         'Win to 5 against two Normal opponents, each holding half of the court',
       ],
-      giant: ['GIANT', 'Win to 5 against a Normal opponent whose paddle is half as long again'],
-      shutout: ['SHUTOUT', 'Win to 3 without losing a single point'],
+      giant: ['GOLIATH', 'Win to 5 against a Normal opponent whose paddle is half as long again'],
+      shutout: ['FLAWLESS', 'Win to 3 without losing a single point'],
       survival: [
-        'SURVIVAL',
+        'LAST STAND',
         'Score 10 before you lose three lives; the opponent grows stronger every point',
       ],
-      insanity: ['INSANITY', 'Win to 5 against an Insane opponent'],
+      insanity: ['REDLINE', 'Win to 5 against an Insane opponent'],
       chaos: [
-        'CHAOS',
+        'SYSTEM CRASH',
         'Win to 7 against a Hard opponent while the modifiers take turns, two points each',
       ],
     },
@@ -291,8 +292,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     playerLabels: ['P1', 'P2'],
     challengesHeading: 'ИСПЫТАНИЯ',
     challengesPassed: 'ПРОЙДЕНО',
-    challengeTier: 'ЭТАП',
-    challengeTiers: { warehouse: 'СКЛАД', dojo: 'ДОДЗЁ', brokenNet: 'СЛОМАННАЯ СЕТЬ' },
+    challengeTiers: { warehouse: 'НОВИЧОК', dojo: 'МАСТЕР', brokenNet: 'ЛЕГЕНДА' },
     attemptPassed: 'ПРОЙДЕНО!',
     attemptFailed: 'НЕ ПРОЙДЕНО',
     attemptAllPassed: 'ВСЕ ИСПЫТАНИЯ ПРОЙДЕНЫ',
@@ -336,49 +336,52 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       [DifficultyLevel.INSANE]: ['БЕЗУМИЕ', 'Противник: почти не ошибается'],
     },
     challenges: {
-      warmUp: ['РАЗМИНКА', 'Выиграй матч до 3 очков'],
-      twoBalls: ['ДВА МЯЧА', 'Выиграй до 5 очков, когда в игре сразу два мяча'],
-      longRally: ['ДОЛГИЙ РОЗЫГРЫШ', 'Розыгрыш в 20 ударов за минуту'],
+      warmUp: ['ПЕРВАЯ ПОДАЧА', 'Выиграй матч до 3 очков'],
+      twoBalls: ['ДУБЛЬ', 'Выиграй до 5 очков, когда в игре сразу два мяча'],
+      longRally: ['МАРАФОН', 'Розыгрыш в 20 ударов за минуту'],
       bricks: [
-        'КИРПИЧИ',
+        'ПРОЛОМ',
         'Выиграй до 5 очков у противника средней сложности сквозь стену из кирпичей, которые мяч разбивает',
       ],
       wind: [
-        'ВЕТЕР',
+        'СКВОЗНЯК',
         'Выиграй до 5 очков у противника средней сложности на порывистом ветру, который меняет направление',
       ],
       turbo: [
-        'ТУРБО',
+        'ПЕРЕГРЕВ',
         'Выиграй до 5 очков у противника средней сложности: мяч разгоняется в полёте',
       ],
       shrinkingPaddle: [
-        'ТАЮЩАЯ РАКЕТКА',
+        'ОГАРОК',
         'Розыгрыш в 20 ударов за минуту; твоя ракетка короче с каждым ударом',
       ],
-      darkness: ['ТЬМА', 'Выиграй до 5 очков у противника средней сложности на тёмном корте'],
-      blitz: ['БЛИЦ', 'Выиграй до 3 очков, пока не прошли две минуты'],
+      darkness: ['БЛЭКАУТ', 'Выиграй до 5 очков у противника средней сложности на тёмном корте'],
+      blitz: ['ОТСЧЁТ', 'Выиграй до 3 очков, пока не прошли две минуты'],
       bumpers: [
-        'ОТБОЙНИКИ',
+        'ПИНБОЛ',
         'Выиграй до 5 очков у сложного противника, когда на центральной линии стоят отбойники',
       ],
-      ice: ['ЛЁД', 'Выиграй до 5 очков у сложного противника на льду: ракетки скользят'],
-      ghost: ['ПРИЗРАК', 'Выиграй до 5 очков у сложного противника: в середине корта мяч невидим'],
+      ice: ['ГОЛОЛЁД', 'Выиграй до 5 очков у сложного противника на льду: ракетки скользят'],
+      ghost: [
+        'СЛЕПАЯ ЗОНА',
+        'Выиграй до 5 очков у сложного противника: в середине корта мяч невидим',
+      ],
       twoOnOne: [
-        'ДВОЕ НА ОДНОГО',
+        'ТАНДЕМ',
         'Выиграй до 5 очков у двух противников средней сложности, каждый держит свою половину',
       ],
       giant: [
-        'ВЕЛИКАН',
+        'ГОЛИАФ',
         'Выиграй до 5 очков у противника средней сложности с ракеткой в полтора раза длиннее',
       ],
-      shutout: ['ВСУХУЮ', 'Выиграй до 3 очков, не пропустив ни одного'],
+      shutout: ['БЕЗ ОШИБОК', 'Выиграй до 3 очков, не пропустив ни одного'],
       survival: [
-        'ВЫЖИВАНИЕ',
+        'ПОСЛЕДНИЙ БОЙ',
         'Набери 10 очков, пока не кончились три жизни; противник сильнее с каждым очком',
       ],
-      insanity: ['БЕЗУМИЕ', 'Выиграй до 5 очков у безумного противника'],
+      insanity: ['КРАСНАЯ ЗОНА', 'Выиграй до 5 очков у безумного противника'],
       chaos: [
-        'ХАОС',
+        'СИСТЕМНЫЙ СБОЙ',
         'Выиграй до 7 очков у сложного противника, пока модификаторы сменяют друг друга каждые 2 очка',
       ],
     },

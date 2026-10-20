@@ -21,6 +21,9 @@ import { UIManager } from '@/ui/UIManager';
 
 const progressOf = (...passed: ChallengeId[]): ChallengeProgress => ({ passed });
 
+/** The tier tab shown in the challenges' list, as it reads. */
+const shownTier = () => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent;
+
 describe('progress through the challenges', () => {
   it('has every challenge open from the start, in any order', () => {
     const states = (progress: ChallengeProgress) =>
@@ -153,58 +156,78 @@ describe('the challenges in the menus', () => {
     return { menu, actions, screenButtons, button, title, subtitle, text };
   };
 
-  it('opens the list from PLAY a stage at a time: every challenge open, the passed ones ticked', () => {
+  it('opens the list from PLAY a tier at a time: every challenge open, the passed ones ticked', () => {
     const { menu, screenButtons, button, title, subtitle } = setup(['warmUp', 'giant']);
     menu.showPlayMenu();
     button('CHALLENGE').click();
 
     expect(title()).toBe('CHALLENGE');
     expect(subtitle()).toBe('PASSED: 2 / 18');
-    const stage = () =>
-      document.querySelector('.challenge-list [role="spinbutton"]')?.getAttribute('aria-valuetext');
+    const tabs = () => [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
     const items = () => screenButtons().filter((b) => b.matches('.challenge-list__item'));
     const names = () => items().map((b) => b.textContent);
-    const next = () => document.querySelector<HTMLButtonElement>('[aria-label="Next"]')!.click();
 
-    expect(stage()).toBe('WAREHOUSE');
-    expect(names()).toEqual(['WARM-UP', 'TWO BALLS', 'LONG RALLY', 'BRICKS', 'WIND', 'TURBO']);
+    // Every tier a tab, with how many of its six are passed; the first one's shown
+    expect(tabs().map((tab) => tab.textContent)).toEqual([
+      'ROOKIE 1/6',
+      'MASTER 0/6',
+      'LEGEND 1/6',
+    ]);
+    expect(shownTier()).toBe('ROOKIE 1/6');
+    expect(names()).toEqual([
+      'FIRST SERVE',
+      'DOUBLE',
+      'MARATHON',
+      'BREAKOUT',
+      'CROSSWIND',
+      'OVERHEAT',
+    ]);
     expect(items().every((b) => !b.disabled)).toBe(true);
     expect(items()[0].classList).toContain('challenge-list__item--passed');
     expect(items()[1].classList).toContain('challenge-list__item--open');
-    next();
-    expect(stage()).toBe('DOJO');
-    expect(names()).toEqual(['MELTING PADDLE', 'DARKNESS', 'BLITZ', 'BUMPERS', 'ICE', 'GHOST']);
-    next();
-    expect(stage()).toBe('BROKEN NET');
-    expect(names()).toEqual(['TWO ON ONE', 'GIANT', 'SHUTOUT', 'SURVIVAL', 'INSANITY', 'CHAOS']);
+    tabs()[1].click();
+    expect(shownTier()).toBe('MASTER 0/6');
+    expect(names()).toEqual([
+      'MELTDOWN',
+      'BLACKOUT',
+      'COUNTDOWN',
+      'PINBALL',
+      'BLACK ICE',
+      'BLIND SPOT',
+    ]);
+    tabs()[2].click();
+    expect(names()).toEqual([
+      'TAG TEAM',
+      'GOLIATH',
+      'FLAWLESS',
+      'LAST STAND',
+      'REDLINE',
+      'SYSTEM CRASH',
+    ]);
     expect(items()[1].classList).toContain('challenge-list__item--passed');
-    next();
-    expect(stage()).toBe('WAREHOUSE');
     expect(screenButtons().at(-1)?.textContent).toBe('BACK');
   });
 
-  it('opens on the stage of the first challenge still to pass, and keeps the last one opened', () => {
+  it('opens on the tier of the first challenge still to pass, and keeps the last one opened', () => {
     const warehouse = CHALLENGE_IDS.filter((id) => CHALLENGES[id].scene === 'warehouse');
     const { menu, button, title } = setup(warehouse);
-    const stage = () =>
-      document.querySelector('.challenge-list [role="spinbutton"]')?.getAttribute('aria-valuetext');
     menu.showPlayMenu();
     button('CHALLENGE').click();
-    expect(stage()).toBe('DOJO');
+    expect(shownTier()).toBe('MASTER 0/6');
 
-    // Back to the list from a card of another stage: that stage's page
+    // Back to the list from a card of another tier: that tier's page
     menu.showChallengeCard('insanity');
     expect(menu.goBack()).toBe(true);
     expect(title()).toBe('CHALLENGE');
-    expect(stage()).toBe('BROKEN NET');
+    expect(shownTier()).toBe('LEGEND 0/6');
   });
 
   it("shows a challenge's card, starts it, and steps back on Esc to the list and PLAY", () => {
     const { menu, actions, button, title, subtitle, text } = setup();
     menu.showChallengeList();
-    button('WIND').click();
+    button('CROSSWIND').click();
 
-    expect(title()).toBe('WIND');
+    expect(title()).toBe('CROSSWIND');
     expect(subtitle()).toBe(
       'Win to 5 against a Normal opponent in a gusting wind that turns now and then',
     );
@@ -239,13 +262,13 @@ describe('the challenges in the menus', () => {
       isAllPassed: false,
     });
     expect(title()).toBe('PASSED!');
-    expect(subtitle()).toBe('WARM-UP');
+    expect(subtitle()).toBe('FIRST SERVE');
     expect(text('.challenge-result__message')).toBe('');
     expect(screenButtons().map((b) => b.textContent)).toEqual(['NEXT', 'ALL CHALLENGES']);
 
     button('NEXT').click();
     expect(actions.onReturnToMainMenu).toHaveBeenCalledOnce();
-    expect(title()).toBe('TWO BALLS');
+    expect(title()).toBe('DOUBLE');
   });
 
   it('shows a failed attempt: what it fell short by, TRY AGAIN and the list', () => {

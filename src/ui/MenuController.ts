@@ -472,32 +472,28 @@ export class MenuController {
       view: () => {
         const progress = this.challenges.get();
         const tier = this.challengeTier.value;
-        const step = (by: number) => {
-          const at = CHALLENGE_TIERS.indexOf(tier);
-          this.challengeTier.value =
-            CHALLENGE_TIERS[(at + by + CHALLENGE_TIERS.length) % CHALLENGE_TIERS.length];
-        };
         const tierNames = this.i18n.t('challengeTiers');
         return {
           title: this.i18n.getModeName('challenges'),
           subtitle: `${this.i18n.t('challengesPassed')}: ${this.passedCount()}`,
           body: h(ChallengeList, {
-            tier: {
-              id: 'tier',
-              name: this.i18n.t('challengeTier'),
-              value: tierNames[tier],
-              values: CHALLENGE_TIERS.map((id) => tierNames[id]),
-              color: 'cyan',
-              onNext: () => step(1),
-              onPrevious: () => step(-1),
-            },
+            tiers: CHALLENGE_TIERS.map((id) => {
+              const ids = CHALLENGE_IDS.filter((challenge) => CHALLENGES[challenge].scene === id);
+              return {
+                id,
+                name: tierNames[id],
+                passed: ids.filter((challenge) => challengeState(progress, challenge) === 'passed')
+                  .length,
+                total: ids.length,
+              };
+            }),
+            tier,
+            onTier: (id) => (this.challengeTier.value = id),
             challenges: CHALLENGE_IDS.filter((id) => CHALLENGES[id].scene === tier).map((id) => ({
               id,
               name: this.i18n.getChallengeInfo(id)[0],
               state: challengeState(progress, id),
             })),
-            previousLabel: this.i18n.t('previousChoice'),
-            nextLabel: this.i18n.t('nextChoice'),
             backLabel: this.i18n.t('back'),
             onPick: (id) => {
               this.challengeTier.value = CHALLENGES[id].scene;

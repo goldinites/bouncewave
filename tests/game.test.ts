@@ -192,13 +192,13 @@ describe('Game', () => {
     screenButton('CHALLENGE').click();
     expect(isPickableScene(renderer.scene as SceneId)).toBe(true);
 
-    screenButton('WARM-UP').click();
+    screenButton('FIRST SERVE').click();
     expect(renderer.scene).toBe('warehouse');
     press('Escape'); // back to the list
     expect(isPickableScene(renderer.scene as SceneId)).toBe(true);
 
     // After an attempt, the way back to the menus leaves the challenge's backdrop behind
-    screenButton('WARM-UP').click();
+    screenButton('FIRST SERVE').click();
     screenButton('START').click();
     expect(renderer.scene).toBe('warehouse');
     matchEvents.emit({ type: 'gameOver', winnerIndex: 1, scores: [0, 3] });
@@ -222,7 +222,7 @@ describe('Game', () => {
   it('plays a challenge from its card and keeps it passed', () => {
     buttons()[0].click(); // play
     screenButton('CHALLENGE').click();
-    screenButton('WARM-UP').click();
+    screenButton('FIRST SERVE').click();
     screenButton('START').click();
     expect(isMenuOpen()).toBe(false);
 
@@ -236,7 +236,7 @@ describe('Game', () => {
 
     screenButton('ALL CHALLENGES').click();
     expect($('#gameSubtitle').textContent).toBe('PASSED: 1 / 18');
-    expect(screenButton('WARM-UP').classList).toContain('challenge-list__item--passed');
+    expect(screenButton('FIRST SERVE').classList).toContain('challenge-list__item--passed');
 
     // A quick match after it is a quick match again: its end is the game-over menu
     press('Escape');
