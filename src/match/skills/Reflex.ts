@@ -1,5 +1,4 @@
 import { Ball } from '@/match/Ball';
-import { PADDLE } from '@/match/config';
 import { forecastArrival } from '@/match/forecast';
 import { faceLine, isComingAt, Skill, SkillHit, SkillHost } from '@/match/skills/Skill';
 
@@ -25,8 +24,9 @@ interface Save {
  * is about to get past its owner, who at their own speed won't make it to where the physics says
  * it arrives but with the world slowed would: the balls and the other side slow down until the
  * ball gets there (MAX_DURATION at most), the owner's paddle moves at full speed, and its
- * return has a wider perfect zone. A person's own speed is the keyboard's, or the paddle's when it is already closing in
- * faster, so the rule is the same with keys, a mouse or a finger.
+ * return has a wider perfect zone. Its owner's own speed is their top speed (a person's the
+ * keyboard's, a CPU's its level's), or the paddle's when it is already closing in faster, so
+ * the rule is the same with keys, a mouse or a finger.
  */
 export class Reflex implements Skill {
   public readonly id = 'reflex';
@@ -89,7 +89,7 @@ export class Reflex implements Skill {
 
     const closing =
       Math.sign(paddle.velocity) === Math.sign(offset) ? Math.abs(paddle.velocity) : 0;
-    const speed = Math.max(PADDLE.KEYBOARD_SPEED * paddle.spec.speed, closing);
+    const speed = Math.max(this.host.topSpeed(), closing);
     if (speed * arrival.time >= gap) return false;
 
     // The owner's time until the ball arrives with the world slowed for as long as it may be

@@ -8,6 +8,7 @@ import {
   DIFFICULTY_CONFIGS,
   DIFFICULTY_LEVELS,
 } from '@/match/difficulty';
+import { forecastArrival } from '@/match/forecast';
 import { Paddle } from '@/match/Paddle';
 import { Physics } from '@/match/Physics';
 
@@ -24,6 +25,8 @@ const skill = (overrides: Partial<AiSkill> = {}): AiSkill => ({
   errorPerBounce: 0,
   angleShots: 0,
   nerves: 0,
+  perfectAim: 0,
+  overdrive: false,
   ...overrides,
 });
 
@@ -89,9 +92,10 @@ describe('AiController', () => {
     const ai = new AiController(() => 0.5);
     ai.readShot(cpu, skill());
 
+    // Flown ahead by the physics, as the ball will really fly
+    const arrival = forecastArrival(ball, cpuFaceX(cpu))!;
     ai.update(cpu, ball, skill(), 1, playerPaddle());
 
-    const arrival = predictArrival(cpuFaceX(cpu), ball.x, ball.y, ball.vx, ball.vy, RADIUS);
     expect(cpu.targetY).toBeCloseTo(Math.min(arrival.y, COURT.HEIGHT - 66));
     expect(cpu.targetY).toBeGreaterThan(ball.y);
   });
@@ -168,13 +172,14 @@ describe('AiController', () => {
       const ai = new AiController(() => 1);
       const sloppy = skill({ error: 20, errorPerBounce: 40 });
       ai.readShot(cpu, sloppy);
+      const arrival = forecastArrival(ball, cpuFaceX(cpu))!;
       ai.update(cpu, ball, sloppy, 1, playerPaddle());
-      const arrival = predictArrival(cpuFaceX(cpu), ball.x, ball.y, ball.vx, ball.vy, RADIUS);
       return { misread: cpu.targetY - arrival.y, bounces: arrival.bounces };
     };
 
     const flat = misreadOf(ballAt(400, 200, 400, 0));
-    expect(flat).toEqual({ misread: 10, bounces: 0 });
+    expect(flat.bounces).toBe(0);
+    expect(flat.misread).toBeCloseTo(10);
 
     // Two bounces, arriving mid-court where the paddle can follow its misread
     const steep = misreadOf(ballAt(100, 150, 300, 471));

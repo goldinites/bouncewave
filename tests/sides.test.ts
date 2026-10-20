@@ -32,6 +32,7 @@ const spyController = () => ({
   onIncomingShot: vi.fn<PaddleController['onIncomingShot']>(),
   onPoint: vi.fn<PaddleController['onPoint']>(),
   reset: vi.fn<PaddleController['reset']>(),
+  topSpeed: () => 500,
 });
 
 const setup = (paddles: Paddle[]) => {
@@ -107,8 +108,16 @@ describe('a side with more than one paddle', () => {
 
     controllers.forEach((c) => expect(c.steer).toHaveBeenCalled());
     expect(controllers[0].onIncomingShot).not.toHaveBeenCalled();
-    expect(controllers[1].onIncomingShot).toHaveBeenCalledWith(paddles[1], expect.anything());
-    expect(controllers[2].onIncomingShot).toHaveBeenCalledWith(paddles[2], expect.anything());
+    expect(controllers[1].onIncomingShot).toHaveBeenCalledWith(
+      paddles[1],
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(controllers[2].onIncomingShot).toHaveBeenCalledWith(
+      paddles[2],
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('scores a point for the side, whichever of its paddles it was', () => {

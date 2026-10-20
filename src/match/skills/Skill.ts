@@ -56,6 +56,8 @@ export interface SkillHost {
   meter(): Overdrive | null;
   /** The level the ball plays to right now. */
   physics(): DifficultyConfig;
+  /** px/s its owner can move their paddle at: a person's the keyboard's, a CPU's its level's. */
+  topSpeed(): number;
   report(use: Omit<SkillUse, 'paddleIndex'>): void;
 }
 

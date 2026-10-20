@@ -1,5 +1,5 @@
 import { Ball, Point } from '@/match/Ball';
-import { DifficultyConfig } from '@/match/difficulty';
+import { DifficultyConfig, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { Physics } from '@/match/Physics';
 
 // Flying a copy of the ball ahead: steps of this many seconds (Physics sub-steps a fast ball on
@@ -17,14 +17,15 @@ export interface Forecast {
 /**
  * Where `ball` will cross the line `x`, flown ahead on a copy by the same physics that moves
  * it: walls, boosts and spin included, so a curving ball is read as it will curve. No paddle
- * is in the way. The match's state is left as it was, and the same ball forecasts the same.
+ * is in the way, so no level's pace matters (only a paddle hit reads it): `config` may be left
+ * out. The match's state is left as it was, and the same ball forecasts the same.
  * @param path if given, gets the points the ball flies through on the way, the arrival last
  * @returns null when it is heading away from the line, or won't reach it within MAX_TIME
  */
 export function forecastArrival(
   ball: Ball,
   x: number,
-  config: DifficultyConfig,
+  config: DifficultyConfig = DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL],
   path?: Point[],
 ): Forecast | null {
   const direction = Math.sign(x - ball.x);

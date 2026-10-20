@@ -76,15 +76,15 @@ simulation's randomness is injected, the same seed and inputs replay the same ma
 
 `MatchFlow` runs a match; its pieces each answer one question:
 
-| Question                             | Answer                                                                                          |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score by side, clock, rally goal, CPU ramp, Overdrive, balls |
-| Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)                            |
-| What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed                      |
-| Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle                           |
-| How the ball moves and bounces       | `Physics.step`, one ball at a time; `forecastArrival` flies a copy ahead to where it will cross |
-| What a paddle can do beyond the base | its participant's skills (`match/skills/`), played through hooks by the match's `SkillSet`      |
-| How the AI plays                     | `AiController` (reading, aiming, nerves) and `AiForm` (form by score)                           |
+| Question                             | Answer                                                                                                                     |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score by side, clock, rally goal, CPU ramp, Overdrive, balls                            |
+| Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)                                                       |
+| What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed                                                 |
+| Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle                                                      |
+| How the ball moves and bounces       | `Physics.step`, one ball at a time; `forecastArrival` flies a copy ahead to where it will cross                            |
+| What a paddle can do beyond the base | its participant's skills (`match/skills/`), played through hooks by the match's `SkillSet`                                 |
+| How the AI plays                     | `AiController` (reading each ball's shot through the physics, aiming, perfect swings, nerves) and `AiForm` (form by score) |
 
 Points belong to sides and are kept by the match (`flow.scores`). The first ball out wins the
 point and ends it for every ball. The demo behind the menus is a match with its own lineup of two
@@ -208,13 +208,15 @@ score, and it reports what the player should notice with `host.report`, a `skill
 effects give its sound and burst. What lasts on court is drawn by layers (`SkillRenderer`): the
 spin's streaks and trail, the slowed world's cast (`flow.timeWarp`), a read shot's wireframe and
 sight; skills have no written labels, so each must look and sound like no other. For developers,
-`?skills=arc,analyzer,reflex` gives the player those skills in every match against the CPU, and the debug
-overlay's skill menu (`debug/SkillMenu.ts`) switches them at once (`flow.giveSkills`) and counts
-their uses in the match. A
+`?skills=arc,analyzer,reflex` gives the player those skills in every match against the CPU,
+`?cpuSkills=` the CPU, and the debug overlay's skill menu (`debug/SkillMenu.ts`) switches both at
+once (`flow.giveSkills`) and counts their uses in the match. A CPU plays its skills as a person
+does: they go off from its play (its swings spin the ball, Reflex judges by its level's top
+speed, `controller.topSpeed`), and what they tell their owner reaches it through
+`controller.onSkillUse` (its Analyzer's read sharpens its eye; nothing of it is drawn). A
 challenge's modifier (4.5) joins the same hooks.
 
-**Planned, not there yet** (see the roadmap): the AI reading curves and using skills on purpose
-(4.4), dialogue through Ink (8.1).
+**Planned, not there yet** (see the roadmap): dialogue through Ink (8.1).
 
 ## Rules of thumb
 
@@ -225,7 +227,8 @@ challenge's modifier (4.5) joins the same hooks.
   `AbortController`.
 - Every new string exists in both languages; every new screen effect honours
   `prefers-reduced-motion`; everything works on a phone in either orientation.
-- Every person's paddle draws its Overdrive meter (`flow.overdriveCharges`, null for the CPU's).
+- Every paddle that charges Overdrive draws its meter (`flow.overdriveCharges`): a person's, and
+  a CPU's at a level that does where the rules let it (`rules.cpuOverdrive`, the quick match).
   A match of two (`flow.twoPlayers`) ends in a win, the winner named; otherwise, outside the
   match, the left side is still taken to be the player: whose win the finale and the menus show.
 - If a feature needs `Game.ts`, `MatchFlow.ts`, `RenderFrame` and `EffectsDirector` changed all at

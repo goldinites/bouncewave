@@ -26,6 +26,13 @@ export interface DifficultyConfig {
    */
   nerves: number;
   /**
+   * Chance the CPU plays a return as a perfect hit on purpose: the ball met dead center while the
+   * paddle swings through it, which steers it hard away from the player. See AiController.
+   */
+  perfectAim: number;
+  /** Whether the CPU charges Overdrive, where the match's rules let it (`cpuOverdrive`). */
+  overdrive: boolean;
+  /**
    * How far, in levels, the CPU's form may drift with the score to keep matches close
    * (weaker while it leads, stronger while it trails). See AiForm.
    */
@@ -38,7 +45,14 @@ export interface DifficultyConfig {
 /** How well an AI paddle plays. */
 export type AiSkill = Pick<
   DifficultyConfig,
-  'speed' | 'reaction' | 'error' | 'errorPerBounce' | 'angleShots' | 'nerves'
+  | 'speed'
+  | 'reaction'
+  | 'error'
+  | 'errorPerBounce'
+  | 'angleShots'
+  | 'nerves'
+  | 'perfectAim'
+  | 'overdrive'
 >;
 
 /** Both paddles of the attract-mode demo behind the menu, whatever the difficulty. */
@@ -49,6 +63,8 @@ export const DEMO_AI_SKILL: AiSkill = {
   errorPerBounce: 40,
   angleShots: 0.3,
   nerves: 1,
+  perfectAim: 0.15,
+  overdrive: false,
 };
 
 export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
@@ -59,6 +75,8 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     errorPerBounce: 90,
     angleShots: 0,
     nerves: 1,
+    perfectAim: 0,
+    overdrive: false,
     adaptivity: 0.4,
     acceleration: 0.075,
     maxSpeed: 840,
@@ -70,6 +88,8 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     errorPerBounce: 75,
     angleShots: 0.25,
     nerves: 0.8,
+    perfectAim: 0.1,
+    overdrive: false,
     adaptivity: 0.2,
     acceleration: 0.095,
     maxSpeed: 920,
@@ -81,6 +101,8 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     errorPerBounce: 50,
     angleShots: 0.4,
     nerves: 0.6,
+    perfectAim: 0.25,
+    overdrive: true,
     adaptivity: 0,
     acceleration: 0.115,
     maxSpeed: 1000,
@@ -94,6 +116,8 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     errorPerBounce: 30,
     angleShots: 0.55,
     nerves: 0.4,
+    perfectAim: 0.4,
+    overdrive: true,
     adaptivity: 0,
     acceleration: 0.135,
     maxSpeed: 1080,

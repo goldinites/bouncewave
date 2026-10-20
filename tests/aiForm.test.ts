@@ -22,6 +22,8 @@ describe('skillAt', () => {
         errorPerBounce: config.errorPerBounce,
         angleShots: config.angleShots,
         nerves: config.nerves,
+        perfectAim: config.perfectAim,
+        overdrive: config.overdrive,
       });
     });
   });

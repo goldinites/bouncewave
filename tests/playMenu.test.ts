@@ -28,7 +28,11 @@ describe('modes', () => {
 
   it('plays a quick match to the points set, otherwise by the standard rules', () => {
     expect(MATCH_POINTS).toEqual([3, 5, 7]);
-    expect(quickMatchRules(7)).toEqual({ ...STANDARD_RULES, winningScores: [7, 7] });
+    expect(quickMatchRules(7)).toEqual({
+      ...STANDARD_RULES,
+      winningScores: [7, 7],
+      cpuOverdrive: true,
+    });
   });
 
   it('steps through the lengths and the backgrounds either way, wrapping around', () => {

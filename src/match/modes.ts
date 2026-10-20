@@ -31,7 +31,10 @@ export const DEFAULT_MATCH_POINTS: MatchPoints = 5;
 export const isMatchPoints = (value: unknown): value is MatchPoints =>
   (MATCH_POINTS as readonly unknown[]).includes(value);
 
-/** A quick match: everything as in the standard rules but its length, which the player sets. */
+/**
+ * A quick match: the standard rules, its length as the player sets it, and a CPU that uses
+ * Overdrive at the levels that do.
+ */
 export function quickMatchRules(points: MatchPoints): MatchRules {
-  return { ...STANDARD_RULES, winningScores: firstTo(points) };
+  return { ...STANDARD_RULES, winningScores: firstTo(points), cpuOverdrive: true };
 }

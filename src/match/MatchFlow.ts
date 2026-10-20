@@ -204,12 +204,18 @@ export class MatchFlow {
 
   /** The shots read ahead for whoever has an Analyzer, while the ball is in play. */
   public get shotReads(): ShotRead[] {
-    return this._phase === 'rally' ? this.skills.reads : [];
+    if (this._phase !== 'rally') return [];
+    // A CPU's reads sharpen its eye; nothing of them is shown
+    return this.skills.reads.filter((read) => this.isPlayerPaddle(read.paddleIndex));
   }
 
   /** Whether paddle `index` charges Overdrive: in a real match, if it and the rules have it. */
   private hasOverdrive(index: number): boolean {
-    return !this.isDemo && this._rules.overdrive && (this.lineup[index]?.overdrive ?? false);
+    const participant = this.lineup[index];
+    if (this.isDemo || !this._rules.overdrive || !participant) return false;
+    // A CPU charges it on its own account, at a level that does, where the rules let it
+    const isCpus = this._rules.cpuOverdrive && (participant.controller.chargesOverdrive ?? false);
+    return participant.overdrive || isCpus;
   }
 
   /** Points each side has won in the match being played (or just finished). */
@@ -298,10 +304,12 @@ export class MatchFlow {
    * difficulty on every other.
    * @param paddles what each side plays with, [left, right]; the standard paddle by default
    * @param playerSkills what the player can do beyond the base game; nothing by default
+   * @param cpuSkills what the CPU can; nothing by default
    */
   public playerVsCpu(
     paddles: readonly [PaddleSpec, PaddleSpec] = [STANDARD_PADDLE, STANDARD_PADDLE],
     playerSkills: readonly SkillId[] = [],
+    cpuSkills: readonly SkillId[] = [],
   ): Lineup {
     return this.paddles.map(({ side }, i) => ({
       controller:
@@ -310,7 +318,7 @@ export class MatchFlow {
           : new AiPaddleController(this.random, () => this.difficulty),
       overdrive: i === this.playerIndex,
       paddle: paddles[side],
-      skills: i === this.playerIndex ? playerSkills : [],
+      skills: i === this.playerIndex ? playerSkills : cpuSkills,
     }));
   }
 
@@ -562,7 +570,14 @@ export class MatchFlow {
       balls: this._balls,
       meter: () => (this.hasOverdrive(owner) ? this.overdrives[owner] : null),
       physics: () => this.physicsConfig,
-      report: (use) => this.emit({ type: 'skill', paddleIndex: owner, ...use }),
+      topSpeed: () => this.lineup[owner].controller.topSpeed(this.paddles[owner]),
+      report: (use) => {
+        this.lineup[owner].controller.onSkillUse?.(this.paddles[owner], {
+          ...use,
+          paddleIndex: owner,
+        });
+        this.emit({ type: 'skill', paddleIndex: owner, ...use });
+      },
     };
   }
 
@@ -579,10 +594,10 @@ export class MatchFlow {
   }
 
   /** Tells every paddle of `side` that a shot is on its way. */
-  private shotAt(side: Side, threat: ShotThreat): void {
+  private shotAt(side: Side, threat: ShotThreat, ball: Ball): void {
     this.lineup.forEach(({ controller }, i) => {
       const paddle = this.paddles[i];
-      if (paddle.side === side) controller.onIncomingShot(paddle, threat);
+      if (paddle.side === side) controller.onIncomingShot(paddle, threat, ball);
     });
   }
 
@@ -616,7 +631,7 @@ export class MatchFlow {
           : event.isPerfect
             ? SHOT_THREAT.PERFECT
             : SHOT_THREAT.NORMAL;
-        this.shotAt(otherSide(this.paddles[hitter].side), threat);
+        this.shotAt(otherSide(this.paddles[hitter].side), threat, ball);
         this.emit({ ...event, rally: this._rally, isPowerShot, chargedOverdrive });
         this.skills.afterHit({
           paddleIndex: hitter,
@@ -710,9 +725,7 @@ export class MatchFlow {
     this.lineup.forEach(({ controller }, i) => {
       controller.onServe(this.paddles[i], this.scores, this._rules);
     });
-    const receiver: Side = direction > 0 ? 1 : 0;
-    this.shotAt(receiver, SHOT_THREAT.NORMAL);
-    if (this._balls.length > 1) this.shotAt(otherSide(receiver), SHOT_THREAT.NORMAL);
+    this._balls.forEach((ball) => this.shotAt(ball.vx > 0 ? 1 : 0, SHOT_THREAT.NORMAL, ball));
     this.skills.onServe();
     this._rally = 0;
     this._serveTime = delay;

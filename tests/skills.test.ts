@@ -50,6 +50,7 @@ const hostFor = (paddles: Paddle[], balls: Ball[], charges: number | null = 1) =
     balls,
     meter: () => meter,
     physics: () => CONFIG,
+    topSpeed: () => PADDLE.KEYBOARD_SPEED,
     report,
   };
   return { host, report };

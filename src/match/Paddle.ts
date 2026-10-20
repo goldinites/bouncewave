@@ -3,7 +3,7 @@ import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Side } from '@/match/side';
 import { approach, clamp, lerp } from '@/shared/math';
 
-const PADDLE_SMOOTH_FACTOR = 27.4; // 1/s toward the target, for a paddle of standard speed
+export const PADDLE_SMOOTH_FACTOR = 27.4; // 1/s toward the target, for a paddle of standard speed
 const PADDLE_VELOCITY_SMOOTHING = 13.4; // 1/s, ~75 ms averaging window
 
 export class Paddle {
