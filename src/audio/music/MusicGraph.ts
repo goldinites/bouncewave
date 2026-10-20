@@ -16,6 +16,9 @@ const GLITCH = {
   EDGE: 0.004, // s the level takes to cut out and come back, short enough to sound like a drop
   REWIND_DEPTH: 0.15, // s the rewind's delay swells to: the pitch sags, then shrieks up
   REWIND_SAG: 0.7, // share of the rewind spent sagging; the rest is the shriek
+  // s the held tape's delay swells to: over a 0.6 s hold the pitch sags by up to ~15%, then
+  // runs as far sharp as the tape catches up
+  HOLD_DEPTH: 0.03,
 } as const;
 
 /**
@@ -184,6 +187,23 @@ export class MusicGraph {
       this.glitchDelay.delayTime.setValueCurveAtTime(curve, time, duration);
     } catch {
       // Play on unbent rather than break audio
+    }
+  }
+
+  /**
+   * A tape held back by a finger for `duration` seconds from now, then let go: the delay swells
+   * and falls back smoothly, so the pitch sags, then catches up.
+   */
+  public holdTape(duration: number): void {
+    const steps = 32;
+    const curve = new Float32Array(steps);
+    for (let i = 0; i < steps; i++) {
+      curve[i] = GLITCH.HOLD_DEPTH * Math.sin((Math.PI * i) / (steps - 1)) ** 2;
+    }
+    try {
+      this.glitchDelay.delayTime.setValueCurveAtTime(curve, this.now, duration);
+    } catch {
+      // A song's own rewind is running: it bends the music already
     }
   }
 

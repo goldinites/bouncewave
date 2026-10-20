@@ -9,6 +9,7 @@ import { COURT, BALL } from '@/match/config';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import { Side } from '@/match/side';
+import { REFLEX } from '@/match/skills/Reflex';
 import { finalScoreText } from '@/render/FinalScoreRenderer';
 import { Renderer } from '@/render/Renderer';
 import { EventBus } from '@/shared/EventBus';
@@ -64,7 +65,11 @@ const OVERDRIVE_FX = {
 const SHOCKWAVE_SPEED = {
   PERFECT: 520,
   SCORE: 620,
+  TIME_WARP: 300,
 } as const;
+
+// The slowed world's ring around the paddle that slowed it, in Reflex's blue
+const TIME_WARP_COLOR = '#4f8cff';
 
 // Burning-ball embers during the rally climax
 const EMBERS = {
@@ -172,6 +177,11 @@ export class EffectsDirector {
     return this.paddleFx.glow;
   }
 
+  /** How far each paddle leans, radians (a whip off a spinning hit). */
+  public get paddleTilt(): readonly number[] {
+    return this.paddleFx.tilt;
+  }
+
   /** A side's color: its first paddle's. */
   private colorOf(side: Side): string {
     return this.paddles.find((p) => p.side === side)!.color;
@@ -265,6 +275,10 @@ export class EffectsDirector {
         this.onScore(event);
         break;
 
+      case 'skill':
+        this.onSkill(event);
+        break;
+
       case 'finaleStart':
         this.onFinaleStart(event);
         break;
@@ -320,6 +334,23 @@ export class EffectsDirector {
     this.renderer.addFlash(OVERDRIVE_FX.POWER_FLASH);
     this.renderer.addShake(OVERDRIVE_FX.POWER_SHAKE);
     this.audio.sfx.playPowerShot(hit.rally);
+  }
+
+  /** A skill's sound and burst; what lasts (a spin, a slowed world) the renderer draws itself. */
+  private onSkill(use: Extract<MatchEvent, { type: 'skill' }>): void {
+    switch (use.skill) {
+      case 'arc': {
+        const paddle = this.paddles[use.paddleIndex];
+        this.paddleFx.onWhip(use.paddleIndex, paddle.side, paddle.velocity, use.strength);
+        this.audio.sfx.playSpin(use.strength);
+        break;
+      }
+      case 'reflex':
+        this.particles.shockwave(use.x, use.y, TIME_WARP_COLOR, SHOCKWAVE_SPEED.TIME_WARP);
+        this.audio.sfx.playTimeWarp();
+        this.audio.music.holdTape(REFLEX.MAX_DURATION);
+        break;
+    }
   }
 
   private onScore(score: Extract<MatchEvent, { type: 'score' }>): void {

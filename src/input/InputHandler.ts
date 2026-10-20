@@ -1,10 +1,9 @@
-import { COURT } from '@/match/config';
+import { COURT, PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { PlayerInput } from '@/match/PaddleController';
 import { Side } from '@/match/side';
 import { clamp } from '@/shared/math';
 
-const PADDLE_SPEED = 500; // px/s under keyboard control, for a paddle of standard speed
 // Two taps closer than this make iOS zoom in; a little over its own double-tap window
 const DOUBLE_TAP_MS = 350;
 
@@ -214,7 +213,7 @@ export class InputHandler implements PlayerInput {
     );
 
     if (direction !== 0) {
-      const speed = PADDLE_SPEED * paddle.spec.speed;
+      const speed = PADDLE.KEYBOARD_SPEED * paddle.spec.speed;
       paddle.setTargetY(paddle.targetY + direction * speed * dt);
       this.pointerY[seat] = null; // Keyboard overrides pointer target
     } else if (this.pointerY[seat] !== null) {

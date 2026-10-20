@@ -2,6 +2,7 @@ import { Ball } from '@/match/Ball';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
 import { Scores } from '@/match/side';
+import { TimeWarp } from '@/match/skills/SkillSet';
 import { BackgroundMood } from '@/render/backgrounds/Background';
 import { FinalScoreSign } from '@/render/FinalScoreRenderer';
 import { HudCondition } from '@/render/HudRenderer';
@@ -23,6 +24,8 @@ export interface CourtView {
   time: number;
   serveTime: number;
   rally: number;
+  /** Whoever is slowing the world down (Reflex); null when no one is. */
+  timeWarp: TimeWarp | null;
 }
 
 /** What the HUD writes over the court. */
@@ -39,6 +42,13 @@ export interface HudView {
    * null for a paddle that shows none (the CPU's, every one under rules without Overdrive).
    */
   overdriveCharges: readonly (number | null)[];
+  /**
+   * The perfect hits in a row in each meter, lit brighter than the rest of its charges: the same
+   * as `overdriveCharges` unless an implants' core keeps charges a broken streak left.
+   */
+  overdriveStreaks: readonly (number | null)[];
+  /** What a slowed world is labelled (Reflex's glitch). */
+  timeWarpLabel: string;
 }
 
 /** How the drama presents the moment (fx/EffectsDirector). */
@@ -51,6 +61,8 @@ export interface DramaView {
   zoom: number;
   /** Hit glow of each paddle in [0, 1], in the order of `paddles`. */
   paddleGlow: readonly number[];
+  /** How far each paddle leans, in radians, positive clockwise (a whip off a spinning hit). */
+  paddleTilt: readonly number[];
 }
 
 /** Everything the renderer needs to draw (and animate toward) one frame, by who reads it. */

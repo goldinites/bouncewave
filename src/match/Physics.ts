@@ -69,6 +69,8 @@ export class Physics {
     const subDt = (dt / subSteps) * speedMultiplier;
 
     for (let step = 0; step < subSteps; step++) {
+      // A spinning ball's path turns with time, not with distance: a boost doesn't bend it more
+      if (ball.spin !== 0) Physics.turn(ball, dt / subSteps);
       ball.x += ball.vx * subDt;
       ball.y += ball.vy * subDt;
 
@@ -79,6 +81,7 @@ export class Physics {
       if (ball.y < topBoundary) {
         ball.y = topBoundary;
         ball.vy = Math.abs(ball.vy);
+        ball.spin = 0;
         events.push({ type: 'wallBounce', x: ball.x, y: ball.y });
       }
 
@@ -86,6 +89,7 @@ export class Physics {
       if (ball.y > bottomBoundary) {
         ball.y = bottomBoundary;
         ball.vy = -Math.abs(ball.vy);
+        ball.spin = 0;
         events.push({ type: 'wallBounce', x: ball.x, y: ball.y });
       }
 
@@ -106,7 +110,7 @@ export class Physics {
 
         if (isCollidingX && isCollidingY) {
           const hitOffset = clamp((ball.y - paddle.y) / (spec.height / 2), -1, 1);
-          const isPerfect = Math.abs(hitOffset) <= spec.perfectZone;
+          const isPerfect = Math.abs(hitOffset) <= spec.perfectZone * paddle.perfectZoneScale;
           const steer = isPerfect
             ? Physics.getSpinAngle(
                 paddle.velocity,
@@ -134,6 +138,7 @@ export class Physics {
           }
           ball.vx = direction * Math.cos(bounceAngle) * ball.speed;
           ball.vy = Math.sin(bounceAngle) * ball.speed;
+          ball.spin = 0;
           ball.x = isLeft ? paddle.x + spec.width + ball.radius : paddle.x - ball.radius;
 
           events.push({
@@ -160,6 +165,28 @@ export class Physics {
     }
 
     return events;
+  }
+
+  /**
+   * Turns a spinning ball's flight by its spin over `dt` seconds, keeping its speed, and fades
+   * the spin. A path never turns steeper than a paddle can send it: there the spin is spent, so
+   * the ball neither turns back toward its hitter nor crawls along a wall.
+   */
+  private static turn(ball: Ball, dt: number): void {
+    const angle = ball.spin * dt;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const vx = ball.vx * cos - ball.vy * sin;
+    const vy = ball.vx * sin + ball.vy * cos;
+    const steepness = Math.atan2(Math.abs(vy), Math.abs(vx));
+
+    if (Math.sign(vx) !== Math.sign(ball.vx) || steepness > BOUNCE.MAX_ANGLE) {
+      ball.spin = 0;
+      return;
+    }
+    ball.vx = vx;
+    ball.vy = vy;
+    ball.spin *= Math.exp(-ball.spinDecay * dt);
   }
 
   /**

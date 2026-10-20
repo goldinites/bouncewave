@@ -12,8 +12,10 @@ const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
 const PADDLE_GLOW = { BASE: 18, HOT: 48 } as const;
 
 // The Overdrive meter rides along the player's paddle, on its goal side: one segment per
-// perfect hit in the streak; once full they and the paddle's core pulse yellow
+// perfect hit in the streak; once full they and the paddle's core pulse yellow. Charges an
+// implants' core keeps after the streak broke are lit dimmer (ENERGY_ALPHA)
 const OVERDRIVE_METER = {
+  ENERGY_ALPHA: 0.45,
   GAP: 7, // px between the paddle and the meter
   SEGMENT: { WIDTH: 4, HEIGHT: 16, GAP: 5 },
   HALO: 3, // px of soft glow around a lit segment
@@ -24,17 +26,25 @@ export class EntityRenderer {
   /** @param ctx
    @param paddle
    @param glow hit glow in [0, 1]
-   @param overdrivePulse > 0 while the paddle's Overdrive is charged: its core pulses yellow */
+   @param overdrivePulse > 0 while the paddle's Overdrive is charged: its core pulses yellow
+   @param tilt radians it leans by, about its center, positive clockwise */
   public static renderPaddle(
     ctx: CanvasRenderingContext2D,
     paddle: Paddle,
     glow: number,
     overdrivePulse = 0,
+    tilt = 0,
   ): void {
     const { width, height } = paddle.spec;
     const topY = paddle.drawY - height / 2;
 
     ctx.save();
+    if (tilt !== 0) {
+      const centerX = paddle.x + width / 2;
+      ctx.translate(centerX, paddle.drawY);
+      ctx.rotate(tilt);
+      ctx.translate(-centerX, -paddle.drawY);
+    }
     // Pre-rendered neon; a hit fades the hot one in on top
     this.drawPaddleGlow(ctx, paddle, topY, PADDLE_GLOW.BASE);
     if (glow > 0.01) {
@@ -109,15 +119,23 @@ export class EntityRenderer {
     paddle: Paddle,
     charge: number,
     time: number,
+    streak: number = charge,
   ): void {
-    const { SEGMENT, HALO, PULSE_SPEED } = OVERDRIVE_METER;
-    const isFull = charge >= OVERDRIVE.CHARGE;
+    const { SEGMENT, HALO, PULSE_SPEED, ENERGY_ALPHA } = OVERDRIVE_METER;
+    const isFull = streak >= OVERDRIVE.CHARGE;
     const pulse = isFull ? 0.5 + 0.5 * Math.sin(time * PULSE_SPEED) : 1;
     const color = isFull ? COLORS.YELLOW : paddle.color;
 
     ctx.save();
     this.meterSegments(paddle).forEach(({ x, y }, i) => {
       const isLit = i < charge;
+      if (isLit && i >= streak) {
+        // Energy only: no halo, no pulse
+        ctx.globalAlpha = ENERGY_ALPHA;
+        ctx.fillStyle = paddle.color;
+        ctx.fillRect(x, y, SEGMENT.WIDTH, SEGMENT.HEIGHT);
+        return;
+      }
 
       if (isLit) {
         // Halo as a wider faint block rather than shadowBlur

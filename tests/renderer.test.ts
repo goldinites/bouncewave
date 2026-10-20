@@ -5,6 +5,7 @@ import { Paddle } from '@/match/Paddle';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { Renderer } from '@/render/Renderer';
+import { SkillRenderer } from '@/render/SkillRenderer';
 import { CourtView, DramaView, HudView, RenderFrame } from '@/render/scene';
 import { COLORS } from '@/shared/palette';
 import { fakeContext } from './helpers/fakeContext';
@@ -64,6 +65,7 @@ const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
       time: 0,
       serveTime: 0,
       rally: 0,
+      timeWarp: null,
       ...court,
     },
     hud: {
@@ -72,9 +74,12 @@ const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
       isConditionOnCourt: false,
       sideLabels: null,
       overdriveCharges: [0, null],
+      timeWarpLabel: 'REFLEX',
       ...hud,
+      // No core: the streak is the charges
+      overdriveStreaks: hud?.overdriveStreaks ?? hud?.overdriveCharges ?? [0, null],
     },
-    drama: { climax: 0, vignette: 0, zoom: 1, paddleGlow: [0, 0], ...drama },
+    drama: { climax: 0, vignette: 0, zoom: 1, paddleGlow: [0, 0], paddleTilt: [0, 0], ...drama },
     particles: new ParticleSystem(),
     analyser: null,
     isRotated: false,
@@ -246,6 +251,36 @@ describe('Renderer', () => {
     );
     expect(meter.mock.calls.map(([, , charge]) => charge)).toEqual([1, 2]);
     meter.mockRestore();
+  });
+
+  it('shows a spinning ball and a slowed world only while they last', () => {
+    const spin = vi.spyOn(SkillRenderer, 'renderSpin');
+    const tint = vi.spyOn(SkillRenderer, 'renderTint');
+    const label = vi.spyOn(SkillRenderer, 'renderLabel');
+    const { renderer } = makeRenderer();
+    const ball = new Ball();
+
+    renderer.render(baseFrame({ court: { isDemo: false, balls: [ball], ball } }), 0.016);
+    expect(tint).not.toHaveBeenCalled();
+
+    ball.spin = -0.3;
+    const warp = { paddleIndex: 0, scale: 0.4 };
+    renderer.render(
+      baseFrame({ court: { isDemo: false, balls: [ball], ball, timeWarp: warp } }),
+      0.016,
+    );
+    expect(spin).toHaveBeenCalledWith(expect.anything(), ball, expect.any(Number));
+    expect(tint).toHaveBeenCalledOnce();
+    // Its label, just come up
+    const [, text, , age] = label.mock.calls.at(-1)!;
+    expect(text).toBe('REFLEX');
+    expect(age).toBeCloseTo(0.016);
+
+    // Back to speed, the cast is gone a moment later
+    renderer.render(baseFrame({ court: { isDemo: false, balls: [ball], ball } }), 1);
+    renderer.render(baseFrame({ court: { isDemo: false, balls: [ball], ball } }), 0.016);
+    expect(tint).toHaveBeenCalledOnce();
+    vi.restoreAllMocks();
   });
 
   it('draws every ball on court, in both looks', () => {

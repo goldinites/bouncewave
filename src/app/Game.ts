@@ -4,6 +4,7 @@ import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
 import { BackgroundMenu } from '@/debug/BackgroundMenu';
 import { FpsMeter } from '@/debug/FpsMeter';
+import { SkillMenu } from '@/debug/SkillMenu';
 import { ClassicSwitch } from '@/easterEgg/ClassicSwitch';
 import { EffectsDirector } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
@@ -17,6 +18,7 @@ import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
+import { isSkillId, SKILL_IDS, SkillId } from '@/match/skills/Skill';
 import { challengeState, isEveryChallengePassed, markPassed } from '@/profile/ChallengeProgress';
 import { ProfileStore } from '@/profile/ProfileStore';
 import { getEmptyStatistics } from '@/profile/Statistics';
@@ -75,6 +77,11 @@ export class Game {
   private isRestarting = false;
   /** For developers: the challenge ?challenge= makes every quick match an attempt at. */
   private pinnedChallenge: ChallengeId | null = null;
+  /**
+   * For developers: the skills ?skills= gives the player in every match against the CPU, to
+   * playtest the prototypes (4.3) before the progression is built around them.
+   */
+  private pinnedSkills: readonly SkillId[] = [];
   /** How the last attempt at a challenge went, for the debug overlay. */
   private lastVerdict: ChallengeVerdict | null = null;
   private readonly i18n: I18nManager;
@@ -104,6 +111,10 @@ export class Game {
   private readonly effects: EffectsDirector;
   private readonly fpsMeter: FpsMeter;
   private readonly backgroundMenu: BackgroundMenu;
+  /** Switches the skill prototypes on and off, and counts their uses in the match on court. */
+  private readonly skillMenu: SkillMenu;
+  /** How often each skill went off in the match on court, for the skill menu. */
+  private readonly skillUses = new Map<SkillId, number>();
   /** The background the debug overlay last showed, to notice when the next match changes it. */
   private debugScene: SceneId | null = null;
   /** The classic look's easter egg, and the look the whole game follows. */
@@ -142,11 +153,20 @@ export class Game {
     // the debug overlay shows how the last attempt went
     const challenge = new URLSearchParams(window.location.search).get('challenge');
     if (isChallengeId(challenge)) this.pinnedChallenge = challenge;
+    // ?skills=arc,reflex gives the player those skills (match/skills/Skill.ts)
+    const skills = new URLSearchParams(window.location.search).get('skills') ?? '';
+    this.pinnedSkills = skills.split(',').filter(isSkillId);
     this.backgroundMenu = new BackgroundMenu(
       (scene) => this.pickBackground(scene),
       this.renderer.scenes,
     );
-    this.fpsMeter = new FpsMeter((isVisible) => this.backgroundMenu.setVisible(isVisible));
+    this.skillMenu = new SkillMenu(SKILL_IDS, this.pinnedSkills, (skills) =>
+      this.chooseSkills(skills.filter(isSkillId)),
+    );
+    this.fpsMeter = new FpsMeter((isVisible) => {
+      this.backgroundMenu.setVisible(isVisible);
+      this.skillMenu.setVisible(isVisible);
+    });
     // The music opens with the song of whichever backdrop comes up first
     this.audio.music.enterScene(this.renderer.scene);
     this.showDebugDetail();
@@ -272,6 +292,7 @@ export class Game {
     this.statsRecorder.listenTo(this.matchEvents);
     this.challengeJudge.listenTo(this.matchEvents);
     this.storagePersistence.listenTo(this.matchEvents);
+    this.matchEvents.subscribe((event) => this.countSkillUse(event));
 
     this.conditionBar = new ConditionBar();
 
@@ -381,7 +402,7 @@ export class Game {
       // A challenge is set up in advance: its own rules, paddles, level and backdrop
       const { rules, paddles, difficulty, scene } = CHALLENGES[this.challenge];
       this.matchScene = scene;
-      this.flow.startMatch(rules, this.flow.playerVsCpu(paddles), difficulty);
+      this.flow.startMatch(rules, this.flow.playerVsCpu(paddles, this.playerSkills), difficulty);
     } else if (this.isTwoPlayers) {
       // No CPU to set a level for: the ball plays at the default one's pace
       this.matchScene = null;
@@ -392,10 +413,38 @@ export class Game {
       );
     } else {
       this.matchScene = null;
-      this.flow.startMatch(quickMatchRules(this.settings.current.matchPoints));
+      this.flow.startMatch(
+        quickMatchRules(this.settings.current.matchPoints),
+        this.flow.playerVsCpu(undefined, this.playerSkills),
+      );
     }
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
+  }
+
+  /** The skills the player brings to a match against the CPU: a developer's, in the neon look. */
+  private get playerSkills(): readonly SkillId[] {
+    return this.look === 'classic' ? [] : this.pinnedSkills;
+  }
+
+  /**
+   * For developers, from the skill menu: the player's skills from now on, in the match on court
+   * at once if it is one against the CPU.
+   */
+  private chooseSkills(skills: readonly SkillId[]): void {
+    this.pinnedSkills = skills;
+    if (this.flow.isDemo || this.isTwoPlayers) return;
+    const player = this.paddles.findIndex((_, i) => this.flow.isPlayerPaddle(i));
+    if (player >= 0) this.flow.giveSkills(player, this.playerSkills);
+  }
+
+  /** Counts each skill's uses in the match on court, for the skill menu. */
+  private countSkillUse(event: MatchEvent): void {
+    if (event.type === 'matchStart') this.skillUses.clear();
+    else if (event.type === 'skill') {
+      this.skillUses.set(event.skill, (this.skillUses.get(event.skill) ?? 0) + 1);
+    } else return;
+    this.skillMenu.setCounts(this.skillUses);
   }
 
   /** The match on court again from 0:0, on the backdrop it was being played on. */
@@ -627,6 +676,7 @@ export class Game {
         time: Math.max(0, this.flow.time - this.simulation.lag),
         serveTime: this.flow.serveTime,
         rally: this.flow.rally,
+        timeWarp: this.flow.timeWarp,
       },
       hud: {
         readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
@@ -634,12 +684,15 @@ export class Game {
         isConditionOnCourt: this.isConditionOnCourt,
         sideLabels: this.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
         overdriveCharges: this.flow.overdriveCharges,
+        overdriveStreaks: this.flow.overdriveStreaks,
+        timeWarpLabel: this.i18n.t('timeWarp'),
       },
       drama: {
         climax: this.effects.climaxLevel,
         vignette: this.effects.vignette,
         zoom: this.effects.cameraZoom,
         paddleGlow: this.effects.paddleGlow,
+        paddleTilt: this.effects.paddleTilt,
       },
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),
@@ -667,5 +720,6 @@ export class Game {
     this.audio.dispose();
     this.fpsMeter.dispose();
     this.backgroundMenu.dispose();
+    this.skillMenu.dispose();
   }
 }

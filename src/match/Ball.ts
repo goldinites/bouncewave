@@ -24,6 +24,14 @@ export class Ball {
   private sinceTrailPoint = Infinity;
   /** In flight from an Overdrive power shot; cleared by the next hit or serve. */
   public isPowerShot = false;
+  /**
+   * How fast its flight turns, in rad/s (positive turns it clockwise on screen, y pointing
+   * down): a skill's spin bends its path (Arc). Physics turns it and fades it; a wall, a paddle
+   * and a serve take it off.
+   */
+  public spin = 0;
+  /** How fast the spin fades, 1/s. */
+  public spinDecay = 0;
 
   /** Where the ball stood when the current simulation step began. */
   private previousX = this.x;
@@ -74,6 +82,7 @@ export class Ball {
     this.sinceTrailPoint = Infinity;
     this.clearBoost();
     this.isPowerShot = false;
+    this.spin = 0;
     // Back at the center in one jump: nothing to draw between where it was and here
     this.rememberPosition();
     this.interpolate(1);
@@ -81,6 +90,26 @@ export class Ball {
     const angle = (random() - 0.5) * 0.8;
     this.vx = direction * Math.cos(angle) * this.speed;
     this.vy = Math.sin(angle) * this.speed;
+  }
+
+  /**
+   * A ball flying exactly as this one does, to fly ahead of it (a forecast): its position,
+   * velocity, size, boost and spin, with no trail.
+   */
+  public flightCopy(): Ball {
+    const copy = new Ball();
+    copy.x = this.x;
+    copy.y = this.y;
+    copy.vx = this.vx;
+    copy.vy = this.vy;
+    copy.speed = this.speed;
+    copy.radius = this.radius;
+    copy.spin = this.spin;
+    copy.spinDecay = this.spinDecay;
+    copy.boostAmount = this.boostAmount;
+    copy.boostDuration = this.boostDuration;
+    copy.boostTimeLeft = this.boostTimeLeft;
+    return copy;
   }
 
   /** Call at the start of every simulation step. */
