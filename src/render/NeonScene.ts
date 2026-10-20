@@ -5,7 +5,8 @@ import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
 import { RenderFrame, Scene, SceneState } from '@/render/scene';
-import { SkillRenderer } from '@/render/SkillRenderer';
+import { ARC_TRAIL, SkillRenderer, TrailPoint } from '@/render/SkillRenderer';
+import { Ball } from '@/match/Ball';
 import { approach, clamp } from '@/shared/math';
 
 // Lightweight scene dimming behind the menus and the pause
@@ -119,6 +120,24 @@ function neonLayers(
 
   const fillScreen = (c: CanvasRenderingContext2D) => c.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
+  // Arc's trail of each spinning ball: laid while it spins, fading once it has stopped; a ball
+  // spun again starts a new one
+  const arcTrails = new Map<Ball, { points: TrailPoint[]; isLaying: boolean }>();
+  const followArcTrails = (balls: readonly Ball[], realDt: number) => {
+    for (const ball of balls) {
+      const trail = arcTrails.get(ball);
+      if (ball.spin !== 0 && !trail?.isLaying) arcTrails.set(ball, { points: [], isLaying: true });
+    }
+    for (const [ball, trail] of arcTrails) {
+      const { points } = trail;
+      for (const point of points) point.age += realDt;
+      while (points.length > 0 && points[0].age >= ARC_TRAIL.LIFE) points.shift();
+      trail.isLaying = ball.spin !== 0 && balls.includes(ball);
+      if (trail.isLaying) points.push({ x: ball.drawX, y: ball.drawY, age: 0 });
+      else if (points.length === 0) arcTrails.delete(ball);
+    }
+  };
+
   // The slowed world (Reflex): its cast eases in and out, and its label stays up a while after
   // it began, over the paddle that slowed it. Followed once a frame by the first of its layers
   const warp = { level: 0, age: Infinity, paddleIndex: 0, wasOn: false };
@@ -186,6 +205,15 @@ function neonLayers(
             EntityRenderer.renderOverdriveMeter(c, paddle, charge, court.time, streak);
           }
         });
+      },
+    },
+    {
+      // The curve a spinning ball (Arc) flies, laid out behind it
+      id: 'arcTrail',
+      space: 'court',
+      render: (c, { court }, { realDt }) => {
+        followArcTrails(court.serveTime > 0 ? [] : court.balls, realDt);
+        for (const { points } of arcTrails.values()) SkillRenderer.renderArcTrail(c, points);
       },
     },
     {

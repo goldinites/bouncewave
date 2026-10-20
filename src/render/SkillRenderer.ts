@@ -14,6 +14,22 @@ const SPIN_STREAKS = {
   ALPHA: 0.85,
 } as const;
 
+// Arc's trail: the path a spinning ball has flown, held long enough to show its curve (the
+// ball's own trail is a short streak)
+export const ARC_TRAIL = {
+  LIFE: 0.7, // s a point of it lasts
+  WIDTH: 3, // px
+  ALPHA: 0.75, // where it is newest
+  COLOR: '#bff4ff',
+} as const;
+
+/** A point of Arc's trail, and seconds since the ball was there. */
+export interface TrailPoint {
+  x: number;
+  y: number;
+  age: number;
+}
+
 // Reflex: the slowed world turns blue and its balls split into red and cyan ghosts
 const TIME_WARP = {
   TINT: '40, 110, 255',
@@ -52,6 +68,26 @@ export class SkillRenderer {
     for (const start of [turn, turn + Math.PI]) {
       ctx.beginPath();
       ctx.arc(ball.drawX, ball.drawY, radius, start, start + SPIN_STREAKS.LENGTH);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** The curve a spinning ball has flown, fading toward its oldest end. */
+  public static renderArcTrail(ctx: CanvasRenderingContext2D, points: readonly TrailPoint[]): void {
+    if (points.length < 2) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = ARC_TRAIL.COLOR;
+    ctx.lineWidth = ARC_TRAIL.WIDTH;
+    ctx.lineCap = 'round';
+    for (let i = 1; i < points.length; i++) {
+      const life = 1 - points[i].age / ARC_TRAIL.LIFE;
+      if (life <= 0) continue;
+      ctx.globalAlpha = ARC_TRAIL.ALPHA * life * life;
+      ctx.beginPath();
+      ctx.moveTo(points[i - 1].x, points[i - 1].y);
+      ctx.lineTo(points[i].x, points[i].y);
       ctx.stroke();
     }
     ctx.restore();
