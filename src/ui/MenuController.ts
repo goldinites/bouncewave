@@ -4,7 +4,13 @@ import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { LANGUAGES, TRANSLATIONS } from '@/i18n/translations';
 import { ChallengeVerdict } from '@/match/ChallengeJudge';
-import { CHALLENGE_IDS, ChallengeId, CHALLENGES } from '@/match/challenges';
+import {
+  CHALLENGE_IDS,
+  CHALLENGE_TIERS,
+  ChallengeId,
+  CHALLENGES,
+  ChallengeTier,
+} from '@/match/challenges';
 import { MatchEvent } from '@/match/MatchFlow';
 import { MATCH_POINTS, MODE_IDS, ModeId, MODES } from '@/match/modes';
 import { DIFFICULTY_LEVELS } from '@/match/difficulty';
@@ -214,6 +220,8 @@ export class MenuController {
   /** Which challenges the player has passed, for their screens and the statistics. */
   private readonly challenges: ChallengeProgressAccess;
   private readonly stack = new ScreenStack();
+  /** The tier the challenges' list shows: the last challenge opened keeps it on its own. */
+  private readonly challengeTier = signal<ChallengeTier>(CHALLENGE_TIERS[0]);
   /** The game's look, which decides what the menus offer. */
   private readonly look: ReadonlySignal<Look>;
   /** The screen last drawn, to tell one drawn again from one that has just come on screen. */
@@ -431,10 +439,13 @@ export class MenuController {
 
   private pickMode(mode: ModeId): void {
     if (mode === 'quick') this.open(this.quickMatchSetup());
-    if (mode === 'challenges') this.open(this.challengeList());
+    if (mode === 'challenges') {
+      this.challengeTier.value = this.firstOpenTier();
+      this.open(this.challengeList());
+    }
   }
 
-  /** "4 / 9": the challenges passed, of them all. */
+  /** "4 / 18": the challenges passed, of them all. */
   private passedCount(): string {
     return `${this.challenges.get().passed.length} / ${CHALLENGE_IDS.length}`;
   }
@@ -444,23 +455,54 @@ export class MenuController {
     this.stack.reset(this.mainMenu(), this.playMenu(), this.challengeList());
   }
 
+  /**
+   * The tier the list opens on from PLAY: that of the first challenge still to pass (the first
+   * tier once all are).
+   */
+  private firstOpenTier(): ChallengeTier {
+    const progress = this.challenges.get();
+    const next = CHALLENGE_IDS.find((id) => challengeState(progress, id) === 'open');
+    return CHALLENGES[next ?? CHALLENGE_IDS[0]].scene;
+  }
+
   private challengeList(): ScreenEntry {
     return {
       id: 'challenges',
       scene: null,
       view: () => {
         const progress = this.challenges.get();
+        const tier = this.challengeTier.value;
+        const step = (by: number) => {
+          const at = CHALLENGE_TIERS.indexOf(tier);
+          this.challengeTier.value =
+            CHALLENGE_TIERS[(at + by + CHALLENGE_TIERS.length) % CHALLENGE_TIERS.length];
+        };
+        const tierNames = this.i18n.t('challengeTiers');
         return {
           title: this.i18n.getModeName('challenges'),
           subtitle: `${this.i18n.t('challengesPassed')}: ${this.passedCount()}`,
           body: h(ChallengeList, {
-            challenges: CHALLENGE_IDS.map((id) => ({
+            tier: {
+              id: 'tier',
+              name: this.i18n.t('challengeTier'),
+              value: tierNames[tier],
+              values: CHALLENGE_TIERS.map((id) => tierNames[id]),
+              color: 'cyan',
+              onNext: () => step(1),
+              onPrevious: () => step(-1),
+            },
+            challenges: CHALLENGE_IDS.filter((id) => CHALLENGES[id].scene === tier).map((id) => ({
               id,
               name: this.i18n.getChallengeInfo(id)[0],
               state: challengeState(progress, id),
             })),
+            previousLabel: this.i18n.t('previousChoice'),
+            nextLabel: this.i18n.t('nextChoice'),
             backLabel: this.i18n.t('back'),
-            onPick: (id) => this.open(this.challengeCard(id)),
+            onPick: (id) => {
+              this.challengeTier.value = CHALLENGES[id].scene;
+              this.open(this.challengeCard(id));
+            },
             onBack: this.back,
           }),
         };
@@ -474,6 +516,7 @@ export class MenuController {
    * the economy (stage 6).
    */
   public showChallengeCard(challenge: ChallengeId): void {
+    this.challengeTier.value = CHALLENGES[challenge].scene;
     this.stack.reset(
       this.mainMenu(),
       this.playMenu(),

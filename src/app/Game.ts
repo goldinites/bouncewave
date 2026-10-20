@@ -454,7 +454,7 @@ export class Game {
    */
   private forLook(rules: MatchRules): MatchRules {
     return this.look === 'classic'
-      ? { ...rules, overdrive: false, cpuOverdrive: false, modifiers: [] }
+      ? { ...rules, overdrive: false, cpuOverdrive: false, modifiers: [], rotation: null }
       : rules;
   }
 
@@ -612,7 +612,6 @@ export class Game {
           this.i18n,
           this.flow,
           this.challenge ? CHALLENGES[this.challenge].goal : null,
-          this.challengeJudge.progress,
         );
     this.conditionBar.update(condition, !this.isConditionOnCourt);
     const frame = this.buildRenderFrame(condition);

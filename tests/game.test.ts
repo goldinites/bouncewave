@@ -235,7 +235,7 @@ describe('Game', () => {
     });
 
     screenButton('ALL CHALLENGES').click();
-    expect($('#gameSubtitle').textContent).toBe('PASSED: 1 / 9');
+    expect($('#gameSubtitle').textContent).toBe('PASSED: 1 / 18');
     expect(screenButton('WARM-UP').classList).toContain('challenge-list__item--passed');
 
     // A quick match after it is a quick match again: its end is the game-over menu

@@ -14,7 +14,6 @@ const setup = (challenge: ChallengeId | null) => {
   const verdicts: ChallengeVerdict[] = [];
   const judge = new ChallengeJudge({
     match: {
-      isPlayerPaddle: (i) => i === 0,
       playerSide: 0,
       rules: challenge ? CHALLENGES[challenge].rules : { winningScores: [5, 5] },
     },
@@ -24,16 +23,16 @@ const setup = (challenge: ChallengeId | null) => {
   judge.judge(challenge);
 
   const start = () => events.emit({ type: 'matchStart' });
-  const hit = (paddleIndex: number, rally: number, isPowerShot = false) =>
+  const hit = (paddleIndex: number, rally: number) =>
     events.emit({
       type: 'paddleHit',
       paddleIndex,
-      isPerfect: isPowerShot,
+      isPerfect: false,
       x: 0,
       y: 0,
       speed: 400,
       rally,
-      isPowerShot,
+      isPowerShot: false,
       chargedOverdrive: false,
     });
   const score = (side: Side, times = 1) => {
@@ -107,30 +106,6 @@ describe('judging a challenge', () => {
     expect(verdicts).toMatchObject([
       { isPassed: false, progress: 18, target: 20 },
       { isPassed: true, progress: 20, target: 20 },
-    ]);
-  });
-
-  it('counts only the player’s Overdrive shots, and wants the win too', () => {
-    const { verdicts, start, hit, score, gameOver } = setup('overload');
-    start();
-    for (let i = 0; i < 5; i++) hit(0, 1, true);
-    hit(1, 2, true);
-    score(1, 7);
-    gameOver(1, [0, 7]);
-    start();
-    for (let i = 0; i < 4; i++) hit(0, 1, true);
-    for (let i = 0; i < 3; i++) hit(1, 2, true);
-    score(0, 7);
-    gameOver(0, [7, 0]);
-    start();
-    for (let i = 0; i < 5; i++) hit(0, 1, true);
-    score(0, 7);
-    gameOver(0, [7, 0]);
-
-    expect(verdicts).toMatchObject([
-      { isPassed: false, progress: 5 },
-      { isPassed: false, progress: 4 },
-      { isPassed: true, progress: 5, target: 5 },
     ]);
   });
 

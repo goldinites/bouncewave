@@ -258,6 +258,11 @@ function neonLayers(
       render: (c, { court }) => ModifierRenderer.renderBumpers(c, court.conditions.bumpers),
     },
     {
+      id: 'bricks',
+      space: 'court',
+      render: (c, { court }) => ModifierRenderer.renderBricks(c, court.conditions.bricks),
+    },
+    {
       id: 'hud',
       space: 'court',
       render: (c, frame, state) => {

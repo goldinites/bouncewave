@@ -53,6 +53,19 @@ export interface MatchRules {
   readonly balls: number;
   /** What changes the match beyond these rules: wind, darkness and the rest (docs/CHALLENGES.md). */
   readonly modifiers: readonly ModifierId[];
+  /** Modifiers taken in turn on top of those (Chaos); null for none. */
+  readonly rotation: ModifierRotation | null;
+}
+
+/**
+ * Modifiers played one at a time, each for a few points, in an order dealt afresh for every match
+ * (Chaos). The next one and when it comes are shown ahead. Only those that change the court, the
+ * ball or what is seen: not Two opponents, which changes who plays.
+ */
+export interface ModifierRotation {
+  readonly modifiers: readonly ModifierId[];
+  /** Points (both sides' together) each one is played for. */
+  readonly points: number;
 }
 
 /**
@@ -80,6 +93,7 @@ export const STANDARD_RULES: MatchRules = {
   cpuOverdrive: false,
   balls: 1,
   modifiers: [],
+  rotation: null,
 };
 
 /** The same winning score for both sides. */

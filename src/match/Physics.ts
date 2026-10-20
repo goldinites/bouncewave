@@ -1,6 +1,6 @@
 import { Ball } from '@/match/Ball';
 import { COURT, BALL } from '@/match/config';
-import { CourtConditions } from '@/match/court';
+import { Brick, CourtConditions } from '@/match/court';
 import { DifficultyConfig } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
 import { Side } from '@/match/side';
@@ -44,7 +44,9 @@ export type PhysicsEvent =
       /** Ball speed right after the hit (acceleration applied). */
       speed: number;
     }
-  | { type: 'score'; scoringPlayerIndex: Side; y: number };
+  | { type: 'score'; scoringPlayerIndex: Side; y: number }
+  /** Off one of the court's bricks (Bricks); whoever handles it breaks the brick. */
+  | { type: 'brickHit'; brick: Brick; x: number; y: number };
 
 /**
  * Ball movement and collisions only. It changes the ball, and nothing else: effects, sound,
@@ -79,6 +81,10 @@ export class Physics {
       ball.y += ball.vy * subDt;
       if (court && court.bumpers.length > 0) {
         for (const event of Physics.bumpOff(ball, court)) events.push(event);
+      }
+      if (court && court.bricks.length > 0) {
+        const event = Physics.breakOff(ball, court);
+        if (event) events.push(event);
       }
 
       const topBoundary = COURT.TOP_WALL + ball.radius;
@@ -203,11 +209,7 @@ export class Physics {
     }
   }
 
-  /**
-   * Bounces the ball off any of the court's posts it has run into: mirrored about the post's
-   * surface, kept off it, and never sent off steeper than a paddle could (so it can't stall
-   * along a wall). A post takes the spin off, as a wall does.
-   */
+  /** Bounces the ball off any of the court's posts it has run into, and keeps it off them. */
   private static bumpOff(ball: Ball, court: CourtConditions): PhysicsEvent[] {
     const events: PhysicsEvent[] = [];
     for (const bumper of court.bumpers) {
@@ -218,23 +220,57 @@ export class Physics {
       if (distance >= reach || distance === 0) continue;
       const nx = dx / distance;
       const ny = dy / distance;
-      const along = ball.vx * nx + ball.vy * ny;
-      if (along >= 0) continue; // already leaving it
-
-      const speed = Math.hypot(ball.vx, ball.vy);
-      const vx = ball.vx - 2 * along * nx;
-      const vy = ball.vy - 2 * along * ny;
-      const angle = Math.min(Math.atan2(Math.abs(vy), Math.abs(vx)), BOUNCE.MAX_ANGLE);
-      const xSign = vx === 0 ? Math.sign(nx) || 1 : Math.sign(vx);
-      ball.vx = xSign * Math.cos(angle) * speed;
-      ball.vy = Math.sign(vy) * Math.sin(angle) * speed;
+      if (!Physics.reflect(ball, nx, ny)) continue; // already leaving it
       ball.x = bumper.x + nx * reach;
       ball.y = bumper.y + ny * reach;
-      ball.spin = 0;
-      ball.spinDelay = 0;
       events.push({ type: 'wallBounce', x: ball.x, y: ball.y });
     }
     return events;
+  }
+
+  /**
+   * Bounces the ball off the first of the court's bricks it has run into, as off a post: about
+   * the brick's surface (a face, or a corner it clipped). The brick stays: the event says which
+   * was hit, and the match breaks it.
+   */
+  private static breakOff(ball: Ball, court: CourtConditions): PhysicsEvent | null {
+    for (const brick of court.bricks) {
+      // The point of the brick nearest the ball's centre
+      const nearX = clamp(ball.x, brick.x, brick.x + brick.width);
+      const nearY = clamp(ball.y, brick.y, brick.y + brick.height);
+      const dx = ball.x - nearX;
+      const dy = ball.y - nearY;
+      const distance = Math.hypot(dx, dy);
+      if (distance >= ball.radius) continue;
+      // A centre already inside (a fast step) is put back out the way it came in
+      const nx = distance === 0 ? -Math.sign(ball.vx) || 1 : dx / distance;
+      const ny = distance === 0 ? 0 : dy / distance;
+      if (!Physics.reflect(ball, nx, ny)) continue;
+      ball.x = nearX + nx * ball.radius;
+      ball.y = nearY + ny * ball.radius;
+      return { type: 'brickHit', brick, x: ball.x, y: ball.y };
+    }
+    return null;
+  }
+
+  /**
+   * Mirrors the ball's flight about a surface facing (nx, ny), never sending it off steeper than
+   * a paddle could (so it can't stall along a wall), and takes the spin off, as a wall does.
+   * @returns false, the ball untouched, when it is already leaving the surface
+   */
+  private static reflect(ball: Ball, nx: number, ny: number): boolean {
+    const along = ball.vx * nx + ball.vy * ny;
+    if (along >= 0) return false;
+    const speed = Math.hypot(ball.vx, ball.vy);
+    const vx = ball.vx - 2 * along * nx;
+    const vy = ball.vy - 2 * along * ny;
+    const angle = Math.min(Math.atan2(Math.abs(vy), Math.abs(vx)), BOUNCE.MAX_ANGLE);
+    const xSign = vx === 0 ? Math.sign(nx) || 1 : Math.sign(vx);
+    ball.vx = xSign * Math.cos(angle) * speed;
+    ball.vy = Math.sign(vy) * Math.sin(angle) * speed;
+    ball.spin = 0;
+    ball.spinDelay = 0;
+    return true;
   }
 
   /**

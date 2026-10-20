@@ -267,7 +267,7 @@ describe('the statistics screen', () => {
       'NORMAL 1 / 2',
       'HARD 1 / 1',
       'INSANE 0 / 0',
-      'PASSED 2 / 9',
+      'PASSED 2 / 18',
     ]);
     expect([...document.querySelectorAll('.stats__heading')].map((h) => h.textContent)).toEqual([
       'WINS BY DIFFICULTY',

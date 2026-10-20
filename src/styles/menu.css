@@ -363,7 +363,8 @@
   min-width: clamp(170px, 38%, 280px);
 }
 
-/* The challenges: three to a row, so all nine and BACK fit a short phone's court unscrolled */
+/* The challenges a stage at a time: its six three to a row under the stage's choice, so they and
+   BACK fit a short phone's court unscrolled */
 .challenge-list {
   display: flex;
   flex-direction: column;
@@ -561,7 +562,7 @@
 
 /* The court is on its side here (stage.css), so the menu is turned back upright over it */
 @media (orientation: portrait) and (max-width: 900px) {
-  /* A phone held upright is too narrow for three names a row: two, the odd last one centered */
+  /* A phone held upright is too narrow for three names a row: two */
   .challenge-list__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: 90%;
@@ -571,12 +572,6 @@
   .challenge-list .game-button {
     padding: 0.85em 0.6em;
     font-size: 14px;
-  }
-
-  .challenge-list__item:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-    justify-self: center;
-    width: calc(50% - 5px);
   }
 
   .game__ui {

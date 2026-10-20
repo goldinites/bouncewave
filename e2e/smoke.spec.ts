@@ -133,14 +133,21 @@ test('lists the challenges on the court and starts the first from its card', asy
 
   await button(page, 'PLAY').click();
   await button(page, 'CHALLENGE').click();
-  await expect(page.locator('#gameSubtitle')).toHaveText('PASSED: 0 / 9');
-  // Every challenge is open from the start
+  await expect(page.locator('#gameSubtitle')).toHaveText('PASSED: 0 / 18');
+  // A stage at a time, every challenge open from the start: its six, the stage's arrows and BACK
+  // on the court in every orientation
   await expect(button(page, 'WARM-UP')).toBeEnabled();
-  await expect(button(page, 'INSANITY')).toBeEnabled();
-  // Every challenge and BACK, on the court in every orientation
   await expectOnCourt(page, button(page, 'WARM-UP'));
-  await expectOnCourt(page, button(page, 'INSANITY'));
+  await expectOnCourt(page, button(page, 'TURBO'));
+  await expectOnCourt(page, button(page, 'Previous'));
+  await expectOnCourt(page, button(page, 'Next'));
   await expectOnCourt(page, button(page, 'BACK'));
+  // The last stage, back a step from the first
+  await button(page, 'Previous').click();
+  await expect(button(page, 'CHAOS')).toBeEnabled();
+  await expectOnCourt(page, button(page, 'CHAOS'));
+  await expectOnCourt(page, button(page, 'TWO ON ONE'));
+  await button(page, 'Next').click();
 
   await button(page, 'WARM-UP').click();
   await expect(page.locator('#gameSubtitle')).toHaveText('Win a match to 3 points');

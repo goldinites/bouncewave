@@ -6,6 +6,7 @@ import { BALL, COURT, PADDLE } from '@/match/config';
 import { CHALLENGE_IDS, CHALLENGES } from '@/match/challenges';
 import { DifficultyLevel } from '@/match/difficulty';
 import { FINALE, MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { MODIFIER_IDS } from '@/match/modifiers/Modifier';
 import { Paddle } from '@/match/Paddle';
 import { AiPaddleController } from '@/match/PaddleController';
 import { STANDARD_PADDLE } from '@/match/PaddleSpec';
@@ -236,22 +237,42 @@ describe('a match’s own difficulty and paddles', () => {
 });
 
 describe('the challenges', () => {
-  it('are nine, the first nine of docs/CHALLENGES.md, easiest first', () => {
+  it('are eighteen, easiest first, with modifiers or without (docs/CHALLENGES.md)', () => {
     expect(CHALLENGE_IDS).toEqual([
       'warmUp',
-      'longRally',
       'twoBalls',
+      'longRally',
+      'bricks',
+      'wind',
+      'turbo',
+      'shrinkingPaddle',
+      'darkness',
       'blitz',
-      'shutout',
+      'bumpers',
+      'ice',
+      'ghost',
+      'twoOnOne',
       'giant',
+      'shutout',
       'survival',
-      'overload',
       'insanity',
+      'chaos',
     ]);
     expect(CHALLENGES.survival.rules.winningScores).toEqual([10, 3]);
     expect(CHALLENGES.blitz.rules.winningScores).toEqual([3, 3]);
     expect(CHALLENGES.giant.paddles[1].height).toBe(PADDLE.HEIGHT * 1.5);
     expect(CHALLENGES.longRally.rules.timeLimit).toBe(60);
+    expect(CHALLENGES.shrinkingPaddle.rules).toMatchObject({ timeLimit: 60, rallyGoal: 20 });
+    expect(CHALLENGES.ghost.rules.modifiers).toEqual(['invisibleBand']);
+  });
+
+  it('take every modifier but Two opponents in turn in Chaos, the finale', () => {
+    const rotation = CHALLENGES.chaos.rules.rotation;
+    expect(rotation?.points).toBe(2);
+    expect([...(rotation?.modifiers ?? [])].sort()).toEqual(
+      MODIFIER_IDS.filter((id) => id !== 'twoOpponents').sort(),
+    );
+    expect(CHALLENGE_IDS.at(-1)).toBe('chaos');
   });
 
   it('are all lost when their clock runs out, whatever the score', () => {

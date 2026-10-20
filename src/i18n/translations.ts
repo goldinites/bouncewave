@@ -1,4 +1,5 @@
-import { ChallengeId } from '@/match/challenges';
+import { ChallengeId, ChallengeTier } from '@/match/challenges';
+import { ModifierId } from '@/match/modifiers/Modifier';
 import { DifficultyLevel } from '@/match/difficulty';
 import { ModeId } from '@/match/modes';
 import { BackgroundChoice } from '@/shared/scenes';
@@ -72,6 +73,9 @@ export interface TranslationSchema {
    */
   challengesHeading: string;
   challengesPassed: string;
+  /** The challenges' list a tier at a time: the choice's name, and each tier's (its backdrop's). */
+  challengeTier: string;
+  challengeTiers: Record<ChallengeTier, string>;
   /** An attempt's outcome: passed or not, every challenge passed, and its buttons. */
   attemptPassed: string;
   attemptFailed: string;
@@ -81,29 +85,30 @@ export interface TranslationSchema {
   toChallenges: string;
   /** A challenge's condition in the HUD, as it stands: "RALLY 12 / 20 · 0:41". */
   hudRally: string;
-  hudPowerShots: string;
   hudPoints: string;
+  /** The modifier coming next when they take turns (Chaos): "WIND · NEXT: DARKNESS". */
+  hudNextModifier: string;
   /** What a failed attempt fell short by: how far it got toward the goal, or what spoilt it. */
   shortRally: string;
   shortPoints: string;
-  shortPowerShots: string;
   shortConceded: string;
-  shortLost: string;
   /**
    * The finale's sign over a failed attempt, in place of `lose` where it would mislead: the clock
-   * ran out, a point was lost in a shutout, the lives ran out, a match won with too few shots.
+   * ran out, a point was lost in a shutout, the lives ran out.
    */
   finaleTimeUp: string;
   finaleConceded: string;
   finaleNoLives: string;
-  finaleNoOverdrive: string;
+  /** Every match modifier's name, as the HUD names it when they take turns. */
+  modifiers: Record<ModifierId, string>;
   /** Every backdrop's name, and random's, by choice. */
   backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
   d: Record<DifficultyLevel, DifficultyDescription>;
   /**
    * Name and description of every challenge, by challenge. The description is all the card says
-   * of it: its goal and whatever sets its match apart (points to win, clock, level, paddles).
+   * of it: its goal and whatever sets its match apart (points to win, clock, level, paddles,
+   * modifiers).
    */
   challenges: Record<ChallengeId, ChallengeDescription>;
 }
@@ -156,6 +161,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     playerLabels: ['P1', 'P2'],
     challengesHeading: 'CHALLENGES',
     challengesPassed: 'PASSED',
+    challengeTier: 'STAGE',
+    challengeTiers: { warehouse: 'WAREHOUSE', dojo: 'DOJO', brokenNet: 'BROKEN NET' },
     attemptPassed: 'PASSED!',
     attemptFailed: 'NOT PASSED',
     attemptAllPassed: 'EVERY CHALLENGE PASSED',
@@ -163,17 +170,25 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     tryAgain: 'TRY AGAIN',
     toChallenges: 'ALL CHALLENGES',
     hudRally: 'RALLY {n} / {target}',
-    hudPowerShots: 'OVERDRIVE {n} / {target}',
     hudPoints: 'POINTS {n} / {target}',
+    hudNextModifier: 'NEXT: {name}',
     shortRally: 'RALLY: {n} OF {target}',
     shortPoints: 'POINTS: {n} OF {target}',
-    shortPowerShots: 'OVERDRIVE SHOTS: {n} OF {target}',
     shortConceded: 'A POINT WAS LOST',
-    shortLost: 'THE MATCH WAS LOST',
     finaleTimeUp: 'TIME UP',
     finaleConceded: 'POINT LOST',
     finaleNoLives: 'OUT OF LIVES',
-    finaleNoOverdrive: 'NOT ENOUGH OVERDRIVE',
+    modifiers: {
+      wind: 'WIND',
+      darkness: 'DARKNESS',
+      twoOpponents: 'TWO OPPONENTS',
+      turbo: 'TURBO',
+      shrinkingPaddle: 'MELTING PADDLE',
+      bumpers: 'BUMPERS',
+      invisibleBand: 'GHOST BAND',
+      ice: 'ICE',
+      bricks: 'BRICKS',
+    },
     backgrounds: {
       random: 'RANDOM',
       lasers: 'LASERS',
@@ -191,17 +206,41 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     },
     challenges: {
       warmUp: ['WARM-UP', 'Win a match to 3 points'],
-      blitz: ['BLITZ', 'Win to 3 before the two minutes are up'],
-      longRally: ['LONG RALLY', 'Keep a rally going for 20 hits within a minute'],
-      shutout: ['SHUTOUT', 'Win to 3 without losing a single point'],
       twoBalls: ['TWO BALLS', 'Win to 5 with two balls in play at once'],
+      longRally: ['LONG RALLY', 'Keep a rally going for 20 hits within a minute'],
+      bricks: [
+        'BRICKS',
+        'Win to 5 against a Normal opponent through a wall of bricks the ball breaks',
+      ],
+      wind: [
+        'WIND',
+        'Win to 5 against a Normal opponent in a gusting wind that turns now and then',
+      ],
+      turbo: ['TURBO', 'Win to 5 against a Normal opponent: the ball speeds up in flight'],
+      shrinkingPaddle: [
+        'MELTING PADDLE',
+        'Keep a rally going for 20 hits within a minute; your paddle shrinks with every hit',
+      ],
+      darkness: ['DARKNESS', 'Win to 5 against a Normal opponent on a court in the dark'],
+      blitz: ['BLITZ', 'Win to 3 before the two minutes are up'],
+      bumpers: ['BUMPERS', 'Win to 5 against a Hard opponent, posts standing on the centre line'],
+      ice: ['ICE', 'Win to 5 against a Hard opponent on ice: the paddles slide'],
+      ghost: ['GHOST', 'Win to 5 against a Hard opponent: the ball vanishes across the middle'],
+      twoOnOne: [
+        'TWO ON ONE',
+        'Win to 5 against two Normal opponents, each holding half of the court',
+      ],
+      giant: ['GIANT', 'Win to 5 against a Normal opponent whose paddle is half as long again'],
+      shutout: ['SHUTOUT', 'Win to 3 without losing a single point'],
       survival: [
         'SURVIVAL',
         'Score 10 before you lose three lives; the opponent grows stronger every point',
       ],
-      giant: ['GIANT', 'Win to 5 against a Normal opponent whose paddle is half as long again'],
-      overload: ['OVERLOAD', 'Beat a Normal opponent to 7, landing 5 Overdrive shots'],
       insanity: ['INSANITY', 'Win to 5 against an Insane opponent'],
+      chaos: [
+        'CHAOS',
+        'Win to 7 against a Hard opponent while the modifiers take turns, two points each',
+      ],
     },
   },
   ru: {
@@ -252,6 +291,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     playerLabels: ['P1', 'P2'],
     challengesHeading: 'ИСПЫТАНИЯ',
     challengesPassed: 'ПРОЙДЕНО',
+    challengeTier: 'ЭТАП',
+    challengeTiers: { warehouse: 'СКЛАД', dojo: 'ДОДЗЁ', brokenNet: 'СЛОМАННАЯ СЕТЬ' },
     attemptPassed: 'ПРОЙДЕНО!',
     attemptFailed: 'НЕ ПРОЙДЕНО',
     attemptAllPassed: 'ВСЕ ИСПЫТАНИЯ ПРОЙДЕНЫ',
@@ -259,18 +300,26 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     tryAgain: 'ЕЩЁ РАЗ',
     toChallenges: 'К СПИСКУ',
     hudRally: 'РОЗЫГРЫШ {n} / {target}',
-    hudPowerShots: 'OVERDRIVE {n} / {target}',
     hudPoints: 'ОЧКИ {n} / {target}',
+    hudNextModifier: 'ДАЛЕЕ: {name}',
     shortRally: 'РОЗЫГРЫШ: {n} ИЗ {target}',
     shortPoints: 'ОЧКИ: {n} ИЗ {target}',
-    shortPowerShots: 'УДАРЫ OVERDRIVE: {n} ИЗ {target}',
     shortConceded: 'ПРОПУЩЕНО ОЧКО',
-    shortLost: 'МАТЧ ПРОИГРАН',
     // In English, as the finale's GAME OVER is
     finaleTimeUp: 'TIME UP',
     finaleConceded: 'POINT LOST',
     finaleNoLives: 'OUT OF LIVES',
-    finaleNoOverdrive: 'NOT ENOUGH OVERDRIVE',
+    modifiers: {
+      wind: 'ВЕТЕР',
+      darkness: 'ТЬМА',
+      twoOpponents: 'ДВОЕ СОПЕРНИКОВ',
+      turbo: 'ТУРБО',
+      shrinkingPaddle: 'ТАЮЩАЯ РАКЕТКА',
+      bumpers: 'ОТБОЙНИКИ',
+      invisibleBand: 'НЕВИДИМАЯ ПОЛОСА',
+      ice: 'ЛЁД',
+      bricks: 'КИРПИЧИ',
+    },
     backgrounds: {
       random: 'СЛУЧАЙНЫЙ',
       lasers: 'ЛАЗЕРНЫЙ',
@@ -288,23 +337,50 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     },
     challenges: {
       warmUp: ['РАЗМИНКА', 'Выиграй матч до 3 очков'],
-      blitz: ['БЛИЦ', 'Выиграй до 3 очков, пока не прошли две минуты'],
-      longRally: ['ДОЛГИЙ РОЗЫГРЫШ', 'Розыгрыш в 20 ударов за минуту'],
-      shutout: ['ВСУХУЮ', 'Выиграй до 3 очков, не пропустив ни одного'],
       twoBalls: ['ДВА МЯЧА', 'Выиграй до 5 очков, когда в игре сразу два мяча'],
-      survival: [
-        'ВЫЖИВАНИЕ',
-        'Набери 10 очков, пока не кончились три жизни; противник сильнее с каждым очком',
+      longRally: ['ДОЛГИЙ РОЗЫГРЫШ', 'Розыгрыш в 20 ударов за минуту'],
+      bricks: [
+        'КИРПИЧИ',
+        'Выиграй до 5 очков у противника средней сложности сквозь стену из кирпичей, которые мяч разбивает',
+      ],
+      wind: [
+        'ВЕТЕР',
+        'Выиграй до 5 очков у противника средней сложности на порывистом ветру, который меняет направление',
+      ],
+      turbo: [
+        'ТУРБО',
+        'Выиграй до 5 очков у противника средней сложности: мяч разгоняется в полёте',
+      ],
+      shrinkingPaddle: [
+        'ТАЮЩАЯ РАКЕТКА',
+        'Розыгрыш в 20 ударов за минуту; твоя ракетка короче с каждым ударом',
+      ],
+      darkness: ['ТЬМА', 'Выиграй до 5 очков у противника средней сложности на тёмном корте'],
+      blitz: ['БЛИЦ', 'Выиграй до 3 очков, пока не прошли две минуты'],
+      bumpers: [
+        'ОТБОЙНИКИ',
+        'Выиграй до 5 очков у сложного противника, когда на центральной линии стоят отбойники',
+      ],
+      ice: ['ЛЁД', 'Выиграй до 5 очков у сложного противника на льду: ракетки скользят'],
+      ghost: ['ПРИЗРАК', 'Выиграй до 5 очков у сложного противника: в середине корта мяч невидим'],
+      twoOnOne: [
+        'ДВОЕ НА ОДНОГО',
+        'Выиграй до 5 очков у двух противников средней сложности, каждый держит свою половину',
       ],
       giant: [
         'ВЕЛИКАН',
         'Выиграй до 5 очков у противника средней сложности с ракеткой в полтора раза длиннее',
       ],
-      overload: [
-        'ПЕРЕГРУЗКА',
-        'Выиграй у противника средней сложности до 7 очков, сделав 5 ударов Overdrive',
+      shutout: ['ВСУХУЮ', 'Выиграй до 3 очков, не пропустив ни одного'],
+      survival: [
+        'ВЫЖИВАНИЕ',
+        'Набери 10 очков, пока не кончились три жизни; противник сильнее с каждым очком',
       ],
       insanity: ['БЕЗУМИЕ', 'Выиграй до 5 очков у безумного противника'],
+      chaos: [
+        'ХАОС',
+        'Выиграй до 7 очков у сложного противника, пока модификаторы сменяют друг друга каждые 2 очка',
+      ],
     },
   },
 };

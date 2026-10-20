@@ -25,6 +25,8 @@ const match = (
   playerSide: 0,
   timeLeft: rules.timeLimit,
   rally: 0,
+  upcomingModifier: null,
+  activeModifiers: rules.modifiers,
   ...overrides,
 });
 
@@ -59,9 +61,7 @@ describe("a challenge's condition in the HUD", () => {
 
   it('shows the rally toward its goal and the clock', () => {
     const { rules, goal } = CHALLENGES.longRally;
-    expect(
-      describeCondition(ru, match(rules, [0, 0], { rally: 12, timeLeft: 41 }), goal, 0),
-    ).toEqual({
+    expect(describeCondition(ru, match(rules, [0, 0], { rally: 12, timeLeft: 41 }), goal)).toEqual({
       text: 'РОЗЫГРЫШ 12 / 20 · 0:41',
       lives: null,
       isUrgent: false,
@@ -71,7 +71,7 @@ describe("a challenge's condition in the HUD", () => {
 
   it('shows the points toward an uneven score, and the lives left as hearts, in the score’s place', () => {
     const { rules, goal } = CHALLENGES.survival;
-    expect(describeCondition(ru, match(rules, [7, 1]), goal, 7)).toEqual({
+    expect(describeCondition(ru, match(rules, [7, 1]), goal)).toEqual({
       text: 'ОЧКИ 7 / 10',
       lives: { left: 2, total: 3 },
       isUrgent: false,
@@ -81,7 +81,7 @@ describe("a challenge's condition in the HUD", () => {
 
   it('shows Shutout’s points without a lone heart: one life says nothing its goal doesn’t', () => {
     const { rules, goal } = CHALLENGES.shutout;
-    expect(describeCondition(en, match(rules, [2, 0]), goal, 2)).toEqual({
+    expect(describeCondition(en, match(rules, [2, 0]), goal)).toEqual({
       text: 'POINTS 2 / 3',
       lives: null,
       isUrgent: false,
@@ -89,33 +89,42 @@ describe("a challenge's condition in the HUD", () => {
     });
   });
 
-  it('shows the Overdrive shots toward their goal, under the score that also counts', () => {
-    const { rules, goal } = CHALLENGES.overload;
-    expect(describeCondition(en, match(rules), goal, 2)).toEqual({
-      text: 'OVERDRIVE 2 / 5',
+  it('names the modifier in play and the next one, urgent the point before it comes (Chaos)', () => {
+    const { rules, goal } = CHALLENGES.chaos;
+    const chaos = (inPoints: number) =>
+      match(rules, [1, 0], {
+        activeModifiers: ['wind'],
+        upcomingModifier: { id: 'darkness', inPoints },
+      });
+    expect(describeCondition(ru, chaos(2), goal)).toEqual({
+      text: 'ВЕТЕР · ДАЛЕЕ: ТЬМА',
       lives: null,
       isUrgent: false,
       replacesScore: false,
+    });
+    expect(describeCondition(en, chaos(1), goal)).toMatchObject({
+      text: 'WIND · NEXT: DARKNESS',
+      isUrgent: true,
     });
   });
 
   it('turns the clock urgent for its last ten seconds', () => {
     const { rules, goal } = CHALLENGES.blitz;
-    expect(describeCondition(en, match(rules, [3, 1], { timeLeft: 84 }), goal, 3)).toEqual({
+    expect(describeCondition(en, match(rules, [3, 1], { timeLeft: 84 }), goal)).toEqual({
       text: '1:24',
       lives: null,
       isUrgent: false,
       replacesScore: false,
     });
-    expect(describeCondition(en, match(rules, [3, 1], { timeLeft: 9.5 }), goal, 3)?.isUrgent).toBe(
+    expect(describeCondition(en, match(rules, [3, 1], { timeLeft: 9.5 }), goal)?.isUrgent).toBe(
       true,
     );
   });
 
   it('shows nothing where the score says it all', () => {
     const { rules, goal } = CHALLENGES.warmUp;
-    expect(describeCondition(en, match(rules), goal, 0)).toBeNull();
-    expect(describeCondition(en, match(STANDARD_RULES), null, null)).toBeNull();
+    expect(describeCondition(en, match(rules), goal)).toBeNull();
+    expect(describeCondition(en, match(STANDARD_RULES), null)).toBeNull();
   });
 });
 

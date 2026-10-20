@@ -2,6 +2,7 @@ import { I18nManager } from '@/i18n/I18nManager';
 import { ChallengeVerdict } from '@/match/ChallengeJudge';
 import { ChallengeGoal, CHALLENGES } from '@/match/challenges';
 import { FinaleReason } from '@/match/MatchFlow';
+import { ModifierId } from '@/match/modifiers/Modifier';
 import { MatchRules } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
 
@@ -22,10 +23,14 @@ export interface ConditionMatch {
   readonly timeLeft: number | null;
   /** Hits in the rally being played. */
   readonly rally: number;
+  /** The rotation's next modifier and the points until it comes (Chaos); null for none. */
+  readonly upcomingModifier: { readonly id: ModifierId; readonly inPoints: number } | null;
+  /** The modifiers in play right now. */
+  readonly activeModifiers: readonly ModifierId[];
 }
 
 /**
- * The condition line, whether it is urgent (the clock nearly out), and whether it takes the
+ * The condition line, whether it is urgent (the clock nearly out, a modifier about to change), and whether it takes the
  * score's place: where the score tells the player nothing the line doesn't (Survival's points and
  * lives, Shutout's) or nothing at all (Long Rally, where points don't count).
  */
@@ -39,26 +44,21 @@ export interface Condition {
 
 /**
  * What the player needs to see of a challenge's condition while playing it, in one line: the
- * rally toward its goal, the Overdrive shots, the points toward an uneven winning score with the
- * lives left (the HUD draws them as hearts), and the clock. Null when there is nothing to show (a standard match,
- * whose score says it all).
+ * rally toward its goal, the points toward an uneven winning score with the lives left (the HUD
+ * draws them as hearts), the modifier in play and the next one when they take turns (Chaos), and
+ * the clock. Null when there is nothing to show (a standard match, whose score says it all).
  * @param goal the challenge's goal; null in a quick match
- * @param progress the judge's count toward it (the Overdrive shots)
  */
 export function describeCondition(
   i18n: I18nManager,
   match: ConditionMatch,
   goal: ChallengeGoal | null,
-  progress: number | null,
 ): Condition | null {
   const parts: string[] = [];
   let lives: Condition['lives'] = null;
   let replacesScore = goal?.type === 'rally';
   if (goal?.type === 'rally')
     parts.push(i18n.format('hudRally', { n: match.rally, target: goal.hits }));
-  if (goal?.type === 'powerShots') {
-    parts.push(i18n.format('hudPowerShots', { n: progress ?? 0, target: goal.count }));
-  }
 
   // An uneven match (Survival, Shutout): the player's points toward theirs, the opponent's
   // winning score as the player's lives. A single life (Shutout) says nothing the goal doesn't,
@@ -74,12 +74,21 @@ export function describeCondition(
     }
   }
 
+  // Modifiers taking turns: the one in play, and the next, urgent the point before it comes
+  const upcoming = match.upcomingModifier;
+  if (upcoming) {
+    const now = match.activeModifiers.at(-1);
+    if (now) parts.push(i18n.t('modifiers')[now]);
+    parts.push(i18n.format('hudNextModifier', { name: i18n.t('modifiers')[upcoming.id] }));
+  }
+
   if (match.timeLeft !== null) parts.push(clockTime(match.timeLeft));
   if (parts.length === 0) return null;
   return {
     text: parts.join(' · '),
     lives,
-    isUrgent: match.timeLeft !== null && match.timeLeft < CLOCK_URGENT_BELOW,
+    isUrgent:
+      (match.timeLeft !== null && match.timeLeft < CLOCK_URGENT_BELOW) || upcoming?.inPoints === 1,
     replacesScore,
   };
 }
@@ -93,8 +102,6 @@ export function describeShortfall(i18n: I18nManager, verdict: ChallengeVerdict):
   switch (CHALLENGES[verdict.challenge].goal.type) {
     case 'rally':
       return i18n.format('shortRally', { n, target });
-    case 'powerShots':
-      return n < target ? i18n.format('shortPowerShots', { n, target }) : i18n.t('shortLost');
     case 'shutout':
       return n < target ? i18n.format('shortPoints', { n, target }) : i18n.t('shortConceded');
     case 'win':
@@ -110,9 +117,8 @@ export interface FinaleSign {
 
 /**
  * The finale's sign over an attempt, told by its verdict rather than by who won the match: a lost
- * clock reads TIME UP, not GAME OVER, and a match won with too few Overdrive shots is no win. The
- * sign's number is the score, or the goal's own count where the score says nothing of it (Long
- * Rally's hits, the shots short of Overload's).
+ * clock reads TIME UP, not GAME OVER. The sign's number is the score, or the goal's own count
+ * where the score says nothing of it (Long Rally's hits).
  */
 export function describeFinale(
   i18n: I18nManager,
@@ -132,11 +138,6 @@ export function describeFinale(
   switch (goal.type) {
     case 'shutout':
       return { label: i18n.t('finaleConceded'), text };
-    case 'powerShots':
-      // A lost match is simply lost; a won one fell short by its shots (the player is the left side)
-      return finale.winnerIndex === 0
-        ? { label: i18n.t('finaleNoOverdrive'), text: count }
-        : { label: i18n.t('lose'), text };
     case 'rally':
     case 'win': {
       // The player is the left side: an opponent who needs fewer points took the player's lives

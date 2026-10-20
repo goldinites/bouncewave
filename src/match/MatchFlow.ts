@@ -1,6 +1,6 @@
 import { ShotThreat, SHOT_THREAT } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
-import { CourtConditions } from '@/match/court';
+import { Brick, CourtConditions } from '@/match/court';
 import { ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
 import { HALVES, SECOND_PADDLE_STEP } from '@/match/modifiers/modifiers';
 import { ModifierSet } from '@/match/modifiers/ModifierSet';
@@ -55,6 +55,8 @@ export type MatchEvent =
   | { type: 'returnToMenu' }
   | { type: 'serve' }
   | { type: 'wallBounce'; x: number; y: number }
+  // A ball broke a brick (Bricks), bouncing off it
+  | { type: 'brickBreak'; brick: Brick; x: number; y: number }
   | {
       type: 'paddleHit';
       /** Which of the match's paddles hit it (an index into its list). */
@@ -155,6 +157,10 @@ export class MatchFlow {
   private readonly _court = new CourtConditions();
   /** The modifiers of the match being played. */
   private readonly modifiers = new ModifierSet();
+  /** Those in play right now: the rules' own, and the rotation's turn (Chaos). */
+  private _activeModifiers: readonly ModifierId[] = [];
+  /** The rotation's modifiers in the order dealt for this match. */
+  private rotation: ModifierId[] = [];
   /** Every ball on court: the first is the one given, the rest the rules' extra balls. */
   private readonly _balls: Ball[];
   private readonly input: PlayerInput;
@@ -292,9 +298,24 @@ export class MatchFlow {
     return this._court;
   }
 
-  /** The modifiers of the match being played (none in the demo), for whatever draws them. */
+  /** The modifiers in play right now (none in the demo), for whatever draws them. */
   public get activeModifiers(): readonly ModifierId[] {
-    return this.isDemo ? [] : this._rules.modifiers;
+    return this.isDemo ? [] : this._activeModifiers;
+  }
+
+  /**
+   * The rotation's next modifier and the points until it takes over (Chaos), shown ahead; null
+   * without a rotation, and in the demo.
+   */
+  public get upcomingModifier(): { readonly id: ModifierId; readonly inPoints: number } | null {
+    const rotation = this._rules.rotation;
+    if (this.isDemo || !rotation) return null;
+    const played = this._scores[0] + this._scores[1];
+    const turn = Math.floor(played / rotation.points);
+    return {
+      id: this.rotation[(turn + 1) % this.rotation.length],
+      inPoints: (turn + 1) * rotation.points - played,
+    };
   }
 
   /** Every ball on court, the first one first. */
@@ -421,6 +442,9 @@ export class MatchFlow {
     if (lineup.length !== this.paddles.length) {
       throw new Error('A lineup needs a participant for every paddle');
     }
+    if (rules.rotation?.modifiers.includes('twoOpponents')) {
+      throw new Error('Two opponents changes who plays: it cannot take a turn in a rotation');
+    }
     this._rules = rules;
     this.matchDifficulty = difficulty;
     this._timeLeft = rules.timeLimit;
@@ -429,7 +453,9 @@ export class MatchFlow {
       rules.modifiers.includes('twoOpponents') ? this.withSecondOpponent(lineup) : lineup,
     );
     this.useBalls(rules.balls);
-    this.modifiers.use(rules.modifiers, this.modifierHost());
+    this.rotation = this.deal(rules.rotation?.modifiers ?? []);
+    this._activeModifiers = this.modifiersAt(0);
+    this.modifiers.use(this._activeModifiers, this.modifierHost());
     this.emit({ type: 'matchStart' });
     this.resetScores();
     this._phase = 'serving';
@@ -731,6 +757,10 @@ export class MatchFlow {
       case 'score':
         this.handleScore(event.scoringPlayerIndex, event.y);
         break;
+      case 'brickHit':
+        this._court.bricks = this._court.bricks.filter((brick) => brick !== event.brick);
+        this.emit({ type: 'brickBreak', brick: event.brick, x: event.x, y: event.y });
+        break;
     }
   }
 
@@ -753,7 +783,34 @@ export class MatchFlow {
     }
 
     this._phase = 'serving';
+    this.takeTurn();
     this.serve(nextServe, SERVE_DELAY.NORMAL);
+  }
+
+  /** `modifiers` in an order dealt with the match's randomness, so a seed replays it. */
+  private deal(modifiers: readonly ModifierId[]): ModifierId[] {
+    const order = [...modifiers];
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(this.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    return order;
+  }
+
+  /** The modifiers the rules have in play once `played` points (both sides') are played. */
+  private modifiersAt(played: number): readonly ModifierId[] {
+    const rotation = this._rules.rotation;
+    if (!rotation || this.rotation.length === 0) return this._rules.modifiers;
+    const turn = Math.floor(played / rotation.points) % this.rotation.length;
+    return [...this._rules.modifiers, this.rotation[turn]];
+  }
+
+  /** The rotation's next modifier takes over once its points are played (Chaos). */
+  private takeTurn(): void {
+    const now = this.modifiersAt(this._scores[0] + this._scores[1]);
+    if (now.every((id, i) => this._activeModifiers[i] === id)) return;
+    this._activeModifiers = now;
+    this.modifiers.use(now, this.modifierHost());
   }
 
   /**

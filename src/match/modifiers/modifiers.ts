@@ -1,5 +1,5 @@
 import { COURT, PADDLE } from '@/match/config';
-import { Bumper } from '@/match/court';
+import { Brick, Bumper } from '@/match/court';
 import { Modifier, ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
 import { PaddleSpec } from '@/match/PaddleSpec';
 import { SkillHit } from '@/match/skills/Skill';
@@ -36,6 +36,35 @@ export const BUMPERS = {
   RISE: 0.5, // s it takes to rise or sink
   CLEARANCE: 80, // px every ball must be from the middle for it to rise
 } as const;
+
+// Bricks: a wall of two columns across the middle, as in Arkanoid. A ball bounces off a brick and
+// breaks it, so a shot into the wall comes back at its hitter; hits open holes in it. An opening
+// in the middle lets the serve through, and the wall is whole again at every serve: every point
+// starts fair
+export const BRICKS = {
+  WIDTH: 14, // px
+  HEIGHT: 33, // px
+  GAP: 4, // px between two bricks
+  ROWS: 5, // a half's, from the opening to the wall
+  OPENING: 100, // px clear across the middle
+  COLUMNS: [COURT.WIDTH / 2 - 17, COURT.WIDTH / 2 + 3], // px, each column's left edge
+} as const;
+
+/** The whole wall of bricks, top half and bottom half. */
+export const BRICK_WALL: readonly Brick[] = BRICKS.COLUMNS.flatMap((x) =>
+  Array.from({ length: BRICKS.ROWS }, (_, row) => {
+    const offset = BRICKS.OPENING / 2 + row * (BRICKS.HEIGHT + BRICKS.GAP);
+    return [
+      {
+        x,
+        y: COURT.HEIGHT / 2 - offset - BRICKS.HEIGHT,
+        width: BRICKS.WIDTH,
+        height: BRICKS.HEIGHT,
+      },
+      { x, y: COURT.HEIGHT / 2 + offset, width: BRICKS.WIDTH, height: BRICKS.HEIGHT },
+    ];
+  }).flat(),
+);
 
 // The shrinking paddle: the player's paddle loses a share of its length with every hit of theirs
 // in a rally, down to a floor, and is whole again at the serve: every point starts fair
@@ -194,6 +223,28 @@ class Bumpers implements Modifier {
   }
 }
 
+/** A wall of bricks across the middle, whole again at every serve; the match breaks them. */
+class Bricks implements Modifier {
+  public readonly id = 'bricks';
+  private readonly host: ModifierHost;
+
+  constructor(host: ModifierHost) {
+    this.host = host;
+  }
+
+  public start(): void {
+    this.onServe();
+  }
+
+  public onServe(): void {
+    this.host.court.bricks = BRICK_WALL;
+  }
+
+  public end(): void {
+    this.host.court.bricks = [];
+  }
+}
+
 /** The player's paddle shrinks with every hit of theirs in a rally; whole again at the serve. */
 class ShrinkingPaddle implements Modifier {
   public readonly id = 'shrinkingPaddle';
@@ -268,6 +319,7 @@ export const MODIFIERS: Record<ModifierId, (host: ModifierHost) => Modifier> = {
   // Drawn only: the ball is not drawn while it crosses the band
   invisibleBand: () => passive('invisibleBand'),
   ice: (host) => new Ice(host),
+  bricks: (host) => new Bricks(host),
 };
 
 /** The stretch of the court across the middle where the invisible band hides the ball, px. */

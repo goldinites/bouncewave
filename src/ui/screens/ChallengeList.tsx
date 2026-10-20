@@ -2,6 +2,7 @@ import { ChallengeId } from '@/match/challenges';
 import { ChallengeState } from '@/profile/ChallengeProgress';
 import { ButtonColor } from '@/ui/UIManager';
 import { MenuButton } from '@/ui/screens/MenuButton';
+import { Choice, OptionRow } from '@/ui/screens/OptionRow';
 
 export interface ChallengeListEntry {
   id: ChallengeId;
@@ -10,8 +11,13 @@ export interface ChallengeListEntry {
 }
 
 export interface ChallengeListProps {
-  /** Every challenge, easiest first. */
+  /** The tier shown, stepped through as a choice: its backdrop's name. */
+  tier: Choice;
+  /** The tier's challenges, easiest first. */
   challenges: readonly ChallengeListEntry[];
+  /** The tier arrows' names for screen readers. */
+  previousLabel: string;
+  nextLabel: string;
   backLabel: string;
   onPick: (challenge: ChallengeId) => void;
   onBack: () => void;
@@ -32,12 +38,22 @@ const Mark = ({ state }: { state: ChallengeState }) =>
   ) : null;
 
 /**
- * The challenges from easiest to hardest, three to a row, every one open; the passed ones ticked.
- * The count of passed ones is the screen's subtitle. Texts come in ready to show.
+ * The challenges from easiest to hardest a tier at a time (six, on its backdrop), three to a row,
+ * every one open, the passed ones ticked; arrows step from tier to tier. The count of passed ones
+ * is the screen's subtitle. Texts come in ready to show.
  */
-export function ChallengeList({ challenges, backLabel, onPick, onBack }: ChallengeListProps) {
+export function ChallengeList({
+  tier,
+  challenges,
+  previousLabel,
+  nextLabel,
+  backLabel,
+  onPick,
+  onBack,
+}: ChallengeListProps) {
   return (
     <div class="challenge-list">
+      <OptionRow choice={tier} previousLabel={previousLabel} nextLabel={nextLabel} />
       <div class="challenge-list__grid">
         {challenges.map((challenge) => (
           <MenuButton
