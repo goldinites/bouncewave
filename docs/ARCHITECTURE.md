@@ -239,7 +239,7 @@ shared paddle list grows and shrinks, as the balls do). Layers are in `ModifierR
 developers, `?mods=wind,darkness` and the debug overlay's modifier menu play quick matches with
 them.
 
-**Planned, not there yet** (see the roadmap): dialogue through Ink (8.1).
+**Planned, not there yet** (see the roadmap): dialogue through Ink (9.1).
 
 ## Rules of thumb
 

@@ -7,8 +7,8 @@ import { PLAYERS, PlayerId, playerPointShare, SimReport, simulateMany } from './
 
 /**
  * The balance report (npm run sim): AI against AI, the AI in the player's seat standing in for
- * players of four strengths (PLAYERS), and the tables the balancing steps decide by (4.7, 6.6–6.7,
- * 6.10). Seeded, so it reads the same every run until the game changes. SIM_MATCHES sets the
+ * players of four strengths (PLAYERS), and the tables the balancing steps decide by (4.7, 7.6–7.7,
+ * 7.10). Seeded, so it reads the same every run until the game changes. SIM_MATCHES sets the
  * matches a cell (default 40: some 300 points, about ±6 points of share either way).
  */
 

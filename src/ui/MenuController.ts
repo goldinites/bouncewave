@@ -628,7 +628,7 @@ export class MenuController {
   /**
    * A challenge's card: its name and its description (which says what sets its match apart), START
    * and BACK. A passed one is marked so, and can be played again. Its reward (money) joins it with
-   * the economy (stage 6).
+   * the economy (stage 7).
    */
   public showChallengeCard(challenge: ChallengeId): void {
     this.challengeTier.value = CHALLENGES[challenge].scene;
