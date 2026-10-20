@@ -16,17 +16,14 @@ const WIND_LOOK = {
   CHEVRON: 9, // px across
 } as const;
 
-// Darkness: the court is dark but for light cast from the paddles: full along each goal line
-// (the player's reaches further), fading smoothly toward the middle, with a warm pool around each
-// paddle like a lantern's. A ball crossing the middle can't be seen but where it strikes a wall
-// or a post, which flashes: the opponent's hit and the bounces are there to read its flight by
+// Darkness: the whole court is dark but for a pool of light around each paddle, like a lantern's
+// (decided with the user: no lit lanes along the goal lines). A ball can't be seen but in a pool
+// or where it strikes a wall or a post, which flashes: the opponent's hit and the bounces are
+// there to read its flight by
 export const DARKNESS = {
   RGB: '3, 0, 10',
   ALPHA: 0.95,
-  PLAYER_LIGHT: 170, // px from the left edge lit in full...
-  OPPONENT_LIGHT: 140, // ...from the right edge
-  FADE: 110, // px the light fades over, into the dark
-  LANTERN: 150, // px around a paddle its own pool of light reaches
+  LANTERN: 180, // px around a paddle its pool of light reaches, fading
   FLASH: 55, // px across a bounce's flash...
   FLASH_LIFE: 0.45, // ...and seconds it lasts
   // The dark is worked out at this share of the court's size and drawn stretched: smooth, cheap
@@ -124,7 +121,7 @@ export class ModifierRenderer {
   private static darkMask: HTMLCanvasElement | null = null;
 
   /**
-   * The court in the dark but for the light cast from the paddles and the flashes where a ball
+   * The whole court in the dark but for the paddles' lanterns and the flashes where a ball
    * has just bounced. Drawn over the balls (one in the dark can't be seen); the HUD goes over it.
    */
   public static renderDarkness(
@@ -151,22 +148,8 @@ export class ModifierRenderer {
     m.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
     // Light takes the dark away: wherever two lights meet, the brighter wins out
     m.globalCompositeOperation = 'destination-out';
-    const lit = 'rgba(0, 0, 0, 1)';
     const unlit = 'rgba(0, 0, 0, 0)';
 
-    // Along each goal line, fading toward the middle
-    for (const [edge, reach] of [
-      [0, DARKNESS.PLAYER_LIGHT],
-      [COURT.WIDTH, -DARKNESS.OPPONENT_LIGHT],
-    ]) {
-      const end = edge + reach + Math.sign(reach) * DARKNESS.FADE;
-      const lane = m.createLinearGradient(edge, 0, end, 0);
-      lane.addColorStop(0, lit);
-      lane.addColorStop(Math.abs(reach) / Math.abs(end - edge), lit);
-      lane.addColorStop(1, unlit);
-      m.fillStyle = lane;
-      m.fillRect(Math.min(edge, end), 0, Math.abs(end - edge), COURT.HEIGHT);
-    }
     // A lantern's pool around each paddle, and a flash wherever a ball bounced
     const pool = (x: number, y: number, radius: number, strength: number) => {
       const glow = m.createRadialGradient(x, y, 0, x, y, radius);

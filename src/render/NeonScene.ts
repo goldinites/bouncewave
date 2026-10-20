@@ -357,7 +357,12 @@ function neonLayers(
         const { court } = frame;
         followFlashes(court.balls, state.realDt);
         if (!court.modifiers.includes('darkness')) return;
-        ModifierRenderer.renderDarkness(c, court.paddles, flashes);
+        // A ball waiting for the serve is lit, so the point is seen to start from it
+        const waiting =
+          court.serveTime > 0
+            ? court.balls.map((ball) => ({ x: ball.drawX, y: ball.drawY, age: 0 }))
+            : [];
+        ModifierRenderer.renderDarkness(c, court.paddles, [...flashes, ...waiting]);
         drawHud(c, frame, state);
       },
     },
