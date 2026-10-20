@@ -26,7 +26,9 @@ export interface PaddleSpec {
 export const STANDARD_PADDLE: PaddleSpec = {
   height: PADDLE.HEIGHT,
   width: PADDLE.WIDTH,
-  perfectZone: 0.15,
+  // ~18 px of a 92 px paddle; was 0.15 until playtesting the skills (4.3) found the meter too
+  // hard to charge
+  perfectZone: 0.2,
   power: 1,
   spin: 1,
   speed: 1,

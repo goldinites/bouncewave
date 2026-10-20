@@ -1,10 +1,12 @@
+import { Analyzer } from '@/match/skills/Analyzer';
 import { Arc } from '@/match/skills/Arc';
 import { Reflex } from '@/match/skills/Reflex';
-import { Skill, SkillHit, SkillHost, SkillId } from '@/match/skills/Skill';
+import { ShotRead, Skill, SkillHit, SkillHost, SkillId } from '@/match/skills/Skill';
 
 /** How each skill is made for the paddle that has it. */
 const SKILLS: Record<SkillId, (host: SkillHost) => Skill> = {
   arc: (host) => new Arc(host),
+  analyzer: (host) => new Analyzer(host),
   reflex: (host) => new Reflex(host),
 };
 
@@ -55,6 +57,11 @@ export class SkillSet {
 
   public onServe(): void {
     for (const { skill } of this.skills) skill.onServe?.();
+  }
+
+  /** The shots read ahead for their owners right now (Analyzer). */
+  public get reads(): ShotRead[] {
+    return this.skills.flatMap(({ skill }) => (skill.read ? [skill.read] : []));
   }
 
   /** Whoever is slowing the balls down right now; null when no one is. */

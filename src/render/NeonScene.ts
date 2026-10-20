@@ -5,7 +5,13 @@ import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
 import { RenderFrame, Scene, SceneState } from '@/render/scene';
-import { ARC_TRAIL, SkillRenderer, TrailPoint } from '@/render/SkillRenderer';
+import {
+  AFTERIMAGES,
+  Afterimage,
+  ARC_TRAIL,
+  SkillRenderer,
+  TrailPoint,
+} from '@/render/SkillRenderer';
 import { Ball } from '@/match/Ball';
 import { approach, clamp } from '@/shared/math';
 
@@ -138,18 +144,32 @@ function neonLayers(
     }
   };
 
-  // The slowed world (Reflex): its cast eases in and out, and its label stays up a while after
-  // it began, over the paddle that slowed it. Followed once a frame by the first of its layers
-  const warp = { level: 0, age: Infinity, paddleIndex: 0, wasOn: false };
+  // The slowed world (Reflex): its screen eases in and out, and the paddle that slowed it leaves
+  // afterimages, which fade on after it ends. Followed once a frame by the first of its layers
+  const warpEdges = SkillRenderer.warpEdges(ctx);
+  const warp = { level: 0, sinceAfterimage: Infinity, color: 0 };
+  const afterimages: Afterimage[] = [];
   const followWarp = ({ court }: RenderFrame, { realDt }: SceneState) => {
-    const isOn = court.timeWarp !== null;
-    if (court.timeWarp) {
-      if (!warp.wasOn) warp.age = 0;
-      warp.paddleIndex = court.timeWarp.paddleIndex;
-    }
-    warp.wasOn = isOn;
-    warp.age += realDt;
-    warp.level = approach(warp.level, isOn ? 1 : 0, TIME_WARP_FADE, realDt);
+    const { timeWarp } = court;
+    warp.level = approach(warp.level, timeWarp ? 1 : 0, TIME_WARP_FADE, realDt);
+    for (const image of afterimages) image.age += realDt;
+    while (afterimages.length > 0 && afterimages[0].age >= AFTERIMAGES.LIFE) afterimages.shift();
+
+    warp.sinceAfterimage += realDt;
+    const paddle = timeWarp && court.paddles[timeWarp.paddleIndex];
+    if (!paddle || warp.sinceAfterimage < AFTERIMAGES.INTERVAL) return;
+    warp.sinceAfterimage = 0;
+    warp.color = (warp.color + 1) % AFTERIMAGES.COLORS.length;
+    const { width, height } = paddle.spec;
+    afterimages.push({
+      x: paddle.x,
+      y: paddle.drawY,
+      width,
+      height,
+      color: AFTERIMAGES.COLORS[warp.color],
+      age: 0,
+      back: paddle.side === 0 ? -1 : 1,
+    });
   };
 
   return [
@@ -189,6 +209,16 @@ function neonLayers(
       },
     },
     {
+      // The paddle that slowed the world leaves afterimages (not for a player who asked for less
+      // motion, who keeps the screen's glow)
+      id: 'afterimages',
+      space: 'court',
+      render: (c, frame, state) => {
+        followWarp(frame, state);
+        if (!isMotionReduced()) SkillRenderer.renderAfterimages(c, afterimages);
+      },
+    },
+    {
       // Each person's paddle carries their Overdrive meter (only in a match that has Overdrive)
       id: 'paddles',
       space: 'court',
@@ -202,7 +232,14 @@ function neonLayers(
           const tilt = isMotionReduced() ? 0 : (drama.paddleTilt[i] ?? 0);
           EntityRenderer.renderPaddle(c, paddle, drama.paddleGlow[i], pulse, tilt);
           if (charge !== null && !state.finalSign) {
-            EntityRenderer.renderOverdriveMeter(c, paddle, charge, court.time, streak);
+            EntityRenderer.renderOverdriveMeter(
+              c,
+              paddle,
+              charge,
+              court.time,
+              streak,
+              drama.meterSpent[i] ?? 0,
+            );
           }
         });
       },
@@ -217,13 +254,14 @@ function neonLayers(
       },
     },
     {
-      // A slowed world's balls split into chromatic ghosts; a still picture keeps only its cast
-      id: 'timeWarpGhosts',
+      // The shots read ahead for their paddles (Analyzer)
+      id: 'shotReads',
       space: 'court',
-      render: (c, frame, state) => {
-        followWarp(frame, state);
-        if (warp.level < 0.01 || isMotionReduced()) return;
-        for (const ball of frame.court.balls) SkillRenderer.renderGhosts(c, ball, warp.level);
+      render: (c, { court }) => {
+        for (const read of court.shotReads) {
+          const paddle = court.paddles[read.paddleIndex];
+          SkillRenderer.renderShotRead(c, read, paddle, isMotionReduced());
+        }
       },
     },
     {
@@ -255,15 +293,6 @@ function neonLayers(
       },
     },
     {
-      id: 'timeWarpLabel',
-      space: 'court',
-      render: (c, { court, hud: view, isRotated }, state) => {
-        const paddle = court.paddles[warp.paddleIndex];
-        if (court.isDemo || state.finalSign || !paddle) return;
-        SkillRenderer.renderLabel(c, view.timeWarpLabel, paddle, warp.age, isRotated);
-      },
-    },
-    {
       id: 'finalScore',
       space: 'court',
       render: (c, { isRotated }, state) => {
@@ -276,7 +305,7 @@ function neonLayers(
       id: 'timeWarp',
       space: 'screen',
       render: (c) => {
-        if (warp.level >= 0.01) SkillRenderer.renderTint(c, warp.level);
+        if (warp.level >= 0.01) SkillRenderer.renderTint(c, warp.level, warpEdges);
       },
     },
     {

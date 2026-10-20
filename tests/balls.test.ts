@@ -170,7 +170,14 @@ describe('the balls on court', () => {
     place(right, 700, 400);
     left.isPowerShot = right.isPowerShot = true;
 
-    const flow = { phase: 'rally', rally: 0, isBallLive: true, balls: [left, right] };
+    const flow = {
+      phase: 'rally',
+      rally: 0,
+      isBallLive: true,
+      balls: [left, right],
+      overdriveCharges: [null, null],
+      implantCores: [false, false],
+    };
     effects.afterSimulation(0.1, flow as unknown as MatchFlow);
 
     const near = (ball: Ball) =>

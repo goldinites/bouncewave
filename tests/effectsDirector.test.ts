@@ -48,7 +48,14 @@ const makeAudio = () => ({
 
 /** Just enough of MatchFlow for afterSimulation's reads; nothing else is touched. */
 const fakeFlow = (overrides: Partial<MatchFlow> = {}): MatchFlow =>
-  ({ phase: 'finale', rally: 0, isBallLive: false, ...overrides }) as unknown as MatchFlow;
+  ({
+    phase: 'finale',
+    rally: 0,
+    isBallLive: false,
+    overdriveCharges: [null, null],
+    implantCores: [false, false],
+    ...overrides,
+  }) as unknown as MatchFlow;
 
 const makeDirector = (
   matchScene?: () => SceneId | null,
@@ -385,5 +392,30 @@ describe('EffectsDirector.handle', () => {
     expect(audio.music.recover).toHaveBeenCalledOnce();
     expect(audio.music.setDramaLevel).toHaveBeenCalledWith(0);
     expect(audio.music.resetClimax).toHaveBeenCalledOnce();
+  });
+});
+
+describe('EffectsDirector meters', () => {
+  const meters = (charges: (number | null)[], cores = [true, false]) =>
+    fakeFlow({ phase: 'rally', overdriveCharges: charges, implantCores: cores });
+
+  it('flares a charge an implants’ core loses, one at a time', () => {
+    const { effects } = makeDirector();
+    effects.afterSimulation(0.016, meters([2, null]));
+    expect(effects.meterSpent[0]).toBe(0);
+
+    effects.afterSimulation(0.016, meters([1, null]));
+    expect(effects.meterSpent[0]).toBeGreaterThan(0.9);
+  });
+
+  it('leaves a meter without a core, and a power shot’s emptying, to their own effects', () => {
+    const { effects } = makeDirector();
+    effects.afterSimulation(0.016, meters([1, null], [false, false]));
+    effects.afterSimulation(0.016, meters([0, null], [false, false]));
+    expect(effects.meterSpent[0]).toBe(0);
+
+    effects.afterSimulation(0.016, meters([3, null]));
+    effects.afterSimulation(0.016, meters([0, null]));
+    expect(effects.meterSpent[0]).toBe(0);
   });
 });

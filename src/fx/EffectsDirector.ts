@@ -126,6 +126,8 @@ export class EffectsDirector {
   private readonly drama = new MatchPointDrama();
   private readonly climax = new RallyClimax();
   private readonly paddleFx: PaddleEffects;
+  /** Each paddle's meter as the last frame left it, to see a charge go. */
+  private meterCharges: (number | null)[] = [];
   private fireworks: VictoryFireworks | null = null;
 
   private readonly renderer: Renderer;
@@ -177,9 +179,31 @@ export class EffectsDirector {
     return this.paddleFx.glow;
   }
 
+  /** How brightly the charge each paddle's meter just lost still burns, in [0, 1]. */
+  public get meterSpent(): readonly number[] {
+    return this.paddleFx.spent;
+  }
+
   /** How far each paddle leans, radians (a whip off a spinning hit). */
   public get paddleTilt(): readonly number[] {
     return this.paddleFx.tilt;
+  }
+
+  /**
+   * An implants' core loses its charges one at a time, to an implant or a hit that wasn't
+   * perfect: each one lost flares on the meter as it goes, so the player sees where it went and
+   * that the rest are still there. (A power shot empties the meter with a blast of its own.)
+   */
+  private followMeters(flow: MatchFlow): void {
+    const charges = flow.overdriveCharges;
+    const cores = flow.implantCores;
+    charges.forEach((charge, i) => {
+      const before = this.meterCharges[i] ?? null;
+      if (cores[i] && charge !== null && before !== null && before - charge === 1) {
+        this.paddleFx.onSpend(i);
+      }
+    });
+    this.meterCharges = charges;
   }
 
   /** A side's color: its first paddle's. */
@@ -208,6 +232,7 @@ export class EffectsDirector {
 
   /** Continuous effects after the simulation step, on the same (possibly slowed) clock. */
   public afterSimulation(dt: number, flow: MatchFlow): void {
+    this.followMeters(flow);
     const sparkRally = flow.phase === 'finale' ? 0 : flow.rally;
     this.paddleFx.update(dt, this.paddles, this.particles, sparkRally);
 
@@ -345,6 +370,9 @@ export class EffectsDirector {
         this.audio.sfx.playSpin(use.strength);
         break;
       }
+      case 'analyzer':
+        this.audio.sfx.playScan();
+        break;
       case 'reflex':
         this.particles.shockwave(use.x, use.y, TIME_WARP_COLOR, SHOCKWAVE_SPEED.TIME_WARP);
         this.audio.sfx.playTimeWarp();

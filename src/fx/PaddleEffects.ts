@@ -3,6 +3,9 @@ import { Paddle } from '@/match/Paddle';
 import { randomRange } from '@/shared/math';
 
 const GLOW_DECAY = 4; // 1/s, from a fresh hit (1) to unlit (0)
+// A charge lost from an implants' core (spent, or to a hit that wasn't perfect): the segment
+// flares, flickers and goes out
+const SPENT_DECAY = 1.6; // 1/s, from the flare (1) to out (0)
 const SPARK_SPEED_MIN = 30;
 const SPARK_SPEED_MAX = 100;
 // A spinning hit (Arc) whips the paddle over toward its motion, like a racket swung through the
@@ -21,6 +24,7 @@ const WHIP = {
  */
 export class PaddleEffects {
   private readonly _glow: number[];
+  private readonly _spent: number[];
   private readonly _tilt: number[];
   private readonly tiltSpeed: number[];
   /** The angle each paddle leans toward, and for how long more before it comes back to 0. */
@@ -30,10 +34,21 @@ export class PaddleEffects {
   /** @param paddleCount how many paddles are on the court */
   constructor(paddleCount: number) {
     this._glow = new Array<number>(paddleCount).fill(0);
+    this._spent = new Array<number>(paddleCount).fill(0);
     this._tilt = new Array<number>(paddleCount).fill(0);
     this.tiltSpeed = new Array<number>(paddleCount).fill(0);
     this.lean = new Array<number>(paddleCount).fill(0);
     this.leanFor = new Array<number>(paddleCount).fill(0);
+  }
+
+  /** How brightly the charge each paddle's meter just lost still burns, in [0, 1]. */
+  public get spent(): readonly number[] {
+    return this._spent;
+  }
+
+  /** The paddle's implants' core has lost a charge of its meter. */
+  public onSpend(paddleIndex: number): void {
+    this._spent[paddleIndex] = 1;
   }
 
   /**
@@ -71,6 +86,7 @@ export class PaddleEffects {
 
   public reset(): void {
     this._glow.fill(0);
+    this._spent.fill(0);
     this._tilt.fill(0);
     this.tiltSpeed.fill(0);
     this.lean.fill(0);
@@ -85,6 +101,7 @@ export class PaddleEffects {
   ): void {
     paddles.forEach((paddle, i) => {
       this._glow[i] = Math.max(0, this._glow[i] - dt * GLOW_DECAY);
+      this._spent[i] = Math.max(0, this._spent[i] - dt * SPENT_DECAY);
       this.springBack(i, dt);
       this.emitSparks(dt, paddle, particles, rally);
     });

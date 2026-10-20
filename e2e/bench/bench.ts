@@ -97,11 +97,11 @@ function bench(scene: string) {
     onEvent: (event) => events.push(event),
     random,
   });
-  // Both play with the skill prototypes, so their forecasts and layers are in the measure
+  // Both play with every skill prototype, so their forecasts and layers are in the measure
   const lineup = paddles.map(() => ({
     controller: new AiPaddleController(random, () => DifficultyLevel.HARD),
     overdrive: true,
-    skills: ['arc', 'reflex'] as const,
+    skills: ['arc', 'analyzer', 'reflex'] as const,
   }));
   flow.startMatch({ ...STANDARD_RULES, winningScores: firstTo(99), balls: 2 }, lineup);
   renderer.pinBackground(scene as never);
@@ -134,6 +134,7 @@ function bench(scene: string) {
         serveTime: flow.serveTime,
         rally: flow.rally,
         timeWarp: flow.timeWarp,
+        shotReads: flow.shotReads,
       },
       hud: {
         readyText: 'GET READY',
@@ -142,7 +143,6 @@ function bench(scene: string) {
         sideLabels: null,
         overdriveCharges: flow.overdriveCharges,
         overdriveStreaks: flow.overdriveStreaks,
-        timeWarpLabel: 'REFLEX',
       },
       drama: {
         climax,
@@ -150,6 +150,7 @@ function bench(scene: string) {
         zoom: 1 + 0.1 * climax,
         paddleGlow: [climax, climax],
         paddleTilt: [0, 0],
+        meterSpent: [0, 0],
       },
       particles,
       analyser: null,
