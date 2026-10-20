@@ -236,6 +236,16 @@ function neonLayers(
       },
     },
     {
+      // The frozen court, under everything that moves on it
+      id: 'ice',
+      space: 'court',
+      render: (c, { court }) => {
+        if (court.modifiers.includes('ice')) {
+          ModifierRenderer.renderIce(c, court.time, isMotionReduced());
+        }
+      },
+    },
+    {
       id: 'invisibleBand',
       space: 'court',
       render: (c, { court }) => {
@@ -364,16 +374,6 @@ function neonLayers(
             : [];
         ModifierRenderer.renderDarkness(c, court.paddles, [...flashes, ...waiting]);
         drawHud(c, frame, state);
-      },
-    },
-    {
-      // Over everything on the court: it rains on all of it
-      id: 'rain',
-      space: 'court',
-      render: (c, { court }) => {
-        if (court.modifiers.includes('slipperyRain')) {
-          ModifierRenderer.renderRain(c, court.time, isMotionReduced());
-        }
       },
     },
     {

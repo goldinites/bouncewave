@@ -16,12 +16,13 @@ export class Paddle {
   /** Smoothed vertical speed in px/s (positive = moving down). */
   public velocity: number = 0;
   /**
-   * How quickly it takes up the speed it is steered at, and how quickly it slows down, 1/s;
-   * Infinity (the usual) at once. A slippery court (Slippery rain) gives it finite ones: it slides
-   * into motion and rolls on out of it.
+   * How quickly it takes up the speed it is steered at, 1/s; Infinity (the usual) at once. A
+   * slippery court (Ice) gives it a finite one, and a friction: it slides into motion
+   * and rolls on out of it.
    */
   private _grip = Infinity;
-  private brake = Infinity;
+  /** How fast it sheds speed while it slides, px/s². */
+  private friction = Infinity;
   /** While it slides, 1/s of the way to its aim it is steered at. */
   private pull = 0;
   /** Its speed while it slides, px/s (only with a finite grip). */
@@ -89,12 +90,12 @@ export class Paddle {
 
   /**
    * Makes it slide (or, with an Infinity grip, not): steered at `pull` (1/s) of the way to its
-   * aim, it takes up that speed over ~1/`grip` seconds and slows down over ~1/`brake`.
+   * aim, it takes up that speed over ~1/`grip` seconds, and sheds speed at `friction` px/s².
    */
-  public slip(pull: number, grip: number, brake: number): void {
+  public slip(pull: number, grip: number, friction: number): void {
     this.pull = pull;
     this._grip = grip;
-    this.brake = brake;
+    this.friction = friction;
   }
 
   /**
@@ -143,10 +144,18 @@ export class Paddle {
     const rate = PADDLE_SMOOTH_FACTOR * this.spec.speed;
     if (Number.isFinite(this._grip)) {
       // It slides: the speed it is steered at is taken up over time, and kept a while after
+      // It picks up speed as steered, but sheds it only by friction, as on ice: the faster it
+      // went, the further it rolls on once it is meant to slow down or turn
       const steered = (this.targetY - this.y) * this.pull;
-      const isSlowing =
-        Math.sign(steered) !== Math.sign(this.slide) || Math.abs(steered) < Math.abs(this.slide);
-      this.slide = approach(this.slide, steered, isSlowing ? this.brake : this._grip, dt);
+      const isSpeedingUp =
+        this.slide === 0 ||
+        (Math.sign(steered) === Math.sign(this.slide) && Math.abs(steered) >= Math.abs(this.slide));
+      if (isSpeedingUp) {
+        this.slide = approach(this.slide, steered, this._grip, dt);
+      } else {
+        const shed = this.friction * dt;
+        this.slide = Math.abs(this.slide) > shed ? this.slide - Math.sign(this.slide) * shed : 0;
+      }
       this.y += this.slide * dt;
       if (this.y < this.minY || this.y > this.maxY) {
         this.y = clamp(this.y, this.minY, this.maxY);

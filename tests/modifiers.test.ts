@@ -6,7 +6,7 @@ import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { forecastArrival } from '@/match/forecast';
 import { MatchFlow } from '@/match/MatchFlow';
 import { ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
-import { BUMPERS, HALVES, MODIFIERS, RAIN, SHRINK, TURBO, WIND } from '@/match/modifiers/modifiers';
+import { BUMPERS, HALVES, ICE, MODIFIERS, SHRINK, TURBO, WIND } from '@/match/modifiers/modifiers';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
 import { Physics } from '@/match/Physics';
@@ -44,14 +44,32 @@ const make = (id: ModifierId, balls: Ball[] = []) => {
 };
 
 describe('The court’s conditions in the physics', () => {
-  it('lets the wind push the ball’s path along, its speed kept', () => {
+  it('lets the wind push the ball up or down, its speed across the court kept', () => {
     const conditions = new CourtConditions();
     conditions.wind = WIND.MAX;
     const ball = ballOver(conditions, 200, 250, 400);
     for (let i = 0; i < 120; i++) Physics.step(ball, [], CONFIG, STEP);
 
     expect(ball.vy).toBeGreaterThan(0);
-    expect(Math.hypot(ball.vx, ball.vy)).toBeCloseTo(400, 6);
+    expect(ball.vx).toBeCloseTo(400, 6);
+  });
+
+  it('makes a shot into the wind hard: sent down against it, it barely gets down', () => {
+    /** How far down a shot sent down at 25° from the top third gets across the court. */
+    const depth = (wind: number) => {
+      const conditions = new CourtConditions();
+      conditions.wind = wind;
+      const ball = ballOver(conditions, 60, 150, 600 * Math.cos(0.45), 600 * Math.sin(0.45));
+      let lowest = ball.y;
+      while (ball.x < COURT.WIDTH - 60) {
+        Physics.step(ball, [], CONFIG, STEP);
+        lowest = Math.max(lowest, ball.y);
+      }
+      return lowest - 150;
+    };
+    const calm = depth(0);
+    expect(depth(-WIND.MIN)).toBeLessThan(calm * 0.75);
+    expect(depth(-WIND.MAX)).toBeLessThan(calm * 0.6);
   });
 
   it('speeds a turbo ball up in flight, to the level’s top speed', () => {
@@ -188,11 +206,11 @@ describe('The modifiers', () => {
     expect(paddles[0].spec.height).toBe(PADDLE.HEIGHT);
   });
 
-  it('makes every paddle slide in the rain: it lags its aim, then runs past it', () => {
-    const { modifier, paddles } = make('slipperyRain');
+  it('makes every paddle slide on the ice: it lags its aim, then runs past it', () => {
+    const { modifier, paddles } = make('ice');
     modifier.start!();
     const paddle = paddles[0];
-    expect(paddle.grip).toBe(RAIN.GRIP);
+    expect(paddle.grip).toBe(ICE.GRIP);
 
     paddle.setTargetY(350);
     const trail: number[] = [];

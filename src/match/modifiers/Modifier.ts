@@ -16,7 +16,7 @@ export const MODIFIER_IDS = [
   'shrinkingPaddle',
   'bumpers',
   'invisibleBand',
-  'slipperyRain',
+  'ice',
 ] as const;
 export type ModifierId = (typeof MODIFIER_IDS)[number];
 

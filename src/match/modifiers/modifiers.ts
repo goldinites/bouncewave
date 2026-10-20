@@ -4,12 +4,13 @@ import { Modifier, ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
 import { PaddleSpec } from '@/match/PaddleSpec';
 import { SkillHit } from '@/match/skills/Skill';
 
-// Wind across the court: it blows the ball up or down in gusts, from a moderate wind to a strong
-// one, and turns around now and then. Its streaks follow its strength, and die down a moment
-// before it turns, so a gust and a turn can be seen coming
+// Wind across the court: it pushes the ball up or down in gusts, from a moderate wind to a strong
+// one, and turns around now and then. A shot into the wind loses its way (one sent down against
+// a wind blowing up barely gets down), a shot with it runs steeper. Its streaks follow its
+// strength, and die down a moment before it turns, so a gust and a turn can be seen coming
 export const WIND = {
-  MIN: 120, // px/s²: a serve-speed ball crossing the court drifts ~90 px...
-  MAX: 240, // ...up to ~180 px in a strong gust
+  MIN: 160, // px/s²: a ball crossing the court in a second drifts ~80 px...
+  MAX: 300, // ...up to ~150 px in a strong gust
   GUST: 3, // s between the gusts' new strengths
   EASE: 0.8, // 1/s it moves toward a gust's strength
   PERIOD: 15, // s between turns
@@ -40,11 +41,11 @@ export const BUMPERS = {
 // in a rally, down to a floor, and is whole again at the serve: every point starts fair
 export const SHRINK = { PER_HIT: 0.06, FLOOR: 0.5 } as const;
 
-// Slippery rain: every paddle slides. It heads for its aim at PULL (1/s of the way left), takes
-// up that speed over ~1/GRIP s and sheds it over ~1/BRAKE s, so stopped it rolls on past its aim
-// by about a quarter of the way it came, comes back once, and stands. Moderate: a paddle on a
-// phone must not trail the finger far, nor sway about it
-export const RAIN = { PULL: 9, GRIP: 9, BRAKE: 6 } as const;
+// Ice: the court is frozen and every paddle slides on it. It heads for its aim at PULL (1/s of the way
+// left) and takes up that speed over ~1/GRIP s, but sheds speed only by FRICTION: the faster it
+// went, the further it rolls on (a quick 150 px move rolls ~70 px past its aim) before it comes
+// back and stands
+export const ICE = { PULL: 8, GRIP: 6, FRICTION: 1300 } as const; // 1/s, 1/s, px/s²
 
 /** The wind, in gusts, turning around every WIND.PERIOD seconds. */
 class Wind implements Modifier {
@@ -236,15 +237,15 @@ class ShrinkingPaddle implements Modifier {
   }
 }
 
-class SlipperyRain implements Modifier {
-  public readonly id = 'slipperyRain';
+class Ice implements Modifier {
+  public readonly id = 'ice';
   private readonly host: ModifierHost;
 
   constructor(host: ModifierHost) {
     this.host = host;
   }
   public start(): void {
-    for (const paddle of this.host.paddles) paddle.slip(RAIN.PULL, RAIN.GRIP, RAIN.BRAKE);
+    for (const paddle of this.host.paddles) paddle.slip(ICE.PULL, ICE.GRIP, ICE.FRICTION);
   }
   public end(): void {
     for (const paddle of this.host.paddles) paddle.slip(0, Infinity, Infinity);
@@ -266,13 +267,13 @@ export const MODIFIERS: Record<ModifierId, (host: ModifierHost) => Modifier> = {
   bumpers: (host) => new Bumpers(host),
   // Drawn only: the ball is not drawn while it crosses the band
   invisibleBand: () => passive('invisibleBand'),
-  slipperyRain: (host) => new SlipperyRain(host),
+  ice: (host) => new Ice(host),
 };
 
 /** The stretch of the court across the middle where the invisible band hides the ball, px. */
 export const INVISIBLE_BAND = {
-  LEFT: COURT.WIDTH / 2 - 110,
-  RIGHT: COURT.WIDTH / 2 + 110,
+  LEFT: COURT.WIDTH / 2 - 160,
+  RIGHT: COURT.WIDTH / 2 + 160,
 } as const;
 
 /**

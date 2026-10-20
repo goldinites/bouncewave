@@ -22,7 +22,7 @@ const WIND_LOOK = {
 // there to read its flight by
 export const DARKNESS = {
   RGB: '3, 0, 10',
-  ALPHA: 0.95,
+  ALPHA: 0.98, // a ball in the dark is a bare silhouette
   LANTERN: 180, // px around a paddle its pool of light reaches, fading
   FLASH: 55, // px across a bounce's flash...
   FLASH_LIFE: 0.45, // ...and seconds it lasts
@@ -43,14 +43,26 @@ const BAND = { RGB: '200, 140, 255', ALPHA: 0.35, DASH: [8, 8] } as const;
 // Bumpers: neon posts, a hot core in a glowing ring
 const BUMPER_LOOK = { COLOR: '#ff2bd6', CORE: '#ffd0f4', GLOW: 10 } as const;
 
-// Slippery rain: thin streaks slanting down the court
-const RAIN_LOOK = {
-  DROPS: 70,
-  LENGTH: 16, // px
-  SLANT: 0.25, // px across a px down
-  SPEED: 1.6, // court heights a second
-  RGB: '150, 190, 255',
-  ALPHA: 0.42,
+// Ice: the court frozen over. A cold cast, frost thick along the walls, cracks in the ice, a
+// sheen drifting across it and glints twinkling in it
+const ICE_LOOK = {
+  TINT: 'rgba(160, 215, 255, 0.1)',
+  FROST: 'rgba(225, 245, 255, 0.3)', // along the walls, fading inward
+  FROST_DEPTH: 70, // px
+  CRACK: 'rgba(230, 248, 255, 0.28)',
+  // The cracks, as polylines in shares of the court, so they sit the same at any size
+  CRACKS: [
+    [0.08, 0.2, 0.16, 0.31, 0.15, 0.42, 0.22, 0.5],
+    [0.3, 0.86, 0.36, 0.74, 0.44, 0.71, 0.47, 0.6],
+    [0.6, 0.12, 0.57, 0.25, 0.63, 0.33],
+    [0.72, 0.62, 0.8, 0.7, 0.83, 0.84, 0.91, 0.9],
+    [0.86, 0.22, 0.79, 0.3],
+    [0.18, 0.66, 0.24, 0.78],
+  ],
+  SHEEN: 0.07, // alpha of the sheen's bands
+  SHEEN_SPEED: 0.05, // court widths a second
+  GLINTS: 14,
+  GLINT_SIZE: 4, // px of each arm
 } as const;
 
 /**
@@ -229,26 +241,74 @@ export class ModifierRenderer {
   }
 
   /**
-   * Rain slanting down the court: the paddles slide on it.
-   * @param isMotionReduced the drops hang still
+   * The court frozen over: the paddles slide on it.
+   * @param isMotionReduced the sheen holds still and the glints shine steadily
    */
-  public static renderRain(
+  public static renderIce(
     ctx: CanvasRenderingContext2D,
     time: number,
     isMotionReduced: boolean,
   ): void {
+    const { WIDTH, HEIGHT } = COURT;
     beginLayer(ctx);
-    ctx.strokeStyle = `rgba(${RAIN_LOOK.RGB}, ${RAIN_LOOK.ALPHA})`;
+    ctx.fillStyle = ICE_LOOK.TINT;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    // Frost thick along the walls
+    for (const [from, to] of [
+      [COURT.TOP_WALL, COURT.TOP_WALL + ICE_LOOK.FROST_DEPTH],
+      [HEIGHT - COURT.BOTTOM_WALL, HEIGHT - COURT.BOTTOM_WALL - ICE_LOOK.FROST_DEPTH],
+    ]) {
+      const frost = ctx.createLinearGradient(0, from, 0, to);
+      frost.addColorStop(0, ICE_LOOK.FROST);
+      frost.addColorStop(1, 'rgba(225, 245, 255, 0)');
+      ctx.fillStyle = frost;
+      ctx.fillRect(0, Math.min(from, to), WIDTH, ICE_LOOK.FROST_DEPTH);
+    }
+
+    // Cracks
+    ctx.strokeStyle = ICE_LOOK.CRACK;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    const fall = isMotionReduced ? 0 : time * RAIN_LOOK.SPEED;
-    for (let i = 0; i < RAIN_LOOK.DROPS; i++) {
-      const y = wrap(i * 0.381966 + fall) * COURT.HEIGHT;
-      const x = wrap(i * 0.6180339 + (y / COURT.HEIGHT) * 0.05) * COURT.WIDTH;
-      ctx.moveTo(x, y);
-      ctx.lineTo(x - RAIN_LOOK.LENGTH * RAIN_LOOK.SLANT, y + RAIN_LOOK.LENGTH);
+    for (const crack of ICE_LOOK.CRACKS) {
+      ctx.moveTo(crack[0] * WIDTH, crack[1] * HEIGHT);
+      for (let i = 2; i < crack.length; i += 2) ctx.lineTo(crack[i] * WIDTH, crack[i + 1] * HEIGHT);
     }
     ctx.stroke();
+
+    // A sheen of two slanting bands drifting across
+    const drift = isMotionReduced ? 0.3 : wrap(time * ICE_LOOK.SHEEN_SPEED);
+    ctx.fillStyle = `rgba(255, 255, 255, ${ICE_LOOK.SHEEN})`;
+    for (const [offset, width] of [
+      [0, 60],
+      [0.12, 24],
+    ]) {
+      const x = (wrap(drift + offset) * 1.4 - 0.2) * WIDTH;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + width, 0);
+      ctx.lineTo(x + width - HEIGHT * 0.5, HEIGHT);
+      ctx.lineTo(x - HEIGHT * 0.5, HEIGHT);
+      ctx.fill();
+    }
+
+    // Glints twinkling in it
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i < ICE_LOOK.GLINTS; i++) {
+      const x = wrap(i * 0.6180339 + 0.11) * WIDTH;
+      const y = wrap(i * 0.381966 + 0.27) * HEIGHT;
+      const twinkle = isMotionReduced ? 0.5 : Math.max(0, Math.sin(time * 2.3 + i * 1.7));
+      if (twinkle < 0.05) continue;
+      const size = ICE_LOOK.GLINT_SIZE * twinkle;
+      ctx.globalAlpha = 0.7 * twinkle;
+      ctx.beginPath();
+      ctx.moveTo(x - size, y);
+      ctx.lineTo(x + size, y);
+      ctx.moveTo(x, y - size);
+      ctx.lineTo(x, y + size);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 }
