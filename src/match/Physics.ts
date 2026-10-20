@@ -43,6 +43,8 @@ export type PhysicsEvent =
       y: number;
       /** Ball speed right after the hit (acceleration applied). */
       speed: number;
+      /** How steeply it went off, radians from the flat return (either way). */
+      angle: number;
     }
   | { type: 'score'; scoringPlayerIndex: Side; y: number }
   /** Off one of the court's bricks (Bricks); whoever handles it breaks the brick. */
@@ -164,6 +166,7 @@ export class Physics {
             x: ball.x,
             y: ball.y,
             speed: ball.speed,
+            angle: Math.abs(bounceAngle),
           });
           break;
         }

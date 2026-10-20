@@ -553,6 +553,17 @@ export class Game {
     return step === 'perfect' || step === 'overdrive' ? 0 : null;
   }
 
+  /**
+   * A step that opens on a card: the match pauses behind it until it is read (GOT IT, or Esc as
+   * from the pause), then the step is played.
+   */
+  private showTutorialCard(): void {
+    const card = this.tutorialCoach.card;
+    if (!card || !this.flow.pause()) return;
+    this.uiManager.setPauseButtonVisibility(false);
+    this.menuController.showTutorialCard(card, () => this.resume());
+  }
+
   /** Every step done: the tutorial is through for good, and its end screen comes up. */
   private finishTutorial(): void {
     this.isTutorial = false;
@@ -631,6 +642,8 @@ export class Game {
   }
 
   public resume(): void {
+    // A tutorial step's card is read once the match resumes from it
+    if (this.isTutorial) this.tutorialCoach.acknowledge();
     this.flow.resume();
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
@@ -681,6 +694,7 @@ export class Game {
     if (isTutorialOn && !isPaused) {
       this.tutorialCoach.update(realDt);
       if (this.tutorialCoach.isFinished) this.finishTutorial();
+      else this.showTutorialCard();
     }
 
     // A challenge's condition, or the tutorial's step: in the strip above the court, or on the

@@ -10,25 +10,40 @@ import { Side } from '@/match/side';
 import { EventBus } from '@/shared/EventBus';
 
 /**
- * The tutorial's steps (step 4.8), in order: each taught by doing it, never by reading. Moving,
- * returning the ball, a perfect hit off the paddle's center, steering the return by moving the
- * paddle as it strikes, and Overdrive from three perfect hits in a row.
+ * The tutorial's steps (step 4.8), in order, each passed by doing it: moving, returning the ball,
+ * a steep return off the paddle's edge, a perfect hit off its center, a perfect hit struck on the
+ * move to aim it, and Overdrive from three perfect hits in a row.
  */
-export const TUTORIAL_STEPS = ['move', 'hit', 'perfect', 'steer', 'overdrive'] as const;
+export const TUTORIAL_STEPS = ['move', 'hit', 'angle', 'perfect', 'aim', 'overdrive'] as const;
 
 export type TutorialStep = (typeof TUTORIAL_STEPS)[number];
+
+/**
+ * The steps that open on a card (the match paused): why the move is worth making and an example
+ * of it. Returning the ball is the first card's own point.
+ */
+export const TUTORIAL_CARDS = ['move', 'angle', 'perfect', 'aim', 'overdrive'] as const;
+
+export type TutorialCard = (typeof TUTORIAL_CARDS)[number];
+
+const hasCard = (step: TutorialStep): step is TutorialCard =>
+  (TUTORIAL_CARDS as readonly TutorialStep[]).includes(step);
 
 export const TUTORIAL = {
   MOVE_DISTANCE: 220, // px the paddle has to travel, either way, to pass the first step
   /** How many of each a step asks for. */
-  COUNTS: { hit: 2, perfect: 2, steer: 2 },
-  // A return counts as steered when the paddle met the ball moving at least this fast: enough
-  // to turn it visibly off the line it would take
-  STEER_SPEED: 180, // px/s
+  COUNTS: { hit: 2, angle: 2, perfect: 2, aim: 2 },
+  // A return counts as steep (the edge's step) from this angle off the flat one: an edge hit's,
+  // which a flat hit nudged by the paddle's motion never reaches
+  STEEP_ANGLE: 0.45, // rad, ~26°
+  // A perfect hit counts as aimed from this angle: the paddle met the ball on the move, a little
+  // under 200 px/s
+  AIM_ANGLE: 0.4, // rad, ~23°
   // Tries at a step (a return that wasn't it, a ball missed) before its hint shows
   HINT_AFTER: 3,
-  PRAISE: 1.2, // s the praise shows between steps
-  FEEDBACK: 1, // s a try's verdict shows: it counted, or why not
+  PRAISE: 2, // s the praise shows between steps
+  // A try's verdict (it counted, or why not) stays this long, long enough to read
+  FEEDBACK: 2.5, // s
 } as const;
 
 /**
@@ -90,9 +105,11 @@ export class TrainerController implements PaddleController {
 
 /**
  * What a learner's last try came to, told at once so they learn what counts: it did, or why it
- * didn't (off the center, the paddle standing still, a charge lost to a plain hit, a ball missed).
+ * didn't (a flat return where a steep one was asked, off the center, a perfect hit that went out
+ * flat with the paddle standing still, a charge lost to a plain hit, a ball missed).
  */
-export type TutorialFeedback = 'counted' | 'offCenter' | 'stoodStill' | 'chargeLost' | 'missed';
+export type TutorialFeedback =
+  'counted' | 'flat' | 'offCenter' | 'stoodStill' | 'chargeLost' | 'missed';
 
 /** Where the learner is: the step, how far into it, and whether its hint is due. */
 export interface TutorialProgress {
@@ -117,10 +134,10 @@ export interface TutorialCoachDeps {
 }
 
 /**
- * Follows the learner through the steps, from the match's events and their paddle: it says which
- * step they are at, counts what it asks for, tells them after every return whether it counted
- * and why not, and moves on once the step is done, with a moment of praise between steps. It only
- * watches: the tutorial's match plays as any other.
+ * Follows the learner through the steps, from the match's events and their paddle. A step with a
+ * card waits for it to be read (`card`, then `acknowledge`); then the coach counts what the step
+ * asks for, tells after every try whether it counted and why not, and moves on once it is done,
+ * with a moment of praise between steps. It only watches: the tutorial's match plays as any other.
  */
 export class TutorialCoach {
   private readonly deps: TutorialCoachDeps;
@@ -135,6 +152,8 @@ export class TutorialCoach {
   private feedbackFor = 0;
   /** The meter's streak as last seen: a hit empties it before its event comes, so look back. */
   private seenStreak = 0;
+  /** Whether the step's card has been read (or it has none). */
+  private isIntroduced = false;
 
   constructor(deps: TutorialCoachDeps) {
     this.deps = deps;
@@ -169,6 +188,20 @@ export class TutorialCoach {
     }
   }
 
+  /**
+   * The card due now, to be shown with the match paused: the step's, once the praise for the last
+   * one is over and until it is acknowledged; null otherwise.
+   */
+  public get card(): TutorialCard | null {
+    const step = TUTORIAL_STEPS[this.stepIndex];
+    return step && hasCard(step) && !this.isIntroduced && !this.isPraising ? step : null;
+  }
+
+  /** The card due has been read: the step begins. Nothing, when no card is due. */
+  public acknowledge(): void {
+    if (this.card) this.isIntroduced = true;
+  }
+
   /** Whether a step has just been done and is being praised. */
   public get isPraising(): boolean {
     return this._praise > 0;
@@ -189,14 +222,10 @@ export class TutorialCoach {
    * ?tutorial=perfect).
    */
   public reset(from: TutorialStep = TUTORIAL_STEPS[0]): void {
-    this.stepIndex = TUTORIAL_STEPS.indexOf(from);
-    this.done = 0;
-    this.tries = 0;
+    this.begin(TUTORIAL_STEPS.indexOf(from));
     this.travelled = 0;
     this.lastY = null;
     this._praise = 0;
-    this.feedbackFor = 0;
-    this.seenStreak = 0;
   }
 
   /** Call every frame of the tutorial: it watches the paddle move and counts the moments down. */
@@ -204,7 +233,7 @@ export class TutorialCoach {
     if (this._praise > 0) this._praise = Math.max(0, this._praise - dt);
     if (this.feedbackFor > 0) this.feedbackFor = Math.max(0, this.feedbackFor - dt);
     const { y } = this.deps.player().paddle;
-    if (this.lastY !== null && this.progress?.step === 'move' && !this.isPraising) {
+    if (this.lastY !== null && this.progress?.step === 'move' && this.isPlaying) {
       this.travelled += Math.abs(y - this.lastY);
       if (this.travelled >= TUTORIAL.MOVE_DISTANCE) this.pass();
     }
@@ -217,11 +246,16 @@ export class TutorialCoach {
     return events.subscribe((event) => this.handle(event));
   }
 
+  /** Whether the step is being played: its card read, no praise showing. */
+  private get isPlaying(): boolean {
+    return this.isIntroduced && !this.isPraising;
+  }
+
   private handle(event: MatchEvent): void {
     const streakBefore = this.seenStreak;
     this.seenStreak = this.deps.overdriveStreak();
     const progress = this.progress;
-    if (!progress || progress.step === 'move' || this.isPraising) return;
+    if (!progress || progress.step === 'move' || !this.isPlaying) return;
     const player = this.deps.player();
     if (event.type === 'score' && !event.isDemo && event.scoringPlayerIndex !== player.side) {
       this.fail('missed');
@@ -232,12 +266,13 @@ export class TutorialCoach {
     switch (progress.step) {
       case 'hit':
         return this.count();
+      case 'angle':
+        return event.angle >= TUTORIAL.STEEP_ANGLE ? this.count() : this.fail('flat');
       case 'perfect':
         return event.isPerfect ? this.count() : this.fail('offCenter');
-      case 'steer':
-        return Math.abs(player.paddle.velocity) >= TUTORIAL.STEER_SPEED
-          ? this.count()
-          : this.fail('stoodStill');
+      case 'aim':
+        if (!event.isPerfect) return this.fail('offCenter');
+        return event.angle >= TUTORIAL.AIM_ANGLE ? this.count() : this.fail('stoodStill');
       case 'overdrive':
         // The meter counts the perfect hits in a row; the hit after it is full fires it
         if (event.isPowerShot) return this.pass();
@@ -264,10 +299,18 @@ export class TutorialCoach {
   }
 
   private pass(): void {
-    this.stepIndex++;
+    this.begin(this.stepIndex + 1);
+    this._praise = TUTORIAL.PRAISE;
+  }
+
+  /** Starts the step at `index`: nothing done or tried yet, its card (if any) still to read. */
+  private begin(index: number): void {
+    this.stepIndex = index;
     this.done = 0;
     this.tries = 0;
     this.feedbackFor = 0;
-    this._praise = TUTORIAL.PRAISE;
+    this.seenStreak = 0;
+    const step = TUTORIAL_STEPS[index];
+    this.isIntroduced = !step || !hasCard(step);
   }
 }

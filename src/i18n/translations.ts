@@ -2,7 +2,7 @@ import { ChallengeId, ChallengeTier } from '@/match/challenges';
 import { ModifierId } from '@/match/modifiers/Modifier';
 import { DifficultyLevel } from '@/match/difficulty';
 import { ModeId } from '@/match/modes';
-import { TutorialFeedback, TutorialStep } from '@/match/tutorial';
+import { TutorialCard, TutorialFeedback, TutorialStep } from '@/match/tutorial';
 import { BackgroundChoice } from '@/shared/scenes';
 export type Language = 'en' | 'ru';
 
@@ -23,6 +23,13 @@ export interface TutorialTexts {
   charged: string;
   /** Told for a moment after every try: it counted, or why it didn't. */
   feedback: Record<TutorialFeedback, string>;
+  /**
+   * The cards that open the steps, the match paused: what the move is, why it is worth making,
+   * and how; moving is told as the device does it. Their button.
+   */
+  cards: Record<TutorialCard, { title: string; why: string; how: string }>;
+  moveHowByTouch: string;
+  ok: string;
   /** Between two steps. */
   praise: string;
   /** Its end. */
@@ -190,26 +197,58 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       steps: {
         move: 'MOVE: W/S, ↑/↓ OR THE MOUSE',
         hit: 'RETURN THE BALL',
+        angle: 'HIT IT WITH AN EDGE',
         perfect: 'HIT IT WITH THE YELLOW CENTER',
-        steer: 'HIT ON THE MOVE: IT FLIES ANGLED',
+        aim: 'YELLOW CENTER, ON THE MOVE',
         overdrive: 'CHARGE: YELLOW 3 TIMES IN A ROW',
       },
       moveByTouch: 'MOVE: SLIDE A FINGER',
       hints: {
         move: 'MOVE THE PADDLE UP AND DOWN',
         hit: 'STAND WHERE THE BALL IS GOING',
+        angle: 'MEET IT NEAR AN END, NOT THE MIDDLE',
         perfect: 'THE BALL MUST TOUCH THE YELLOW',
-        steer: 'KEEP MOVING AS THE BALL HITS',
+        aim: 'DON’T STOP AS THE BALL HITS',
         overdrive: 'STAND STILL, CATCH IT DEAD CENTER',
       },
       charged: 'CHARGED! NEXT HIT IS OVERDRIVE',
       feedback: {
         counted: 'YES!',
+        flat: 'TOO FLAT: USE AN EDGE',
         offCenter: 'OFF THE CENTER',
-        stoodStill: 'THE PADDLE STOOD STILL: MOVE',
+        stoodStill: 'STRAIGHT: THE PADDLE STOOD STILL',
         chargeLost: 'OFF CENTER: CHARGE LOST',
         missed: 'MISSED: AGAIN',
       },
+      cards: {
+        move: {
+          title: 'YOUR PADDLE',
+          why: 'Don’t let the ball past your paddle: every ball you miss is a point to the opponent.',
+          how: 'Move it with W/S, ↑/↓ or the mouse, and return the ball.',
+        },
+        angle: {
+          title: 'ANGLE',
+          why: 'Off the paddle’s edge the ball flies off steep and bounces off the walls: the opponent misjudges such balls more often.',
+          how: 'Meet it near an end: the closer, the steeper. Too close, and you miss it.',
+        },
+        perfect: {
+          title: 'PERFECT HIT',
+          why: 'Off the yellow center the ball flies faster and is harder to read: the opponent reacts later.',
+          how: 'Meet the ball with the yellow band in the middle of the paddle.',
+        },
+        aim: {
+          title: 'AIM',
+          why: 'A perfect hit on the move sends the ball the way the paddle goes: an angle without the edge’s risk.',
+          how: 'Keep moving as the ball meets the center: it goes off the way the paddle moves.',
+        },
+        overdrive: {
+          title: 'OVERDRIVE',
+          why: 'Three perfect hits in a row charge the meter by your paddle, and the next hit is a power shot: fast and very hard to return.',
+          how: 'A plain hit before it is charged empties the meter.',
+        },
+      },
+      moveHowByTouch: 'Slide a finger to move it, and return the ball.',
+      ok: 'GOT IT',
       praise: 'NICE!',
       doneTitle: 'WELL PLAYED!',
       doneText: 'Now for a real match',
@@ -224,7 +263,11 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         music: { name: 'Music', keys: 'M', touch: 'In the settings' },
         twoPlayers: { name: 'Two players', keys: 'W/S and ↑/↓', touch: 'Each on their half' },
         perfect: { name: 'Perfect hit', keys: 'The paddle’s center', touch: 'The paddle’s center' },
-        angle: { name: 'An angle', keys: 'Move as you hit', touch: 'Move as you hit' },
+        angle: {
+          name: 'An angle',
+          keys: 'An edge, or the center on the move',
+          touch: 'An edge, or the center on the move',
+        },
         overdrive: { name: 'Overdrive', keys: '3 perfect in a row', touch: '3 perfect in a row' },
       },
     },
@@ -365,26 +408,58 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       steps: {
         move: 'ДВИГАЙ РАКЕТКУ: W/S, ↑/↓ ИЛИ МЫШЬ',
         hit: 'ОТБЕЙ МЯЧ',
+        angle: 'ОТБЕЙ КРАЕМ РАКЕТКИ',
         perfect: 'ОТБЕЙ ЖЁЛТЫМ ЦЕНТРОМ',
-        steer: 'ОТБЕЙ НА ХОДУ — МЯЧ УЙДЁТ ВБОК',
+        aim: 'ЖЁЛТЫМ ЦЕНТРОМ НА ХОДУ',
         overdrive: 'ЗАРЯД: ЖЁЛТЫМ 3 РАЗА ПОДРЯД',
       },
       moveByTouch: 'ВЕДИ РАКЕТКУ ПАЛЬЦЕМ',
       hints: {
         move: 'ДВИГАЙ РАКЕТКУ ВВЕРХ И ВНИЗ',
         hit: 'ВСТАНЬ ТУДА, КУДА ЛЕТИТ МЯЧ',
+        angle: 'ПОДСТАВЬ КОНЕЦ РАКЕТКИ, НЕ СЕРЕДИНУ',
         perfect: 'МЯЧ ДОЛЖЕН ПОПАСТЬ В ЖЁЛТОЕ',
-        steer: 'ДВИГАЙ РАКЕТКУ В МОМЕНТ УДАРА',
+        aim: 'НЕ ОСТАНАВЛИВАЙСЯ В МОМЕНТ УДАРА',
         overdrive: 'СТОЙ НА МЕСТЕ И ЛОВИ ЦЕНТРОМ',
       },
       charged: 'ЗАРЯЖЕНО! СЛЕДУЮЩИЙ УДАР — OVERDRIVE',
       feedback: {
         counted: 'ЕСТЬ!',
+        flat: 'СЛИШКОМ ПРЯМО — КРАЕМ',
         offCenter: 'МИМО ЦЕНТРА',
-        stoodStill: 'РАКЕТКА СТОЯЛА — ДВИГАЙСЯ',
+        stoodStill: 'ПРЯМО — РАКЕТКА СТОЯЛА',
         chargeLost: 'НЕ ЦЕНТРОМ — ЗАРЯД СБРОШЕН',
         missed: 'ПРОПУСТИЛ — ЕЩЁ РАЗ',
       },
+      cards: {
+        move: {
+          title: 'ТВОЯ РАКЕТКА',
+          why: 'Не пропусти мяч за свою ракетку: каждый пропущенный мяч — очко сопернику.',
+          how: 'Двигай её клавишами W/S, ↑/↓ или мышью и отбивай мяч.',
+        },
+        angle: {
+          title: 'УГОЛ',
+          why: 'От края ракетки мяч уходит круто и отскакивает от стен — на таких мячах соперник ошибается чаще.',
+          how: 'Подставь край: чем ближе к концу, тем круче. Слишком близко — промах.',
+        },
+        perfect: {
+          title: 'ИДЕАЛЬНЫЙ УДАР',
+          why: 'От жёлтого центра мяч летит быстрее, и его труднее прочитать — соперник реагирует позже.',
+          how: 'Встреть мяч жёлтой полосой посередине ракетки.',
+        },
+        aim: {
+          title: 'ПРИЦЕЛ',
+          why: 'Идеальный удар в движении уводит мяч туда, куда едет ракетка: угол без риска края.',
+          how: 'Не останавливайся, когда мяч встречает центр: он уйдёт туда, куда ведёшь ракетку.',
+        },
+        overdrive: {
+          title: 'OVERDRIVE',
+          why: 'Три идеальных подряд заряжают шкалу у ракетки, и следующий удар — мощный: быстрый и очень трудный для соперника.',
+          how: 'Обычный удар до заряда обнуляет шкалу.',
+        },
+      },
+      moveHowByTouch: 'Веди её пальцем и отбивай мяч.',
+      ok: 'ПОНЯТНО',
       praise: 'ОТЛИЧНО!',
       doneTitle: 'ГОТОВО!',
       doneText: 'Теперь — настоящий матч',
@@ -399,7 +474,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         music: { name: 'Музыка', keys: 'M', touch: 'В настройках' },
         twoPlayers: { name: 'Двое', keys: 'W/S и ↑/↓', touch: 'Каждый на своей половине' },
         perfect: { name: 'Идеальный удар', keys: 'Центр ракетки', touch: 'Центр ракетки' },
-        angle: { name: 'Угол', keys: 'Двигайся при ударе', touch: 'Двигайся при ударе' },
+        angle: { name: 'Угол', keys: 'Край или центр на ходу', touch: 'Край или центр на ходу' },
         overdrive: { name: 'Overdrive', keys: '3 идеальных подряд', touch: '3 идеальных подряд' },
       },
     },

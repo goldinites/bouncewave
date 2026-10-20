@@ -1,5 +1,5 @@
 import { I18nManager } from '@/i18n/I18nManager';
-import { TutorialFeedback, TutorialProgress } from '@/match/tutorial';
+import { TutorialCard, TutorialFeedback, TutorialProgress } from '@/match/tutorial';
 import { Condition } from '@/ui/challengeTexts';
 
 /** What the tutorial's line needs to know of where the learner is. */
@@ -7,6 +7,8 @@ export interface TutorialLine {
   readonly progress: TutorialProgress | null;
   readonly isPraising: boolean;
   readonly feedback: TutorialFeedback | null;
+  /** A step's card is up: the line gives way to it. */
+  readonly card: TutorialCard | null;
 }
 
 /**
@@ -21,7 +23,7 @@ export interface TutorialLine {
  */
 export function describeTutorial(
   i18n: I18nManager,
-  { progress, isPraising, feedback }: TutorialLine,
+  { progress, isPraising, feedback, card }: TutorialLine,
   isTouch: boolean,
 ): Condition | null {
   const texts = i18n.t('tutorial');
@@ -31,6 +33,7 @@ export function describeTutorial(
     isUrgent: false,
     replacesScore: true,
   });
+  if (card) return null;
   if (isPraising) return line(texts.praise);
   if (!progress) return null;
 

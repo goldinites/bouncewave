@@ -29,6 +29,7 @@ const setup = () => {
       x: 0,
       y: 0,
       speed: 400,
+      angle: 0,
       rally: 1,
       isPowerShot: false,
       chargedOverdrive: false,
@@ -36,7 +37,7 @@ const setup = () => {
     });
   const miss = () => events.emit({ type: 'score', scoringPlayerIndex: 1, y: 0, isDemo: false });
   /** Lets the praise between two steps (or a try's verdict) run out. */
-  const wait = () => coach.update(TUTORIAL.PRAISE);
+  const wait = () => coach.update(Math.max(TUTORIAL.PRAISE, TUTORIAL.FEEDBACK));
   const move = (distance: number) => {
     coach.update(0);
     paddle.y += distance;
@@ -49,11 +50,14 @@ const line = (coach: TutorialCoach, isTouch = false) =>
   describeTutorial(new I18nManager('en'), coach, isTouch)?.text;
 
 describe('the tutorial', () => {
-  it('starts by moving the paddle, far enough either way, told as the device moves it', () => {
+  it('opens a step with a card, and plays it only once the card is read', () => {
     const { coach, move, hit } = setup();
-    expect(coach.progress?.step).toBe('move');
-    expect(line(coach)).toBe('MOVE: W/S, ↑/↓ OR THE MOUSE');
-    expect(line(coach, true)).toBe('MOVE: SLIDE A FINGER');
+    expect(coach.card).toBe('move');
+    move(TUTORIAL.MOVE_DISTANCE); // not yet: the card is up
+    expect(coach.progress?.done).toBe(0);
+    coach.acknowledge();
+    expect(coach.card).toBeNull();
+
     hit(); // a return is no move
     move(100);
     move(-100);
@@ -61,45 +65,83 @@ describe('the tutorial', () => {
     move(TUTORIAL.MOVE_DISTANCE);
     expect(coach.isPraising).toBe(true);
     expect(line(coach)).toBe('NICE!');
+    // Returning the ball has no card of its own: the first one told it
     expect(coach.progress?.step).toBe('hit');
+    expect(coach.card).toBeNull();
+  });
+
+  it('tells moving as the device moves the paddle', () => {
+    const { coach } = setup();
+    coach.acknowledge();
+    expect(line(coach)).toBe('MOVE: W/S, ↑/↓ OR THE MOUSE');
+    expect(line(coach, true)).toBe('MOVE: SLIDE A FINGER');
+  });
+
+  it('waits for the praise to end before the next card, and a resume with none due reads none', () => {
+    const { coach, hit, wait } = setup();
+    coach.reset('hit');
+    hit();
+    hit();
+    expect(coach.progress?.step).toBe('angle');
+    expect(coach.card).toBeNull(); // the praise first
+    coach.acknowledge(); // a pause left during the praise
+    wait();
+    expect(coach.card).toBe('angle');
   });
 
   it('says after every try whether it counted, and why not, the count always in sight', () => {
-    const { coach, move, hit, wait, paddle } = setup();
-    move(TUTORIAL.MOVE_DISTANCE);
-    wait();
-
+    const { coach, hit, wait } = setup();
+    coach.reset('hit');
     expect(line(coach)).toBe('RETURN THE BALL · 0 / 2');
     hit();
     expect(line(coach)).toBe('YES! · 1 / 2');
     wait();
     expect(line(coach)).toBe('RETURN THE BALL · 1 / 2');
     hit();
-    expect(coach.progress?.step).toBe('perfect');
-    hit({ isPerfect: true }); // nothing counts while the praise shows
-    expect(coach.progress?.done).toBe(0);
     wait();
 
+    // The edge: a steep return, not a flat one
+    coach.acknowledge();
+    hit({ angle: TUTORIAL.STEEP_ANGLE / 2 });
+    expect(line(coach)).toBe('TOO FLAT: USE AN EDGE · 0 / 2');
+    hit({ angle: TUTORIAL.STEEP_ANGLE });
+    hit({ angle: 1 });
+    wait();
+
+    coach.acknowledge();
     hit();
     expect(line(coach)).toBe('OFF THE CENTER · 0 / 2');
     hit({ isPerfect: true });
     hit({ isPerfect: true });
     wait();
 
-    // A return struck on the move, fast enough to steer it
-    paddle.velocity = TUTORIAL.STEER_SPEED / 2;
-    hit();
-    expect(line(coach)).toBe('THE PADDLE STOOD STILL: MOVE · 0 / 2');
-    paddle.velocity = -TUTORIAL.STEER_SPEED;
-    hit();
-    expect(coach.progress).toMatchObject({ step: 'steer', done: 1 });
-    hit();
+    // Aim: a perfect hit that goes off angled, the paddle on the move
+    coach.acknowledge();
+    hit({ angle: 1 });
+    expect(line(coach)).toBe('OFF THE CENTER · 0 / 2');
+    hit({ isPerfect: true, angle: 0 });
+    expect(line(coach)).toBe('STRAIGHT: THE PADDLE STOOD STILL · 0 / 2');
+    hit({ isPerfect: true, angle: TUTORIAL.AIM_ANGLE });
+    hit({ isPerfect: true, angle: 0.8 });
     expect(coach.progress?.step).toBe('overdrive');
+  });
+
+  it('keeps a try’s verdict up long enough to read', () => {
+    const { coach, hit } = setup();
+    coach.reset('perfect');
+    coach.acknowledge();
+    hit();
+    coach.update(TUTORIAL.FEEDBACK - 0.1);
+    expect(coach.feedback).toBe('offCenter');
+    coach.update(0.2);
+    expect(coach.feedback).toBeNull();
   });
 
   it('teaches Overdrive by its meter: charged by perfect hits in a row, fired by the next', () => {
     const { coach, meter, hit, wait } = setup();
     coach.reset('overdrive');
+    expect(coach.card).toBe('overdrive');
+    coach.acknowledge();
     expect(line(coach)).toBe('CHARGE: YELLOW 3 TIMES IN A ROW · 0 / 3');
 
     meter.streak = 1;
@@ -124,12 +166,9 @@ describe('the tutorial', () => {
   });
 
   it('shows a step’s hint after a few tries without it, still counting, and forgets them next', () => {
-    const { coach, move, hit, miss, wait } = setup();
-    move(TUTORIAL.MOVE_DISTANCE);
-    wait();
-    hit();
-    hit();
-    wait();
+    const { coach, hit, miss, wait } = setup();
+    coach.reset('perfect');
+    coach.acknowledge();
     for (let i = 0; i < TUTORIAL.HINT_AFTER - 1; i++) hit();
     expect(coach.progress?.isHinted).toBe(false);
     miss();
@@ -140,13 +179,12 @@ describe('the tutorial', () => {
     hit({ isPerfect: true });
     hit({ isPerfect: true });
     wait();
-    expect(coach.progress).toMatchObject({ step: 'steer', isHinted: false });
+    expect(coach.progress).toMatchObject({ step: 'aim', isHinted: false });
   });
 
   it('ignores the trainer’s returns and the points it loses', () => {
-    const { coach, move, hit, wait } = setup();
-    move(TUTORIAL.MOVE_DISTANCE);
-    wait();
+    const { coach, hit } = setup();
+    coach.reset('hit');
     hit({ paddleIndex: 1 });
     expect(coach.progress?.done).toBe(0);
     expect(coach.feedback).toBeNull();
@@ -154,12 +192,13 @@ describe('the tutorial', () => {
 
   it('starts over when reset, or at the step asked', () => {
     const { coach, move } = setup();
+    coach.acknowledge();
     move(TUTORIAL.MOVE_DISTANCE);
     coach.reset();
     expect(coach.progress).toMatchObject({ step: 'move', done: 0 });
-    expect(coach.isPraising).toBe(false);
-    coach.reset('steer');
-    expect(coach.progress?.step).toBe('steer');
+    expect(coach.card).toBe('move');
+    coach.reset('aim');
+    expect(coach.progress?.step).toBe('aim');
   });
 
   it('plays a match that points never end, with a slow ball and a trainer that returns it', () => {

@@ -66,6 +66,8 @@ export type MatchEvent =
       x: number;
       y: number;
       speed: number;
+      /** How steeply it went off, radians from the flat return (either way). */
+      angle: number;
       /** Rally length including this hit. */
       rally: number;
       /** The paddle's Overdrive went off on this hit. */

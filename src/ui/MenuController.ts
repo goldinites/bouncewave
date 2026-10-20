@@ -12,6 +12,7 @@ import {
   ChallengeTier,
 } from '@/match/challenges';
 import { MatchEvent } from '@/match/MatchFlow';
+import { TutorialCard } from '@/match/tutorial';
 import { MATCH_POINTS, MODE_IDS, ModeId, MODES } from '@/match/modes';
 import { DIFFICULTY_LEVELS } from '@/match/difficulty';
 import {
@@ -37,6 +38,7 @@ import { Choice } from '@/ui/screens/OptionRow';
 import { QuickMatchSetup } from '@/ui/screens/QuickMatchSetup';
 import { SettingsScreen } from '@/ui/screens/SettingsScreen';
 import { StatsScreen } from '@/ui/screens/StatsScreen';
+import { TutorialCardScreen } from '@/ui/screens/TutorialCardScreen';
 import { ButtonColor, UIManager } from '@/ui/UIManager';
 
 /**
@@ -142,6 +144,15 @@ const MODE_COLORS: Record<ModeId, ButtonColor> = {
 /** Whether the device is played by touch first (a phone, a tablet), not with keys and a mouse. */
 export const isTouchFirst = (): boolean =>
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+
+/** Whether the court is turned for a portrait phone (as InputHandler.isRotated has it). */
+const isCourtTurned = (): boolean =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(orientation:portrait) and (max-width:900px)').matches;
+
+/** Whether the player asked for less motion: examples stand still. */
+const isMotionReduced = (): boolean =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 'on');
 
@@ -489,6 +500,33 @@ export class MenuController {
         }),
       }),
     };
+  }
+
+  /**
+   * The card that opens a tutorial step, over the paused match: an example of the move, why it is
+   * worth making and how; GOT IT (or Esc, as from the pause) plays it.
+   */
+  public showTutorialCard(card: TutorialCard, onOk: () => void): void {
+    this.stack.reset({
+      id: 'tutorialCard',
+      view: () => {
+        const texts = this.i18n.t('tutorial');
+        const { title, why, how } = texts.cards[card];
+        return {
+          title,
+          subtitle: '',
+          body: h(TutorialCardScreen, {
+            card,
+            why,
+            how: card === 'move' && isTouchFirst() ? texts.moveHowByTouch : how,
+            okLabel: texts.ok,
+            onOk,
+            isMotionReduced: isMotionReduced(),
+            isRotated: isCourtTurned(),
+          }),
+        };
+      },
+    });
   }
 
   /** The tutorial's end: on to a quick match, or back to the menu. */

@@ -31,6 +31,7 @@ const setup = (challenge: ChallengeId | null) => {
       x: 0,
       y: 0,
       speed: 400,
+      angle: 0,
       rally,
       isPowerShot: false,
       chargedOverdrive: false,

@@ -686,6 +686,89 @@
   }
 }
 
+/* A tutorial step's card, over the paused match: the move on a small court, why and how, then
+   GOT IT. As narrow as reads well, and short enough for a phone on its side */
+.tutorial-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  width: min(440px, 88%);
+  text-align: center;
+}
+
+.tutorial-card__demo {
+  width: min(240px, 60%);
+  height: auto;
+  margin-bottom: 4px;
+}
+
+.tutorial-card__demo--rotated {
+  width: min(140px, 36%);
+}
+
+.tutorial-card__why,
+.tutorial-card__how {
+  margin: 0;
+  color: var(--white);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.tutorial-card__how {
+  color: var(--yellow);
+}
+
+.tutorial-demo__wall {
+  fill: var(--pink);
+  opacity: 0.6;
+}
+
+.tutorial-demo__path {
+  fill: none;
+  stroke: var(--white);
+  stroke-dasharray: 3 4;
+  stroke-width: 1;
+  opacity: 0.35;
+}
+
+.tutorial-demo__paddle {
+  fill: var(--cyan);
+}
+
+.tutorial-demo__center,
+.tutorial-demo__charge {
+  fill: var(--yellow);
+}
+
+.tutorial-demo__end {
+  fill: var(--white);
+}
+
+.tutorial-demo__arrow {
+  fill: none;
+  stroke: var(--yellow);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.tutorial-demo__ball {
+  fill: var(--white);
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .tutorial-card__demo {
+    width: min(180px, 40%);
+  }
+
+  .tutorial-card__why,
+  .tutorial-card__how {
+    font-size: 13px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .game__title,
   .game-button:hover,

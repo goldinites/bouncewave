@@ -93,6 +93,10 @@ test('offers the tutorial to someone new, and plays it on court', async ({ page 
   await button(page, 'PLAY').click();
   await expect(page.locator('#gameTitle')).toHaveText('FIRST TIME?');
   await button(page, 'TUTORIAL').click();
+  // Its first step opens on a card, with an example, over the paused match
+  await expect(page.locator('#gameTitle')).toHaveText('YOUR PADDLE');
+  await expectOnCourt(page, button(page, 'GOT IT'));
+  await button(page, 'GOT IT').click();
   await expect(menu(page)).toHaveClass(/game__ui--hidden/);
   // Its first step, above the court (a phone on its side writes it on the court instead)
   const viewport = page.viewportSize()!;
