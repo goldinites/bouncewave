@@ -204,7 +204,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     },
     challenges: {
       warmUp: ['FIRST SERVE', 'Win a match to 3 points'],
-      twoBalls: ['DOUBLE', 'Win to 5 with two balls in play at once'],
+      twoBalls: ['SPLIT', 'Win to 5 with two balls in play at once'],
       longRally: ['MARATHON', 'Keep a rally going for 20 hits within a minute'],
       bricks: [
         'BREAKOUT',
@@ -222,7 +222,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       darkness: ['BLACKOUT', 'Win to 5 against a Normal opponent on a court in the dark'],
       blitz: ['COUNTDOWN', 'Win to 3 before the two minutes are up'],
       bumpers: ['PINBALL', 'Win to 5 against a Hard opponent, posts standing on the centre line'],
-      ice: ['DRIFT', 'Win to 5 against a Hard opponent on ice: the paddles slide'],
+      ice: ['SLIDE', 'Win to 5 against a Hard opponent on ice: the paddles slide'],
       ghost: ['DEAD ZONE', 'Win to 5 against a Hard opponent: the ball vanishes across the middle'],
       twoOnOne: [
         'TAG TEAM',
@@ -236,7 +236,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       ],
       insanity: ['INSANITY', 'Win to 5 against an Insane opponent'],
       chaos: [
-        'SYSTEM CRASH',
+        'CHAOS',
         'Win to 7 against a Hard opponent while the modifiers take turns, two points each',
       ],
     },
@@ -334,7 +334,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     },
     challenges: {
       warmUp: ['ПЕРВАЯ ПОДАЧА', 'Выиграй матч до 3 очков'],
-      twoBalls: ['ДУБЛЬ', 'Выиграй до 5 очков, когда в игре сразу два мяча'],
+      twoBalls: ['РАЗДВОЕНИЕ', 'Выиграй до 5 очков, когда в игре сразу два мяча'],
       longRally: ['МАРАФОН', 'Розыгрыш в 20 ударов за минуту'],
       bricks: [
         'НАПРОЛОМ',
@@ -358,7 +358,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         'ПИНБОЛ',
         'Выиграй до 5 очков у сложного противника, когда на центральной линии стоят отбойники',
       ],
-      ice: ['ДРИФТ', 'Выиграй до 5 очков у сложного противника на льду: ракетки скользят'],
+      ice: ['СКОЛЬЖЕНИЕ', 'Выиграй до 5 очков у сложного противника на льду: ракетки скользят'],
       ghost: [
         'МЁРТВАЯ ЗОНА',
         'Выиграй до 5 очков у сложного противника: в середине корта мяч невидим',
@@ -378,7 +378,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       ],
       insanity: ['БЕЗУМИЕ', 'Выиграй до 5 очков у безумного противника'],
       chaos: [
-        'СИСТЕМНЫЙ СБОЙ',
+        'ХАОС',
         'Выиграй до 7 очков у сложного противника, пока модификаторы сменяют друг друга каждые 2 очка',
       ],
     },

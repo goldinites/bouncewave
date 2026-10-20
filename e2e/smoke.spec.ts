@@ -144,8 +144,8 @@ test('lists the challenges on the court and starts the first from its card', asy
   await expectOnCourt(page, button(page, 'OVERHEAT'));
   await expectOnCourt(page, button(page, 'BACK'));
   await tab('LEGEND').click();
-  await expect(button(page, 'SYSTEM CRASH')).toBeEnabled();
-  await expectOnCourt(page, button(page, 'SYSTEM CRASH'));
+  await expect(button(page, 'CHAOS')).toBeEnabled();
+  await expectOnCourt(page, button(page, 'CHAOS'));
   await expectOnCourt(page, button(page, 'TAG TEAM'));
   await tab('ROOKIE').click();
 

@@ -176,7 +176,7 @@ describe('the challenges in the menus', () => {
     expect(shownTier()).toBe('ROOKIE 1/6');
     expect(names()).toEqual([
       'FIRST SERVE',
-      'DOUBLE',
+      'SPLIT',
       'MARATHON',
       'BREAKOUT',
       'CROSSWIND',
@@ -192,7 +192,7 @@ describe('the challenges in the menus', () => {
       'BLACKOUT',
       'COUNTDOWN',
       'PINBALL',
-      'DRIFT',
+      'SLIDE',
       'DEAD ZONE',
     ]);
     tabs()[2].click();
@@ -202,7 +202,7 @@ describe('the challenges in the menus', () => {
       'PERFECT GAME',
       'SURVIVAL',
       'INSANITY',
-      'SYSTEM CRASH',
+      'CHAOS',
     ]);
     expect(items()[1].classList).toContain('challenge-list__item--passed');
     expect(screenButtons().at(-1)?.textContent).toBe('BACK');
@@ -268,7 +268,7 @@ describe('the challenges in the menus', () => {
 
     button('NEXT').click();
     expect(actions.onReturnToMainMenu).toHaveBeenCalledOnce();
-    expect(title()).toBe('DOUBLE');
+    expect(title()).toBe('SPLIT');
   });
 
   it('shows a failed attempt: what it fell short by, TRY AGAIN and the list', () => {
