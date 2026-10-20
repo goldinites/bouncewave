@@ -302,8 +302,6 @@ export class Game {
           this.challenge = null;
           this.isTwoPlayers = false;
           this.isTutorial = true;
-          // Offered the once: started, it is never offered again, even if left halfway
-          if (this.profile.current.tutorial === null) this.profile.update({ tutorial: 'skipped' });
           this.start();
         },
         isTutorialOffered: () => this.profile.current.tutorial === null,

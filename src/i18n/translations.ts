@@ -10,10 +10,11 @@ export type DifficultyDescription = [name: string, description: string];
 
 /** The tutorial's texts (step 4.8): its offer, each step, its hint and its card, its end. */
 export interface TutorialTexts {
-  /** Offered on the first PLAY: its title, what it is, and the way past it. */
+  /** Offered on PLAY until gone through or turned down: its title, its question, the answers. */
   offerTitle: string;
   offerText: string;
-  skip: string;
+  yes: string;
+  no: string;
   /** What each step asks, over the court; moving as a person with keys or a finger does it. */
   steps: Record<TutorialStep, string>;
   moveByTouch: string;
@@ -189,8 +190,9 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     modes: { story: 'STORY', challenges: 'CHALLENGE', quick: 'QUICK MATCH', tutorial: 'TUTORIAL' },
     tutorial: {
       offerTitle: 'FIRST TIME?',
-      offerText: 'A minute on the controls and the shots',
-      skip: 'PLAY NOW',
+      offerText: 'Take the tutorial? It’s a minute on the controls and the shots',
+      yes: 'YES',
+      no: 'NO',
       steps: {
         move: 'MOVE: W/S, ↑/↓ OR THE MOUSE',
         hit: 'RETURN THE BALL',
@@ -397,8 +399,9 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     modes: { story: 'СЮЖЕТ', challenges: 'ИСПЫТАНИЕ', quick: 'БЫСТРЫЙ МАТЧ', tutorial: 'ОБУЧЕНИЕ' },
     tutorial: {
       offerTitle: 'ВПЕРВЫЕ?',
-      offerText: 'Минута на управление и приёмы',
-      skip: 'СРАЗУ ИГРАТЬ',
+      offerText: 'Пройти обучение? Это минута на управление и приёмы',
+      yes: 'ДА',
+      no: 'НЕТ',
       steps: {
         move: 'ДВИГАЙ РАКЕТКУ: W/S, ↑/↓ ИЛИ МЫШЬ',
         hit: 'ОТБЕЙ МЯЧ',

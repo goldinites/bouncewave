@@ -80,11 +80,11 @@ export interface GameMenuActions {
   /** Starts the tutorial (step 4.8). */
   onStartTutorial?: () => void;
   /**
-   * Whether PLAY offers the tutorial first: to someone it was never offered to. Never when left
-   * out.
+   * Whether PLAY offers the tutorial first: to someone who has neither gone through it nor turned
+   * it down. Never when left out.
    */
   isTutorialOffered?: () => boolean;
-  /** The tutorial offered was turned down (PLAY NOW): it isn't offered again. */
+  /** The tutorial offered was turned down (NO): it isn't offered again. */
   onDeclineTutorial?: () => void;
   /**
    * Whether two people play the match on court: its end names the winner instead of "you win" or
@@ -469,8 +469,9 @@ export class MenuController {
   }
 
   /**
-   * The tutorial offered on someone's first PLAY: it, or PLAY NOW, which turns it down for good
-   * and goes on to the PLAY menu, where the tutorial stays.
+   * The tutorial offered on PLAY to someone who hasn't gone through it: YES plays it; NO turns it
+   * down for good (it stays on the PLAY menu) and goes on to the modes. Esc steps back, deciding
+   * nothing.
    */
   private tutorialOffer(): ScreenEntry {
     return {
@@ -482,20 +483,19 @@ export class MenuController {
         body: h(ButtonMenu, {
           items: [
             {
-              id: 'tutorial',
-              label: this.i18n.getModeName('tutorial'),
+              id: 'yes',
+              label: this.i18n.t('tutorial').yes,
               color: MODE_COLORS.tutorial,
               onClick: () => this.actions.onStartTutorial?.(),
             },
             {
-              id: 'skip',
-              label: this.i18n.t('tutorial').skip,
+              id: 'no',
+              label: this.i18n.t('tutorial').no,
               onClick: () => {
                 this.actions.onDeclineTutorial?.();
                 this.stack.reset(this.mainMenu(), this.playMenu());
               },
             },
-            { id: 'back', label: this.i18n.t('back'), color: 'purple', onClick: this.back },
           ],
         }),
       }),

@@ -270,13 +270,17 @@ describe('Game', () => {
     const frame = (timestamp: number) =>
       (game as unknown as { runFrame(timestamp: number): void }).runFrame(timestamp);
 
-    it("is offered on someone new's first PLAY, and once turned down never again", () => {
+    it('is offered on PLAY until turned down, and once turned down never again', () => {
       openNew();
       buttons()[0].click(); // play
       expect($('#gameTitle').textContent).toBe('FIRST TIME?');
-      expect(labels()).toEqual(['TUTORIAL', 'PLAY NOW', 'BACK']);
+      expect(labels()).toEqual(['YES', 'NO']);
+      // Stepping back decides nothing: it is offered again
+      press('Escape');
+      buttons()[0].click();
+      expect($('#gameTitle').textContent).toBe('FIRST TIME?');
 
-      screenButton('PLAY NOW').click();
+      screenButton('NO').click();
       expect($('#gameTitle').textContent).toBe('GAME MODE');
       expect(tutorialState()).toBe('skipped');
       press('Escape');
@@ -289,11 +293,11 @@ describe('Game', () => {
     it('plays on court, step by step, and its end leads on to a match', () => {
       openNew();
       buttons()[0].click(); // play
-      screenButton('TUTORIAL').click();
+      screenButton('YES').click();
       expect(isMenuOpen()).toBe(false);
       expect(isPauseButtonShown()).toBe(true);
-      // Started, it isn't offered again, even if left halfway
-      expect(tutorialState()).toBe('skipped');
+      // Started is not gone through: left halfway, it is offered again
+      expect(tutorialState() ?? null).toBeNull();
 
       // It starts with moving, told by the line over the court
       frame(1000);

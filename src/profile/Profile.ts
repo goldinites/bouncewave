@@ -24,8 +24,8 @@ const settingsSchema = v.object(
 ) as unknown as v.GenericSchema<unknown, UserSettings>;
 
 /**
- * How the tutorial (step 4.8) stands for the player: gone through, turned down (skipped, or left
- * halfway), or never yet offered (null). Offered once, on the first PLAY.
+ * How the tutorial (step 4.8) stands for the player: gone through, turned down (NO when offered),
+ * or neither yet (null): offered on PLAY until one or the other.
  */
 export const tutorialStateSchema = v.fallback(v.nullable(v.picklist(['done', 'skipped'])), null);
 

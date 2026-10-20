@@ -28,12 +28,12 @@ const menu = (page: Page) => page.locator('#gameUI');
 const choice = (page: Page, name: string) => page.getByRole('spinbutton', { name, exact: true });
 
 /**
- * PLAY, on to the modes: past the tutorial offered to someone new (PLAY NOW), as every test here
+ * PLAY, on to the modes: past the tutorial offered to someone new (NO), as every test here
  * starts from nothing saved.
  */
 const openModes = async (page: Page, play = 'PLAY') => {
   await button(page, play).click();
-  const skip = button(page, /^(PLAY NOW|СРАЗУ ИГРАТЬ)$/);
+  const skip = button(page, /^(NO|НЕТ)$/);
   const modes = button(page, /^(QUICK MATCH|БЫСТРЫЙ МАТЧ)$/);
   await expect(skip.or(modes)).toBeVisible();
   if (await skip.isVisible()) await skip.click();
@@ -92,7 +92,7 @@ test('offers the tutorial to someone new, and plays it on court', async ({ page 
   await page.goto('');
   await button(page, 'PLAY').click();
   await expect(page.locator('#gameTitle')).toHaveText('FIRST TIME?');
-  await button(page, 'TUTORIAL').click();
+  await button(page, 'YES').click();
   await expect(menu(page)).toHaveClass(/game__ui--hidden/);
   // Its first step, above the court (a phone on its side writes it on the court instead)
   const viewport = page.viewportSize()!;
@@ -101,9 +101,13 @@ test('offers the tutorial to someone new, and plays it on court', async ({ page 
   }
   await page.waitForTimeout(SETTLE_MS);
 
-  // Left halfway, it isn't offered again
+  // Left halfway, it is offered again; turned down, never
   await page.keyboard.press('Escape');
   await button(page, 'MAIN MENU').click();
+  await button(page, 'PLAY').click();
+  await expect(page.locator('#gameTitle')).toHaveText('FIRST TIME?');
+  await button(page, 'NO').click();
+  await page.keyboard.press('Escape');
   await button(page, 'PLAY').click();
   await expect(page.locator('#gameTitle')).toHaveText('GAME MODE');
 });
@@ -111,7 +115,7 @@ test('offers the tutorial to someone new, and plays it on court', async ({ page 
 test('opens a tutorial move on a card that fits the court', async ({ page }) => {
   await page.goto('?tutorial=perfect');
   await button(page, 'PLAY').click();
-  await button(page, 'TUTORIAL').click();
+  await button(page, 'YES').click();
   await expect(page.locator('#gameTitle')).toHaveText('PERFECT HIT');
   await expectOnCourt(page, page.locator('.tutorial-card'));
   await button(page, 'GOT IT').click();
