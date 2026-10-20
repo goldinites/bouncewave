@@ -22,6 +22,8 @@ export class ConditionBar {
   private readonly el: HTMLElement;
   /** What it last showed, so a frame that changes nothing leaves the DOM alone. */
   private shown = '';
+  /** The strip's width its line was last fitted to; 0 until it is (a hidden strip has none). */
+  private fittedTo = 0;
 
   constructor() {
     this.el = getRequiredElement<HTMLElement>('gameCondition');
@@ -36,7 +38,11 @@ export class ConditionBar {
     const key = line
       ? `${line.text}|${line.lives?.left}/${line.lives?.total}|${line.isUrgent}`
       : '';
-    if (key === this.shown) return;
+    if (key === this.shown) {
+      // Fitted once the strip has a width, and again whenever it changes
+      if (line && this.el.clientWidth !== this.fittedTo) this.fit();
+      return;
+    }
     this.shown = key;
 
     this.el.textContent = '';
@@ -52,6 +58,26 @@ export class ConditionBar {
       hearts.setAttribute('aria-label', `${line.lives.left} / ${line.lives.total}`);
       for (let i = 0; i < line.lives.total; i++) hearts.append(heart(i < line.lives.left));
       this.el.append(hearts);
+    }
+    this.fit();
+  }
+
+  /**
+   * Sets a line too long for the strip smaller, never on two lines: the strip keeps one line's
+   * room, so the court doesn't shift. Measured by its parts' own widths, which a centered line
+   * spilling over both edges keeps, where the strip's scroll width wouldn't.
+   */
+  private fit(): void {
+    const width = this.el.clientWidth;
+    this.fittedTo = width;
+    const [text, hearts] = [...this.el.children] as HTMLElement[];
+    if (!text || width === 0) return;
+    text.style.fontSize = '';
+    const gap = hearts ? parseFloat(getComputedStyle(this.el).columnGap) || 0 : 0;
+    const needed = text.offsetWidth + (hearts?.offsetWidth ?? 0) + gap;
+    if (needed > width) {
+      const size = parseFloat(getComputedStyle(text).fontSize);
+      text.style.fontSize = `${Math.floor((size * width) / needed)}px`;
     }
   }
 }

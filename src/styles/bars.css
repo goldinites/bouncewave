@@ -20,8 +20,11 @@
   justify-content: center;
   gap: 0.6em;
 
-  /* One line's room, kept while empty, so the court never shifts */
+  /* One line's room, kept while empty, so the court never shifts; a longer line is set
+     smaller (ui/ConditionBar) rather than wrapped */
   min-height: 1.4em;
+  white-space: nowrap;
+  overflow: hidden;
   margin: 0;
 
   color: var(--white);

@@ -45,6 +45,8 @@ const CONDITION = {
   LOST_HEART_ALPHA: 0.35, // a life lost stays as a faint outline
   Y: 142, // court px, the line's center under the scores
   Y_ALONE: 82, // court px, where the scores stand
+  // A longer line is set smaller to fit, clear of the court's edges (the tutorial's steps)
+  MAX_WIDTH: 720, // court px
   ALPHA: 0.8,
   URGENT_PULSE: 7, // 1/s, the urgent clock's throb
 } as const;
@@ -80,8 +82,13 @@ export function drawConditionLine(
 ): void {
   ctx.save();
   const alone = condition.replacesScore;
-  const size = alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
+  let size: number = alone ? CONDITION.SIZE_ALONE : CONDITION.SIZE;
   ctx.font = style.font(size);
+  const fullWidth = ctx.measureText(condition.text).width;
+  if (fullWidth > CONDITION.MAX_WIDTH) {
+    size = Math.floor((size * CONDITION.MAX_WIDTH) / fullWidth);
+    ctx.font = style.font(size);
+  }
   ctx.textBaseline = 'middle';
   ctx.fillStyle = style.color;
   ctx.globalAlpha = style.alpha;

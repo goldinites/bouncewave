@@ -252,6 +252,7 @@ export class Game {
     // The learner plays the left paddle, as the player always does against the CPU
     this.tutorialCoach = new TutorialCoach({
       player: () => ({ paddle: this.paddles[0], index: 0, side: 0 }),
+      overdriveStreak: () => this.flow.overdriveStreaks[0] ?? 0,
     });
 
     this.flow = new MatchFlow({

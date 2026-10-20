@@ -2,6 +2,7 @@ import { AiController, ShotThreat } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
 import { AiSkill } from '@/match/difficulty';
 import { MatchEvent } from '@/match/MatchFlow';
+import { OVERDRIVE } from '@/match/Overdrive';
 import { Paddle } from '@/match/Paddle';
 import { PaddleController } from '@/match/PaddleController';
 import { firstTo, MatchRules, STANDARD_RULES } from '@/match/rules';
@@ -20,13 +21,14 @@ export type TutorialStep = (typeof TUTORIAL_STEPS)[number];
 export const TUTORIAL = {
   MOVE_DISTANCE: 220, // px the paddle has to travel, either way, to pass the first step
   /** How many of each a step asks for. */
-  COUNTS: { hit: 2, perfect: 2, steer: 2, overdrive: 1 },
+  COUNTS: { hit: 2, perfect: 2, steer: 2 },
   // A return counts as steered when the paddle met the ball moving at least this fast: enough
   // to turn it visibly off the line it would take
   STEER_SPEED: 180, // px/s
   // Tries at a step (a return that wasn't it, a ball missed) before its hint shows
   HINT_AFTER: 3,
   PRAISE: 1.2, // s the praise shows between steps
+  FEEDBACK: 1, // s a try's verdict shows: it counted, or why not
 } as const;
 
 /**
@@ -86,25 +88,39 @@ export class TrainerController implements PaddleController {
   }
 }
 
+/**
+ * What a learner's last try came to, told at once so they learn what counts: it did, or why it
+ * didn't (off the center, the paddle standing still, a charge lost to a plain hit, a ball missed).
+ */
+export type TutorialFeedback = 'counted' | 'offCenter' | 'stoodStill' | 'chargeLost' | 'missed';
+
 /** Where the learner is: the step, how far into it, and whether its hint is due. */
 export interface TutorialProgress {
   readonly step: TutorialStep;
-  /** Done of the step's count; for moving, a share of the distance, in [0, 1]. */
+  /**
+   * Done of the step's count; for moving, a share of the distance, in [0, 1]; for Overdrive, the
+   * perfect hits in a row on the meter.
+   */
   readonly done: number;
   readonly target: number;
   /** The learner has tried a few times without it: the step's hint is shown. */
   readonly isHinted: boolean;
+  /** Overdrive is charged: the very next return is the power shot the step asks for. */
+  readonly isCharged: boolean;
 }
 
 export interface TutorialCoachDeps {
   /** The learner's paddle, the side that plays it, and its index in the match's list. */
   readonly player: () => { readonly paddle: Paddle; readonly index: number; readonly side: Side };
+  /** The learner's Overdrive meter: the perfect hits in a row on it. */
+  readonly overdriveStreak: () => number;
 }
 
 /**
  * Follows the learner through the steps, from the match's events and their paddle: it says which
- * step they are at, counts what it asks for, and moves on once it is done, with a moment of praise
- * between steps. It only watches: the tutorial's match plays as any other.
+ * step they are at, counts what it asks for, tells them after every return whether it counted
+ * and why not, and moves on once the step is done, with a moment of praise between steps. It only
+ * watches: the tutorial's match plays as any other.
  */
 export class TutorialCoach {
   private readonly deps: TutorialCoachDeps;
@@ -115,6 +131,10 @@ export class TutorialCoach {
   private lastY: number | null = null;
   /** Seconds of praise left after a step is done; the next one is told after it. */
   private _praise = 0;
+  private _feedback: TutorialFeedback | null = null;
+  private feedbackFor = 0;
+  /** The meter's streak as last seen: a hit empties it before its event comes, so look back. */
+  private seenStreak = 0;
 
   constructor(deps: TutorialCoachDeps) {
     this.deps = deps;
@@ -124,24 +144,39 @@ export class TutorialCoach {
   public get progress(): TutorialProgress | null {
     const step = TUTORIAL_STEPS[this.stepIndex];
     if (!step) return null;
-    return step === 'move'
-      ? {
+    const isHinted = this.tries >= TUTORIAL.HINT_AFTER;
+    switch (step) {
+      case 'move':
+        return {
           step,
           done: Math.min(1, this.travelled / TUTORIAL.MOVE_DISTANCE),
           target: 1,
           isHinted: false,
-        }
-      : {
-          step,
-          done: this.done,
-          target: TUTORIAL.COUNTS[step],
-          isHinted: this.tries >= TUTORIAL.HINT_AFTER,
+          isCharged: false,
         };
+      case 'overdrive': {
+        const streak = Math.min(OVERDRIVE.CHARGE, this.deps.overdriveStreak());
+        return {
+          step,
+          done: streak,
+          target: OVERDRIVE.CHARGE,
+          isHinted,
+          isCharged: streak >= OVERDRIVE.CHARGE,
+        };
+      }
+      default:
+        return { step, done: this.done, target: TUTORIAL.COUNTS[step], isHinted, isCharged: false };
+    }
   }
 
   /** Whether a step has just been done and is being praised. */
   public get isPraising(): boolean {
     return this._praise > 0;
+  }
+
+  /** What the learner's last try came to, for a moment after it; null otherwise. */
+  public get feedback(): TutorialFeedback | null {
+    return this.feedbackFor > 0 ? this._feedback : null;
   }
 
   /** Every step is done and the last praise is over: the tutorial is through. */
@@ -160,17 +195,21 @@ export class TutorialCoach {
     this.travelled = 0;
     this.lastY = null;
     this._praise = 0;
+    this.feedbackFor = 0;
+    this.seenStreak = 0;
   }
 
-  /** Call every frame of the tutorial: it watches the paddle move and counts the praise down. */
+  /** Call every frame of the tutorial: it watches the paddle move and counts the moments down. */
   public update(dt: number): void {
     if (this._praise > 0) this._praise = Math.max(0, this._praise - dt);
+    if (this.feedbackFor > 0) this.feedbackFor = Math.max(0, this.feedbackFor - dt);
     const { y } = this.deps.player().paddle;
     if (this.lastY !== null && this.progress?.step === 'move' && !this.isPraising) {
       this.travelled += Math.abs(y - this.lastY);
       if (this.travelled >= TUTORIAL.MOVE_DISTANCE) this.pass();
     }
     this.lastY = y;
+    this.seenStreak = this.deps.overdriveStreak();
   }
 
   /** @returns a function that stops listening */
@@ -179,43 +218,56 @@ export class TutorialCoach {
   }
 
   private handle(event: MatchEvent): void {
+    const streakBefore = this.seenStreak;
+    this.seenStreak = this.deps.overdriveStreak();
     const progress = this.progress;
-    if (!progress || this.isPraising) return;
+    if (!progress || progress.step === 'move' || this.isPraising) return;
     const player = this.deps.player();
     if (event.type === 'score' && !event.isDemo && event.scoringPlayerIndex !== player.side) {
-      this.tries++;
+      this.fail('missed');
       return;
     }
     if (event.type !== 'paddleHit' || event.paddleIndex !== player.index) return;
 
-    const counts = (() => {
-      switch (progress.step) {
-        case 'move':
-          return false;
-        case 'hit':
-          return true;
-        case 'perfect':
-          return event.isPerfect;
-        case 'steer':
-          return Math.abs(player.paddle.velocity) >= TUTORIAL.STEER_SPEED;
-        case 'overdrive':
-          return event.isPowerShot;
-      }
-    })();
-    // A perfect hit on the way to Overdrive is a step toward it, not a miss
-    if (progress.step === 'overdrive' && !counts && event.isPerfect) return;
-    if (!counts) {
-      if (progress.step !== 'move') this.tries++;
-      return;
+    switch (progress.step) {
+      case 'hit':
+        return this.count();
+      case 'perfect':
+        return event.isPerfect ? this.count() : this.fail('offCenter');
+      case 'steer':
+        return Math.abs(player.paddle.velocity) >= TUTORIAL.STEER_SPEED
+          ? this.count()
+          : this.fail('stoodStill');
+      case 'overdrive':
+        // The meter counts the perfect hits in a row; the hit after it is full fires it
+        if (event.isPowerShot) return this.pass();
+        if (event.isPerfect) return this.tell('counted');
+        return this.fail(streakBefore > 0 ? 'chargeLost' : 'offCenter');
     }
+  }
+
+  private count(): void {
     this.done++;
-    if (this.done >= progress.target) this.pass();
+    const progress = this.progress;
+    if (progress && this.done >= progress.target) this.pass();
+    else this.tell('counted');
+  }
+
+  private fail(feedback: TutorialFeedback): void {
+    this.tries++;
+    this.tell(feedback);
+  }
+
+  private tell(feedback: TutorialFeedback): void {
+    this._feedback = feedback;
+    this.feedbackFor = TUTORIAL.FEEDBACK;
   }
 
   private pass(): void {
     this.stepIndex++;
     this.done = 0;
     this.tries = 0;
+    this.feedbackFor = 0;
     this._praise = TUTORIAL.PRAISE;
   }
 }

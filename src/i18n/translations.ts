@@ -2,7 +2,7 @@ import { ChallengeId, ChallengeTier } from '@/match/challenges';
 import { ModifierId } from '@/match/modifiers/Modifier';
 import { DifficultyLevel } from '@/match/difficulty';
 import { ModeId } from '@/match/modes';
-import { TutorialStep } from '@/match/tutorial';
+import { TutorialFeedback, TutorialStep } from '@/match/tutorial';
 import { BackgroundChoice } from '@/shared/scenes';
 export type Language = 'en' | 'ru';
 
@@ -19,6 +19,10 @@ export interface TutorialTexts {
   moveByTouch: string;
   /** Shown in a step's place once a few tries have missed it. */
   hints: Record<TutorialStep, string>;
+  /** Overdrive charged: what the very next return does. */
+  charged: string;
+  /** Told for a moment after every try: it counted, or why it didn't. */
+  feedback: Record<TutorialFeedback, string>;
   /** Between two steps. */
   praise: string;
   /** Its end. */
@@ -186,17 +190,25 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       steps: {
         move: 'MOVE: W/S, ↑/↓ OR THE MOUSE',
         hit: 'RETURN THE BALL',
-        perfect: 'HIT IT WITH THE CENTER',
-        steer: 'MOVE AS YOU HIT: AN ANGLE',
-        overdrive: '3 PERFECT IN A ROW: OVERDRIVE',
+        perfect: 'HIT IT WITH THE YELLOW CENTER',
+        steer: 'HIT ON THE MOVE: IT FLIES ANGLED',
+        overdrive: 'CHARGE: YELLOW 3 TIMES IN A ROW',
       },
       moveByTouch: 'MOVE: SLIDE A FINGER',
       hints: {
         move: 'MOVE THE PADDLE UP AND DOWN',
         hit: 'STAND WHERE THE BALL IS GOING',
-        perfect: 'MEET IT WITH THE GLOWING MIDDLE',
-        steer: 'SWING THE PADDLE AS IT ARRIVES',
-        overdrive: 'STAND STILL, MEET IT DEAD CENTER',
+        perfect: 'THE BALL MUST TOUCH THE YELLOW',
+        steer: 'KEEP MOVING AS THE BALL HITS',
+        overdrive: 'STAND STILL, CATCH IT DEAD CENTER',
+      },
+      charged: 'CHARGED! NEXT HIT IS OVERDRIVE',
+      feedback: {
+        counted: 'YES!',
+        offCenter: 'OFF THE CENTER',
+        stoodStill: 'THE PADDLE STOOD STILL: MOVE',
+        chargeLost: 'OFF CENTER: CHARGE LOST',
+        missed: 'MISSED: AGAIN',
       },
       praise: 'NICE!',
       doneTitle: 'WELL PLAYED!',
@@ -353,17 +365,25 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       steps: {
         move: 'ДВИГАЙ РАКЕТКУ: W/S, ↑/↓ ИЛИ МЫШЬ',
         hit: 'ОТБЕЙ МЯЧ',
-        perfect: 'БЕЙ ЦЕНТРОМ РАКЕТКИ',
-        steer: 'ДВИГАЙСЯ ПРИ УДАРЕ — УГОЛ',
-        overdrive: '3 ИДЕАЛЬНЫХ ПОДРЯД — OVERDRIVE',
+        perfect: 'ОТБЕЙ ЖЁЛТЫМ ЦЕНТРОМ',
+        steer: 'ОТБЕЙ НА ХОДУ — МЯЧ УЙДЁТ ВБОК',
+        overdrive: 'ЗАРЯД: ЖЁЛТЫМ 3 РАЗА ПОДРЯД',
       },
       moveByTouch: 'ВЕДИ РАКЕТКУ ПАЛЬЦЕМ',
       hints: {
         move: 'ДВИГАЙ РАКЕТКУ ВВЕРХ И ВНИЗ',
         hit: 'ВСТАНЬ ТУДА, КУДА ЛЕТИТ МЯЧ',
-        perfect: 'ВСТРЕТЬ МЯЧ СВЕТЯЩЕЙСЯ СЕРЕДИНОЙ',
-        steer: 'ВЕДИ РАКЕТКУ, КОГДА МЯЧ ПРИЛЕТАЕТ',
-        overdrive: 'СТОЙ НА МЕСТЕ И БЕЙ ЦЕНТРОМ',
+        perfect: 'МЯЧ ДОЛЖЕН ПОПАСТЬ В ЖЁЛТОЕ',
+        steer: 'ДВИГАЙ РАКЕТКУ В МОМЕНТ УДАРА',
+        overdrive: 'СТОЙ НА МЕСТЕ И ЛОВИ ЦЕНТРОМ',
+      },
+      charged: 'ЗАРЯЖЕНО! СЛЕДУЮЩИЙ УДАР — OVERDRIVE',
+      feedback: {
+        counted: 'ЕСТЬ!',
+        offCenter: 'МИМО ЦЕНТРА',
+        stoodStill: 'РАКЕТКА СТОЯЛА — ДВИГАЙСЯ',
+        chargeLost: 'НЕ ЦЕНТРОМ — ЗАРЯД СБРОШЕН',
+        missed: 'ПРОПУСТИЛ — ЕЩЁ РАЗ',
       },
       praise: 'ОТЛИЧНО!',
       doneTitle: 'ГОТОВО!',
