@@ -171,14 +171,15 @@ describe('The AI hits perfect on purpose', () => {
     }
   });
 
-  it('with Arc, swings its angled returns toward the opponent, off center, for the curve', () => {
+  it('with Arc, swings some angled returns toward the opponent, off center, for the curve', () => {
     for (const opponentY of [100, 400]) {
       const player = playerPaddle();
       player.y = opponentY;
       const cpu = cpuPaddle();
       const ball = ballAt(300, 250, 450, 0);
       const curver = skill({ angleShots: 1 });
-      const ai = new AiController(() => 0.5);
+      // A roll in the curves' share of the angled returns
+      const ai = new AiController(() => 0.2);
       ai.usesArc = true;
       ai.readShot(cpu, curver, undefined, ball);
       const config = DIFFICULTY_CONFIGS[DifficultyLevel.HARD];

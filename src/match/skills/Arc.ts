@@ -7,6 +7,9 @@ import { Skill, SkillHit, SkillHost } from '@/match/skills/Skill';
 // by how far the curve takes the ball across the court, whatever its speed: a fast ball spins
 // harder, so a curve reads the same early in a rally and late
 export const ARC = {
+  // Only a swing spins the ball: the paddle set off no longer ago than this (it stood still or
+  // moved the other way before). A chase after the ball, however fast, is a plain hit
+  SWING_WINDOW: 0.3, // s
   THRESHOLD: 200, // px/s of paddle speed below which a hit puts no spin on (small adjustments)
   REFERENCE_SPEED: 200, // px/s above the threshold where the spin reaches ~76% of its max; the
   // keyboard's 500 px/s gets ~85%
@@ -116,7 +119,8 @@ export class Arc implements Skill {
   public afterHit({ paddleIndex, ball, isPerfect }: SkillHit): void {
     if (paddleIndex !== this.host.owner) return;
     const speed = ball.speed * ball.speedMultiplier;
-    const { velocity } = this.host.paddles[paddleIndex];
+    const { velocity, motionTime } = this.host.paddles[paddleIndex];
+    if (motionTime > ARC.SWING_WINDOW) return;
     const late = Arc.lateShare(velocity, speed);
     const spin = Arc.spinFor(velocity, ball.vx, speed, isPerfect, late);
     if (spin === 0) return;

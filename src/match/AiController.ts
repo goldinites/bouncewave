@@ -47,10 +47,15 @@ const SWING = {
   MAX_BOUNCES: 1,
 } as const;
 
-// With Arc, its angled return is a curve: struck off the paddle's center on the move, toward the
-// opponent, so the curve (against the swing) breaks it away from them. Off center rather than
-// perfect: a perfect hit on the move steers so steeply the ball meets a wall, which takes the spin
-const ARC_SHOT = { OFFSET: 0.4 } as const; // share of the half-height off center
+// With Arc, some of its angled returns are curves: struck off the paddle's center on the move,
+// toward the opponent, so the curve (against the swing) breaks it away from them. Off center
+// rather than perfect: a perfect hit on the move steers so steeply the ball meets a wall, which
+// takes the spin. A curve now and then, not on every angled return: a shot it always played
+// would be no surprise
+const ARC_SHOT = {
+  OFFSET: 0.4, // share of the half-height off center
+  SHARE: 0.35, // of its angled returns
+} as const;
 
 /** How hard a shot is to read, on top of the AI's own skill. */
 export interface ShotThreat {
@@ -236,7 +241,8 @@ export class AiController {
     const style = this.random();
     read.wantsAngle = style < skill.angleShots;
     read.wantsPerfect = !read.wantsAngle && style < skill.angleShots + skill.perfectAim;
-    read.wantsArc = read.wantsAngle && this.usesArc;
+    // The first share of the angled band is a curve, with Arc
+    read.wantsArc = this.usesArc && style < skill.angleShots * ARC_SHOT.SHARE;
     if (read.wantsArc) read.wantsAngle = false;
     read.angleSize = ANGLE_SHOT.MIN + this.random() * (ANGLE_SHOT.MAX - ANGLE_SHOT.MIN);
   }

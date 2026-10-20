@@ -241,6 +241,45 @@ describe('Arc', () => {
     }
   });
 
+  /** A paddle steered like a held key, at the keyboard's speed, for `seconds` after standing. */
+  const movedFor = (seconds: number) => {
+    const paddle = court()[0];
+    paddle.y = paddle.targetY = 100;
+    for (let t = 0; t < seconds; t += STEP) {
+      paddle.setTargetY(paddle.targetY + PADDLE.KEYBOARD_SPEED * STEP);
+      paddle.update(STEP);
+    }
+    return paddle;
+  };
+
+  it('times a paddle’s motion: anew from standing still or turning around', () => {
+    expect(movedFor(0.2).motionTime).toBeLessThan(0.2);
+    expect(movedFor(0.6).motionTime).toBeGreaterThan(0.5);
+
+    const turned = movedFor(0.6);
+    for (let t = 0; t < 0.1; t += STEP) {
+      turned.setTargetY(turned.targetY - PADDLE.KEYBOARD_SPEED * STEP);
+      turned.update(STEP);
+    }
+    expect(turned.motionTime).toBeLessThan(0.1);
+  });
+
+  it('spins a swing at the ball, not a chase after it', () => {
+    const spinOff = (paddle: Paddle) => {
+      const paddles = [paddle, court()[1]];
+      const ball = ballAt(60, 250, 400);
+      new Arc(hostFor(paddles, [ball]).host).afterHit({
+        paddleIndex: 0,
+        ball,
+        isPerfect: false,
+        isPowerShot: false,
+      });
+      return ball.spin;
+    };
+    expect(spinOff(movedFor(0.15))).not.toBe(0);
+    expect(spinOff(movedFor(0.6))).toBe(0);
+  });
+
   it('spins its owner’s hits on the move and reports them', () => {
     const paddles = court();
     const ball = ballAt(60, 250, 400);
