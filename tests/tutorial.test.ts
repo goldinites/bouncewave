@@ -70,7 +70,11 @@ describe('the tutorial', () => {
 
     // The edge: it waits for its card to be read
     expect(coach.card).toBe('angle');
-    expect(line(coach)).toBeUndefined();
+    // The line goes blank but keeps the score away
+    expect(describeTutorial(new I18nManager('en'), coach, false)).toMatchObject({
+      text: '',
+      replacesScore: true,
+    });
     hit({ angle: 1 });
     expect(coach.progress?.done).toBe(0);
     coach.acknowledge();
@@ -157,6 +161,8 @@ describe('the tutorial', () => {
     hit({ isPowerShot: true });
     expect(coach.progress).toBeNull();
     expect(coach.isFinished).toBe(false);
+    // Its last moment: no score shows through
+    expect(describeTutorial(new I18nManager('en'), coach, false)?.replacesScore).toBe(true);
     wait();
     expect(coach.isFinished).toBe(true);
   });

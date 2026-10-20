@@ -16,14 +16,15 @@ export interface TutorialLine {
  * the step asks for with how far the learner is ("PERFECT HIT · 1 / 2"), its hint once they have
  * tried a few times, and for a moment after a try that didn't count, why not; the count is never
  * out of sight. Moving is told as the device moves the paddle, with keys and a mouse or a finger;
- * a charged Overdrive says the very next hit fires it. Nothing while a step's card is up.
+ * a charged Overdrive says the very next hit fires it. A blank line while a step's card is up
+ * and after the last step: the score, which counts nothing here, never shows through.
  * @param isTouch whether the device is played by touch first
  */
 export function describeTutorial(
   i18n: I18nManager,
   { progress, feedback, card }: TutorialLine,
   isTouch: boolean,
-): Condition | null {
+): Condition {
   const texts = i18n.t('tutorial');
   const line = (text: string): Condition => ({
     text,
@@ -31,8 +32,7 @@ export function describeTutorial(
     isUrgent: false,
     replacesScore: true,
   });
-  if (card) return null;
-  if (!progress) return null;
+  if (card || !progress) return line('');
 
   const { step, done, target, isHinted, isCharged } = progress;
   if (step === 'move') return line(isTouch ? texts.moveByTouch : texts.steps.move);
