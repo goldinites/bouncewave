@@ -4,6 +4,7 @@ import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
 import { BackgroundMenu } from '@/debug/BackgroundMenu';
 import { FpsMeter } from '@/debug/FpsMeter';
+import { ModifierMenu } from '@/debug/ModifierMenu';
 import { SkillMenu, SkillOwner } from '@/debug/SkillMenu';
 import { ClassicSwitch } from '@/easterEgg/ClassicSwitch';
 import { EffectsDirector } from '@/fx/EffectsDirector';
@@ -16,6 +17,7 @@ import { ChallengeId, CHALLENGES, isChallengeId } from '@/match/challenges';
 import { COURT, PADDLE } from '@/match/config';
 import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { isModifierId, MODIFIER_IDS, ModifierId } from '@/match/modifiers/Modifier';
 import { quickMatchRules } from '@/match/modes';
 import { MatchRules } from '@/match/rules';
 import { Paddle } from '@/match/Paddle';
@@ -83,6 +85,8 @@ export class Game {
    * against the CPU, to playtest the prototypes (4.3) before the progression is built around them.
    */
   private readonly pinnedSkills: Record<SkillOwner, readonly SkillId[]> = { player: [], cpu: [] };
+  /** For developers: the modifiers ?mods= puts in every quick match, to playtest them (4.5). */
+  private pinnedModifiers: readonly ModifierId[] = [];
   /** How the last attempt at a challenge went, for the debug overlay. */
   private lastVerdict: ChallengeVerdict | null = null;
   private readonly i18n: I18nManager;
@@ -96,7 +100,7 @@ export class Game {
   /** A phone on its side, as bars.css lays it out: the controls in the margin beside the court. */
   private readonly sideDock = window.matchMedia(SIDE_DOCK_QUERY);
 
-  private readonly paddles: readonly Paddle[];
+  private readonly paddles: Paddle[];
   private readonly ball = new Ball();
   private readonly particles = new ParticleSystem();
   private readonly flow: MatchFlow;
@@ -114,6 +118,8 @@ export class Game {
   private readonly backgroundMenu: BackgroundMenu;
   /** Switches the skill prototypes on and off, and counts their uses in the match on court. */
   private readonly skillMenu: SkillMenu;
+  /** Switches the match modifiers on and off for the next quick match. */
+  private readonly modifierMenu: ModifierMenu;
   /** How often each skill went off in the match on court, for the skill menu. */
   private readonly skillUses = new Map<SkillId, [number, number]>();
   /** The background the debug overlay last showed, to notice when the next match changes it. */
@@ -160,6 +166,8 @@ export class Game {
     const skillsIn = (param: string) => (params.get(param) ?? '').split(',').filter(isSkillId);
     this.pinnedSkills.player = skillsIn('skills');
     this.pinnedSkills.cpu = skillsIn('cpuSkills');
+    // ?mods=wind,darkness plays every quick match with those modifiers
+    this.pinnedModifiers = (params.get('mods') ?? '').split(',').filter(isModifierId);
     this.backgroundMenu = new BackgroundMenu(
       (scene) => this.pickBackground(scene),
       this.renderer.scenes,
@@ -167,7 +175,11 @@ export class Game {
     this.skillMenu = new SkillMenu(SKILL_IDS, this.pinnedSkills, (owner, skills) =>
       this.chooseSkills(owner, skills.filter(isSkillId)),
     );
+    this.modifierMenu = new ModifierMenu(MODIFIER_IDS, this.pinnedModifiers, (modifiers) => {
+      this.pinnedModifiers = modifiers.filter(isModifierId);
+    });
     this.fpsMeter = new FpsMeter((isVisible) => {
+      this.modifierMenu.setVisible(isVisible);
       this.backgroundMenu.setVisible(isVisible);
       this.skillMenu.setVisible(isVisible);
     });
@@ -415,14 +427,14 @@ export class Game {
       // No CPU to set a level for: the ball plays at the default one's pace
       this.matchScene = null;
       this.flow.startMatch(
-        this.forLook(quickMatchRules(this.settings.current.matchPoints)),
+        this.forLook(this.quickRules),
         this.flow.twoPlayers(this.inputHandler.players),
         TWO_PLAYER_PACE,
       );
     } else {
       this.matchScene = null;
       this.flow.startMatch(
-        this.forLook(quickMatchRules(this.settings.current.matchPoints)),
+        this.forLook(this.quickRules),
         this.flow.playerVsCpu(undefined, this.skillsOf('player'), this.skillsOf('cpu')),
       );
     }
@@ -430,12 +442,20 @@ export class Game {
     this.uiManager.setPauseButtonVisibility(true);
   }
 
+  /** A quick match's rules, as the player set it up, with any modifiers a developer pinned. */
+  private get quickRules(): MatchRules {
+    const rules = quickMatchRules(this.settings.current.matchPoints);
+    return this.pinnedModifiers.length > 0 ? { ...rules, modifiers: this.pinnedModifiers } : rules;
+  }
+
   /**
    * The rules as the look plays them: the classic look is Pong as it was, with no Overdrive for
    * anyone (and no skills: `skillsOf`).
    */
   private forLook(rules: MatchRules): MatchRules {
-    return this.look === 'classic' ? { ...rules, overdrive: false, cpuOverdrive: false } : rules;
+    return this.look === 'classic'
+      ? { ...rules, overdrive: false, cpuOverdrive: false, modifiers: [] }
+      : rules;
   }
 
   /**
@@ -701,6 +721,8 @@ export class Game {
         rally: this.flow.rally,
         timeWarp: this.flow.timeWarp,
         shotReads: this.flow.shotReads,
+        modifiers: this.flow.activeModifiers,
+        conditions: this.flow.court,
       },
       hud: {
         readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
@@ -745,5 +767,6 @@ export class Game {
     this.fpsMeter.dispose();
     this.backgroundMenu.dispose();
     this.skillMenu.dispose();
+    this.modifierMenu.dispose();
   }
 }

@@ -4,6 +4,7 @@ import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
+import { ModifierRenderer } from '@/render/ModifierRenderer';
 import { RenderFrame, Scene, SceneState } from '@/render/scene';
 import {
   AFTERIMAGES,
@@ -22,6 +23,8 @@ const VIGNETTE = { RGB: '4, 0, 14', MAX_ALPHA: 0.6 } as const;
 const SHAKE_FROM = 0.2; // px; a weaker shake isn't worth moving the court for
 const FLASH_ALPHA = 0.25; // of a full flash
 const TIME_WARP_FADE = 14; // 1/s the slowed world's cast comes and goes at
+// A turbo ball's heat: none at the serve's speed, full this much faster (px/s)
+const TURBO_HEAT = { FROM: 380, SPAN: 520 } as const;
 
 /**
  * Where a layer is drawn: `backdrop` under the camera's zoom; `court` under the zoom and the
@@ -188,6 +191,36 @@ function neonLayers(
     },
     { id: 'court', space: 'court', render: (c) => CourtRenderer.render(c) },
     {
+      id: 'wind',
+      space: 'court',
+      render: (c, { court }) => {
+        const { wind, windTurnsIn } = court.conditions;
+        if (wind === 0) return;
+        ModifierRenderer.renderWind(c, wind, windTurnsIn, court.time, isMotionReduced());
+      },
+    },
+    {
+      id: 'invisibleBand',
+      space: 'court',
+      render: (c, { court }) => {
+        if (court.modifiers.includes('invisibleBand')) ModifierRenderer.renderBand(c);
+      },
+    },
+    {
+      id: 'bumpers',
+      space: 'court',
+      render: (c, { court }) => ModifierRenderer.renderBumpers(c, court.conditions.bumpers),
+    },
+    {
+      // Under the HUD, the paddles and the balls: those stay in sight
+      id: 'darkness',
+      space: 'court',
+      render: (c, { court }) => {
+        if (!court.modifiers.includes('darkness')) return;
+        ModifierRenderer.renderDarkness(c, court.balls, court.paddles);
+      },
+    },
+    {
       // The final score takes the HUD's place at the end of a match
       id: 'hud',
       space: 'court',
@@ -269,8 +302,14 @@ function neonLayers(
       id: 'balls',
       space: 'court',
       render: (c, { court, drama }) => {
+        const isBanded = court.modifiers.includes('invisibleBand');
+        const isTurbo = court.conditions.turbo !== 0;
         for (const ball of court.balls) {
-          const heat = Math.max(drama.climax, ball.isPowerShot ? 1 : 0);
+          // The invisible band hides a ball crossing it
+          if (isBanded && ModifierRenderer.isInBand(ball.drawX)) continue;
+          // A turbo ball glows hotter the faster it has got
+          const turbo = isTurbo ? clamp((ball.speed - TURBO_HEAT.FROM) / TURBO_HEAT.SPAN, 0, 1) : 0;
+          const heat = Math.max(drama.climax, ball.isPowerShot ? 1 : 0, turbo);
           EntityRenderer.renderBall(c, ball, court.rally, court.time, court.serveTime, heat);
         }
       },
@@ -281,7 +320,11 @@ function neonLayers(
       space: 'court',
       render: (c, { court }) => {
         if (court.serveTime > 0) return;
-        for (const ball of court.balls) SkillRenderer.renderSpin(c, ball, court.time);
+        const isBanded = court.modifiers.includes('invisibleBand');
+        for (const ball of court.balls) {
+          if (isBanded && ModifierRenderer.isInBand(ball.drawX)) continue;
+          SkillRenderer.renderSpin(c, ball, court.time);
+        }
       },
     },
     {
@@ -290,6 +333,16 @@ function neonLayers(
       render: (c, { particles }) => {
         EntityRenderer.renderParticles(c, particles.particles);
         EntityRenderer.renderShockwaves(c, particles.rings);
+      },
+    },
+    {
+      // Over everything on the court: it rains on all of it
+      id: 'rain',
+      space: 'court',
+      render: (c, { court }) => {
+        if (court.modifiers.includes('slipperyRain')) {
+          ModifierRenderer.renderRain(c, court.time, isMotionReduced());
+        }
       },
     },
     {

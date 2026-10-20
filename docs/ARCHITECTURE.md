@@ -217,6 +217,20 @@ speed, `controller.topSpeed`), and what they tell their owner reaches it through
 `controller.onSkillUse` (its Analyzer's read sharpens its eye; nothing of it is drawn). A
 challenge's modifier (4.5) joins the same hooks.
 
+**A modifier** (docs/CHALLENGES.md). A rule of the match in `rules.modifiers`: its id in
+`MODIFIER_IDS` (`match/modifiers/Modifier.ts`) and its maker in `MODIFIERS`
+(`match/modifiers/modifiers.ts`). The match's `ModifierSet` starts it with the match and ends it
+when the match is left, so whatever it changed is put back; between, it plays through the same
+hooks as a skill (`beforeStep`, `afterHit`, `onServe`). What the court does to the ball lives in
+`CourtConditions` (`match/court.ts`: wind, turbo, posts), which every ball carries and `Physics`
+applies, so a forecast and the AI fly through it too; a paddle's `grip` (it slides) and `confine`
+(a stretch of the court) serve the others. A modifier that only changes what is drawn (Darkness,
+the invisible band) needs no hooks: its layer reads `court.modifiers`. Two opponents is set up by
+the match itself: a second paddle for the CPU while the match lasts (`withSecondOpponent`; the
+shared paddle list grows and shrinks, as the balls do). Layers are in `ModifierRenderer`. For
+developers, `?mods=wind,darkness` and the debug overlay's modifier menu play quick matches with
+them.
+
 **Planned, not there yet** (see the roadmap): dialogue through Ink (8.1).
 
 ## Rules of thumb

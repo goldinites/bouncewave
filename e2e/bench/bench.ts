@@ -103,7 +103,9 @@ function bench(scene: string) {
     overdrive: true,
     skills: ['arc', 'analyzer', 'reflex'] as const,
   }));
-  flow.startMatch({ ...STANDARD_RULES, winningScores: firstTo(99), balls: 2 }, lineup);
+  // The drawn modifiers' layers in the measure too (Hard's level of everything at once)
+  const modifiers = ['wind', 'darkness', 'bumpers', 'invisibleBand', 'slipperyRain'] as const;
+  flow.startMatch({ ...STANDARD_RULES, winningScores: firstTo(99), balls: 2, modifiers }, lineup);
   renderer.pinBackground(scene as never);
 
   const render: number[] = [];
@@ -135,6 +137,8 @@ function bench(scene: string) {
         rally: flow.rally,
         timeWarp: flow.timeWarp,
         shotReads: flow.shotReads,
+        modifiers: flow.activeModifiers,
+        conditions: flow.court,
       },
       hud: {
         readyText: 'GET READY',

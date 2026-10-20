@@ -1,5 +1,6 @@
 import { Mock, afterEach, describe, expect, it, vi } from 'vitest';
 import { Ball } from '@/match/Ball';
+import { CourtConditions } from '@/match/court';
 import { COURT, PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import { ParticleSystem } from '@/fx/ParticleSystem';
@@ -67,6 +68,8 @@ const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
       rally: 0,
       timeWarp: null,
       shotReads: [],
+      modifiers: [],
+      conditions: new CourtConditions(),
       ...court,
     },
     hud: {

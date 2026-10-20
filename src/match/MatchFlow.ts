@@ -1,5 +1,9 @@
 import { ShotThreat, SHOT_THREAT } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
+import { CourtConditions } from '@/match/court';
+import { ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
+import { HALVES, SECOND_PADDLE_STEP } from '@/match/modifiers/modifiers';
+import { ModifierSet } from '@/match/modifiers/ModifierSet';
 import { BALL, COURT } from '@/match/config';
 import { DifficultyConfig, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { GameState } from '@/match/GameState';
@@ -96,8 +100,12 @@ export interface Participant {
 export type Lineup = readonly Participant[];
 
 export interface MatchFlowDeps {
-  /** Every paddle on the court, each playing for its side; at least one a side. */
-  paddles: readonly Paddle[];
+  /**
+   * Every paddle on the court, each playing for its side; at least one a side. The match adds a
+   * paddle to it for as long as a match needs one more (an opponent's second, Two opponents),
+   * so whoever shares the list sees it.
+   */
+  paddles: Paddle[];
   /** The match's first ball; the rules may put more on court alongside it. */
   ball: Ball;
   input: PlayerInput;
@@ -140,7 +148,13 @@ export class MatchFlow {
   private matchDifficulty: DifficultyLevel | null = null;
   /** Seconds left on the match clock; null without one, or in the demo. */
   private _timeLeft: number | null = null;
-  private readonly paddles: readonly Paddle[];
+  private readonly paddles: Paddle[];
+  /** How many paddles there are between matches: the ones the match was given. */
+  private readonly basePaddles: number;
+  /** What the court does to the balls over it, as the modifiers of the match set it. */
+  private readonly _court = new CourtConditions();
+  /** The modifiers of the match being played. */
+  private readonly modifiers = new ModifierSet();
   /** Every ball on court: the first is the one given, the rest the rules' extra balls. */
   private readonly _balls: Ball[];
   private readonly input: PlayerInput;
@@ -153,8 +167,10 @@ export class MatchFlow {
       throw new Error('A match needs a paddle on each side');
     }
     this.paddles = deps.paddles;
+    this.basePaddles = deps.paddles.length;
     this.overdrives = deps.paddles.map(() => new Overdrive());
     this._balls = [deps.ball];
+    deps.ball.court = this._court;
     this.input = deps.input;
     this.getDifficulty = deps.getDifficulty;
     this.emit = deps.onEvent;
@@ -271,6 +287,16 @@ export class MatchFlow {
     return this._phase === 'serving' || this._phase === 'rally';
   }
 
+  /** What the court does to the balls over it (wind, turbo, posts), as the match's modifiers set it. */
+  public get court(): CourtConditions {
+    return this._court;
+  }
+
+  /** The modifiers of the match being played (none in the demo), for whatever draws them. */
+  public get activeModifiers(): readonly ModifierId[] {
+    return this.isDemo ? [] : this._rules.modifiers;
+  }
+
   /** Every ball on court, the first one first. */
   public get balls(): readonly Ball[] {
     return this._balls;
@@ -372,6 +398,7 @@ export class MatchFlow {
   }
 
   public startAttract(): void {
+    this.modifiers.end();
     this.useLineup(this.demoLineup);
     this.useBalls(1);
     this.matchDifficulty = null;
@@ -397,8 +424,12 @@ export class MatchFlow {
     this._rules = rules;
     this.matchDifficulty = difficulty;
     this._timeLeft = rules.timeLimit;
-    this.useLineup(lineup);
+    this.modifiers.end();
+    this.useLineup(
+      rules.modifiers.includes('twoOpponents') ? this.withSecondOpponent(lineup) : lineup,
+    );
     this.useBalls(rules.balls);
+    this.modifiers.use(rules.modifiers, this.modifierHost());
     this.emit({ type: 'matchStart' });
     this.resetScores();
     this._phase = 'serving';
@@ -463,7 +494,10 @@ export class MatchFlow {
     const difficulty = this.physicsConfig;
     const isServing = this._serveTime > 0;
     // Skills act while the ball is in play, before anything moves; they may slow time down
-    if (!isServing) this.skills.beforeStep(dt);
+    if (!isServing) {
+      this.skills.beforeStep(dt);
+      this.modifiers.beforeStep(dt);
+    }
     this.updatePaddles(dt);
 
     if (isServing) {
@@ -550,6 +584,12 @@ export class MatchFlow {
    * theirs, and its meter with a core if they have implants.
    */
   private useLineup(lineup: Lineup): void {
+    // A paddle added for a match (an opponent's second) leaves with it
+    if (lineup.length < this.paddles.length) {
+      this.paddles.length = lineup.length;
+      this.overdrives.length = lineup.length;
+      this.paddles.forEach((paddle) => paddle.confine());
+    }
     this.lineup = lineup;
     lineup.forEach(({ paddle, skills = [] }, i) => {
       this.paddles[i].useSpec(paddle ?? STANDARD_PADDLE);
@@ -561,6 +601,36 @@ export class MatchFlow {
       lineup.map(({ skills = [] }) => skills),
       (owner) => this.skillHost(owner),
     );
+  }
+
+  /**
+   * `lineup` with a second paddle for the CPU (Two opponents): the same player and paddle, a
+   * second AI, the two of them each holding a half of the court (overlapping in the middle).
+   */
+  private withSecondOpponent(lineup: Lineup): Lineup {
+    const cpu = lineup.findIndex(({ controller }) => !(controller instanceof HumanController));
+    if (cpu < 0 || lineup.length > this.basePaddles) return lineup;
+    const first = this.paddles[cpu];
+    const spec = lineup[cpu].paddle ?? STANDARD_PADDLE;
+    const forward = first.side === 0 ? SECOND_PADDLE_STEP : -SECOND_PADDLE_STEP;
+    const second = new Paddle(first.side, first.x + forward, first.color, spec);
+    this.paddles.push(second);
+    this.overdrives.push(new Overdrive());
+    first.confine(HALVES[0].top, HALVES[0].bottom);
+    second.confine(HALVES[1].top, HALVES[1].bottom);
+    const controller = new AiPaddleController(this.random, () => this.difficulty);
+    return [...lineup, { ...lineup[cpu], controller }];
+  }
+
+  /** What the match's modifiers see of it. */
+  private modifierHost(): ModifierHost {
+    return {
+      paddles: this.paddles,
+      balls: this._balls,
+      court: this._court,
+      isPlayerPaddle: (index) => this.isPlayerPaddle(index),
+      random: this.random,
+    };
   }
 
   /** What a skill of paddle `owner` sees of the match, and how it reports what it does. */
@@ -585,7 +655,11 @@ export class MatchFlow {
   /** Puts `count` balls on court: the match's first ball and as many new ones as it takes. */
   private useBalls(count: number): void {
     this._balls.length = Math.max(1, Math.min(count, this._balls.length));
-    while (this._balls.length < count) this._balls.push(new Ball());
+    while (this._balls.length < count) {
+      const ball = new Ball();
+      ball.court = this._court;
+      this._balls.push(ball);
+    }
   }
 
   /** Who a paddle plays against: the first paddle of the other side. */
@@ -635,6 +709,12 @@ export class MatchFlow {
         this.shotAt(otherSide(this.paddles[hitter].side), threat, ball);
         this.emit({ ...event, rally: this._rally, isPowerShot, chargedOverdrive });
         this.skills.afterHit({
+          paddleIndex: hitter,
+          ball,
+          isPerfect: event.isPerfect,
+          isPowerShot,
+        });
+        this.modifiers.afterHit({
           paddleIndex: hitter,
           ball,
           isPerfect: event.isPerfect,
@@ -710,6 +790,7 @@ export class MatchFlow {
   private finishFinale(): void {
     const winner = this.finaleWinner;
     this._phase = 'attract';
+    this.modifiers.end();
     this.useLineup(this.demoLineup);
     this.useBalls(1);
 
@@ -728,6 +809,7 @@ export class MatchFlow {
     });
     this._balls.forEach((ball) => this.shotAt(ball.vx > 0 ? 1 : 0, SHOT_THREAT.NORMAL, ball));
     this.skills.onServe();
+    this.modifiers.onServe();
     this._rally = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });
