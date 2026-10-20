@@ -17,6 +17,7 @@ import { COURT, PADDLE } from '@/match/config';
 import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
+import { MatchRules } from '@/match/rules';
 import { Paddle } from '@/match/Paddle';
 import { isSkillId, SKILL_IDS, SkillId } from '@/match/skills/Skill';
 import { challengeState, isEveryChallengePassed, markPassed } from '@/profile/ChallengeProgress';
@@ -406,7 +407,7 @@ export class Game {
       const { rules, paddles, difficulty, scene } = CHALLENGES[this.challenge];
       this.matchScene = scene;
       this.flow.startMatch(
-        rules,
+        this.forLook(rules),
         this.flow.playerVsCpu(paddles, this.skillsOf('player'), this.skillsOf('cpu')),
         difficulty,
       );
@@ -414,19 +415,27 @@ export class Game {
       // No CPU to set a level for: the ball plays at the default one's pace
       this.matchScene = null;
       this.flow.startMatch(
-        quickMatchRules(this.settings.current.matchPoints),
+        this.forLook(quickMatchRules(this.settings.current.matchPoints)),
         this.flow.twoPlayers(this.inputHandler.players),
         TWO_PLAYER_PACE,
       );
     } else {
       this.matchScene = null;
       this.flow.startMatch(
-        quickMatchRules(this.settings.current.matchPoints),
+        this.forLook(quickMatchRules(this.settings.current.matchPoints)),
         this.flow.playerVsCpu(undefined, this.skillsOf('player'), this.skillsOf('cpu')),
       );
     }
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
+  }
+
+  /**
+   * The rules as the look plays them: the classic look is Pong as it was, with no Overdrive for
+   * anyone (and no skills: `skillsOf`).
+   */
+  private forLook(rules: MatchRules): MatchRules {
+    return this.look === 'classic' ? { ...rules, overdrive: false, cpuOverdrive: false } : rules;
   }
 
   /**

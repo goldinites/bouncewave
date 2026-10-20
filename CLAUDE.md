@@ -71,7 +71,8 @@ Rules that keep it clean (the first two are enforced by `tests/architecture.test
   `prefers-reduced-motion`; everything works on a phone in either orientation (`isRotated`: the
   stage is turned in CSS on a portrait phone).
 - Every paddle that charges Overdrive draws its meter (`flow.overdriveCharges`): a person's,
-  and in a quick match the CPU's at Hard and Insane (`rules.cpuOverdrive`). In a match of two
+  and in a quick match the CPU's at Hard and Insane (`rules.cpuOverdrive`); the classic look has
+  no Overdrive and no skills at all. In a match of two
   (`Game`'s `isTwoPlayers`, `flow.isTwoPlayer`) the end names the winner and is always a win;
   otherwise outside the match the left side is still taken to be the player (whose win the
   finale and menus show).

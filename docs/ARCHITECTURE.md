@@ -181,7 +181,8 @@ A new kind of player (a replay, a remote player) is a new `PaddleController`.
 look `ClassicSwitch` (`easterEgg/`) turns on and off from the main menu only. `Game` follows its
 signal and hands the look to the `Renderer` (the classic one draws its own flat `ClassicScene` and
 shows no effects: `renderer.showsEffects`), the `UIManager` (the menus' chrome, `classic.css`) and
-the `AudioEngine` (which music `playMusic` plays); the menus read it to offer only what the look can
+the `AudioEngine` (which music `playMusic` plays), and plays its matches as Pong was: no Overdrive
+and no skills for anyone (`Game.forLook`, `skillsOf`); the menus read it to offer only what the look can
 play. The neon drawing code never asks which look is on. A new look is a value of `Look`, a scene
 that draws it, and its chrome.
 

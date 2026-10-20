@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { Mock, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Game } from '@/app/Game';
-import { MatchEvent } from '@/match/MatchFlow';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { EventBus } from '@/shared/EventBus';
 import { isPickableScene, SceneId } from '@/shared/scenes';
 import { fakeContext } from './helpers/fakeContext';
@@ -27,6 +27,19 @@ const choice = (name: string) =>
   document
     .querySelector(`[role="spinbutton"][aria-label="${name}"]`)
     ?.getAttribute('aria-valuetext');
+// The classic look's switch on the main menu
+const KONAMI = [
+  'ArrowUp',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowLeft',
+  'ArrowRight',
+  'KeyB',
+  'KeyA',
+];
 /** PLAY, QUICK MATCH, then START as it is set up. */
 const play = () => {
   buttons()[0].click();
@@ -137,6 +150,19 @@ describe('Game', () => {
     screenButton('QUICK MATCH').click();
     expect(choice('POINTS')).toBe('7');
     expect(choice('BACKGROUND')).toBe('LASERS');
+  });
+
+  it('plays the classic look as Pong was: no Overdrive meter, no skills', () => {
+    const flow = (game as unknown as { flow: MatchFlow }).flow;
+    play();
+    expect(flow.overdriveCharges[0]).toBe(0);
+    game.toMenu();
+
+    // The classic main menu goes straight to the quick match's setup
+    for (const code of KONAMI) press(code);
+    screenButton('QUICK MATCH').click();
+    screenButton('START').click();
+    expect(flow.overdriveCharges).toEqual([null, null]);
   });
 
   it('restarts the match from the pause', () => {
