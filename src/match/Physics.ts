@@ -179,7 +179,8 @@ export class Physics {
 
   /**
    * What the court does to the ball over `dt` seconds: the wind pushes its path along (its speed
-   * kept, never steeper than a paddle sends it), and Turbo speeds it up, to the level's top.
+   * kept, never steeper than a paddle sends it), and Turbo speeds it up, to the level's top and
+   * the share past it the rally has earned.
    */
   private static applyCourt(
     ball: Ball,
@@ -194,8 +195,9 @@ export class Physics {
       ball.vx = Math.sign(ball.vx) * Math.cos(angle) * speed;
       ball.vy = Math.sign(vy) * Math.sin(angle) * speed;
     }
-    if (court.turbo !== 0 && ball.speed < config.maxSpeed) {
-      const speed = Math.min(ball.speed + court.turbo * dt, config.maxSpeed);
+    const turboLimit = config.maxSpeed * (1 + court.turboOver);
+    if (court.turbo !== 0 && ball.speed < turboLimit) {
+      const speed = Math.min(ball.speed + court.turbo * dt, turboLimit);
       ball.vx *= speed / ball.speed;
       ball.vy *= speed / ball.speed;
       ball.speed = speed;

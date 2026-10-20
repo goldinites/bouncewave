@@ -1,38 +1,60 @@
 import { COURT, PADDLE } from '@/match/config';
+import { Bumper } from '@/match/court';
 import { Modifier, ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
 import { PaddleSpec } from '@/match/PaddleSpec';
 import { SkillHit } from '@/match/skills/Skill';
 
-// Wind across the court: it blows the ball up or down, and turns around now and then. Its
-// particles turn a moment before it does, so the turn can be seen coming
+// Wind across the court: it blows the ball up or down in gusts, from a moderate wind to a strong
+// one, and turns around now and then. Its streaks follow its strength, and die down a moment
+// before it turns, so a gust and a turn can be seen coming
 export const WIND = {
-  STRENGTH: 140, // px/s²: a serve-speed ball crossing the court drifts ~100 px
+  MIN: 120, // px/s²: a serve-speed ball crossing the court drifts ~90 px...
+  MAX: 240, // ...up to ~180 px in a strong gust
+  GUST: 3, // s between the gusts' new strengths
+  EASE: 0.8, // 1/s it moves toward a gust's strength
   PERIOD: 15, // s between turns
   WARNING: 1, // s the turn shows before it comes
 } as const;
 
-// Turbo: a ball in flight gains speed, up to the level's top speed
-export const TURBO = { GAIN: 160 } as const; // px/s²
+// Turbo: a ball in flight gains speed; past the level's top speed too, a little more for every
+// hit of the rally, up to a share over it
+export const TURBO = {
+  GAIN: 160, // px/s²
+  OVER_PER_HIT: 0.015, // of the top speed, for every hit of the rally
+  MAX_OVER: 0.18,
+} as const;
 
-// Bumpers: posts in the middle of the court, clear of the serve's straight line
+// Bumpers: posts on the centre line, clear of the serve's straight line, and a third in the
+// middle that rises and sinks. It is never there at the serve, rises only with every ball clear
+// of it, and takes RISE seconds to grow from a dot, blinking, so it can't appear unseen
 export const BUMPERS = {
   RADIUS: 16, // px
   Y: [COURT.HEIGHT * 0.27, COURT.HEIGHT * 0.73], // px
+  UP: 4, // s the middle one stays up...
+  DOWN: 4, // ...and down
+  RISE: 0.5, // s it takes to rise or sink
+  CLEARANCE: 80, // px every ball must be from the middle for it to rise
 } as const;
 
 // The shrinking paddle: the player's paddle loses a share of its length with every hit of theirs
 // in a rally, down to a floor, and is whole again at the serve: every point starts fair
-export const SHRINK = { PER_HIT: 0.1, FLOOR: 0.5 } as const;
+export const SHRINK = { PER_HIT: 0.06, FLOOR: 0.5 } as const;
 
-// Slippery rain: every paddle slides, taking up the speed it is steered at over ~1/GRIP s.
-// Moderate: a paddle on a phone must not trail the finger far
-export const RAIN = { GRIP: 9 } as const; // 1/s
+// Slippery rain: every paddle slides. It heads for its aim at PULL (1/s of the way left), takes
+// up that speed over ~1/GRIP s and sheds it over ~1/BRAKE s, so stopped it rolls on past its aim
+// by about a quarter of the way it came, comes back once, and stands. Moderate: a paddle on a
+// phone must not trail the finger far, nor sway about it
+export const RAIN = { PULL: 9, GRIP: 9, BRAKE: 6 } as const;
 
-/** The wind, turning around every WIND.PERIOD seconds. */
+/** The wind, in gusts, turning around every WIND.PERIOD seconds. */
 class Wind implements Modifier {
   public readonly id = 'wind';
   private direction = 1;
   private turnsIn: number = WIND.PERIOD;
+  private strength: number = WIND.MIN;
+  /** The strength the current gust is heading for, and how long until the next one. */
+  private gust: number = WIND.MIN;
+  private nextGustIn: number = WIND.GUST;
 
   private readonly host: ModifierHost;
 
@@ -43,6 +65,8 @@ class Wind implements Modifier {
   public start(): void {
     this.direction = this.host.random() < 0.5 ? 1 : -1;
     this.turnsIn = WIND.PERIOD;
+    this.strength = this.gust = WIND.MIN + this.host.random() * (WIND.MAX - WIND.MIN);
+    this.nextGustIn = WIND.GUST;
     this.blow();
   }
 
@@ -52,11 +76,17 @@ class Wind implements Modifier {
       this.direction = -this.direction;
       this.turnsIn += WIND.PERIOD;
     }
+    this.nextGustIn -= dt;
+    if (this.nextGustIn <= 0) {
+      this.gust = WIND.MIN + this.host.random() * (WIND.MAX - WIND.MIN);
+      this.nextGustIn += WIND.GUST;
+    }
+    this.strength += (this.gust - this.strength) * Math.min(1, WIND.EASE * dt);
     this.blow();
   }
 
   private blow(): void {
-    this.host.court.wind = this.direction * WIND.STRENGTH;
+    this.host.court.wind = this.direction * this.strength;
     this.host.court.windTurnsIn = this.turnsIn;
   }
 
@@ -73,11 +103,26 @@ class Turbo implements Modifier {
   constructor(host: ModifierHost) {
     this.host = host;
   }
+  private hits = 0;
+
   public start(): void {
     this.host.court.turbo = TURBO.GAIN;
+    this.host.court.turboOver = 0;
   }
+
+  public afterHit(): void {
+    this.hits++;
+    this.host.court.turboOver = Math.min(TURBO.MAX_OVER, TURBO.OVER_PER_HIT * this.hits);
+  }
+
+  public onServe(): void {
+    this.hits = 0;
+    this.host.court.turboOver = 0;
+  }
+
   public end(): void {
     this.host.court.turbo = 0;
+    this.host.court.turboOver = 0;
   }
 }
 
@@ -88,13 +133,61 @@ class Bumpers implements Modifier {
   constructor(host: ModifierHost) {
     this.host = host;
   }
+  /** How far the middle post has risen, in [0, 1], which way it is going, and until when. */
+  private height = 0;
+  private isRising = false;
+  private holdFor: number = BUMPERS.DOWN;
+
   public start(): void {
-    this.host.court.bumpers = BUMPERS.Y.map((y) => ({
+    this.onServe();
+  }
+
+  /** At the serve the middle post is down, and stays down a while. */
+  public onServe(): void {
+    this.height = 0;
+    this.isRising = false;
+    this.holdFor = BUMPERS.DOWN;
+    this.place();
+  }
+
+  public beforeStep(dt: number): void {
+    this.holdFor -= dt;
+    if (this.holdFor <= 0) {
+      const isClear = this.host.balls.every(
+        (ball) =>
+          Math.hypot(ball.x - COURT.WIDTH / 2, ball.y - COURT.HEIGHT / 2) > BUMPERS.CLEARANCE,
+      );
+      // It rises only into an empty middle; sinking needs no room
+      if (this.isRising || isClear) {
+        this.isRising = !this.isRising;
+        this.holdFor = this.isRising ? BUMPERS.UP : BUMPERS.DOWN;
+      }
+    }
+    const toward = this.isRising ? 1 : 0;
+    const step = dt / BUMPERS.RISE;
+    this.height =
+      toward > this.height ? Math.min(1, this.height + step) : Math.max(0, this.height - step);
+    this.place();
+  }
+
+  /** The two fixed posts, and the middle one as far as it has risen. */
+  private place(): void {
+    const posts: Bumper[] = BUMPERS.Y.map((y) => ({
       x: COURT.WIDTH / 2,
       y,
       radius: BUMPERS.RADIUS,
     }));
+    if (this.height > 0) {
+      posts.push({
+        x: COURT.WIDTH / 2,
+        y: COURT.HEIGHT / 2,
+        radius: BUMPERS.RADIUS * this.height,
+        growth: this.height,
+      });
+    }
+    this.host.court.bumpers = posts;
   }
+
   public end(): void {
     this.host.court.bumpers = [];
   }
@@ -151,10 +244,10 @@ class SlipperyRain implements Modifier {
     this.host = host;
   }
   public start(): void {
-    for (const paddle of this.host.paddles) paddle.grip = RAIN.GRIP;
+    for (const paddle of this.host.paddles) paddle.slip(RAIN.PULL, RAIN.GRIP, RAIN.BRAKE);
   }
   public end(): void {
-    for (const paddle of this.host.paddles) paddle.grip = Infinity;
+    for (const paddle of this.host.paddles) paddle.slip(0, Infinity, Infinity);
   }
 }
 
@@ -178,8 +271,8 @@ export const MODIFIERS: Record<ModifierId, (host: ModifierHost) => Modifier> = {
 
 /** The stretch of the court across the middle where the invisible band hides the ball, px. */
 export const INVISIBLE_BAND = {
-  LEFT: COURT.WIDTH / 2 - 70,
-  RIGHT: COURT.WIDTH / 2 + 70,
+  LEFT: COURT.WIDTH / 2 - 110,
+  RIGHT: COURT.WIDTH / 2 + 110,
 } as const;
 
 /**

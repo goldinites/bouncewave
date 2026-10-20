@@ -3,6 +3,8 @@ export interface Bumper {
   readonly x: number;
   readonly y: number;
   readonly radius: number;
+  /** How far it has grown, in [0, 1], for one that rises and sinks; whole when left out. */
+  readonly growth?: number;
 }
 
 /**
@@ -14,8 +16,10 @@ export class CourtConditions {
   public wind = 0;
   /** Seconds until the wind turns around; Infinity while it won't. */
   public windTurnsIn = Infinity;
-  /** How fast a ball in flight gains speed, px/s² (Turbo), up to the level's top speed. */
+  /** How fast a ball in flight gains speed, px/s² (Turbo), up to the level's top speed... */
   public turbo = 0;
+  /** ...and this share over it (Turbo, growing with the rally). */
+  public turboOver = 0;
   /** Posts the ball bounces off. */
   public bumpers: readonly Bumper[] = [];
 
@@ -24,6 +28,7 @@ export class CourtConditions {
     this.wind = 0;
     this.windTurnsIn = Infinity;
     this.turbo = 0;
+    this.turboOver = 0;
     this.bumpers = [];
   }
 }

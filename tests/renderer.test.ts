@@ -6,6 +6,7 @@ import { Paddle } from '@/match/Paddle';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { Renderer } from '@/render/Renderer';
+import { ModifierRenderer } from '@/render/ModifierRenderer';
 import { SkillRenderer } from '@/render/SkillRenderer';
 import { CourtView, DramaView, HudView, RenderFrame } from '@/render/scene';
 import { COLORS } from '@/shared/palette';
@@ -325,6 +326,26 @@ describe('Renderer', () => {
       expect.any(Boolean),
     );
     expect(meter.mock.calls[0][5]).toBe(0.8);
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the middle dark with Darkness, and flashes where a ball bounces', () => {
+    const dark = vi.spyOn(ModifierRenderer, 'renderDarkness');
+    const { renderer } = makeRenderer();
+    const ball = new Ball();
+    Object.assign(ball, { drawX: 400, drawY: 30, vx: 300, vy: -200 });
+    const frame = () =>
+      baseFrame({ court: { isDemo: false, balls: [ball], ball, modifiers: ['darkness'] } });
+
+    renderer.render(frame(), 0.016);
+    expect(dark.mock.calls.at(-1)![1]).toHaveLength(0);
+    // Off the top wall: it turns around, and there is a flash where it did
+    ball.vy = 200;
+    renderer.render(frame(), 0.016);
+    expect(dark.mock.calls.at(-1)![1]).toEqual([{ x: 400, y: 30, age: 0 }]);
+
+    renderer.render(baseFrame({ court: { isDemo: false, balls: [ball], ball } }), 0.016);
+    expect(dark).toHaveBeenCalledTimes(2);
     vi.restoreAllMocks();
   });
 

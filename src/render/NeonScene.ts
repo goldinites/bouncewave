@@ -4,7 +4,7 @@ import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
-import { ModifierRenderer } from '@/render/ModifierRenderer';
+import { DARKNESS, Flash, ModifierRenderer } from '@/render/ModifierRenderer';
 import { RenderFrame, Scene, SceneState } from '@/render/scene';
 import {
   AFTERIMAGES,
@@ -147,6 +147,23 @@ function neonLayers(
     }
   };
 
+  // In the dark, a ball flashes wherever it bounces (it turns around, up or down or across)
+  const flashes: Flash[] = [];
+  const headings = new Map<Ball, { vx: number; vy: number }>();
+  const followFlashes = (balls: readonly Ball[], realDt: number) => {
+    for (const flash of flashes) flash.age += realDt;
+    while (flashes.length > 0 && flashes[0].age >= DARKNESS.FLASH_LIFE) flashes.shift();
+    for (const ball of balls) {
+      const before = headings.get(ball);
+      const turned =
+        before &&
+        (Math.sign(before.vx) !== Math.sign(ball.vx) ||
+          Math.sign(before.vy) !== Math.sign(ball.vy));
+      if (turned) flashes.push({ x: ball.drawX, y: ball.drawY, age: 0 });
+      headings.set(ball, { vx: ball.vx, vy: ball.vy });
+    }
+  };
+
   // The slowed world (Reflex): its screen eases in and out, and the paddle that slowed it leaves
   // afterimages, which fade on after it ends. Followed once a frame by the first of its layers
   const warpEdges = SkillRenderer.warpEdges(ctx);
@@ -210,15 +227,6 @@ function neonLayers(
       id: 'bumpers',
       space: 'court',
       render: (c, { court }) => ModifierRenderer.renderBumpers(c, court.conditions.bumpers),
-    },
-    {
-      // Under the HUD, the paddles and the balls: those stay in sight
-      id: 'darkness',
-      space: 'court',
-      render: (c, { court }) => {
-        if (!court.modifiers.includes('darkness')) return;
-        ModifierRenderer.renderDarkness(c, court.balls, court.paddles);
-      },
     },
     {
       // The final score takes the HUD's place at the end of a match
@@ -333,6 +341,17 @@ function neonLayers(
       render: (c, { particles }) => {
         EntityRenderer.renderParticles(c, particles.particles);
         EntityRenderer.renderShockwaves(c, particles.rings);
+      },
+    },
+    {
+      // Over the balls, so one in the dark middle is unseen; the paddles' lanes stay lit
+      id: 'darkness',
+      space: 'court',
+      render: (c, { court, hud: view }, { realDt }) => {
+        followFlashes(court.balls, realDt);
+        if (!court.modifiers.includes('darkness')) return;
+        const isConditionShown = view.condition !== null && view.isConditionOnCourt;
+        ModifierRenderer.renderDarkness(c, flashes, isConditionShown);
       },
     },
     {

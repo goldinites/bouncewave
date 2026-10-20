@@ -6,7 +6,7 @@ import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { forecastArrival } from '@/match/forecast';
 import { MatchFlow } from '@/match/MatchFlow';
 import { ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
-import { HALVES, MODIFIERS, RAIN, SHRINK, TURBO, WIND } from '@/match/modifiers/modifiers';
+import { BUMPERS, HALVES, MODIFIERS, RAIN, SHRINK, TURBO, WIND } from '@/match/modifiers/modifiers';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
 import { Physics } from '@/match/Physics';
@@ -28,15 +28,17 @@ const ballOver = (conditions: CourtConditions, x: number, y: number, vx: number,
 };
 
 /** A modifier made for a court of two paddles, the left one the player's. */
-const make = (id: ModifierId) => {
+const make = (id: ModifierId, balls: Ball[] = []) => {
   const paddles = court();
   const conditions = new CourtConditions();
+  let seed = 0.13;
   const host: ModifierHost = {
     paddles,
-    balls: [],
+    balls,
     court: conditions,
     isPlayerPaddle: (index) => index === 0,
-    random: () => 0.25,
+    // A spread of values, so the wind's gusts differ
+    random: () => (seed = (seed * 9301 + 0.4927) % 1),
   };
   return { modifier: MODIFIERS[id](host), paddles, conditions };
 };
@@ -44,7 +46,7 @@ const make = (id: ModifierId) => {
 describe('The court’s conditions in the physics', () => {
   it('lets the wind push the ball’s path along, its speed kept', () => {
     const conditions = new CourtConditions();
-    conditions.wind = WIND.STRENGTH;
+    conditions.wind = WIND.MAX;
     const ball = ballOver(conditions, 200, 250, 400);
     for (let i = 0; i < 120; i++) Physics.step(ball, [], CONFIG, STEP);
 
@@ -80,7 +82,7 @@ describe('The court’s conditions in the physics', () => {
 
   it('flies a forecast through the wind as the ball will fly', () => {
     const conditions = new CourtConditions();
-    conditions.wind = -WIND.STRENGTH;
+    conditions.wind = -WIND.MAX;
     const ball = ballOver(conditions, 100, 300, 420);
     const forecast = forecastArrival(ball, 700, CONFIG)!;
     while (ball.x < 700) Physics.step(ball, [], CONFIG, STEP);
@@ -101,6 +103,71 @@ describe('The modifiers', () => {
 
     modifier.end!();
     expect(conditions.wind).toBe(0);
+  });
+
+  it('blows in gusts, from a moderate wind to a strong one', () => {
+    const { modifier, conditions } = make('wind');
+    modifier.start!();
+    const strengths: number[] = [];
+    for (let t = 0; t < 30; t += 0.1) {
+      modifier.beforeStep!(0.1);
+      strengths.push(Math.abs(conditions.wind));
+    }
+    expect(Math.min(...strengths)).toBeGreaterThanOrEqual(WIND.MIN);
+    expect(Math.max(...strengths)).toBeLessThanOrEqual(WIND.MAX);
+    expect(Math.max(...strengths) - Math.min(...strengths)).toBeGreaterThan(30);
+  });
+
+  it('lets a turbo ball past the top speed as the rally grows, never too far', () => {
+    const { modifier, conditions } = make('turbo');
+    modifier.start!();
+    const fly = () => {
+      const ball = ballOver(conditions, 100, 250, 400);
+      for (let i = 0; i < 40; i++) {
+        ball.x = 100;
+        Physics.step(ball, [], CONFIG, 0.5);
+      }
+      return ball.speed;
+    };
+    expect(fly()).toBe(CONFIG.maxSpeed);
+
+    const hit = () =>
+      modifier.afterHit!({
+        paddleIndex: 0,
+        ball: new Ball(),
+        isPerfect: false,
+        isPowerShot: false,
+      });
+    for (let i = 0; i < 4; i++) hit();
+    expect(fly()).toBeCloseTo(CONFIG.maxSpeed * (1 + 4 * TURBO.OVER_PER_HIT));
+    for (let i = 0; i < 40; i++) hit();
+    expect(fly()).toBeCloseTo(CONFIG.maxSpeed * (1 + TURBO.MAX_OVER));
+
+    modifier.onServe!();
+    expect(fly()).toBe(CONFIG.maxSpeed);
+  });
+
+  it('raises the middle post only into an empty middle, never at the serve', () => {
+    const ball = ballOver(new CourtConditions(), COURT.WIDTH / 2, COURT.HEIGHT / 2, 0);
+    const { modifier, conditions } = make('bumpers', [ball]);
+    modifier.start!();
+    const middle = () => conditions.bumpers.find((post) => post.y === COURT.HEIGHT / 2);
+    expect(conditions.bumpers).toHaveLength(2);
+
+    // Its time comes with the ball in the middle: it waits
+    for (let t = 0; t < BUMPERS.DOWN + 1; t += 0.05) modifier.beforeStep!(0.05);
+    expect(middle()).toBeUndefined();
+
+    ball.x = 100;
+    modifier.beforeStep!(0.05);
+    modifier.beforeStep!(BUMPERS.RISE / 2);
+    expect(middle()!.growth).toBeGreaterThan(0);
+    expect(middle()!.growth).toBeLessThan(1);
+    modifier.beforeStep!(BUMPERS.RISE);
+    expect(middle()!.radius).toBe(BUMPERS.RADIUS);
+
+    modifier.onServe!();
+    expect(middle()).toBeUndefined();
   });
 
   it('shrinks the player’s paddle with each of their hits, whole again at the serve', () => {
@@ -136,6 +203,14 @@ describe('The modifiers', () => {
     // In 0.05 s a dry paddle covers three quarters of the way (to ~325); a wet one a third
     expect(trail[11]).toBeLessThan(290);
     expect(Math.max(...trail)).toBeGreaterThan(350);
+
+    // Stopped on its way, it rolls on a while
+    paddle.setTargetY(100);
+    for (let t = 0; t < 0.15; t += STEP) paddle.update(STEP);
+    paddle.setTargetY(paddle.y);
+    const stoppedAt = paddle.y;
+    for (let t = 0; t < 0.3; t += STEP) paddle.update(STEP);
+    expect(Math.abs(paddle.y - stoppedAt)).toBeGreaterThan(5);
 
     modifier.end!();
     expect(paddle.grip).toBe(Infinity);
