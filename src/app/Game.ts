@@ -21,6 +21,14 @@ import { isModifierId, MODIFIER_IDS, ModifierId } from '@/match/modifiers/Modifi
 import { quickMatchRules } from '@/match/modes';
 import { MatchRules } from '@/match/rules';
 import { Paddle } from '@/match/Paddle';
+import { HumanController } from '@/match/PaddleController';
+import {
+  TrainerController,
+  TUTORIAL_RULES,
+  TUTORIAL_STEPS,
+  TutorialCoach,
+  TutorialStep,
+} from '@/match/tutorial';
 import { isSkillId, SKILL_IDS, SkillId } from '@/match/skills/Skill';
 import { challengeState, isEveryChallengePassed, markPassed } from '@/profile/ChallengeProgress';
 import { ProfileStore } from '@/profile/ProfileStore';
@@ -34,7 +42,8 @@ import { EventBus } from '@/shared/EventBus';
 import { Look } from '@/shared/look';
 import { COLORS } from '@/shared/palette';
 import { BackgroundChoice, isPickableScene, isSceneId, SceneId } from '@/shared/scenes';
-import { MenuController } from '@/ui/MenuController';
+import { isTouchFirst, MenuController } from '@/ui/MenuController';
+import { describeTutorial } from '@/ui/tutorialTexts';
 import { Condition, describeCondition, describeFinale } from '@/ui/challengeTexts';
 import { ConditionBar, SIDE_DOCK_QUERY } from '@/ui/ConditionBar';
 import { UIManager } from '@/ui/UIManager';
@@ -66,6 +75,12 @@ export class Game {
    * not asked of the match: by its end the match has already handed the paddles back to the demo.
    */
   private isTwoPlayers = false;
+  /** Whether the match on court (and its restarts) is the tutorial (step 4.8). */
+  private isTutorial = false;
+  /** Follows the learner through the tutorial's steps. */
+  private readonly tutorialCoach: TutorialCoach;
+  /** For developers: the step ?tutorial= starts the tutorial at. */
+  private pinnedTutorialStep: TutorialStep = TUTORIAL_STEPS[0];
   /**
    * Two players on a phone held upright: their match (its pause and its end too) is shown in
    * landscape, the phone held sideways between them. Off again back on the main menu.
@@ -156,6 +171,11 @@ export class Game {
     // debug overlay comes with a menu of them all
     const pinned = new URLSearchParams(window.location.search).get('bg');
     if (pinned && isSceneId(pinned)) this.renderer.pinBackground(pinned);
+    // ?tutorial=perfect starts the tutorial at that step
+    const tutorialStep = new URLSearchParams(window.location.search).get('tutorial');
+    if (TUTORIAL_STEPS.includes(tutorialStep as TutorialStep)) {
+      this.pinnedTutorialStep = tutorialStep as TutorialStep;
+    }
     // ?challenge=survival makes every quick match an attempt at that challenge;
     // the debug overlay shows how the last attempt went
     const challenge = new URLSearchParams(window.location.search).get('challenge');
@@ -229,6 +249,11 @@ export class Game {
       isRestart: () => this.isRestarting,
     });
 
+    // The learner plays the left paddle, as the player always does against the CPU
+    this.tutorialCoach = new TutorialCoach({
+      player: () => ({ paddle: this.paddles[0], index: 0, side: 0 }),
+    });
+
     this.flow = new MatchFlow({
       paddles: this.paddles,
       ball: this.ball,
@@ -257,18 +282,31 @@ export class Game {
           // The classic look has no challenges, not even a pinned one
           this.challenge = this.look === 'classic' ? null : this.pinnedChallenge;
           this.isTwoPlayers = false;
+          this.isTutorial = false;
           this.start();
         },
         onStartChallenge: (challenge) => {
           this.challenge = challenge;
           this.isTwoPlayers = false;
+          this.isTutorial = false;
           this.start();
         },
         onStartTwoPlayers: () => {
           this.challenge = null;
           this.isTwoPlayers = true;
+          this.isTutorial = false;
           this.start();
         },
+        onStartTutorial: () => {
+          this.challenge = null;
+          this.isTwoPlayers = false;
+          this.isTutorial = true;
+          // Offered the once: started, it is never offered again, even if left halfway
+          if (this.profile.current.tutorial === null) this.profile.update({ tutorial: 'skipped' });
+          this.start();
+        },
+        isTutorialOffered: () => this.profile.current.tutorial === null,
+        onDeclineTutorial: () => this.profile.update({ tutorial: 'skipped' }),
         isChallengeMatch: () => this.challenge !== null,
         isTwoPlayerMatch: () => this.isTwoPlayers,
         onResumeGame: () => this.resume(),
@@ -289,8 +327,9 @@ export class Game {
       profile: this.profile,
       match: this.flow,
       getDifficulty: () => this.flow.difficulty,
-      // The player's record is the player's: neither challenges nor two people's matches count
-      isCounted: () => this.challenge === null && !this.isTwoPlayers,
+      // The player's record is the player's: neither challenges, two people's matches nor the
+      // tutorial count
+      isCounted: () => this.challenge === null && !this.isTwoPlayers && !this.isTutorial,
     });
 
     this.challengeJudge = new ChallengeJudge({
@@ -308,6 +347,7 @@ export class Game {
     this.statsRecorder.listenTo(this.matchEvents);
     this.challengeJudge.listenTo(this.matchEvents);
     this.storagePersistence.listenTo(this.matchEvents);
+    this.tutorialCoach.listenTo(this.matchEvents);
     this.matchEvents.subscribe((event) => this.countSkillUse(event));
 
     this.conditionBar = new ConditionBar();
@@ -423,6 +463,18 @@ export class Game {
         this.flow.playerVsCpu(paddles, this.skillsOf('player'), this.skillsOf('cpu')),
         difficulty,
       );
+    } else if (this.isTutorial) {
+      // The learner against the trainer, on the player's own backdrop, from the first step
+      this.matchScene = null;
+      this.tutorialCoach.reset(this.pinnedTutorialStep);
+      this.flow.startMatch(
+        TUTORIAL_RULES,
+        [
+          { controller: new HumanController(this.inputHandler), overdrive: true },
+          { controller: new TrainerController(Math.random), overdrive: false },
+        ],
+        DifficultyLevel.EASY,
+      );
     } else if (this.isTwoPlayers) {
       // No CPU to set a level for: the ball plays at the default one's pace
       this.matchScene = null;
@@ -490,6 +542,25 @@ export class Game {
     this.skillMenu.setCounts(this.skillUses);
   }
 
+  /**
+   * The paddle whose perfect zone the tutorial marks: the learner's, while a step is about
+   * perfect hits.
+   */
+  private get perfectZoneMark(): number | null {
+    if (!this.isTutorial || this.flow.isDemo || this.tutorialCoach.isPraising) return null;
+    const step = this.tutorialCoach.progress?.step;
+    return step === 'perfect' || step === 'overdrive' ? 0 : null;
+  }
+
+  /** Every step done: the tutorial is through for good, and its end screen comes up. */
+  private finishTutorial(): void {
+    this.isTutorial = false;
+    this.profile.update({ tutorial: 'done' });
+    this.flow.returnToMenu();
+    this.uiManager.setPauseButtonVisibility(false);
+    this.menuController.showTutorialDone();
+  }
+
   /** The match on court again from 0:0, on the backdrop it was being played on. */
   public restart(): void {
     this.isRestarting = true;
@@ -501,6 +572,7 @@ export class Game {
   }
 
   public toMenu(): void {
+    this.isTutorial = false;
     this.setLandscape(false);
     this.flow.returnToMenu();
     this.uiManager.setPauseButtonVisibility(false);
@@ -604,15 +676,23 @@ export class Game {
     // Music reads this on its own scheduler tick, paused frames included (it muffles in pause)
     this.audio.playMusic(this.buildMusicState());
 
-    // A challenge's condition: in the strip above the court, or on the court on a phone on its
-    // side, which has no strip
+    const isTutorialOn = this.isTutorial && !this.flow.isDemo;
+    if (isTutorialOn && !isPaused) {
+      this.tutorialCoach.update(realDt);
+      if (this.tutorialCoach.isFinished) this.finishTutorial();
+    }
+
+    // A challenge's condition, or the tutorial's step: in the strip above the court, or on the
+    // court on a phone on its side, which has no strip
     const condition = this.flow.isDemo
       ? null
-      : describeCondition(
-          this.i18n,
-          this.flow,
-          this.challenge ? CHALLENGES[this.challenge].goal : null,
-        );
+      : isTutorialOn
+        ? describeTutorial(this.i18n, this.tutorialCoach, isTouchFirst())
+        : describeCondition(
+            this.i18n,
+            this.flow,
+            this.challenge ? CHALLENGES[this.challenge].goal : null,
+          );
     this.conditionBar.update(condition, !this.isConditionOnCourt);
     const frame = this.buildRenderFrame(condition);
     if (!isPaused) {
@@ -729,6 +809,7 @@ export class Game {
         isConditionOnCourt: this.isConditionOnCourt,
         sideLabels: this.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
         overtimeText: this.flow.isOvertime ? this.i18n.t('overtime') : null,
+        perfectZoneMark: this.perfectZoneMark,
         overdriveCharges: this.flow.overdriveCharges,
         overdriveStreaks: this.flow.overdriveStreaks,
       },

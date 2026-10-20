@@ -156,6 +156,13 @@ match. The menus start one (`onStartChallenge`), `Game.start` plays it and its r
 and to the result screen in place of the game-over menu. Challenges stay out of the statistics
 (`StatsRecorder`'s `isCounted`).
 
+**A tutorial step.** A name in `TUTORIAL_STEPS` (`match/tutorial.ts`), what counts for it in
+`TutorialCoach` (from the match's events and the learner's paddle; it only watches), and its line
+and hint in both languages (`tutorial` in `i18n/translations.ts`). The tutorial is a match of
+`TUTORIAL_RULES` against `TrainerController`, started by `Game.start`; its line takes the
+challenge condition's place (`ui/tutorialTexts.ts`). Whether it was gone through or turned down is
+the profile's `tutorial`.
+
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
 in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/MenuController.ts`).
 The PLAY menu lists it, switched off until `isPlayable`; `MenuController.pickMode` opens

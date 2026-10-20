@@ -9,10 +9,11 @@ export interface StatsSection {
 
 export interface StatsScreenProps {
   sections: readonly StatsSection[];
-  /** The reset button, and what it says once pressed, asking to be pressed again. */
-  resetLabel: string;
-  resetConfirmLabel: string;
-  onReset: () => void;
+  /**
+   * The reset button, and what it says once pressed, asking to be pressed again; none when left
+   * out (the controls, listed the same way).
+   */
+  reset?: { label: string; confirmLabel: string; onReset: () => void };
   backLabel: string;
   onBack: () => void;
 }
@@ -20,24 +21,19 @@ export interface StatsScreenProps {
 /**
  * The player's statistics: sections of label and value, side by side where the court is wide
  * enough and one under another where it isn't, then RESET and BACK. RESET wipes them only when
- * pressed twice: the first press asks. Texts come in ready to show.
+ * pressed twice: the first press asks. Texts come in ready to show. The controls screen lists its
+ * rows the same way, with no RESET.
  */
-export function StatsScreen({
-  sections,
-  resetLabel,
-  resetConfirmLabel,
-  onReset,
-  backLabel,
-  onBack,
-}: StatsScreenProps) {
+export function StatsScreen({ sections, reset, backLabel, onBack }: StatsScreenProps) {
   const [isConfirming, setConfirming] = useState(false);
-  const reset = () => {
+  const pressReset = () => {
+    if (!reset) return;
     if (!isConfirming) {
       setConfirming(true);
       return;
     }
     setConfirming(false);
-    onReset();
+    reset.onReset();
   };
 
   return (
@@ -58,9 +54,11 @@ export function StatsScreen({
         ))}
       </div>
       <div class="screen-buttons stats__buttons">
-        <MenuButton color="pink" onClick={reset}>
-          {isConfirming ? resetConfirmLabel : resetLabel}
-        </MenuButton>
+        {reset && (
+          <MenuButton color="pink" onClick={pressReset}>
+            {isConfirming ? reset.confirmLabel : reset.label}
+          </MenuButton>
+        )}
         <MenuButton onClick={onBack}>{backLabel}</MenuButton>
       </div>
     </div>

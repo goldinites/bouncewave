@@ -210,14 +210,14 @@ describe('the PLAY menu and the setup, in the menus', () => {
     };
   };
 
-  it('opens from PLAY: the story switched off, the quick match and the challenges on', () => {
+  it('opens from PLAY: the story switched off, the quick match, the challenges and the tutorial on', () => {
     const { menu, screenButtons, labels, title } = setup('ru');
     menu.showMainMenu();
     screenButtons()[0].click();
 
     expect(title()).toBe('РЕЖИМ ИГРЫ');
-    expect(labels()).toEqual(['СЮЖЕТ', 'БЫСТРЫЙ МАТЧ', 'ИСПЫТАНИЕ', 'НАЗАД']);
-    expect(screenButtons().map((b) => b.disabled)).toEqual([true, false, false, false]);
+    expect(labels()).toEqual(['СЮЖЕТ', 'БЫСТРЫЙ МАТЧ', 'ИСПЫТАНИЕ', 'ОБУЧЕНИЕ', 'НАЗАД']);
+    expect(screenButtons().map((b) => b.disabled)).toEqual([true, false, false, false, false]);
   });
 
   it('sets up the quick match: background, difficulty and points, as last chosen', () => {
@@ -347,7 +347,9 @@ describe('the PLAY menu and the setup, in the menus', () => {
     press('ArrowDown');
     expect(document.activeElement).toBe(screenButtons()[2]); // challenges
     press('ArrowDown');
-    expect(document.activeElement).toBe(screenButtons()[3]); // back
+    expect(document.activeElement).toBe(screenButtons()[3]); // tutorial
+    press('ArrowDown');
+    expect(document.activeElement).toBe(screenButtons()[4]); // back
     press('ArrowDown');
     expect(document.activeElement).toBe(screenButtons()[1]);
     press('Home');
@@ -374,7 +376,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     press('End');
     keyButtons()[4].click(); // back to the PLAY menu
     expect(document.activeElement).toBe(screenButtons()[1]);
-    screenButtons()[3].click(); // back to the main menu
+    screenButtons()[4].click(); // back to the main menu
     expect(document.activeElement).toBe(screenButtons()[0]);
   });
 });

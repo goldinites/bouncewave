@@ -293,7 +293,11 @@ function neonLayers(
           // A whipped paddle stays upright for a player who asked for less motion: the ball's
           // spin streaks still tell the curve
           const tilt = isMotionReduced() ? 0 : (drama.paddleTilt[i] ?? 0);
-          EntityRenderer.renderPaddle(c, paddle, drama.paddleGlow[i], pulse, tilt);
+          const mark =
+            view.perfectZoneMark === i
+              ? EntityRenderer.perfectMarkAt(court.time, isMotionReduced())
+              : 0;
+          EntityRenderer.renderPaddle(c, paddle, drama.paddleGlow[i], pulse, tilt, mark);
           if (charge !== null && !state.finalSign) {
             EntityRenderer.renderOverdriveMeter(
               c,

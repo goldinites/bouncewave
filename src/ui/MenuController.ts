@@ -2,7 +2,7 @@ import { effect, ReadonlySignal, signal, untracked } from '@preact/signals-core'
 import { h } from 'preact';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
-import { LANGUAGES, TRANSLATIONS } from '@/i18n/translations';
+import { CONTROL_ROWS, ControlId, LANGUAGES, TRANSLATIONS } from '@/i18n/translations';
 import { ChallengeVerdict } from '@/match/ChallengeJudge';
 import {
   CHALLENGE_IDS,
@@ -75,6 +75,15 @@ export interface GameMenuActions {
   onStartChallenge: (challenge: ChallengeId) => void;
   /** Starts a match of two players, as they last set it up (the settings keep the setup). */
   onStartTwoPlayers?: () => void;
+  /** Starts the tutorial (step 4.8). */
+  onStartTutorial?: () => void;
+  /**
+   * Whether PLAY offers the tutorial first: to someone it was never offered to. Never when left
+   * out.
+   */
+  isTutorialOffered?: () => boolean;
+  /** The tutorial offered was turned down (PLAY NOW): it isn't offered again. */
+  onDeclineTutorial?: () => void;
   /**
    * Whether two people play the match on court: its end names the winner instead of "you win" or
    * "game over". Nobody does when left out.
@@ -127,7 +136,12 @@ const MODE_COLORS: Record<ModeId, ButtonColor> = {
   story: 'pink',
   challenges: 'purple',
   quick: 'cyan',
+  tutorial: 'yellow',
 };
+
+/** Whether the device is played by touch first (a phone, a tablet), not with keys and a mouse. */
+export const isTouchFirst = (): boolean =>
+  typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
 const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 'on');
 
@@ -321,7 +335,11 @@ export class MenuController {
               : {
                   id: 'play',
                   label: this.i18n.t('play'),
-                  onClick: () => this.open(this.playMenu()),
+                  // Someone new is offered the tutorial first, the once
+                  onClick: () =>
+                    this.open(
+                      this.actions.isTutorialOffered?.() ? this.tutorialOffer() : this.playMenu(),
+                    ),
                 },
             {
               id: 'multiplayer',
@@ -398,10 +416,12 @@ export class MenuController {
                 rows: [{ label: t('challengesPassed'), value: this.passedCount() }],
               },
             ],
-            resetLabel: t('resetStats'),
-            resetConfirmLabel: t('resetStatsConfirm'),
-            // The profile is a signal: wiped, the screen shows it by itself
-            onReset: () => this.statistics.reset(),
+            reset: {
+              label: t('resetStats'),
+              confirmLabel: t('resetStatsConfirm'),
+              // The profile is a signal: wiped, the screen shows it by itself
+              onReset: () => this.statistics.reset(),
+            },
             backLabel: t('back'),
             onBack: this.back,
           }),
@@ -437,7 +457,68 @@ export class MenuController {
     };
   }
 
+  /**
+   * The tutorial offered on someone's first PLAY: it, or PLAY NOW, which turns it down for good
+   * and goes on to the PLAY menu, where the tutorial stays.
+   */
+  private tutorialOffer(): ScreenEntry {
+    return {
+      id: 'tutorialOffer',
+      scene: null,
+      view: () => ({
+        title: this.i18n.t('tutorial').offerTitle,
+        subtitle: this.i18n.t('tutorial').offerText,
+        body: h(ButtonMenu, {
+          items: [
+            {
+              id: 'tutorial',
+              label: this.i18n.getModeName('tutorial'),
+              color: MODE_COLORS.tutorial,
+              onClick: () => this.actions.onStartTutorial?.(),
+            },
+            {
+              id: 'skip',
+              label: this.i18n.t('tutorial').skip,
+              onClick: () => {
+                this.actions.onDeclineTutorial?.();
+                this.stack.reset(this.mainMenu(), this.playMenu());
+              },
+            },
+            { id: 'back', label: this.i18n.t('back'), color: 'purple', onClick: this.back },
+          ],
+        }),
+      }),
+    };
+  }
+
+  /** The tutorial's end: on to a quick match, or back to the menu. */
+  public showTutorialDone(): void {
+    this.stack.reset({
+      id: 'tutorialDone',
+      view: () => ({
+        title: this.i18n.t('tutorial').doneTitle,
+        subtitle: this.i18n.t('tutorial').doneText,
+        body: h(ButtonMenu, {
+          items: [
+            {
+              id: 'quick',
+              label: this.i18n.getModeName('quick'),
+              onClick: () => this.open(this.quickMatchSetup()),
+            },
+            {
+              id: 'menu',
+              label: this.i18n.t('menu'),
+              color: 'purple',
+              onClick: () => this.actions.onReturnToMainMenu(),
+            },
+          ],
+        }),
+      }),
+    });
+  }
+
   private pickMode(mode: ModeId): void {
+    if (mode === 'tutorial') this.actions.onStartTutorial?.();
     if (mode === 'quick') this.open(this.quickMatchSetup());
     if (mode === 'challenges') {
       this.challengeTier.value = this.firstOpenTier();
@@ -791,18 +872,27 @@ export class MenuController {
           title: this.i18n.t('settings'),
           subtitle: '',
           body: h(SettingsScreen, {
-            items: SETTINGS_MENU.map((entry) =>
-              entry.kind === 'toggle'
-                ? {
-                    kind: 'toggle' as const,
-                    id: entry.key,
-                    label: entry.label(settings, this.i18n),
-                    color: entry.color,
-                    isOn: entry.isOn(settings),
-                    onToggle: () => this.changeSetting(entry),
-                  }
-                : { kind: 'choice' as const, ...this.choiceOf(entry, settings) },
-            ),
+            items: [
+              ...SETTINGS_MENU.map((entry) =>
+                entry.kind === 'toggle'
+                  ? {
+                      kind: 'toggle' as const,
+                      id: entry.key,
+                      label: entry.label(settings, this.i18n),
+                      color: entry.color,
+                      isOn: entry.isOn(settings),
+                      onToggle: () => this.changeSetting(entry),
+                    }
+                  : { kind: 'choice' as const, ...this.choiceOf(entry, settings) },
+              ),
+              {
+                kind: 'link' as const,
+                id: 'controls',
+                label: this.i18n.t('controls').title,
+                color: 'yellow' as const,
+                onClick: () => this.open(this.controlsScreen()),
+              },
+            ],
             previousLabel: this.i18n.t('previousChoice'),
             nextLabel: this.i18n.t('nextChoice'),
             backLabel: this.i18n.t('back'),
@@ -811,6 +901,34 @@ export class MenuController {
         };
       },
     });
+  }
+
+  /**
+   * The controls and the shots, as the device plays them: keys and a mouse, or a finger. Opened
+   * from the settings, so from the pause too.
+   */
+  private controlsScreen(): ScreenEntry {
+    return {
+      id: 'controls',
+      view: () => {
+        const texts = this.i18n.t('controls');
+        const how = isTouchFirst() ? 'touch' : 'keys';
+        const rows = (ids: readonly ControlId[]) =>
+          ids.map((id) => ({ label: texts.rows[id].name, value: texts.rows[id][how] }));
+        return {
+          title: texts.title,
+          subtitle: '',
+          body: h(StatsScreen, {
+            sections: [
+              { rows: rows(CONTROL_ROWS.controls) },
+              { heading: texts.shots, rows: rows(CONTROL_ROWS.shots) },
+            ],
+            backLabel: this.i18n.t('back'),
+            onBack: this.back,
+          }),
+        };
+      },
+    };
   }
 
   /** A choice as its row shows it, its arrows stepping the setting either way. */

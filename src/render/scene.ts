@@ -48,6 +48,11 @@ export interface HudView {
   /** OVERTIME, while the rally on court is in it (match/overtime.ts); null otherwise. */
   overtimeText: string | null;
   /**
+   * The paddle (an index into `paddles`) whose perfect zone glows, so a learner sees where to meet
+   * the ball (the tutorial); null for none.
+   */
+  perfectZoneMark: number | null;
+  /**
    * Charges in each paddle's Overdrive meter (0..OVERDRIVE.CHARGE), in the order of `paddles`;
    * null for a paddle that shows none (the CPU's, every one under rules without Overdrive).
    */

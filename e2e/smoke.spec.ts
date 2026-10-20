@@ -27,6 +27,18 @@ const menu = (page: Page) => page.locator('#gameUI');
 /** A quick match choice, by its name; its value is its aria-valuetext. */
 const choice = (page: Page, name: string) => page.getByRole('spinbutton', { name, exact: true });
 
+/**
+ * PLAY, on to the modes: past the tutorial offered to someone new (PLAY NOW), as every test here
+ * starts from nothing saved.
+ */
+const openModes = async (page: Page, play = 'PLAY') => {
+  await button(page, play).click();
+  const skip = button(page, /^(PLAY NOW|СРАЗУ ИГРАТЬ)$/);
+  const modes = button(page, /^(QUICK MATCH|БЫСТРЫЙ МАТЧ)$/);
+  await expect(skip.or(modes)).toBeVisible();
+  if (await skip.isVisible()) await skip.click();
+};
+
 /** Fails unless `locator` sits wholly on the court: the menus never need scrolling. */
 const expectOnCourt = async (page: Page, locator: Locator) => {
   const [box, court] = await Promise.all([
@@ -58,7 +70,7 @@ test('starts a match, pauses, resumes and goes back to the menu', async ({ page,
   const pauseMatch = () => (isMobile ? pause.click() : page.keyboard.press('Escape'));
   await page.goto('');
 
-  await button(page, 'PLAY').click();
+  await openModes(page);
   await button(page, 'QUICK MATCH').click();
   await button(page, 'START').click();
   await expect(menu(page)).toHaveClass(/game__ui--hidden/);
@@ -74,6 +86,26 @@ test('starts a match, pauses, resumes and goes back to the menu', async ({ page,
   await pauseMatch();
   await button(page, 'MAIN MENU').click();
   await expect(button(page, 'PLAY')).toBeVisible();
+});
+
+test('offers the tutorial to someone new, and plays it on court', async ({ page }) => {
+  await page.goto('');
+  await button(page, 'PLAY').click();
+  await expect(page.locator('#gameTitle')).toHaveText('FIRST TIME?');
+  await button(page, 'TUTORIAL').click();
+  await expect(menu(page)).toHaveClass(/game__ui--hidden/);
+  // Its first step, above the court (a phone on its side writes it on the court instead)
+  const viewport = page.viewportSize()!;
+  if (!(viewport.height <= 520 && viewport.width > viewport.height)) {
+    await expect(page.locator('#gameCondition')).toHaveText(/^(MOVE|ДВИГАЙ|ВЕДИ)/);
+  }
+  await page.waitForTimeout(SETTLE_MS);
+
+  // Left halfway, it isn't offered again
+  await page.keyboard.press('Escape');
+  await button(page, 'MAIN MENU').click();
+  await button(page, 'PLAY').click();
+  await expect(page.locator('#gameTitle')).toHaveText('GAME MODE');
 });
 
 test('plays a match of two from MULTIPLAYER, both steering at once', async ({ page }) => {
@@ -96,7 +128,7 @@ test('plays a match of two from MULTIPLAYER, both steering at once', async ({ pa
 test('lists the modes behind PLAY, the ones still to come switched off', async ({ page }) => {
   await page.goto('');
 
-  await button(page, 'PLAY').click();
+  await openModes(page);
   await expect(button(page, 'STORY')).toBeDisabled();
   await expect(button(page, 'CHALLENGE')).toBeEnabled();
   await expect(button(page, 'QUICK MATCH')).toBeEnabled();
@@ -110,7 +142,7 @@ test('lists the modes behind PLAY, the ones still to come switched off', async (
 test('sets up a quick match, its background coming up behind the menu', async ({ page }) => {
   await page.goto('');
 
-  await button(page, 'PLAY').click();
+  await openModes(page);
   await button(page, 'QUICK MATCH').click();
   // The arrows step a choice either way
   await button(page, 'Next').first().click();
@@ -131,7 +163,7 @@ test('sets up a quick match, its background coming up behind the menu', async ({
 test('lists the challenges on the court and starts the first from its card', async ({ page }) => {
   await page.goto('');
 
-  await button(page, 'PLAY').click();
+  await openModes(page);
   await button(page, 'CHALLENGE').click();
   await expect(page.locator('#gameSubtitle')).toHaveText('PASSED: 0 / 18');
   // A tier at a time, every challenge open from the start: the tiers' tabs, its six and BACK on
@@ -184,7 +216,7 @@ test('restarts a match from the pause', async ({ page, isMobile }) => {
   const pause = page.locator('#pauseButton');
   await page.goto('');
 
-  await button(page, 'PLAY').click();
+  await openModes(page);
   await button(page, 'QUICK MATCH').click();
   await button(page, 'START').click();
   await page.waitForTimeout(SETTLE_MS);
@@ -204,11 +236,11 @@ test('brings settings saved before the profile into it', async ({ page }) => {
   });
   await page.goto('');
 
-  await button(page, 'ИГРАТЬ').click();
+  await openModes(page, 'ИГРАТЬ');
   await button(page, 'БЫСТРЫЙ МАТЧ').click();
   await expect(choice(page, 'ОЧКИ')).toHaveAttribute('aria-valuetext', '7');
   const profile = await page.evaluate(() => localStorage.getItem('bouncewave_profile'));
-  expect(JSON.parse(profile ?? '{}')).toMatchObject({ version: 3 });
+  expect(JSON.parse(profile ?? '{}')).toMatchObject({ version: 4 });
 });
 
 test('shows the statistics on the court, and comes back', async ({ page }) => {

@@ -10,6 +10,9 @@ import { COLORS } from '@/shared/palette';
 const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
 // Paddle neon in canvas pixels: always lit, flaring up to HOT on a hit
 const PADDLE_GLOW = { BASE: 18, HOT: 48 } as const;
+// The tutorial's mark on a paddle's perfect zone: a band of yellow light a little wider than the
+// paddle, throbbing gently (steady with reduced motion)
+const PERFECT_MARK = { OVERHANG: 4, GLOW: 14, PULSE: 6 } as const; // px, px, rad/s
 
 // The Overdrive meter rides along the player's paddle, on its goal side: one segment per
 // perfect hit in the streak; once full they and the paddle's core pulse yellow. Charges an
@@ -28,13 +31,15 @@ export class EntityRenderer {
    @param paddle
    @param glow hit glow in [0, 1]
    @param overdrivePulse > 0 while the paddle's Overdrive is charged: its core pulses yellow
-   @param tilt radians it leans by, about its center, positive clockwise */
+   @param tilt radians it leans by, about its center, positive clockwise
+   @param perfectMark how brightly its perfect zone is marked, in [0, 1] (the tutorial); 0 for none */
   public static renderPaddle(
     ctx: CanvasRenderingContext2D,
     paddle: Paddle,
     glow: number,
     overdrivePulse = 0,
     tilt = 0,
+    perfectMark = 0,
   ): void {
     const { width, height } = paddle.spec;
     const topY = paddle.drawY - height / 2;
@@ -63,7 +68,29 @@ export class EntityRenderer {
     this.roundRect(ctx, paddle.x + width / 2 - 2, topY + 8, 4, height - 16, 2);
     ctx.fill();
 
+    if (perfectMark > 0) {
+      const zone = paddle.spec.perfectZone * height; // the zone, both halves
+      ctx.globalAlpha = perfectMark;
+      ctx.shadowColor = COLORS.YELLOW;
+      ctx.shadowBlur = PERFECT_MARK.GLOW;
+      ctx.fillStyle = COLORS.YELLOW;
+      this.roundRect(
+        ctx,
+        paddle.x - PERFECT_MARK.OVERHANG,
+        paddle.drawY - zone / 2,
+        width + PERFECT_MARK.OVERHANG * 2,
+        zone,
+        3,
+      );
+      ctx.fill();
+    }
+
     ctx.restore();
+  }
+
+  /** How brightly a marked perfect zone shows at `time`: throbbing, or steady for less motion. */
+  public static perfectMarkAt(time: number, isMotionReduced: boolean): number {
+    return isMotionReduced ? 0.9 : 0.7 + 0.3 * Math.sin(time * PERFECT_MARK.PULSE);
   }
 
   private static drawPaddleGlow(

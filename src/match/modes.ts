@@ -15,6 +15,7 @@ export const MODES = {
   story: { isPlayable: false },
   quick: { isPlayable: true },
   challenges: { isPlayable: true },
+  tutorial: { isPlayable: true },
 } as const satisfies Record<string, GameMode>;
 
 export type ModeId = keyof typeof MODES;
