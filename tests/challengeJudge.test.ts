@@ -64,6 +64,24 @@ describe('judging a challenge', () => {
     ]);
   });
 
+  it('tells the verdict ahead of the match’s end, for the finale, and none outside an attempt', () => {
+    const { judge, verdicts, start, score, gameOver } = setup('warmUp');
+    expect(judge.verdictFor(0)).toBeNull();
+    start();
+    score(0, 2);
+    score(1, 3);
+
+    expect(judge.verdictFor(1)).toEqual({
+      challenge: 'warmUp',
+      isPassed: false,
+      progress: 2,
+      target: 3,
+    });
+    gameOver(1, [2, 3]);
+    expect(verdicts).toHaveLength(1);
+    expect(judge.verdictFor(1)).toBeNull();
+  });
+
   it('fails a shutout won with a point lost', () => {
     const { verdicts, start, score, gameOver } = setup('shutout');
     start();

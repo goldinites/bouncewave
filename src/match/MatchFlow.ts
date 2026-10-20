@@ -41,6 +41,9 @@ export const FINALE = {
  */
 export type MatchPhase = 'attract' | 'serving' | 'rally' | 'paused' | 'finale';
 
+/** What decided a match: a side's winning score, the clock running out, or the rally goal. */
+export type FinaleReason = 'points' | 'time' | 'rally';
+
 export type MatchEvent =
   | { type: 'matchStart' }
   | { type: 'returnToMenu' }
@@ -63,7 +66,13 @@ export type MatchEvent =
     }
   // The side that won the point, and the side that won the match
   | { type: 'score'; scoringPlayerIndex: Side; y: number; isDemo: boolean }
-  | { type: 'finaleStart'; winnerIndex: Side; ballY: number; scores: [number, number] }
+  | {
+      type: 'finaleStart';
+      winnerIndex: Side;
+      ballY: number;
+      scores: [number, number];
+      reason: FinaleReason;
+    }
   | { type: 'gameOver'; winnerIndex: Side; scores: [number, number] };
 
 export type { PlayerInput } from '@/match/PaddleController';
@@ -536,7 +545,7 @@ export class MatchFlow {
         // A rally long enough wins the match for the player (the left side when no one plays)
         const { rallyGoal } = this._rules;
         if (!this.isDemo && rallyGoal !== null && this._rally >= rallyGoal) {
-          this.beginFinale(this.playerSide ?? 0, ball.y);
+          this.beginFinale(this.playerSide ?? 0, ball.y, 'rally');
         }
         break;
       }
@@ -560,7 +569,7 @@ export class MatchFlow {
     this.emit({ type: 'score', scoringPlayerIndex: scorer, y, isDemo: false });
 
     if (this._scores[scorer] >= this._rules.winningScores[scorer]) {
-      this.beginFinale(scorer, y);
+      this.beginFinale(scorer, y, 'points');
       return;
     }
 
@@ -578,10 +587,10 @@ export class MatchFlow {
     const opponent = otherSide(this.playerSide ?? 0);
     const winner: Side =
       this._rules.timeUp === 'opponent' || left === right ? opponent : left > right ? 0 : 1;
-    this.beginFinale(winner, this.leadBall.y);
+    this.beginFinale(winner, this.leadBall.y, 'time');
   }
 
-  private beginFinale(winner: Side, ballY: number): void {
+  private beginFinale(winner: Side, ballY: number, reason: FinaleReason): void {
     this._phase = 'finale';
     this.finaleWinner = winner;
     this.finaleElapsed = 0;
@@ -590,7 +599,13 @@ export class MatchFlow {
     const isPlayerWin = this.playerSide === null ? winner === 0 : this.isPlayerSide(winner);
     this.finaleDuration = isPlayerWin ? FINALE.WIN_DURATION : FINALE.LOSS_DURATION;
 
-    this.emit({ type: 'finaleStart', winnerIndex: winner, ballY, scores: [...this._scores] });
+    this.emit({
+      type: 'finaleStart',
+      winnerIndex: winner,
+      ballY,
+      scores: [...this._scores],
+      reason,
+    });
   }
 
   private finishFinale(): void {

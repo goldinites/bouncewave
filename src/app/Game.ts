@@ -30,7 +30,7 @@ import { Look } from '@/shared/look';
 import { COLORS } from '@/shared/palette';
 import { BackgroundChoice, isPickableScene, isSceneId, SceneId } from '@/shared/scenes';
 import { MenuController } from '@/ui/MenuController';
-import { Condition, describeCondition } from '@/ui/challengeTexts';
+import { Condition, describeCondition, describeFinale } from '@/ui/challengeTexts';
 import { ConditionBar, SIDE_DOCK_QUERY } from '@/ui/ConditionBar';
 import { UIManager } from '@/ui/UIManager';
 
@@ -71,6 +71,8 @@ export class Game {
    * story chapter's) own; null plays it on the player's. Set by whatever starts the match.
    */
   private matchScene: SceneId | null = null;
+  /** Whether the match starting is the one on court started again: it keeps its backdrop. */
+  private isRestarting = false;
   /** For developers: the challenge ?challenge= makes every quick match an attempt at. */
   private pinnedChallenge: ChallengeId | null = null;
   /** How the last attempt at a challenge went, for the debug overlay. */
@@ -182,6 +184,13 @@ export class Game {
       translate: (key) => this.i18n.t(key),
       matchScene: () => this.matchScene,
       isTwoPlayer: () => this.isTwoPlayers,
+      challengeFinale: (finale) => {
+        const verdict = this.challengeJudge.verdictFor(finale.winnerIndex);
+        return (
+          verdict && { ...describeFinale(this.i18n, verdict, finale), isPassed: verdict.isPassed }
+        );
+      },
+      isRestart: () => this.isRestarting,
     });
 
     this.flow = new MatchFlow({
@@ -207,6 +216,7 @@ export class Game {
       this.settings,
       {
         onStartGame: () => this.start(),
+        onRestartGame: () => this.restart(),
         onStartQuickMatch: () => {
           // The classic look has no challenges, not even a pinned one
           this.challenge = this.look === 'classic' ? null : this.pinnedChallenge;
@@ -386,6 +396,16 @@ export class Game {
     }
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
+  }
+
+  /** The match on court again from 0:0, on the backdrop it was being played on. */
+  public restart(): void {
+    this.isRestarting = true;
+    try {
+      this.start();
+    } finally {
+      this.isRestarting = false;
+    }
   }
 
   public toMenu(): void {

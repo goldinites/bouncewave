@@ -4,7 +4,7 @@ import { Paddle } from '@/match/Paddle';
 import { Side } from '@/match/side';
 import { COURT_LINES } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
-import { FINAL_SIGN_LAYOUT, FinalScoreSign, finalScoreText } from '@/render/FinalScoreRenderer';
+import { FINAL_SIGN_LAYOUT, FinalScoreSign } from '@/render/FinalScoreRenderer';
 import { drawConditionLine, HUD_LAYOUT } from '@/render/HudRenderer';
 import { CourtView, HudView, RenderFrame, Scene, SceneState } from '@/render/scene';
 import { COLORS } from '@/shared/palette';
@@ -156,7 +156,7 @@ export class ClassicScene implements Scene {
     ctx.font = MONO(CLASSIC.FINAL_LABEL);
     ctx.fillText(sign.label, 0, FINAL_SIGN_LAYOUT.LABEL_Y);
     ctx.font = MONO(CLASSIC.FINAL_SCORE);
-    ctx.fillText(finalScoreText(sign), 0, FINAL_SIGN_LAYOUT.SCORE_Y);
+    ctx.fillText(sign.text, 0, FINAL_SIGN_LAYOUT.SCORE_Y);
     ctx.restore();
   }
 }

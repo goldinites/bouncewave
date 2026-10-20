@@ -154,7 +154,7 @@ describe('the match clock', () => {
     while (flow.phase !== 'finale') flow.update(0.1);
 
     expect(flow.timeLeft).toBe(0);
-    expect(finale()).toMatchObject({ winnerIndex: 0, scores: [2, 1] });
+    expect(finale()).toMatchObject({ winnerIndex: 0, scores: [2, 1], reason: 'time' });
   });
 
   it('is the player’s loss whatever the score when the rules say so (Blitz)', () => {

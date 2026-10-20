@@ -9,6 +9,7 @@ import { COURT, BALL } from '@/match/config';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import { Side } from '@/match/side';
+import { finalScoreText } from '@/render/FinalScoreRenderer';
 import { Renderer } from '@/render/Renderer';
 import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
@@ -90,6 +91,25 @@ export interface EffectsDirectorDeps {
    * the winner's color, never the defeat. Nobody does when left out.
    */
   isTwoPlayer?: () => boolean;
+  /**
+   * What the finale says of an attempt at a challenge, told by its verdict rather than by who
+   * won the match; null, or left out, for a match that is no attempt.
+   */
+  challengeFinale?: (finale: FinaleStart) => ChallengeFinale | null;
+  /**
+   * Whether the match starting is the one on court started again (restart): it keeps its
+   * backdrop and song, with no channels flicking over. No match is when left out.
+   */
+  isRestart?: () => boolean;
+}
+
+type FinaleStart = Extract<MatchEvent, { type: 'finaleStart' }>;
+
+/** The finale's sign over an attempt, and whether it passed (celebrated) or not (the defeat). */
+export interface ChallengeFinale {
+  label: string;
+  text: string;
+  isPassed: boolean;
 }
 
 /**
@@ -111,6 +131,8 @@ export class EffectsDirector {
   private readonly matchScene: () => SceneId | null;
 
   private readonly isTwoPlayer: () => boolean;
+  private readonly challengeFinale: NonNullable<EffectsDirectorDeps['challengeFinale']>;
+  private readonly isRestart: () => boolean;
 
   constructor(deps: EffectsDirectorDeps) {
     this.renderer = deps.renderer;
@@ -121,6 +143,8 @@ export class EffectsDirector {
     this.translate = deps.translate;
     this.matchScene = deps.matchScene ?? (() => null);
     this.isTwoPlayer = deps.isTwoPlayer ?? (() => false);
+    this.challengeFinale = deps.challengeFinale ?? (() => null);
+    this.isRestart = deps.isRestart ?? (() => false);
   }
 
   /** Simulation speed requested by the match-point slow motion (1 = normal). */
@@ -208,9 +232,12 @@ export class EffectsDirector {
     switch (event.type) {
       case 'matchStart':
         // Every match is played on another backdrop, found by flicking through the channels:
-        // its own, if it asks for one, else the player's
-        this.audio.music.enterScene(this.renderer.switchChannel(true, this.matchScene()));
-        this.audio.sfx.playChannelSurf();
+        // its own, if it asks for one, else the player's. A restart is the same match again, on
+        // the backdrop (and to the song) it was being played on
+        if (!this.isRestart()) {
+          this.audio.music.enterScene(this.renderer.switchChannel(true, this.matchScene()));
+          this.audio.sfx.playChannelSurf();
+        }
         this.renderer.addFlash(FLASH.START);
         this.paddleFx.reset();
         this.resetTension();
@@ -314,11 +341,13 @@ export class EffectsDirector {
    * End-of-match cutscene: play is frozen but the canvas stays live, so particles,
    * flashes, the background and the neon score sign keep animating until the menu.
    */
-  private onFinaleStart(finale: Extract<MatchEvent, { type: 'finaleStart' }>): void {
+  private onFinaleStart(finale: FinaleStart): void {
     this.resetTension();
     const isTwoPlayer = this.isTwoPlayer();
-    // Outside a match of two the left side is the player
-    const playerWon = isTwoPlayer || finale.winnerIndex === 0;
+    // An attempt ends as its verdict says, not as its match did: a match won short of the
+    // challenge's goal is no win. Outside a match of two the left side is the player
+    const attempt = this.challengeFinale(finale);
+    const playerWon = attempt ? attempt.isPassed : isTwoPlayer || finale.winnerIndex === 0;
 
     if (playerWon) {
       this.renderer.triggerVictoryEffect();
@@ -347,17 +376,20 @@ export class EffectsDirector {
     }
 
     this.renderer.showFinalScore({
-      scores: finale.scores,
-      label: this.translate(
-        isTwoPlayer
-          ? finale.winnerIndex === 0
-            ? 'player1Wins'
-            : 'player2Wins'
-          : playerWon
-            ? 'win'
-            : 'lose',
-      ),
-      color: this.colorOf(finale.winnerIndex),
+      text: attempt?.text ?? finalScoreText(finale.scores),
+      label:
+        attempt?.label ??
+        this.translate(
+          isTwoPlayer
+            ? finale.winnerIndex === 0
+              ? 'player1Wins'
+              : 'player2Wins'
+            : playerWon
+              ? 'win'
+              : 'lose',
+        ),
+      // An attempt's sign burns in the color of whoever it went to: the player's, or the CPU's
+      color: this.colorOf(attempt ? (attempt.isPassed ? 0 : 1) : finale.winnerIndex),
       isWin: playerWon,
     });
   }

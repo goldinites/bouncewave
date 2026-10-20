@@ -1,6 +1,7 @@
 import { I18nManager } from '@/i18n/I18nManager';
 import { ChallengeVerdict } from '@/match/ChallengeJudge';
 import { ChallengeGoal, CHALLENGES } from '@/match/challenges';
+import { FinaleReason } from '@/match/MatchFlow';
 import { MatchRules } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
 
@@ -98,5 +99,49 @@ export function describeShortfall(i18n: I18nManager, verdict: ChallengeVerdict):
       return n < target ? i18n.format('shortPoints', { n, target }) : i18n.t('shortConceded');
     case 'win':
       return i18n.format('shortPoints', { n, target });
+  }
+}
+
+/** The finale's sign over an attempt: what decided it, and the number that tells how it went. */
+export interface FinaleSign {
+  readonly label: string;
+  readonly text: string;
+}
+
+/**
+ * The finale's sign over an attempt, told by its verdict rather than by who won the match: a lost
+ * clock reads TIME UP, not GAME OVER, and a match won with too few Overdrive shots is no win. The
+ * sign's number is the score, or the goal's own count where the score says nothing of it (Long
+ * Rally's hits, the shots short of Overload's).
+ */
+export function describeFinale(
+  i18n: I18nManager,
+  verdict: ChallengeVerdict,
+  finale: {
+    readonly winnerIndex: Side;
+    readonly reason: FinaleReason;
+    readonly scores: readonly [number, number];
+  },
+): FinaleSign {
+  const { goal, rules } = CHALLENGES[verdict.challenge];
+  const count = `${verdict.progress} / ${verdict.target}`;
+  const score = `${finale.scores[0]} : ${finale.scores[1]}`;
+  const text = goal.type === 'rally' ? count : score;
+  if (verdict.isPassed) return { label: i18n.t('win'), text };
+  if (finale.reason === 'time') return { label: i18n.t('finaleTimeUp'), text };
+  switch (goal.type) {
+    case 'shutout':
+      return { label: i18n.t('finaleConceded'), text };
+    case 'powerShots':
+      // A lost match is simply lost; a won one fell short by its shots (the player is the left side)
+      return finale.winnerIndex === 0
+        ? { label: i18n.t('finaleNoOverdrive'), text: count }
+        : { label: i18n.t('lose'), text };
+    case 'rally':
+    case 'win': {
+      // The player is the left side: an opponent who needs fewer points took the player's lives
+      const [mine, theirs] = rules.winningScores;
+      return { label: i18n.t(theirs < mine ? 'finaleNoLives' : 'lose'), text };
+    }
   }
 }
