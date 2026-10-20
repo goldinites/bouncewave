@@ -173,26 +173,31 @@ describe('Arc', () => {
     expect(fromRight.vy).toBeLessThan(0);
   });
 
-  /** How far off the straight line a flat shot at `speed` lands across the court. */
+  /**
+   * How far off the straight line a flat shot at `speed` lands across the court. It leaves low
+   * and bends up (the paddle moving down), so no wall cuts the bend short.
+   */
   const bendOf = (speed: number, paddleVelocity: number, isPerfect: boolean) => {
     const faceX = PADDLE.OFFSET_X + PADDLE.WIDTH;
-    const ball = ballAt(faceX, COURT.HEIGHT / 2, speed);
-    ball.spin = Arc.spinFor(paddleVelocity, speed, speed, isPerfect);
+    const startY = COURT.HEIGHT - COURT.BOTTOM_WALL - 20;
+    const ball = ballAt(faceX, startY, speed);
+    ball.spin = Arc.spinFor(Math.abs(paddleVelocity), speed, speed, isPerfect);
     ball.spinDecay = ARC.DECAY;
     while (ball.x < COURT.WIDTH - faceX) Physics.step(ball, [], CONFIG, STEP);
-    return Math.abs(ball.y - COURT.HEIGHT / 2);
+    expect(ball.spin).not.toBe(0); // no wall took it off
+    return Math.abs(ball.y - startY);
   };
 
-  it('bends a perfect hit no more than a third of the court, at any speed', () => {
+  it('bends a perfect hit no more than half the court, at any speed', () => {
     for (const speed of [380, 600, 840, 1080]) {
-      expect(bendOf(speed, 1e6, true)).toBeLessThanOrEqual(COURT.HEIGHT / 3);
+      expect(bendOf(speed, 1e6, true)).toBeLessThanOrEqual(COURT.HEIGHT / 2);
     }
   });
 
   it('bends a hit from a paddle at the keyboard’s speed far enough to see, fast or slow', () => {
     for (const speed of [380, 1080]) {
-      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, false)).toBeGreaterThan(55);
-      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, true)).toBeGreaterThan(110);
+      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, false)).toBeGreaterThan(110);
+      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, true)).toBeGreaterThan(180);
     }
   });
 
@@ -305,13 +310,20 @@ describe('A match with skills', () => {
     return { events, trace };
   };
 
-  it('replays the same from the same seed, both skills played', () => {
+  it('replays the same from the same seed', () => {
     const first = play(2, ['arc', 'reflex']);
     const second = play(2, ['arc', 'reflex']);
     expect(second.trace).toEqual(first.trace);
     expect(second.events).toEqual(first.events);
+  });
 
-    const used = new Set(first.events.map((event) => event.type === 'skill' && event.skill));
+  it('plays both skills in matches of AIs that have them', () => {
+    // Reflex goes off in some matches only: a few seeds between them see both
+    const used = new Set(
+      [1, 2, 3, 4]
+        .flatMap((seed) => play(seed, ['arc', 'reflex']).events)
+        .map((event) => event.type === 'skill' && event.skill),
+    );
     expect(used).toEqual(new Set([false, 'arc', 'reflex']));
   });
 

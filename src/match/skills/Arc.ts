@@ -9,9 +9,11 @@ export const ARC = {
   THRESHOLD: 200, // px/s of paddle speed below which a hit puts no spin on (small adjustments)
   REFERENCE_SPEED: 200, // px/s above the threshold where the spin reaches ~76% of its max; the
   // keyboard's 500 px/s gets ~85%
-  MAX_BEND: 95, // px the ball lands off the straight line from one paddle to the other, at most
+  // px the ball lands off the straight line from one paddle to the other, at most. A playtest
+  // value (decided with the user): a perfect hit may bend it up to half the court's height
+  MAX_BEND: 133,
   // A perfect hit on the move bends it this many times as far; not twice, as planned, which
-  // would take it past a third of the court's height
+  // would take it past half the court
   PERFECT_FACTOR: 1.65,
   // 1/s; the spin fades over the flight, slowly enough that the whole flight curves rather than
   // its start alone, which reads as a straight shot at another angle
