@@ -34,7 +34,8 @@ time). Update them with `npm run test:visual -- --update-snapshots` only for an 
 after showing the user the new pictures. In the browser: `?debug` or F3 shows the FPS overlay and a menu of
 backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts`);
 `?challenge=<id>` makes every match that challenge (ids in `src/match/challenges.ts`), its last
-verdict shown in the debug overlay.
+verdict shown in the debug overlay; `?skills=arc,reflex` gives the player those skills in every
+match against the CPU (ids in `src/match/skills/Skill.ts`).
 
 ## Architecture
 

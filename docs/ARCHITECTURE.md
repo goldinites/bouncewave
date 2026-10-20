@@ -82,7 +82,8 @@ simulation's randomness is injected, the same seed and inputs replay the same ma
 | Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)                            |
 | What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed                      |
 | Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle                           |
-| How the ball moves and bounces       | `Physics.step`, one ball at a time                                                              |
+| How the ball moves and bounces       | `Physics.step`, one ball at a time; `forecastArrival` flies a copy ahead to where it will cross |
+| What a paddle can do beyond the base | its participant's skills (`match/skills/`), played through hooks by the match's `SkillSet`      |
 | How the AI plays                     | `AiController` (reading, aiming, nerves) and `AiForm` (form by score)                           |
 
 Points belong to sides and are kept by the match (`flow.scores`). The first ball out wins the
@@ -95,7 +96,7 @@ can interrupt `serving` and `rally`.
 ### Events
 
 The match reports through one stream of `MatchEvent`s (`matchStart`, `serve`, `wallBounce`,
-`paddleHit`, `score`, `finaleStart`, `gameOver`, `returnToMenu`). `Game` puts them on an
+`paddleHit`, `skill`, `score`, `finaleStart`, `gameOver`, `returnToMenu`). `Game` puts them on an
 `EventBus` (`matchEvents`); listeners subscribe to everything or to one type. A listener that
 throws is reported in the debug overlay and the others still hear the event, so presentation can
 never stop the match.
@@ -193,8 +194,23 @@ the menus. It never changes the match.
 group it belongs to. The classic look draws its own `ClassicScene` and leaves out what it has no
 place for.
 
-**Planned, not there yet** (see the roadmap): modifiers and skills that hook into the simulation
-and add their layers (4.3), dialogue through Ink (8.1).
+**A skill** (docs/PROGRESSION.md). A class implementing `Skill` (`match/skills/Skill.ts`), its id
+in `SKILL_IDS` (and `IMPLANTS` if it runs on energy: its owner's meter then has a core) and its
+maker in `SKILLS` (`match/skills/SkillSet.ts`). It is built for the paddle whose participant
+lists it (`Participant.skills`) and sees the match through its `SkillHost`: the paddles, the
+balls, its owner's meter (`spend`), the ball's pace. Its hooks run inside the fixed step:
+`beforeStep`, `afterHit`, `timeScale` (how fast a paddle or the balls move this step; Reflex
+slows the world but its owner) and `onServe`. What changes the flight is the ball's own state,
+moved by `Physics` (`ball.spin`, which Arc sets), so `forecastArrival` and the AI see it too; a
+paddle's `perfectZoneScale` widens its perfect zone for a hit. It never changes the rules or the
+score, and it reports what the player should notice with `host.report`, a `skill` event the
+effects give its sound and burst. What lasts on court is drawn by layers (`SkillRenderer`): the
+spin's streaks, the slowed world's cast (`flow.timeWarp`), its label. For developers,
+`?skills=arc,reflex` gives the player those skills in every match against the CPU. A
+challenge's modifier (4.5) joins the same hooks.
+
+**Planned, not there yet** (see the roadmap): the AI reading curves and using skills on purpose
+(4.4), dialogue through Ink (8.1).
 
 ## Rules of thumb
 

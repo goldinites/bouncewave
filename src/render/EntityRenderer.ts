@@ -12,8 +12,10 @@ const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
 const PADDLE_GLOW = { BASE: 18, HOT: 48 } as const;
 
 // The Overdrive meter rides along the player's paddle, on its goal side: one segment per
-// perfect hit in the streak; once full they and the paddle's core pulse yellow
+// perfect hit in the streak; once full they and the paddle's core pulse yellow. Charges an
+// implants' core keeps after the streak broke are lit dimmer (ENERGY_ALPHA)
 const OVERDRIVE_METER = {
+  ENERGY_ALPHA: 0.45,
   GAP: 7, // px between the paddle and the meter
   SEGMENT: { WIDTH: 4, HEIGHT: 16, GAP: 5 },
   HALO: 3, // px of soft glow around a lit segment
@@ -109,15 +111,23 @@ export class EntityRenderer {
     paddle: Paddle,
     charge: number,
     time: number,
+    streak: number = charge,
   ): void {
-    const { SEGMENT, HALO, PULSE_SPEED } = OVERDRIVE_METER;
-    const isFull = charge >= OVERDRIVE.CHARGE;
+    const { SEGMENT, HALO, PULSE_SPEED, ENERGY_ALPHA } = OVERDRIVE_METER;
+    const isFull = streak >= OVERDRIVE.CHARGE;
     const pulse = isFull ? 0.5 + 0.5 * Math.sin(time * PULSE_SPEED) : 1;
     const color = isFull ? COLORS.YELLOW : paddle.color;
 
     ctx.save();
     this.meterSegments(paddle).forEach(({ x, y }, i) => {
       const isLit = i < charge;
+      if (isLit && i >= streak) {
+        // Energy only: no halo, no pulse
+        ctx.globalAlpha = ENERGY_ALPHA;
+        ctx.fillStyle = paddle.color;
+        ctx.fillRect(x, y, SEGMENT.WIDTH, SEGMENT.HEIGHT);
+        return;
+      }
 
       if (isLit) {
         // Halo as a wider faint block rather than shadowBlur

@@ -32,6 +32,8 @@ export interface TranslationSchema {
   ready: string;
   /** Shown instead of `ready` before the point that decides the match. */
   decider: string;
+  /** Over the paddle whose Reflex has slowed the world, like the court's other glitch labels. */
+  timeWarp: string;
   /** The PLAY menu's title. */
   mode: string;
   /** Every game mode's name, by mode. */
@@ -130,6 +132,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
+    timeWarp: 'REFLEX',
     mode: 'GAME MODE',
     modes: { story: 'STORY', challenges: 'CHALLENGE', quick: 'QUICK MATCH' },
     background: 'BACKGROUND',
@@ -225,6 +228,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     lose: 'GAME OVER',
     ready: 'GET READY',
     decider: 'MATCH POINT',
+    timeWarp: 'REFLEX',
     mode: 'РЕЖИМ ИГРЫ',
     modes: { story: 'СЮЖЕТ', challenges: 'ИСПЫТАНИЕ', quick: 'БЫСТРЫЙ МАТЧ' },
     background: 'ФОН',

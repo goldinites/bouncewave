@@ -5,7 +5,8 @@ import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
 import { RenderFrame, Scene, SceneState } from '@/render/scene';
-import { clamp } from '@/shared/math';
+import { SkillRenderer } from '@/render/SkillRenderer';
+import { approach, clamp } from '@/shared/math';
 
 // Lightweight scene dimming behind the menus and the pause
 const MENU_DIM_RGB = '8, 2, 26';
@@ -13,6 +14,7 @@ const MENU_DIM_RGB = '8, 2, 26';
 const VIGNETTE = { RGB: '4, 0, 14', MAX_ALPHA: 0.6 } as const;
 const SHAKE_FROM = 0.2; // px; a weaker shake isn't worth moving the court for
 const FLASH_ALPHA = 0.25; // of a full flash
+const TIME_WARP_FADE = 14; // 1/s the slowed world's cast comes and goes at
 
 /**
  * Where a layer is drawn: `backdrop` under the camera's zoom; `court` under the zoom and the
@@ -117,6 +119,20 @@ function neonLayers(
 
   const fillScreen = (c: CanvasRenderingContext2D) => c.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
 
+  // The slowed world (Reflex): its cast eases in and out, and its label stays up a while after
+  // it began, over the paddle that slowed it. Followed once a frame by the first of its layers
+  const warp = { level: 0, age: Infinity, paddleIndex: 0, wasOn: false };
+  const followWarp = ({ court }: RenderFrame, { realDt }: SceneState) => {
+    const isOn = court.timeWarp !== null;
+    if (court.timeWarp) {
+      if (!warp.wasOn) warp.age = 0;
+      warp.paddleIndex = court.timeWarp.paddleIndex;
+    }
+    warp.wasOn = isOn;
+    warp.age += realDt;
+    warp.level = approach(warp.level, isOn ? 1 : 0, TIME_WARP_FADE, realDt);
+  };
+
   return [
     {
       id: 'backdrop',
@@ -160,12 +176,23 @@ function neonLayers(
       render: (c, { court, hud: view, drama }, state) => {
         court.paddles.forEach((paddle, i) => {
           const charge = court.isDemo ? null : (view.overdriveCharges[i] ?? null);
-          const pulse = charge === null ? 0 : EntityRenderer.overdrivePulse(charge, court.time);
+          const streak = view.overdriveStreaks[i] ?? charge ?? 0;
+          const pulse = charge === null ? 0 : EntityRenderer.overdrivePulse(streak, court.time);
           EntityRenderer.renderPaddle(c, paddle, drama.paddleGlow[i], pulse);
           if (charge !== null && !state.finalSign) {
-            EntityRenderer.renderOverdriveMeter(c, paddle, charge, court.time);
+            EntityRenderer.renderOverdriveMeter(c, paddle, charge, court.time, streak);
           }
         });
+      },
+    },
+    {
+      // A slowed world's balls split into chromatic ghosts; a still picture keeps only its cast
+      id: 'timeWarpGhosts',
+      space: 'court',
+      render: (c, frame, state) => {
+        followWarp(frame, state);
+        if (warp.level < 0.01 || isMotionReduced()) return;
+        for (const ball of frame.court.balls) SkillRenderer.renderGhosts(c, ball, warp.level);
       },
     },
     {
@@ -180,11 +207,29 @@ function neonLayers(
       },
     },
     {
+      // A spinning ball (Arc) shows its spin from the first frames of the curve
+      id: 'ballSpin',
+      space: 'court',
+      render: (c, { court }) => {
+        if (court.serveTime > 0) return;
+        for (const ball of court.balls) SkillRenderer.renderSpin(c, ball, court.time);
+      },
+    },
+    {
       id: 'particles',
       space: 'court',
       render: (c, { particles }) => {
         EntityRenderer.renderParticles(c, particles.particles);
         EntityRenderer.renderShockwaves(c, particles.rings);
+      },
+    },
+    {
+      id: 'timeWarpLabel',
+      space: 'court',
+      render: (c, { court, hud: view, isRotated }, state) => {
+        const paddle = court.paddles[warp.paddleIndex];
+        if (court.isDemo || state.finalSign || !paddle) return;
+        SkillRenderer.renderLabel(c, view.timeWarpLabel, paddle, warp.age, isRotated);
       },
     },
     {
@@ -194,6 +239,13 @@ function neonLayers(
         if (state.finalSign) {
           FinalScoreRenderer.render(c, state.finalSign, state.finalSignAge, isRotated);
         }
+      },
+    },
+    {
+      id: 'timeWarp',
+      space: 'screen',
+      render: (c) => {
+        if (warp.level >= 0.01) SkillRenderer.renderTint(c, warp.level);
       },
     },
     {

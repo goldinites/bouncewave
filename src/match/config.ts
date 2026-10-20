@@ -19,6 +19,8 @@ export const PADDLE = {
   /** How close to the walls a paddle may get. */
   TOP_MARGIN: 20,
   BOTTOM_MARGIN: 20,
+  /** px/s under keyboard control, for a paddle of standard speed: a person's top speed. */
+  KEYBOARD_SPEED: 500,
 } as const;
 
 export const BALL = {

@@ -17,6 +17,7 @@ import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
+import { isSkillId, SkillId } from '@/match/skills/Skill';
 import { challengeState, isEveryChallengePassed, markPassed } from '@/profile/ChallengeProgress';
 import { ProfileStore } from '@/profile/ProfileStore';
 import { getEmptyStatistics } from '@/profile/Statistics';
@@ -75,6 +76,11 @@ export class Game {
   private isRestarting = false;
   /** For developers: the challenge ?challenge= makes every quick match an attempt at. */
   private pinnedChallenge: ChallengeId | null = null;
+  /**
+   * For developers: the skills ?skills= gives the player in every match against the CPU, to
+   * playtest the prototypes (4.3) before the progression is built around them.
+   */
+  private pinnedSkills: readonly SkillId[] = [];
   /** How the last attempt at a challenge went, for the debug overlay. */
   private lastVerdict: ChallengeVerdict | null = null;
   private readonly i18n: I18nManager;
@@ -142,6 +148,9 @@ export class Game {
     // the debug overlay shows how the last attempt went
     const challenge = new URLSearchParams(window.location.search).get('challenge');
     if (isChallengeId(challenge)) this.pinnedChallenge = challenge;
+    // ?skills=arc,reflex gives the player those skills (match/skills/Skill.ts)
+    const skills = new URLSearchParams(window.location.search).get('skills') ?? '';
+    this.pinnedSkills = skills.split(',').filter(isSkillId);
     this.backgroundMenu = new BackgroundMenu(
       (scene) => this.pickBackground(scene),
       this.renderer.scenes,
@@ -381,7 +390,7 @@ export class Game {
       // A challenge is set up in advance: its own rules, paddles, level and backdrop
       const { rules, paddles, difficulty, scene } = CHALLENGES[this.challenge];
       this.matchScene = scene;
-      this.flow.startMatch(rules, this.flow.playerVsCpu(paddles), difficulty);
+      this.flow.startMatch(rules, this.flow.playerVsCpu(paddles, this.playerSkills), difficulty);
     } else if (this.isTwoPlayers) {
       // No CPU to set a level for: the ball plays at the default one's pace
       this.matchScene = null;
@@ -392,10 +401,18 @@ export class Game {
       );
     } else {
       this.matchScene = null;
-      this.flow.startMatch(quickMatchRules(this.settings.current.matchPoints));
+      this.flow.startMatch(
+        quickMatchRules(this.settings.current.matchPoints),
+        this.flow.playerVsCpu(undefined, this.playerSkills),
+      );
     }
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
+  }
+
+  /** The skills the player brings to a match against the CPU: a developer's, in the neon look. */
+  private get playerSkills(): readonly SkillId[] {
+    return this.look === 'classic' ? [] : this.pinnedSkills;
   }
 
   /** The match on court again from 0:0, on the backdrop it was being played on. */
@@ -540,7 +557,8 @@ export class Game {
     const attempt = verdict
       ? ` · ${verdict.challenge} ${verdict.isPassed ? 'passed' : 'failed'} ${verdict.progress}/${verdict.target}`
       : '';
-    this.fpsMeter.setDetail(`res ×${this.renderer.pixelRatio.toFixed(2)}${attempt}`);
+    const skills = this.pinnedSkills.length > 0 ? ` · skills ${this.pinnedSkills.join(',')}` : '';
+    this.fpsMeter.setDetail(`res ×${this.renderer.pixelRatio.toFixed(2)}${attempt}${skills}`);
     this.backgroundMenu.setCurrent(this.renderer.scene);
   }
 
@@ -627,6 +645,7 @@ export class Game {
         time: Math.max(0, this.flow.time - this.simulation.lag),
         serveTime: this.flow.serveTime,
         rally: this.flow.rally,
+        timeWarp: this.flow.timeWarp,
       },
       hud: {
         readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
@@ -634,6 +653,8 @@ export class Game {
         isConditionOnCourt: this.isConditionOnCourt,
         sideLabels: this.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
         overdriveCharges: this.flow.overdriveCharges,
+        overdriveStreaks: this.flow.overdriveStreaks,
+        timeWarpLabel: this.i18n.t('timeWarp'),
       },
       drama: {
         climax: this.effects.climaxLevel,

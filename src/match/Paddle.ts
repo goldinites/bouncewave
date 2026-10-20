@@ -13,6 +13,11 @@ export class Paddle {
   public readonly color: string;
   /** Smoothed vertical speed in px/s (positive = moving down). */
   public velocity: number = 0;
+  /**
+   * Multiplies its perfect zone for now: a skill may widen it for a hit (Reflex's counter-pulse).
+   * 1 the rest of the time; the skill that changes it puts it back.
+   */
+  public perfectZoneScale = 1;
   /** The side of the court it plays on; its points are that side's. */
   public readonly side: Side;
   private _spec: PaddleSpec;

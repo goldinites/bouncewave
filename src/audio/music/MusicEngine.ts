@@ -111,6 +111,11 @@ export class MusicEngine {
     this.isDropPending = true;
   }
 
+  /** The music sags like a held tape for `duration` seconds, then catches up (Reflex). */
+  public holdTape(duration: number): void {
+    this.graph?.holdTape(duration);
+  }
+
   /** Dip the music so the victory sting sits on top; stays down until `recover`. */
   public duck(): void {
     this.graph?.duck();

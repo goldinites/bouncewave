@@ -119,6 +119,19 @@ export class SoundEffects {
     this.beep(freq * 2, 0.4, 'sine', 0.05);
   }
 
+  /** A ball sent off spinning (Arc): a whistle, higher the harder it curves, `strength` in [0, 1]. */
+  public playSpin(strength: number): void {
+    const freq = 900 + 900 * strength;
+    this.beep(freq, 0.34, 'sine', 0.025 + 0.025 * strength, 1.35);
+  }
+
+  /** The world slows down (Reflex): a glitch, then a falling drone. */
+  public playTimeWarp(): void {
+    this.beep(1320, 0.06, 'square', 0.035, 0.5);
+    this.beep(660, 0.09, 'square', 0.03, 1.8);
+    this.beep(196, 0.6, 'sawtooth', 0.04, 0.6);
+  }
+
   /** The Overdrive meter just filled: a bright two-tone chime. */
   public playOverdriveReady(): void {
     this.beep(1046.5, 0.16, 'triangle', 0.05, 1.5);
