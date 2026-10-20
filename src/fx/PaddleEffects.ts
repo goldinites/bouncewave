@@ -99,12 +99,31 @@ export class PaddleEffects {
     particles: ParticleSystem,
     rally: number,
   ): void {
+    this.fit(paddles.length);
     paddles.forEach((paddle, i) => {
       this._glow[i] = Math.max(0, this._glow[i] - dt * GLOW_DECAY);
       this._spent[i] = Math.max(0, this._spent[i] - dt * SPENT_DECAY);
       this.springBack(i, dt);
       this.emitSparks(dt, paddle, particles, rally);
     });
+  }
+
+  /**
+   * Keeps a value for every paddle on court: a match may bring one more (an opponent's second),
+   * which starts unlit and upright, and takes it away again.
+   */
+  private fit(count: number): void {
+    for (const values of [
+      this._glow,
+      this._spent,
+      this._tilt,
+      this.tiltSpeed,
+      this.lean,
+      this.leanFor,
+    ]) {
+      while (values.length < count) values.push(0);
+      values.length = count;
+    }
   }
 
   /**

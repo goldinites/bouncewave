@@ -42,6 +42,8 @@ export function forecastArrival(
     time += FORECAST.STEP;
     bounces += events.filter((event) => event.type === 'wallBounce').length;
     if (path && Math.sign(x - copy.x) === direction) path.push({ x: copy.x, y: copy.y });
+    // A post sent it back: it won't get there on this flight
+    if (Math.sign(copy.vx) !== direction) return null;
 
     if (Math.sign(x - copy.x) !== direction) {
       // Between the step's two ends, as far as the line is along it

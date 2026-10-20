@@ -1,4 +1,5 @@
 import { WINNING_SCORE } from '@/match/config';
+import { ModifierId } from '@/match/modifiers/Modifier';
 import { Scores } from '@/match/side';
 
 /**
@@ -50,6 +51,8 @@ export interface MatchRules {
    * the first one out wins the point, which ends it for all of them.
    */
   readonly balls: number;
+  /** What changes the match beyond these rules: wind, darkness and the rest (docs/CHALLENGES.md). */
+  readonly modifiers: readonly ModifierId[];
 }
 
 /**
@@ -76,6 +79,7 @@ export const STANDARD_RULES: MatchRules = {
   overdrive: true,
   cpuOverdrive: false,
   balls: 1,
+  modifiers: [],
 };
 
 /** The same winning score for both sides. */

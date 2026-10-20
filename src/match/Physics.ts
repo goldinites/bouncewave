@@ -1,12 +1,13 @@
 import { Ball } from '@/match/Ball';
 import { COURT, BALL } from '@/match/config';
+import { CourtConditions } from '@/match/court';
 import { DifficultyConfig } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
 import { Side } from '@/match/side';
 import { clamp } from '@/shared/math';
 
 // Hit offset is normalized to [-1, 1] from paddle center to edge
-const BOUNCE = {
+export const BOUNCE = {
   MAX_ANGLE: 1.1, // radians, reached at the very edge
   CURVE: 1.6, // >1 keeps mid hits flatter and sharpens edge hits
 } as const;
@@ -31,6 +32,7 @@ export const PERFECT_HIT = {
 
 /** Something that happened to the ball during a physics step, in the order it happened. */
 export type PhysicsEvent =
+  /** Off a wall, or off one of the court's posts (Bumpers). */
   | { type: 'wallBounce'; x: number; y: number }
   | {
       type: 'paddleHit';
@@ -68,11 +70,16 @@ export class Physics {
     const subSteps = Math.ceil((ball.speed * speedMultiplier * dt) / 10);
     const subDt = (dt / subSteps) * speedMultiplier;
 
+    const { court } = ball;
     for (let step = 0; step < subSteps; step++) {
       // A spinning ball's path turns with time, not with distance: a boost doesn't bend it more
       if (ball.spin !== 0) Physics.turn(ball, dt / subSteps);
+      if (court) Physics.applyCourt(ball, court, difficultyConfig, dt / subSteps);
       ball.x += ball.vx * subDt;
       ball.y += ball.vy * subDt;
+      if (court && court.bumpers.length > 0) {
+        for (const event of Physics.bumpOff(ball, court)) events.push(event);
+      }
 
       const topBoundary = COURT.TOP_WALL + ball.radius;
       const bottomBoundary = COURT.HEIGHT - COURT.BOTTOM_WALL - ball.radius;
@@ -167,6 +174,66 @@ export class Physics {
       }
     }
 
+    return events;
+  }
+
+  /**
+   * What the court does to the ball over `dt` seconds: the wind pushes it up or down, and Turbo
+   * speeds it up, to the level's top and the share past it the rally has earned.
+   */
+  private static applyCourt(
+    ball: Ball,
+    court: CourtConditions,
+    config: DifficultyConfig,
+    dt: number,
+  ): void {
+    if (court.wind !== 0) {
+      // It pushes across the flight, leaving the speed across the court as it is: into the wind
+      // the ball loses its way up or down, with it the ball runs steeper, never past a paddle's
+      // steepest
+      const steepest = Math.abs(ball.vx) * Math.tan(BOUNCE.MAX_ANGLE);
+      ball.vy = clamp(ball.vy + court.wind * dt, -steepest, steepest);
+    }
+    const turboLimit = config.maxSpeed * (1 + court.turboOver);
+    if (court.turbo !== 0 && ball.speed < turboLimit) {
+      const speed = Math.min(ball.speed + court.turbo * dt, turboLimit);
+      ball.vx *= speed / ball.speed;
+      ball.vy *= speed / ball.speed;
+      ball.speed = speed;
+    }
+  }
+
+  /**
+   * Bounces the ball off any of the court's posts it has run into: mirrored about the post's
+   * surface, kept off it, and never sent off steeper than a paddle could (so it can't stall
+   * along a wall). A post takes the spin off, as a wall does.
+   */
+  private static bumpOff(ball: Ball, court: CourtConditions): PhysicsEvent[] {
+    const events: PhysicsEvent[] = [];
+    for (const bumper of court.bumpers) {
+      const dx = ball.x - bumper.x;
+      const dy = ball.y - bumper.y;
+      const distance = Math.hypot(dx, dy);
+      const reach = bumper.radius + ball.radius;
+      if (distance >= reach || distance === 0) continue;
+      const nx = dx / distance;
+      const ny = dy / distance;
+      const along = ball.vx * nx + ball.vy * ny;
+      if (along >= 0) continue; // already leaving it
+
+      const speed = Math.hypot(ball.vx, ball.vy);
+      const vx = ball.vx - 2 * along * nx;
+      const vy = ball.vy - 2 * along * ny;
+      const angle = Math.min(Math.atan2(Math.abs(vy), Math.abs(vx)), BOUNCE.MAX_ANGLE);
+      const xSign = vx === 0 ? Math.sign(nx) || 1 : Math.sign(vx);
+      ball.vx = xSign * Math.cos(angle) * speed;
+      ball.vy = Math.sign(vy) * Math.sin(angle) * speed;
+      ball.x = bumper.x + nx * reach;
+      ball.y = bumper.y + ny * reach;
+      ball.spin = 0;
+      ball.spinDelay = 0;
+      events.push({ type: 'wallBounce', x: ball.x, y: ball.y });
+    }
     return events;
   }
 

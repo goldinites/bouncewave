@@ -1,4 +1,5 @@
 import { COURT, BALL } from '@/match/config';
+import { CourtConditions } from '@/match/court';
 import { getRallyHeat, getSpeedHeat } from '@/match/heat';
 import { approach, lerp } from '@/shared/math';
 
@@ -34,6 +35,8 @@ export class Ball {
   public spinDecay = 0;
   /** Seconds more it flies straight before its spin starts to turn it (a late break). */
   public spinDelay = 0;
+  /** The court it flies over, with whatever wind, turbo or posts the match's modifiers put there. */
+  public court: CourtConditions | null = null;
 
   /** Where the ball stood when the current simulation step began. */
   private previousX = this.x;
@@ -110,6 +113,7 @@ export class Ball {
     copy.spin = this.spin;
     copy.spinDecay = this.spinDecay;
     copy.spinDelay = this.spinDelay;
+    copy.court = this.court;
     copy.boostAmount = this.boostAmount;
     copy.boostDuration = this.boostDuration;
     copy.boostTimeLeft = this.boostTimeLeft;

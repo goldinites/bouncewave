@@ -36,7 +36,8 @@ backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts
 `?challenge=<id>` makes every match that challenge (ids in `src/match/challenges.ts`), its last
 verdict shown in the debug overlay; `?skills=arc,analyzer,reflex` gives the player those skills in every
 match against the CPU, `?cpuSkills=` the CPU (ids in `src/match/skills/Skill.ts`); the debug
-overlay has switches for both and counts their uses.
+overlay has switches for both and counts their uses; `?mods=wind,darkness` plays quick matches with
+those modifiers (ids in `src/match/modifiers/Modifier.ts`), also switched in the debug overlay.
 
 ## Architecture
 

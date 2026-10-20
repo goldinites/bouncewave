@@ -16,6 +16,20 @@ export class Paddle {
   /** Smoothed vertical speed in px/s (positive = moving down). */
   public velocity: number = 0;
   /**
+   * How quickly it takes up the speed it is steered at, 1/s; Infinity (the usual) at once. A
+   * slippery court (Ice) gives it a finite one, and a friction: it slides into motion
+   * and rolls on out of it.
+   */
+  private _grip = Infinity;
+  /** How fast it sheds speed while it slides, px/s². */
+  private friction = Infinity;
+  /** While it slides, 1/s of the way to its aim it is steered at. */
+  private pull = 0;
+  /** Its speed while it slides, px/s (only with a finite grip). */
+  private slide = 0;
+  /** The stretch of the court it may cover, top to bottom: the whole court unless confined. */
+  private zone: { top: number; bottom: number } = { top: 0, bottom: COURT.HEIGHT };
+  /**
    * Seconds its current motion has lasted: since it last stood still or turned around. A swing
    * at the ball is a short one; a chase after it, a long one.
    */
@@ -62,16 +76,47 @@ export class Paddle {
   public useSpec(spec: PaddleSpec): void {
     if (this.side === 1) this.x += this._spec.width - spec.width;
     this._spec = spec;
-    this.minY = PADDLE.TOP_MARGIN + spec.height / 2;
-    this.maxY = COURT.HEIGHT - PADDLE.BOTTOM_MARGIN - spec.height / 2;
+    const { top, bottom } = this.zone;
+    this.minY = Math.max(PADDLE.TOP_MARGIN, top) + spec.height / 2;
+    this.maxY = Math.min(COURT.HEIGHT - PADDLE.BOTTOM_MARGIN, bottom) - spec.height / 2;
     this.setTargetY(this.targetY);
     this.y = clamp(this.y, this.minY, this.maxY);
   }
 
+  /** How quickly it takes up the speed it is steered at, 1/s (Infinity: at once). */
+  public get grip(): number {
+    return this._grip;
+  }
+
+  /**
+   * Makes it slide (or, with an Infinity grip, not): steered at `pull` (1/s) of the way to its
+   * aim, it takes up that speed over ~1/`grip` seconds, and sheds speed at `friction` px/s².
+   */
+  public slip(pull: number, grip: number, friction: number): void {
+    this.pull = pull;
+    this._grip = grip;
+    this.friction = friction;
+  }
+
+  /**
+   * Keeps it to a stretch of the court, from `top` to `bottom` (one of two paddles on a side,
+   * each holding its half); the whole court when left out.
+   */
+  public confine(top: number = 0, bottom: number = COURT.HEIGHT): void {
+    this.zone = { top, bottom };
+    this.useSpec(this._spec);
+  }
+
+  /** The middle of the stretch it covers, where it stands to begin with. */
+  private get home(): number {
+    return clamp((this.zone.top + this.zone.bottom) / 2, this.minY, this.maxY);
+  }
+
   public resetPosition(): void {
-    this.y = COURT.HEIGHT / 2;
-    this.targetY = COURT.HEIGHT / 2;
+    this.y = this.home;
+    this.targetY = this.home;
     this.velocity = 0;
+    this.slide = 0;
     this.motionTime = 0;
     // Back at the center in one jump: nothing to draw in between
     this.rememberPosition();
@@ -96,7 +141,30 @@ export class Paddle {
   /** Moves toward the target and tracks its speed. */
   public update(dt: number): void {
     const previousY = this.y;
-    this.y = approach(this.y, this.targetY, PADDLE_SMOOTH_FACTOR * this.spec.speed, dt);
+    const rate = PADDLE_SMOOTH_FACTOR * this.spec.speed;
+    if (Number.isFinite(this._grip)) {
+      // It slides: the speed it is steered at is taken up over time, and kept a while after
+      // It picks up speed as steered, but sheds it only by friction, as on ice: the faster it
+      // went, the further it rolls on once it is meant to slow down or turn
+      const steered = (this.targetY - this.y) * this.pull;
+      const isSpeedingUp =
+        this.slide === 0 ||
+        (Math.sign(steered) === Math.sign(this.slide) && Math.abs(steered) >= Math.abs(this.slide));
+      if (isSpeedingUp) {
+        this.slide = approach(this.slide, steered, this._grip, dt);
+      } else {
+        const shed = this.friction * dt;
+        this.slide = Math.abs(this.slide) > shed ? this.slide - Math.sign(this.slide) * shed : 0;
+      }
+      this.y += this.slide * dt;
+      if (this.y < this.minY || this.y > this.maxY) {
+        this.y = clamp(this.y, this.minY, this.maxY);
+        this.slide = 0;
+      }
+    } else {
+      this.y = approach(this.y, this.targetY, rate, dt);
+      this.slide = 0;
+    }
 
     // Low-pass the measured speed so jerky touch input doesn't produce spikes
     if (dt > 0) {

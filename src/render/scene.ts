@@ -1,4 +1,6 @@
 import { Ball } from '@/match/Ball';
+import { CourtConditions } from '@/match/court';
+import { ModifierId } from '@/match/modifiers/Modifier';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
 import { Scores } from '@/match/side';
@@ -29,6 +31,9 @@ export interface CourtView {
   timeWarp: TimeWarp | null;
   /** The shots read ahead for their paddles (Analyzer): their flights and arrivals. */
   shotReads: readonly ShotRead[];
+  /** The match's modifiers (none in the demo), and what they make the court do. */
+  modifiers: readonly ModifierId[];
+  conditions: CourtConditions;
 }
 
 /** What the HUD writes over the court. */
