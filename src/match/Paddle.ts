@@ -3,8 +3,10 @@ import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Side } from '@/match/side';
 import { approach, clamp, lerp } from '@/shared/math';
 
-const PADDLE_SMOOTH_FACTOR = 27.4; // 1/s toward the target, for a paddle of standard speed
+export const PADDLE_SMOOTH_FACTOR = 27.4; // 1/s toward the target, for a paddle of standard speed
 const PADDLE_VELOCITY_SMOOTHING = 13.4; // 1/s, ~75 ms averaging window
+// Below this speed the paddle counts as standing still: its next motion is a new one
+const STILL_SPEED = 60; // px/s
 
 export class Paddle {
   public x: number;
@@ -13,6 +15,11 @@ export class Paddle {
   public readonly color: string;
   /** Smoothed vertical speed in px/s (positive = moving down). */
   public velocity: number = 0;
+  /**
+   * Seconds its current motion has lasted: since it last stood still or turned around. A swing
+   * at the ball is a short one; a chase after it, a long one.
+   */
+  public motionTime = 0;
   /**
    * Multiplies its perfect zone for now: a skill may widen it for a hit (Reflex's counter-pulse).
    * 1 the rest of the time; the skill that changes it puts it back.
@@ -65,6 +72,7 @@ export class Paddle {
     this.y = COURT.HEIGHT / 2;
     this.targetY = COURT.HEIGHT / 2;
     this.velocity = 0;
+    this.motionTime = 0;
     // Back at the center in one jump: nothing to draw in between
     this.rememberPosition();
     this.interpolate(1);
@@ -93,7 +101,11 @@ export class Paddle {
     // Low-pass the measured speed so jerky touch input doesn't produce spikes
     if (dt > 0) {
       const rawVelocity = (this.y - previousY) / dt;
+      const before = this.velocity;
       this.velocity = approach(this.velocity, rawVelocity, PADDLE_VELOCITY_SMOOTHING, dt);
+      const isNewMotion =
+        Math.abs(this.velocity) < STILL_SPEED || Math.sign(this.velocity) !== Math.sign(before);
+      this.motionTime = isNewMotion ? 0 : this.motionTime + dt;
     }
   }
 }

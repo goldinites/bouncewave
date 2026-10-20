@@ -41,6 +41,11 @@ export interface MatchRules {
   /** Whether the player's perfect hits charge Overdrive, and its meter is shown. */
   readonly overdrive: boolean;
   /**
+   * Whether a CPU charges Overdrive too, at a level that does (`AiSkill.overdrive`: Hard and
+   * Insane), its meter shown on its paddle. Off in the challenges, set without it.
+   */
+  readonly cpuOverdrive: boolean;
+  /**
    * Balls in play at once. Every serve sends them off alternately toward one side and the other;
    * the first one out wins the point, which ends it for all of them.
    */
@@ -69,6 +74,7 @@ export const STANDARD_RULES: MatchRules = {
   rallyGoal: null,
   cpuRamp: null,
   overdrive: true,
+  cpuOverdrive: false,
   balls: 1,
 };
 

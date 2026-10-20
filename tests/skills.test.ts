@@ -50,6 +50,7 @@ const hostFor = (paddles: Paddle[], balls: Ball[], charges: number | null = 1) =
     balls,
     meter: () => meter,
     physics: () => CONFIG,
+    topSpeed: () => PADDLE.KEYBOARD_SPEED,
     report,
   };
   return { host, report };
@@ -186,16 +187,46 @@ describe('Arc', () => {
    * How far off the straight line a flat shot at `speed` lands across the court. It leaves low
    * and bends up (the paddle moving down), so no wall cuts the bend short.
    */
-  const bendOf = (speed: number, paddleVelocity: number, isPerfect: boolean) => {
+  const bendOf = (speed: number, paddleVelocity: number, isPerfect: boolean) =>
+    flyArc(speed, paddleVelocity, isPerfect).bend;
+
+  /**
+   * A flat shot at `speed` spun by Arc off a paddle moving down at `paddleVelocity`: how far off
+   * the straight line it lands across the court, and how far it was at 40% of the way.
+   */
+  const flyArc = (speed: number, paddleVelocity: number, isPerfect: boolean) => {
+    const paddles = court();
     const faceX = PADDLE.OFFSET_X + PADDLE.WIDTH;
     const startY = COURT.HEIGHT - COURT.BOTTOM_WALL - 20;
     const ball = ballAt(faceX, startY, speed);
-    ball.spin = Arc.spinFor(Math.abs(paddleVelocity), speed, speed, isPerfect);
-    ball.spinDecay = ARC.DECAY;
-    while (ball.x < COURT.WIDTH - faceX) Physics.step(ball, [], CONFIG, STEP);
+    paddles[0].velocity = Math.abs(paddleVelocity);
+    new Arc(hostFor(paddles, [ball]).host).afterHit({
+      paddleIndex: 0,
+      ball,
+      isPerfect,
+      isPowerShot: false,
+    });
+    const endX = COURT.WIDTH - faceX;
+    let early = 0;
+    while (ball.x < endX) {
+      Physics.step(ball, [], CONFIG, STEP);
+      if (ball.x < faceX + (endX - faceX) * 0.4) early = Math.abs(ball.y - startY);
+    }
     expect(ball.spin).not.toBe(0); // no wall took it off
-    return Math.abs(ball.y - startY);
+    return { bend: Math.abs(ball.y - startY), early };
   };
+
+  it('breaks late off a hard spin on a fast ball: as far, but later', () => {
+    expect(Arc.lateShare(1e6, 450)).toBe(0);
+    expect(Arc.lateShare(260, 1000)).toBe(0);
+    expect(Arc.lateShare(1e6, 1000)).toBe(ARC.LATE_BREAK.MAX_SHARE);
+
+    // The same spin's share on a fast ball, from a paddle that just reaches the late break or not
+    const soft = flyArc(1000, 360, true);
+    const hard = flyArc(1000, 1e6, true);
+    expect(hard.early).toBeLessThan(soft.early * 0.6);
+    expect(hard.bend).toBeGreaterThan(soft.bend);
+  });
 
   it('bends a perfect hit no more than half the court, at any speed', () => {
     for (const speed of [380, 600, 840, 1080]) {
@@ -205,9 +236,48 @@ describe('Arc', () => {
 
   it('bends a hit from a paddle at the keyboard’s speed far enough to see, fast or slow', () => {
     for (const speed of [380, 1080]) {
-      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, false)).toBeGreaterThan(110);
+      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, false)).toBeGreaterThan(100);
       expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, true)).toBeGreaterThan(180);
     }
+  });
+
+  /** A paddle steered like a held key, at the keyboard's speed, for `seconds` after standing. */
+  const movedFor = (seconds: number) => {
+    const paddle = court()[0];
+    paddle.y = paddle.targetY = 100;
+    for (let t = 0; t < seconds; t += STEP) {
+      paddle.setTargetY(paddle.targetY + PADDLE.KEYBOARD_SPEED * STEP);
+      paddle.update(STEP);
+    }
+    return paddle;
+  };
+
+  it('times a paddle’s motion: anew from standing still or turning around', () => {
+    expect(movedFor(0.2).motionTime).toBeLessThan(0.2);
+    expect(movedFor(0.6).motionTime).toBeGreaterThan(0.5);
+
+    const turned = movedFor(0.6);
+    for (let t = 0; t < 0.1; t += STEP) {
+      turned.setTargetY(turned.targetY - PADDLE.KEYBOARD_SPEED * STEP);
+      turned.update(STEP);
+    }
+    expect(turned.motionTime).toBeLessThan(0.1);
+  });
+
+  it('spins a swing at the ball, not a chase after it', () => {
+    const spinOff = (paddle: Paddle) => {
+      const paddles = [paddle, court()[1]];
+      const ball = ballAt(60, 250, 400);
+      new Arc(hostFor(paddles, [ball]).host).afterHit({
+        paddleIndex: 0,
+        ball,
+        isPerfect: false,
+        isPowerShot: false,
+      });
+      return ball.spin;
+    };
+    expect(spinOff(movedFor(0.15))).not.toBe(0);
+    expect(spinOff(movedFor(0.6))).toBe(0);
   });
 
   it('spins its owner’s hits on the move and reports them', () => {

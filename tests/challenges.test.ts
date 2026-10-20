@@ -172,7 +172,8 @@ describe('the match clock', () => {
 
   it('makes a level score the player’s loss', () => {
     const { flow, scoreFor, finale } = setup();
-    flow.startMatch({ ...ONE_MINUTE, timeLimit: 10 });
+    // Running out while the next serve waits, 1:1 whatever the CPU would do in a rally
+    flow.startMatch({ ...ONE_MINUTE, timeLimit: 3.5 });
     scoreFor(0);
     scoreFor(1);
     while (flow.phase !== 'finale') flow.update(0.1);

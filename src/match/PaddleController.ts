@@ -1,11 +1,13 @@
 import { AiController, ShotThreat, SHOT_THREAT } from '@/match/AiController';
 import { AiForm, skillAt } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
+import { PADDLE } from '@/match/config';
 import { AiSkill, DEMO_AI_SKILL, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
 import { cpuRank } from '@/match/ramp';
 import { isDecidingPoint, MatchRules } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
+import { SkillId, SkillUse } from '@/match/skills/Skill';
 
 /** Anything that can steer the player's paddle (keyboard, pointer, touch). */
 export interface PlayerInput {
@@ -24,8 +26,22 @@ export interface PaddleController {
    * @param scores the score as it now stands
    */
   onServe(paddle: Paddle, scores: Scores, rules: MatchRules): void;
-  /** A shot is on its way to `paddle`: the serve, or a hit by the other side. */
-  onIncomingShot(paddle: Paddle, threat: ShotThreat): void;
+  /**
+   * A shot is on its way to `paddle`: the serve, or a hit by the other side.
+   * @param ball the ball it is on
+   */
+  onIncomingShot(paddle: Paddle, threat: ShotThreat, ball: Ball): void;
+  /** One of `paddle`'s own skills has just done something (match/skills/). */
+  onSkillUse?(paddle: Paddle, use: SkillUse): void;
+  /**
+   * Whether it charges Overdrive on its own account, beyond its participant's say (a CPU at a
+   * level that does, where the rules let it).
+   */
+  readonly chargesOverdrive?: boolean;
+  /** px/s it can move `paddle` at, at most: what a skill takes for its owner's own speed. */
+  topSpeed(paddle: Paddle): number;
+  /** The skills its paddle has for the match about to be played, so it can play them. */
+  useSkills?(skills: readonly SkillId[]): void;
   /** A point of a real match was won by the side `scorer`. */
   onPoint(paddle: Paddle, scorer: Side): void;
   /** Forgets everything it has learnt (back to the menu). */
@@ -42,6 +58,11 @@ export class HumanController implements PaddleController {
 
   public steer(paddle: Paddle, _ball: Ball, _opponent: Paddle, dt: number): void {
     this.input.pollPlayerMovement(paddle, dt);
+  }
+
+  /** A person's top speed: the keyboard's (a pointer can be quicker, a hand rarely is). */
+  public topSpeed(paddle: Paddle): number {
+    return PADDLE.KEYBOARD_SPEED * paddle.spec.speed;
   }
 
   public onServe(): void {}
@@ -82,6 +103,24 @@ export class AiPaddleController implements PaddleController {
     this.ai.update(paddle, ball, this._skill, dt, opponent);
   }
 
+  public topSpeed(paddle: Paddle): number {
+    return this._skill.speed * paddle.spec.speed;
+  }
+
+  /** A match's CPU at a level that charges Overdrive; never the demo's. */
+  public get chargesOverdrive(): boolean {
+    return this.form !== null && this._skill.overdrive;
+  }
+
+  public useSkills(skills: readonly SkillId[]): void {
+    this.ai.usesArc = skills.includes('arc');
+  }
+
+  public onSkillUse(_paddle: Paddle, use: SkillUse): void {
+    // Its Analyzer has read the shot: nothing drawn on court for it, only a sharper read
+    if (use.skill === 'analyzer') this.ai.sharpen();
+  }
+
   public onServe(paddle: Paddle, scores: Scores, rules: MatchRules): void {
     if (!this.form || !this.getDifficulty) {
       this._skill = DEMO_AI_SKILL;
@@ -105,8 +144,12 @@ export class AiPaddleController implements PaddleController {
     this._skill = this.form.skillFor(level);
   }
 
-  public onIncomingShot(paddle: Paddle, threat: ShotThreat = SHOT_THREAT.NORMAL): void {
-    this.ai.readShot(paddle, this._skill, threat);
+  public onIncomingShot(
+    paddle: Paddle,
+    threat: ShotThreat = SHOT_THREAT.NORMAL,
+    ball?: Ball,
+  ): void {
+    this.ai.readShot(paddle, this._skill, threat, ball ?? null);
   }
 
   public onPoint(paddle: Paddle, scorer: Side): void {

@@ -1,7 +1,8 @@
 import { Ball } from '@/match/Ball';
 import { COURT } from '@/match/config';
 import { AiSkill } from '@/match/difficulty';
-import { Paddle } from '@/match/Paddle';
+import { Forecast, forecastArrival } from '@/match/forecast';
+import { Paddle, PADDLE_SMOOTH_FACTOR } from '@/match/Paddle';
 import { Physics } from '@/match/Physics';
 import { clamp, lerp } from '@/shared/math';
 
@@ -30,6 +31,31 @@ const TRUST_PER_GLANCE = 0.25;
 // moments before the ball arrives, so a twitch alone doesn't lose a point
 const TWITCH = { CHANCE: 0.35, SIZE: 26, DURATION: 0.12, CALM_BEFORE: 0.35 } as const;
 const IDLE_TWITCH_SIZE = 14; // smaller ones while it waits for the ball to come back
+
+// Where the ball will arrive is flown ahead by the physics (curves included), not worked out
+// along straight lines; it is flown again this often, or as soon as the shot changes
+const FORECAST_REFRESH = 1 / 20; // s
+
+// A perfect hit on purpose: the paddle winds up on one side of where the ball will arrive, then
+// swings through it to meet it dead center at this speed, steering it hard the way it swings
+const SWING = {
+  TIME: 0.14, // s before the ball arrives that the swing starts
+  SPEED: 420, // px/s, the paddle's speed through the ball, if the AI is that quick
+  // It tries it only on a ball it is comfortable with, as a player would: no faster than this
+  // (boosts included), off no more walls than this. A hard ball it just gets back
+  MAX_BALL_SPEED: 750, // px/s
+  MAX_BOUNCES: 1,
+} as const;
+
+// With Arc, some of its angled returns are curves: struck off the paddle's center on the move,
+// toward the opponent, so the curve (against the swing) breaks it away from them. Off center
+// rather than perfect: a perfect hit on the move steers so steeply the ball meets a wall, which
+// takes the spin. A curve now and then, not on every angled return: a shot it always played
+// would be no surprise
+const ARC_SHOT = {
+  OFFSET: 0.4, // share of the half-height off center
+  SHARE: 0.35, // of its angled returns
+} as const;
 
 /** How hard a shot is to read, on top of the AI's own skill. */
 export interface ShotThreat {
@@ -90,11 +116,29 @@ interface ShotRead {
   misread: number | null;
   /** How long it has watched the shot, in seconds at WATCH.REFERENCE_SPEED. */
   watched: number;
+  /**
+   * How far it has seen a curving ball's curve for what it is, in [0, 1]: at 0 it expects the
+   * ball to fly on straight, at 1 it knows where the curve takes it.
+   */
+  curveSeen: number;
   /** Planned return: where on the paddle to take the ball, in [-1, 1]; 0 = a flat return. */
   hitOffset: number;
   /** Whether it plays an angled return this time; the side is picked once it reads the shot. */
   wantsAngle: boolean;
   angleSize: number;
+  /**
+   * Whether it swings through the ball for a perfect hit this time, and which way (1 down, -1
+   * up); picked once it reads the shot.
+   */
+  wantsPerfect: boolean;
+  /** Whether it plays a curve this time (it has Arc), swinging `swing` toward the opponent. */
+  wantsArc: boolean;
+  swing: number;
+
+  /** Where the physics says the ball arrives, how long ago that was flown, and for what flight. */
+  forecast: Forecast | null;
+  forecastAge: number;
+  forecastVx: number;
 
   // Its eyes (see GLANCE): the arrival as last seen, and how much it trusts that sighting
   glanceIn: number;
@@ -109,9 +153,16 @@ const freshRead = (): ShotRead => ({
   misjudgment: 0,
   misread: null,
   watched: 0,
+  curveSeen: 0,
   hitOffset: 0,
   wantsAngle: false,
   angleSize: 0,
+  wantsPerfect: false,
+  wantsArc: false,
+  swing: 1,
+  forecast: null,
+  forecastAge: 0,
+  forecastVx: 0,
   glanceIn: 0,
   sighting: null,
   trust: 1,
@@ -135,7 +186,16 @@ const freshRead = (): ShotRead => ({
  * shot in glances, settling on the trajectory over the first few, and now and then twitches.
  */
 export class AiController {
-  private readonly reads: [ShotRead, ShotRead] = [freshRead(), freshRead()];
+  /** How it reads the shot each ball is on, ball by ball, so a second ball can't upset the first. */
+  private readonly reads = new Map<Ball, ShotRead>();
+  /** A shot announced without its ball (a test's): the first ball it sees unread takes it. */
+  private unclaimed: ShotRead | null = null;
+  /** Its eyes while no ball is coming: the idle fidget. */
+  private readonly idle = freshRead();
+  /** Whether it is swinging through the ball (a perfect hit, a curve) this step. */
+  private isSwinging = false;
+  /** Whether its paddle has Arc: its angled returns are curves then. */
+  public usesArc = false;
   private readonly random: () => number;
 
   constructor(random: () => number = Math.random) {
@@ -149,7 +209,10 @@ export class AiController {
     const maxMovePerFrame = skill.speed * paddle.spec.speed * dt;
 
     const move =
-      Math.abs(deltaY) > AIM_DEADZONE ? clamp(deltaY, -maxMovePerFrame, maxMovePerFrame) : 0;
+      // A swing is smooth all the way: no holding still near the aim
+      Math.abs(deltaY) > (this.isSwinging ? 0 : AIM_DEADZONE)
+        ? clamp(deltaY, -maxMovePerFrame, maxMovePerFrame)
+        : 0;
     paddle.setTargetY(paddle.targetY + move);
   }
 
@@ -157,24 +220,82 @@ export class AiController {
    * A new shot is heading at `paddle` (the opponent hit it, or it was served):
    * rolls how this paddle will read it and whether it will angle the return.
    * @param threat how much harder than usual the shot is to read (a perfect hit, a power shot)
+   * @param ball the ball the shot is on; the next one it sees unread when left out
    */
-  public readShot(paddle: Paddle, skill: AiSkill, threat: ShotThreat = SHOT_THREAT.NORMAL): void {
-    const read = this.reads[paddle.side];
+  public readShot(
+    _paddle: Paddle,
+    skill: AiSkill,
+    threat: ShotThreat = SHOT_THREAT.NORMAL,
+    ball: Ball | null = null,
+  ): void {
+    const read = freshRead();
+    if (ball) this.reads.set(ball, read);
+    else this.unclaimed = read;
     read.reactIn = skill.reaction + threat.extraReaction;
     read.misjudgment = (this.random() - 0.5) * threat.misjudgmentScale;
     read.misread = null;
     read.watched = 0;
     read.hitOffset = 0;
-    read.wantsAngle = this.random() < skill.angleShots;
+    // One roll picks the return: angled (the first angleShots of it), a perfect hit on purpose
+    // (the next perfectAim), or flat. A level without perfect hits rolls as it always has
+    const style = this.random();
+    read.wantsAngle = style < skill.angleShots;
+    read.wantsPerfect = !read.wantsAngle && style < skill.angleShots + skill.perfectAim;
+    // The first share of the angled band is a curve, with Arc
+    read.wantsArc = this.usesArc && style < skill.angleShots * ARC_SHOT.SHARE;
+    if (read.wantsArc) read.wantsAngle = false;
     read.angleSize = ANGLE_SHOT.MIN + this.random() * (ANGLE_SHOT.MAX - ANGLE_SHOT.MIN);
-    read.sighting = null;
-    read.glanceIn = 0;
+  }
+
+  /**
+   * Its implant has read the shot coming for it (Analyzer): it knows where every ball on its way
+   * will arrive, its misjudgment gone.
+   */
+  public sharpen(): void {
+    for (const read of this.reads.values()) {
+      read.misjudgment = 0;
+      read.misread = read.misread === null ? null : 0;
+      read.trust = 1;
+      read.curveSeen = 1;
+    }
   }
 
   /** Forgets every read (a new match, or back to the menu). */
   public reset(): void {
-    this.reads[0] = freshRead();
-    this.reads[1] = freshRead();
+    this.reads.clear();
+    this.unclaimed = null;
+    Object.assign(this.idle, freshRead());
+  }
+
+  /** How it reads `ball`'s shot: its own read, or the one announced without a ball. */
+  private readFor(ball: Ball): ShotRead {
+    let read = this.reads.get(ball);
+    if (!read) {
+      read = this.unclaimed ?? freshRead();
+      this.unclaimed = null;
+      this.reads.set(ball, read);
+    }
+    return read;
+  }
+
+  /**
+   * Where the physics says `ball` crosses `faceX`, flown again when it is due or the shot has
+   * changed (a hit turned it around); straight lines when the flight is too long to fly ahead.
+   */
+  private arrivalOf(read: ShotRead, ball: Ball, faceX: number, dt: number): Forecast {
+    read.forecastAge += dt;
+    if (
+      read.forecast === null ||
+      read.forecastAge >= FORECAST_REFRESH ||
+      ball.vx !== read.forecastVx
+    ) {
+      const straight = predictArrival(faceX, ball.x, ball.y, ball.vx, ball.vy, ball.radius);
+      const time = ball.vx === 0 ? 0 : (faceX - ball.x) / ball.vx;
+      read.forecast = forecastArrival(ball, faceX) ?? { ...straight, time: Math.max(0, time) };
+      read.forecastAge = 0;
+      read.forecastVx = ball.vx;
+    }
+    return { ...read.forecast, time: Math.max(0, read.forecast.time - read.forecastAge) };
   }
 
   private getDesiredY(
@@ -184,15 +305,17 @@ export class AiController {
     dt: number,
     opponent: Paddle,
   ): number {
-    const read = this.reads[paddle.side];
+    this.isSwinging = false;
     const isMovingTowardPaddle = paddle.side === 1 ? ball.vx > 0 : ball.vx < 0;
     if (!isMovingTowardPaddle) {
       // Back to the middle, fidgeting a little while it waits
-      if (skill.nerves > 0 && this.glance(read, dt)) {
-        this.maybeTwitch(read, IDLE_TWITCH_SIZE * skill.nerves);
+      const { idle } = this;
+      if (skill.nerves > 0 && this.glance(idle, dt)) {
+        this.maybeTwitch(idle, IDLE_TWITCH_SIZE * skill.nerves);
       }
-      return COURT.HEIGHT / 2 + read.twitch;
+      return COURT.HEIGHT / 2 + idle.twitch;
     }
+    const read = this.readFor(ball);
 
     if (read.reactIn > 0) {
       read.reactIn -= dt;
@@ -201,27 +324,71 @@ export class AiController {
 
     const faceX =
       paddle.side === 1 ? paddle.x - ball.radius : paddle.x + paddle.spec.width + ball.radius;
-    const arrival = predictArrival(faceX, ball.x, ball.y, ball.vx, ball.vy, ball.radius);
+    const arrival = this.arrivalOf(read, ball, faceX, dt);
 
     // The shot is read once, as soon as the AI reacts: the more walls it has to bounce off from
     // there, the worse the read, and the AI sticks to it — a steep shot stays hard to judge
     if (read.misread === null) {
       read.misread = read.misjudgment * (skill.error + skill.errorPerBounce * arrival.bounces);
+      const isComfortable =
+        ball.speed * ball.speedMultiplier <= SWING.MAX_BALL_SPEED &&
+        arrival.bounces <= SWING.MAX_BOUNCES;
+      if (!isComfortable) read.wantsPerfect = false;
+      // A curve it can't swing at is an angled return after all
+      if (read.wantsArc && !isComfortable) [read.wantsArc, read.wantsAngle] = [false, true];
       if (read.wantsAngle) {
         read.hitOffset = this.pickAngle(paddle, opponent, arrival.y, read.angleSize);
       }
+      // A perfect hit swings toward the half of the court the opponent isn't in; a curve toward
+      // the one they are in, and breaks away from them
+      const away = opponent.y < COURT.HEIGHT / 2 ? 1 : -1;
+      read.swing = read.wantsArc ? -away : away;
+      if (read.wantsArc) read.hitOffset = read.swing * ARC_SHOT.OFFSET;
     }
 
-    const timeLeft = (faceX - ball.x) / ball.vx;
-    const seenY = this.see(read, ball, arrival.y, timeLeft, skill.nerves, dt);
-
+    const timeLeft = arrival.time;
     // Watching the ball, the AI sees its mistake and corrects it, sooner the slower the ball
     const correction = clamp(1 - read.watched / WATCH.TO_CORRECT, 0, 1);
     const apparentSpeed = ball.speed * ball.speedMultiplier; // boosts included
-    read.watched += (dt * WATCH.REFERENCE_SPEED) / Math.max(apparentSpeed, WATCH.REFERENCE_SPEED);
+    const watching = (dt * WATCH.REFERENCE_SPEED) / Math.max(apparentSpeed, WATCH.REFERENCE_SPEED);
+    read.watched += watching;
+
+    // A curving ball (Arc) is expected to fly on straight at first; the curve shows itself as the
+    // AI keeps watching, the sooner the better it plays
+    let arrivalY = arrival.y;
+    if (ball.spin !== 0 && read.curveSeen < 1) {
+      read.curveSeen =
+        skill.curveRead > 0 ? Math.min(1, read.curveSeen + watching / skill.curveRead) : 1;
+      const straight = predictArrival(faceX, ball.x, ball.y, ball.vx, ball.vy, ball.radius).y;
+      arrivalY = lerp(straight, arrival.y, read.curveSeen);
+    }
+    const seenY = this.see(read, ball, arrivalY, timeLeft, skill.nerves, dt);
 
     // The ball meets the paddle `hitOffset` half-heights below its center
-    return seenY + read.misread * correction - (read.hitOffset * paddle.spec.height) / 2;
+    const meetY = seenY + read.misread * correction - (read.hitOffset * paddle.spec.height) / 2;
+    return read.wantsPerfect || read.wantsArc
+      ? this.swingThrough(paddle, skill, meetY, read.swing, timeLeft)
+      : meetY;
+  }
+
+  /**
+   * Where to aim the paddle to swing through `meetY` at the moment the ball gets there: wound up
+   * on the far side of it until the swing starts, then moving through it at the swing's speed.
+   * The paddle trails its aim by its speed over its smoothing, so the aim leads by that much and
+   * the center meets the ball.
+   * @param direction which way it swings: 1 down, -1 up
+   */
+  private swingThrough(
+    paddle: Paddle,
+    skill: AiSkill,
+    meetY: number,
+    direction: number,
+    timeLeft: number,
+  ): number {
+    this.isSwinging = timeLeft <= SWING.TIME;
+    const speed = Math.min(SWING.SPEED, skill.speed * paddle.spec.speed);
+    const lag = speed / (PADDLE_SMOOTH_FACTOR * paddle.spec.speed);
+    return meetY + direction * (lag - speed * Math.min(timeLeft, SWING.TIME));
   }
 
   /**

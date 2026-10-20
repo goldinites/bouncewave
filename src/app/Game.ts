@@ -4,7 +4,7 @@ import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
 import { BackgroundMenu } from '@/debug/BackgroundMenu';
 import { FpsMeter } from '@/debug/FpsMeter';
-import { SkillMenu } from '@/debug/SkillMenu';
+import { SkillMenu, SkillOwner } from '@/debug/SkillMenu';
 import { ClassicSwitch } from '@/easterEgg/ClassicSwitch';
 import { EffectsDirector } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
@@ -17,6 +17,7 @@ import { COURT, PADDLE } from '@/match/config';
 import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
+import { MatchRules } from '@/match/rules';
 import { Paddle } from '@/match/Paddle';
 import { isSkillId, SKILL_IDS, SkillId } from '@/match/skills/Skill';
 import { challengeState, isEveryChallengePassed, markPassed } from '@/profile/ChallengeProgress';
@@ -78,10 +79,10 @@ export class Game {
   /** For developers: the challenge ?challenge= makes every quick match an attempt at. */
   private pinnedChallenge: ChallengeId | null = null;
   /**
-   * For developers: the skills ?skills= gives the player in every match against the CPU, to
-   * playtest the prototypes (4.3) before the progression is built around them.
+   * For developers: the skills ?skills= gives the player, and ?cpuSkills= the CPU, in every match
+   * against the CPU, to playtest the prototypes (4.3) before the progression is built around them.
    */
-  private pinnedSkills: readonly SkillId[] = [];
+  private readonly pinnedSkills: Record<SkillOwner, readonly SkillId[]> = { player: [], cpu: [] };
   /** How the last attempt at a challenge went, for the debug overlay. */
   private lastVerdict: ChallengeVerdict | null = null;
   private readonly i18n: I18nManager;
@@ -114,7 +115,7 @@ export class Game {
   /** Switches the skill prototypes on and off, and counts their uses in the match on court. */
   private readonly skillMenu: SkillMenu;
   /** How often each skill went off in the match on court, for the skill menu. */
-  private readonly skillUses = new Map<SkillId, number>();
+  private readonly skillUses = new Map<SkillId, [number, number]>();
   /** The background the debug overlay last showed, to notice when the next match changes it. */
   private debugScene: SceneId | null = null;
   /** The classic look's easter egg, and the look the whole game follows. */
@@ -153,15 +154,18 @@ export class Game {
     // the debug overlay shows how the last attempt went
     const challenge = new URLSearchParams(window.location.search).get('challenge');
     if (isChallengeId(challenge)) this.pinnedChallenge = challenge;
-    // ?skills=arc,analyzer,reflex gives the player those skills (match/skills/Skill.ts)
-    const skills = new URLSearchParams(window.location.search).get('skills') ?? '';
-    this.pinnedSkills = skills.split(',').filter(isSkillId);
+    // ?skills=arc,analyzer,reflex gives the player those skills (match/skills/Skill.ts), and
+    // ?cpuSkills= the CPU
+    const params = new URLSearchParams(window.location.search);
+    const skillsIn = (param: string) => (params.get(param) ?? '').split(',').filter(isSkillId);
+    this.pinnedSkills.player = skillsIn('skills');
+    this.pinnedSkills.cpu = skillsIn('cpuSkills');
     this.backgroundMenu = new BackgroundMenu(
       (scene) => this.pickBackground(scene),
       this.renderer.scenes,
     );
-    this.skillMenu = new SkillMenu(SKILL_IDS, this.pinnedSkills, (skills) =>
-      this.chooseSkills(skills.filter(isSkillId)),
+    this.skillMenu = new SkillMenu(SKILL_IDS, this.pinnedSkills, (owner, skills) =>
+      this.chooseSkills(owner, skills.filter(isSkillId)),
     );
     this.fpsMeter = new FpsMeter((isVisible) => {
       this.backgroundMenu.setVisible(isVisible);
@@ -402,47 +406,66 @@ export class Game {
       // A challenge is set up in advance: its own rules, paddles, level and backdrop
       const { rules, paddles, difficulty, scene } = CHALLENGES[this.challenge];
       this.matchScene = scene;
-      this.flow.startMatch(rules, this.flow.playerVsCpu(paddles, this.playerSkills), difficulty);
+      this.flow.startMatch(
+        this.forLook(rules),
+        this.flow.playerVsCpu(paddles, this.skillsOf('player'), this.skillsOf('cpu')),
+        difficulty,
+      );
     } else if (this.isTwoPlayers) {
       // No CPU to set a level for: the ball plays at the default one's pace
       this.matchScene = null;
       this.flow.startMatch(
-        quickMatchRules(this.settings.current.matchPoints),
+        this.forLook(quickMatchRules(this.settings.current.matchPoints)),
         this.flow.twoPlayers(this.inputHandler.players),
         TWO_PLAYER_PACE,
       );
     } else {
       this.matchScene = null;
       this.flow.startMatch(
-        quickMatchRules(this.settings.current.matchPoints),
-        this.flow.playerVsCpu(undefined, this.playerSkills),
+        this.forLook(quickMatchRules(this.settings.current.matchPoints)),
+        this.flow.playerVsCpu(undefined, this.skillsOf('player'), this.skillsOf('cpu')),
       );
     }
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
   }
 
-  /** The skills the player brings to a match against the CPU: a developer's, in the neon look. */
-  private get playerSkills(): readonly SkillId[] {
-    return this.look === 'classic' ? [] : this.pinnedSkills;
+  /**
+   * The rules as the look plays them: the classic look is Pong as it was, with no Overdrive for
+   * anyone (and no skills: `skillsOf`).
+   */
+  private forLook(rules: MatchRules): MatchRules {
+    return this.look === 'classic' ? { ...rules, overdrive: false, cpuOverdrive: false } : rules;
   }
 
   /**
-   * For developers, from the skill menu: the player's skills from now on, in the match on court
-   * at once if it is one against the CPU.
+   * The skills the player, or the CPU, brings to a match against the CPU: a developer's, in the
+   * neon look.
    */
-  private chooseSkills(skills: readonly SkillId[]): void {
-    this.pinnedSkills = skills;
-    if (this.flow.isDemo || this.isTwoPlayers) return;
-    const player = this.paddles.findIndex((_, i) => this.flow.isPlayerPaddle(i));
-    if (player >= 0) this.flow.giveSkills(player, this.playerSkills);
+  private skillsOf(owner: SkillOwner): readonly SkillId[] {
+    return this.look === 'classic' ? [] : this.pinnedSkills[owner];
   }
 
-  /** Counts each skill's uses in the match on court, for the skill menu. */
+  /**
+   * For developers, from the skill menu: the player's or the CPU's skills from now on, in the
+   * match on court at once if it is one against the CPU.
+   */
+  private chooseSkills(owner: SkillOwner, skills: readonly SkillId[]): void {
+    this.pinnedSkills[owner] = skills;
+    if (this.flow.isDemo || this.isTwoPlayers) return;
+    this.paddles.forEach((_, i) => {
+      const isPlayers = this.flow.isPlayerPaddle(i);
+      if (isPlayers === (owner === 'player')) this.flow.giveSkills(i, this.skillsOf(owner));
+    });
+  }
+
+  /** Counts each skill's uses in the match on court, the player's and the CPU's, for the menu. */
   private countSkillUse(event: MatchEvent): void {
     if (event.type === 'matchStart') this.skillUses.clear();
     else if (event.type === 'skill') {
-      this.skillUses.set(event.skill, (this.skillUses.get(event.skill) ?? 0) + 1);
+      const uses = this.skillUses.get(event.skill) ?? [0, 0];
+      uses[this.flow.isPlayerPaddle(event.paddleIndex) ? 0 : 1]++;
+      this.skillUses.set(event.skill, uses);
     } else return;
     this.skillMenu.setCounts(this.skillUses);
   }

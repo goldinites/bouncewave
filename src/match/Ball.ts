@@ -32,6 +32,8 @@ export class Ball {
   public spin = 0;
   /** How fast the spin fades, 1/s. */
   public spinDecay = 0;
+  /** Seconds more it flies straight before its spin starts to turn it (a late break). */
+  public spinDelay = 0;
 
   /** Where the ball stood when the current simulation step began. */
   private previousX = this.x;
@@ -83,6 +85,7 @@ export class Ball {
     this.clearBoost();
     this.isPowerShot = false;
     this.spin = 0;
+    this.spinDelay = 0;
     // Back at the center in one jump: nothing to draw between where it was and here
     this.rememberPosition();
     this.interpolate(1);
@@ -106,6 +109,7 @@ export class Ball {
     copy.radius = this.radius;
     copy.spin = this.spin;
     copy.spinDecay = this.spinDecay;
+    copy.spinDelay = this.spinDelay;
     copy.boostAmount = this.boostAmount;
     copy.boostDuration = this.boostDuration;
     copy.boostTimeLeft = this.boostTimeLeft;

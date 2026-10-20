@@ -41,6 +41,7 @@ const steering = () => ({
   onIncomingShot: vi.fn(),
   onPoint: vi.fn(),
   reset: vi.fn(),
+  topSpeed: () => 500,
 });
 
 /** Places a ball at `x` flying at `vx`, level with the middle of the court. */
