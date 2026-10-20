@@ -39,7 +39,8 @@ backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts
 verdict shown in the debug overlay; `?skills=arc,analyzer,reflex` gives the player those skills in every
 match against the CPU, `?cpuSkills=` the CPU (ids in `src/match/skills/Skill.ts`); the debug
 overlay has switches for both and counts their uses; `?mods=wind,darkness` plays quick matches with
-those modifiers (ids in `src/match/modifiers/Modifier.ts`), also switched in the debug overlay.
+those modifiers (ids in `src/match/modifiers/Modifier.ts`), also switched in the debug overlay;
+`?tutorial=perfect` starts the tutorial at that step (ids in `src/match/tutorial.ts`).
 
 ## Architecture
 
@@ -65,7 +66,7 @@ Rules that keep it clean (the first two are enforced by `tests/architecture.test
   (a `PaddleController` and an Overdrive flag per paddle). Never read `WINNING_SCORE`, never
   branch on "paddle 0 is the player": ask the rules and the lineup.
 - Paddles are a list, each with a `side` and a `PaddleSpec` (`paddle.spec`: size, perfect zone,
-  power, spin, speed); read sizes from the spec, never the global `PADDLE`. Points belong to the
+  power, steer, speed); read sizes from the spec, never the global `PADDLE`. Points belong to the
   side (`flow.scores`). Balls are a list (`flow.balls`); the first ball out ends the point; the
   camera and the drama follow `flow.leadBall`.
 - Everything with listeners or timers has `dispose()`; DOM listeners go through an

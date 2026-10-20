@@ -58,6 +58,7 @@ describe('the profile', () => {
       settings: DEFAULTS,
       stats: getEmptyStatistics(),
       challenges: getEmptyChallengeProgress(),
+      tutorial: null,
     });
   });
 
@@ -67,10 +68,11 @@ describe('the profile', () => {
     new ProfileStore(storage).update({ settings });
 
     expect(JSON.parse(storage.getItem(PROFILE_KEY)!)).toEqual({
-      version: 3,
+      version: 4,
       settings,
       stats: getEmptyStatistics(),
       challenges: { passed: [] },
+      tutorial: null,
     });
     expect(new ProfileStore(storage).current.settings).toEqual(settings);
   });
@@ -135,12 +137,13 @@ describe('a profile saved by 1.4 (version 1)', () => {
     const storage = storageWith({ [PROFILE_KEY]: { version: 1, settings } });
 
     expect(new ProfileStore(storage).current).toEqual({
-      version: 3,
+      version: 4,
       settings,
       stats: getEmptyStatistics(),
       challenges: getEmptyChallengeProgress(),
+      tutorial: null,
     });
-    expect(JSON.parse(storage.getItem(PROFILE_KEY)!).version).toBe(3);
+    expect(JSON.parse(storage.getItem(PROFILE_KEY)!).version).toBe(4);
   });
 });
 
@@ -151,12 +154,34 @@ describe('a profile saved by 1.5 (version 2)', () => {
     const storage = storageWith({ [PROFILE_KEY]: { version: 2, settings, stats } });
 
     expect(new ProfileStore(storage).current).toEqual({
-      version: 3,
+      version: 4,
       settings,
       stats,
       challenges: { passed: [] },
+      // Matches played: the tutorial isn't offered
+      tutorial: 'skipped',
     });
-    expect(JSON.parse(storage.getItem(PROFILE_KEY)!).version).toBe(3);
+    expect(JSON.parse(storage.getItem(PROFILE_KEY)!).version).toBe(4);
+  });
+});
+
+describe('a profile saved by 1.5 (version 3)', () => {
+  it('offers the tutorial only to someone who has not played a match yet', () => {
+    const saved = (played: number) => ({
+      version: 3,
+      settings: DEFAULTS,
+      stats: { ...getEmptyStatistics(), played },
+      challenges: { passed: [] },
+    });
+    expect(loadProfile(saved(0)).tutorial).toBeNull();
+    expect(loadProfile(saved(1)).tutorial).toBe('skipped');
+  });
+
+  it('keeps how the tutorial went, and reads anything else as never offered', () => {
+    const saved = (tutorial: unknown) => ({ ...getDefaultProfile(), tutorial });
+    expect(loadProfile(saved('done')).tutorial).toBe('done');
+    expect(loadProfile(saved('skipped')).tutorial).toBe('skipped');
+    expect(loadProfile(saved('later')).tutorial).toBeNull();
   });
 });
 
@@ -180,15 +205,16 @@ describe('settings saved before the profile (version 0)', () => {
     new ProfileStore(storage);
 
     expect(JSON.parse(storage.getItem(PROFILE_KEY)!)).toEqual({
-      version: 3,
+      version: 4,
       settings: { ...DEFAULTS, language: 'ru', matchPoints: 3 },
       stats: getEmptyStatistics(),
       challenges: getEmptyChallengeProgress(),
+      tutorial: null,
     });
   });
 
   it('leave a profile of this version as it was saved, and nothing saved as nothing', () => {
-    const saved = JSON.stringify({ version: 3, settings: DEFAULTS, extra: true });
+    const saved = JSON.stringify({ version: PROFILE_VERSION, settings: DEFAULTS, extra: true });
     const storage = storageWith({ [PROFILE_KEY]: saved });
     new ProfileStore(storage);
     expect(storage.getItem(PROFILE_KEY)).toBe(saved);

@@ -12,8 +12,9 @@ export const BOUNCE = {
   CURVE: 1.6, // >1 keeps mid hits flatter and sharpens edge hits
 } as const;
 
-// Paddle inertia: moving paddle nudges the outgoing angle, kept soft for jerky touch input
-export const SPIN = {
+// The steer: a moving paddle turns the ball it hits off its line (the ball still flies straight;
+// a spinning one, Arc's, curves). Kept soft for jerky touch input
+export const STEER = {
   DEADZONE: 40, // px/s ignored as jitter
   REFERENCE_SPEED: 600, // px/s where the nudge reaches ~76% of max
   MAX_ANGLE: 0.2, // radians (~11°), saturates softly via tanh
@@ -26,8 +27,8 @@ export const PERFECT_HIT = {
   // A center hit alone goes out flat, the easiest ball to return; a perfect one lets the
   // paddle's motion steer it much harder (up to ~60° instead of ~11°), and already at a modest
   // paddle speed, so it can be aimed
-  SPIN_MAX_ANGLE: 1.05,
-  SPIN_REFERENCE_SPEED: 300, // px/s where the steer reaches ~76% of its max
+  STEER_MAX_ANGLE: 1.05,
+  STEER_REFERENCE_SPEED: 300, // px/s where the steer reaches ~76% of its max
 } as const;
 
 /** Something that happened to the ball during a physics step, in the order it happened. */
@@ -43,6 +44,8 @@ export type PhysicsEvent =
       y: number;
       /** Ball speed right after the hit (acceleration applied). */
       speed: number;
+      /** How steeply it went off, radians from the flat return (either way). */
+      angle: number;
     }
   | { type: 'score'; scoringPlayerIndex: Side; y: number }
   /** Off one of the court's bricks (Bricks); whoever handles it breaks the brick. */
@@ -127,15 +130,14 @@ export class Physics {
           const hitOffset = clamp((ball.y - paddle.y) / (spec.height / 2), -1, 1);
           const isPerfect = Math.abs(hitOffset) <= spec.perfectZone * paddle.perfectZoneScale;
           const steer = isPerfect
-            ? Physics.getSpinAngle(
+            ? Physics.getSteerAngle(
                 paddle.velocity,
-                PERFECT_HIT.SPIN_MAX_ANGLE,
-                PERFECT_HIT.SPIN_REFERENCE_SPEED,
+                PERFECT_HIT.STEER_MAX_ANGLE,
+                PERFECT_HIT.STEER_REFERENCE_SPEED,
               )
-            : Physics.getSpinAngle(paddle.velocity);
-          const spin = steer * spec.spin;
+            : Physics.getSteerAngle(paddle.velocity);
           const bounceAngle = clamp(
-            Physics.getBounceAngle(hitOffset) + spin,
+            Physics.getBounceAngle(hitOffset) + steer * spec.steer,
             -BOUNCE.MAX_ANGLE,
             BOUNCE.MAX_ANGLE,
           );
@@ -164,6 +166,7 @@ export class Physics {
             x: ball.x,
             y: ball.y,
             speed: ball.speed,
+            angle: Math.abs(bounceAngle),
           });
           break;
         }
@@ -312,15 +315,15 @@ export class Physics {
   /**
    * Angle nudge from paddle motion at impact (positive velocity = down = steeper downward shot).
    * Small speeds are ignored and large ones saturate, so jerky touch input stays harmless.
-   * @param maxAngle what it saturates at: SPIN.MAX_ANGLE, or more on a perfect hit
+   * @param maxAngle what it saturates at: STEER.MAX_ANGLE, or more on a perfect hit
    * @param referenceSpeed paddle speed where it reaches ~76% of `maxAngle`
    */
-  public static getSpinAngle(
+  public static getSteerAngle(
     paddleVelocity: number,
-    maxAngle: number = SPIN.MAX_ANGLE,
-    referenceSpeed: number = SPIN.REFERENCE_SPEED,
+    maxAngle: number = STEER.MAX_ANGLE,
+    referenceSpeed: number = STEER.REFERENCE_SPEED,
   ): number {
-    const effective = Math.max(0, Math.abs(paddleVelocity) - SPIN.DEADZONE);
+    const effective = Math.max(0, Math.abs(paddleVelocity) - STEER.DEADZONE);
     return Math.sign(paddleVelocity) * Math.tanh(effective / referenceSpeed) * maxAngle;
   }
 }

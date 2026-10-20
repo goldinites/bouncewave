@@ -321,6 +321,21 @@
   max-width: 300px;
 }
 
+/* The controls: the shots' descriptions are longer than the keys, and get the room */
+.stats--controls .stats__section:last-child {
+  flex-grow: 1.7;
+  max-width: 400px;
+}
+
+/* Each control set apart, so a value that wraps is plainly its own row's */
+.stats--controls .stats__rows {
+  gap: 10px;
+}
+
+.stats--controls .stats__row {
+  align-items: baseline;
+}
+
 .stats__heading {
   margin: 0 0 4px;
 
@@ -347,13 +362,17 @@
   letter-spacing: 0.08em;
 }
 
+/* A name stays on one line; a long value (the controls' shots) wraps under itself, flush right */
 .stats__row dt {
   color: var(--cyan);
   opacity: 0.8;
+  white-space: nowrap;
+  text-align: left;
 }
 
 .stats__row dd {
   margin: 0;
+  text-align: right;
 
   color: var(--white);
   font-weight: 700;
@@ -620,6 +639,10 @@
   .stats__rows {
     gap: 1px;
   }
+
+  .stats--controls .stats__rows {
+    gap: 6px;
+  }
 }
 
 /* The court is on its side here (stage.css), so the menu is turned back upright over it */
@@ -683,6 +706,91 @@
     gap: 12px;
     width: max-content;
     max-width: 88%;
+  }
+}
+
+/* A tutorial step's card, over the paused match: the move on a small court, why and how, then
+   GOT IT. As narrow as reads well, and short enough for a phone on its side */
+.tutorial-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  width: min(440px, 88%);
+  /* The screen's last block: its auto margin and the title's keep the column centered */
+  margin-bottom: auto;
+  text-align: center;
+}
+
+.tutorial-card__demo {
+  width: min(240px, 60%);
+  height: auto;
+  margin-bottom: 4px;
+}
+
+.tutorial-card__demo--rotated {
+  width: min(140px, 36%);
+}
+
+.tutorial-card__why,
+.tutorial-card__how {
+  margin: 0;
+  color: var(--white);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.tutorial-card__how {
+  color: var(--yellow);
+}
+
+.tutorial-demo__wall {
+  fill: var(--pink);
+  opacity: 0.6;
+}
+
+.tutorial-demo__path {
+  fill: none;
+  stroke: var(--white);
+  stroke-dasharray: 3 4;
+  stroke-width: 1;
+  opacity: 0.35;
+}
+
+.tutorial-demo__paddle {
+  fill: var(--cyan);
+}
+
+.tutorial-demo__center,
+.tutorial-demo__charge {
+  fill: var(--yellow);
+}
+
+.tutorial-demo__end {
+  fill: var(--white);
+}
+
+.tutorial-demo__arrow {
+  fill: none;
+  stroke: var(--yellow);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.tutorial-demo__ball {
+  fill: var(--white);
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .tutorial-card__demo {
+    width: min(180px, 40%);
+  }
+
+  .tutorial-card__why,
+  .tutorial-card__how {
+    font-size: 13px;
   }
 }
 

@@ -4,7 +4,7 @@ import { CHALLENGE_IDS, ChallengeId } from '@/match/challenges';
 /**
  * How far the player has got through the challenges: which they have passed. Every challenge is
  * open from the start; the later ones are hard enough to wait for the player's progression. Kept
- * as an object so what comes with a challenge later (its money reward, stage 6) can lie beside it.
+ * as an object so what comes with a challenge later (its money reward, stage 7) can lie beside it.
  */
 export interface ChallengeProgress {
   /** Every challenge passed at least once, in the order they open. */

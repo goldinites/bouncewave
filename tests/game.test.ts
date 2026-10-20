@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { Mock, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Game } from '@/app/Game';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { getDefaultProfile } from '@/profile/Profile';
+import { PROFILE_KEY } from '@/profile/ProfileStore';
 import { EventBus } from '@/shared/EventBus';
 import { isPickableScene, SceneId } from '@/shared/scenes';
 import { fakeContext } from './helpers/fakeContext';
@@ -50,8 +52,20 @@ const play = () => {
 describe('Game', () => {
   let game: Game;
 
+  /** A game as it opens, on a fresh page. */
+  const open = () => {
+    const opened = new Game($<HTMLCanvasElement>('#gameCanvas'));
+    opened.init();
+    return opened;
+  };
+
   beforeEach(() => {
     localStorage.clear();
+    // Someone who has already turned the tutorial down: PLAY goes straight to the modes
+    localStorage.setItem(
+      PROFILE_KEY,
+      JSON.stringify({ ...getDefaultProfile(), tutorial: 'skipped' }),
+    );
     document.body.innerHTML = BODY;
 
     // A canvas context that also hands out gradients, which the renderer builds up front
@@ -62,8 +76,7 @@ describe('Game', () => {
       ctx as unknown as RenderingContext,
     );
 
-    game = new Game($<HTMLCanvasElement>('#gameCanvas'));
-    game.init();
+    game = open();
   });
 
   afterEach(() => {
@@ -244,6 +257,85 @@ describe('Game', () => {
     screenButton('START').click();
     matchEvents.emit({ type: 'gameOver', winnerIndex: 1, scores: [1, 5] });
     expect($('#gameTitle').textContent).toBe('GAME OVER');
+  });
+
+  describe('the tutorial', () => {
+    /** The game as someone new opens it: nothing saved. */
+    const openNew = () => {
+      game.dispose();
+      localStorage.clear();
+      game = open();
+    };
+    const tutorialState = () => JSON.parse(localStorage.getItem(PROFILE_KEY) ?? '{}').tutorial;
+    const frame = (timestamp: number) =>
+      (game as unknown as { runFrame(timestamp: number): void }).runFrame(timestamp);
+
+    it('is offered on PLAY until turned down, and once turned down never again', () => {
+      openNew();
+      buttons()[0].click(); // play
+      expect($('#gameTitle').textContent).toBe('FIRST TIME?');
+      expect(labels()).toEqual(['YES', 'NO']);
+      // Stepping back decides nothing: it is offered again
+      press('Escape');
+      buttons()[0].click();
+      expect($('#gameTitle').textContent).toBe('FIRST TIME?');
+
+      screenButton('NO').click();
+      expect($('#gameTitle').textContent).toBe('GAME MODE');
+      expect(tutorialState()).toBe('skipped');
+      press('Escape');
+      buttons()[0].click();
+      expect($('#gameTitle').textContent).toBe('GAME MODE');
+      // It stays on the PLAY menu
+      expect(labels()).toContain('TUTORIAL');
+    });
+
+    it('plays on court, step by step, and its end leads on to a match', () => {
+      openNew();
+      buttons()[0].click(); // play
+      screenButton('YES').click();
+      expect(isMenuOpen()).toBe(false);
+      expect(isPauseButtonShown()).toBe(true);
+      // Started is not gone through: left halfway, it is offered again
+      expect(tutorialState() ?? null).toBeNull();
+
+      // It starts with moving, told by the line over the court
+      frame(1000);
+      frame(1016);
+      expect($('#gameCondition').textContent).toBe('MOVE: W/S, ↑/↓ OR THE MOUSE');
+
+      // A move that needs explaining opens on a card, the match paused behind it
+      const { tutorialCoach } = game as unknown as {
+        tutorialCoach: { reset(step: string): void; stepIndex: number };
+      };
+      tutorialCoach.reset('perfect');
+      frame(1024);
+      expect(isMenuOpen()).toBe(true);
+      expect($('#gameTitle').textContent).toBe('PERFECT HIT');
+      expect($('.tutorial-card__demo')).not.toBeNull();
+      expect(isPauseButtonShown()).toBe(false);
+      screenButton('GOT IT').click();
+      expect(isMenuOpen()).toBe(false);
+      expect(isPauseButtonShown()).toBe(true);
+
+      // Every step done: its end comes up, and it is kept as gone through
+      tutorialCoach.stepIndex = 5;
+      frame(1032);
+      expect($('#gameTitle').textContent).toBe('WELL PLAYED!');
+      expect(labels()).toEqual(['QUICK MATCH', 'MAIN MENU']);
+      expect(tutorialState()).toBe('done');
+      expect(isPauseButtonShown()).toBe(false);
+      screenButton('QUICK MATCH').click();
+      expect($('#gameTitle').textContent).toBe('QUICK MATCH');
+    });
+
+    it("counts for nothing in the player's record", () => {
+      buttons()[0].click(); // play
+      screenButton('TUTORIAL').click();
+      const { matchEvents } = game as unknown as { matchEvents: EventBus<MatchEvent> };
+      matchEvents.emit({ type: 'gameOver', winnerIndex: 0, scores: [1, 0] });
+      expect(JSON.parse(localStorage.getItem(PROFILE_KEY)!).stats.played).toBe(0);
+    });
   });
 
   it('switches every text outside the menus to the language picked', () => {

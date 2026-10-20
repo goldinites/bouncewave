@@ -62,6 +62,18 @@ export interface MatchRules {
   readonly modifiers: readonly ModifierId[];
   /** Modifiers taken in turn on top of those (Chaos); null for none. */
   readonly rotation: ModifierRotation | null;
+  /**
+   * How the ball speeds up, over the level's own (the tutorial's slow, steady ball); null for
+   * the level's.
+   */
+  readonly pace: Pace | null;
+}
+
+/** How much faster the ball gets with every hit, and how fast at most. */
+export interface Pace {
+  /** Share the ball speeds up on each paddle hit. */
+  readonly acceleration: number;
+  readonly maxSpeed: number; // px/s
 }
 
 /**
@@ -102,6 +114,7 @@ export const STANDARD_RULES: MatchRules = {
   balls: 1,
   modifiers: [],
   rotation: null,
+  pace: null,
 };
 
 /** The same winning score for both sides. */

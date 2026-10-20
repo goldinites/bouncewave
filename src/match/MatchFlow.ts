@@ -66,6 +66,8 @@ export type MatchEvent =
       x: number;
       y: number;
       speed: number;
+      /** How steeply it went off, radians from the flat return (either way). */
+      angle: number;
       /** Rally length including this hit. */
       rally: number;
       /** The paddle's Overdrive went off on this hit. */
@@ -613,7 +615,8 @@ export class MatchFlow {
   private get physicsConfig(): DifficultyConfig {
     if (this.isDemo) return DIFFICULTY_CONFIGS[this.getDifficulty()];
 
-    const config = DIFFICULTY_CONFIGS[this.difficulty];
+    const level = DIFFICULTY_CONFIGS[this.difficulty];
+    const config = this._rules.pace ? { ...level, ...this._rules.pace } : level;
     const ramp = this._rules.cpuRamp;
     if (!ramp) return config;
     // The CPU's opponent is the player (the left side when no one plays)

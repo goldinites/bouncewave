@@ -11,7 +11,16 @@ export interface Toggle {
   onToggle: () => void;
 }
 
-export type SettingsItem = ({ kind: 'toggle' } & Toggle) | ({ kind: 'choice' } & Choice);
+/** A button that opens another screen from the settings (the controls). */
+export interface Link {
+  id: string;
+  label: string;
+  color: ButtonColor;
+  onClick: () => void;
+}
+
+export type SettingsItem =
+  ({ kind: 'toggle' } & Toggle) | ({ kind: 'choice' } & Choice) | ({ kind: 'link' } & Link);
 
 export interface SettingsScreenProps {
   items: readonly SettingsItem[];
@@ -24,7 +33,8 @@ export interface SettingsScreenProps {
 
 /**
  * The settings, top to bottom, then BACK: the on/off ones as toggles, the ones picked from a
- * list (the language) as rows stepped by their arrows.
+ * list (the language) as rows stepped by their arrows, a screen of their own (the controls) as a
+ * button.
  */
 export function SettingsScreen({
   items,
@@ -38,6 +48,10 @@ export function SettingsScreen({
       {items.map((item) =>
         item.kind === 'toggle' ? (
           <MenuButton key={item.id} color={item.color} pressed={item.isOn} onClick={item.onToggle}>
+            {item.label}
+          </MenuButton>
+        ) : item.kind === 'link' ? (
+          <MenuButton key={item.id} color={item.color} onClick={item.onClick}>
             {item.label}
           </MenuButton>
         ) : (

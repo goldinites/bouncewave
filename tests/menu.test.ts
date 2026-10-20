@@ -63,10 +63,11 @@ describe('settings menu', () => {
     const { menu, buttons } = setup();
     menu.showSettingsMenu();
 
-    // music (muted), sound (on), language, back
+    // music (muted), sound (on), language, controls, back
     expect(buttons().map((b) => b.getAttribute('aria-pressed'))).toEqual([
       'false',
       'true',
+      null,
       null,
       null,
     ]);
@@ -90,6 +91,7 @@ describe('settings menu', () => {
       'game-button game-button--pink', // music
       'game-button game-button--purple', // sound
       'option-row__value', // language: a choice, its row green
+      'game-button game-button--yellow', // controls
       'game-button', // back, default cyan
     ]);
     expect(buttons()[2].closest('.option-row')?.className).toBe('option-row game-button--green');
@@ -206,7 +208,7 @@ describe('settings menu', () => {
     expect(menu.goBack()).toBe(false);
 
     buttons()[2].click(); // settings, from the pause
-    buttons()[3].click(); // back
+    buttons()[4].click(); // back
     expect(title()).toBe('PAUSED');
   });
 
@@ -256,11 +258,39 @@ describe('settings menu', () => {
     buttons()[2].click(); // settings
 
     const labels = () => buttons().map((b) => text(b));
-    expect(labels()).toEqual(['MUSIC: OFF', 'SOUND EFFECTS: ON', 'LANGUAGE: ENGLISH', 'BACK']);
+    expect(labels()).toEqual([
+      'MUSIC: OFF',
+      'SOUND EFFECTS: ON',
+      'LANGUAGE: ENGLISH',
+      'CONTROLS',
+      'BACK',
+    ]);
 
     // Switching a setting redraws the menu where it is
     buttons()[0].click();
-    expect(labels()).toEqual(['MUSIC: ON', 'SOUND EFFECTS: ON', 'LANGUAGE: ENGLISH', 'BACK']);
+    expect(labels()).toEqual([
+      'MUSIC: ON',
+      'SOUND EFFECTS: ON',
+      'LANGUAGE: ENGLISH',
+      'CONTROLS',
+      'BACK',
+    ]);
+  });
+
+  it('lists the controls and the shots, with keys on a computer', () => {
+    const { menu, buttons } = setup();
+    menu.showSettingsMenu();
+    buttons()[3].click(); // controls
+    expect(document.getElementById('gameTitle')?.textContent).toBe('CONTROLS');
+    const rows = [...document.querySelectorAll('.stats__row')].map((row) =>
+      [...row.children].map((cell) => cell.textContent),
+    );
+    expect(rows).toContainEqual(['Pause', 'P · Esc · right click']);
+    expect(rows).toContainEqual(['Overdrive', '3 perfect in a row: a power shot']);
+    expect(rows).toContainEqual(['Aim', 'Perfect on the move: goes your way']);
+    expect(buttons().map((b) => text(b))).toEqual(['BACK']);
+    buttons()[0].click();
+    expect(document.getElementById('gameTitle')?.textContent).toBe('SETTINGS');
   });
 
   it('leaves the difficulty to the quick match, out of the settings', () => {

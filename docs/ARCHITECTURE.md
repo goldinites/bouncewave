@@ -80,7 +80,7 @@ simulation's randomness is injected, the same seed and inputs replay the same ma
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score by side, clock, rally goal, CPU ramp, Overdrive, balls                                                                                     |
 | Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)                                                                                                                |
-| What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed                                                                                                          |
+| What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, steer, speed                                                                                                         |
 | Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle                                                                                                               |
 | How the ball moves and bounces       | `Physics.step`, one ball at a time; `forecastArrival` flies a copy ahead to where it will cross                                                                                     |
 | What a paddle can do beyond the base | its participant's skills (`match/skills/`), played through hooks by the match's `SkillSet`                                                                                          |
@@ -155,6 +155,14 @@ match. The menus start one (`onStartChallenge`), `Game.start` plays it and its r
 (`challenges.passed`, `profile/ChallengeProgress.ts`; every challenge is open from the start)
 and to the result screen in place of the game-over menu. Challenges stay out of the statistics
 (`StatsRecorder`'s `isCounted`).
+
+**A tutorial step.** A name in `TUTORIAL_STEPS` (`match/tutorial.ts`) and, if it opens on a card, in
+`TUTORIAL_CARDS` with its example (`ui/screens/TutorialCardScreen.tsx`); what counts for it in
+`TutorialCoach` (from the match's events and the learner's paddle; it only watches), and its line
+and hint in both languages (`tutorial` in `i18n/translations.ts`). The tutorial is a match of
+`TUTORIAL_RULES` against `TrainerController`, started by `Game.start`; its line takes the
+challenge condition's place (`ui/tutorialTexts.ts`). Whether it was gone through or turned down is
+the profile's `tutorial`.
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
 in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/MenuController.ts`).
@@ -231,7 +239,7 @@ shared paddle list grows and shrinks, as the balls do). Layers are in `ModifierR
 developers, `?mods=wind,darkness` and the debug overlay's modifier menu play quick matches with
 them.
 
-**Planned, not there yet** (see the roadmap): dialogue through Ink (8.1).
+**Planned, not there yet** (see the roadmap): dialogue through Ink (9.1).
 
 ## Rules of thumb
 

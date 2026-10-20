@@ -167,6 +167,7 @@ describe('a side with more than one paddle', () => {
       x: RIGHT_X,
       y: 380,
       speed: BALL.INITIAL_SPEED,
+      angle: 0,
       rally: 1,
       isPowerShot: false,
       chargedOverdrive: false,

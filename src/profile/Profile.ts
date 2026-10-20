@@ -7,7 +7,7 @@ import { getDefaultSettings, SETTING_KEYS, SETTINGS, UserSettings } from '@/sett
  * The version of the saved profile this build writes. Raise it with every change to what is
  * saved, and add the step from the version before to MIGRATIONS (profile/migrations.ts).
  */
-export const PROFILE_VERSION = 3;
+export const PROFILE_VERSION = 4;
 
 /**
  * Each setting as a saved one is checked: whatever is missing or invalid falls back to its
@@ -23,6 +23,14 @@ const settingsSchema = v.object(
   ),
 ) as unknown as v.GenericSchema<unknown, UserSettings>;
 
+/**
+ * How the tutorial (step 4.8) stands for the player: gone through, turned down (NO when offered),
+ * or neither yet (null): offered on PLAY until one or the other.
+ */
+export const tutorialStateSchema = v.fallback(v.nullable(v.picklist(['done', 'skipped'])), null);
+
+export type TutorialState = v.InferOutput<typeof tutorialStateSchema>;
+
 /** Everything saved between visits, at the current version. */
 export const profileSchema = v.object({
   version: v.literal(PROFILE_VERSION),
@@ -32,6 +40,8 @@ export const profileSchema = v.object({
   stats: statisticsSchema,
   // From version 3
   challenges: challengeProgressSchema,
+  // From version 4
+  tutorial: tutorialStateSchema,
 });
 
 export type Profile = v.InferOutput<typeof profileSchema>;
@@ -42,5 +52,6 @@ export function getDefaultProfile(): Profile {
     settings: getDefaultSettings(),
     stats: getEmptyStatistics(),
     challenges: getEmptyChallengeProgress(),
+    tutorial: null,
   };
 }

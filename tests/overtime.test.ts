@@ -30,7 +30,15 @@ const setup = (level: DifficultyLevel) => {
     ).handlePhysicsEvent.bind(flow);
     for (let i = 0; i < count; i++) {
       handle(
-        { type: 'paddleHit', paddleIndex: i % 2, isPerfect: false, x: 0, y: 0, speed: 500 },
+        {
+          type: 'paddleHit',
+          paddleIndex: i % 2,
+          isPerfect: false,
+          x: 0,
+          y: 0,
+          speed: 500,
+          angle: 0,
+        },
         ball,
       );
     }

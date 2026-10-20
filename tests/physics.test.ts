@@ -3,7 +3,7 @@ import { Ball } from '@/match/Ball';
 import { COURT, PADDLE } from '@/match/config';
 import { DifficultyLevel, DIFFICULTY_CONFIGS } from '@/match/difficulty';
 import { Paddle } from '@/match/Paddle';
-import { PERFECT_HIT, Physics, PhysicsEvent, SPIN } from '@/match/Physics';
+import { PERFECT_HIT, Physics, PhysicsEvent, STEER } from '@/match/Physics';
 
 const NORMAL = DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL];
 
@@ -85,10 +85,10 @@ describe('Physics.step', () => {
     const ordinary = hitLeftPaddleAt(30, 900).ball;
     const ordinaryStill = hitLeftPaddleAt(30, 0).ball;
 
-    const perfectSpin = angleOf(perfect);
-    const ordinarySpin = angleOf(ordinary) - angleOf(ordinaryStill);
-    expect(perfectSpin).toBeGreaterThan(ordinarySpin * 2);
-    expect(perfectSpin).toBeLessThanOrEqual(PERFECT_HIT.SPIN_MAX_ANGLE);
+    const perfectSteer = angleOf(perfect);
+    const ordinarySteer = angleOf(ordinary) - angleOf(ordinaryStill);
+    expect(perfectSteer).toBeGreaterThan(ordinarySteer * 2);
+    expect(perfectSteer).toBeLessThanOrEqual(PERFECT_HIT.STEER_MAX_ANGLE);
 
     // Still, a perfect hit with the paddle at rest goes out flat
     expect(angleOf(hitLeftPaddleAt(0, 0).ball)).toBeCloseTo(0);
@@ -157,11 +157,11 @@ describe('Physics angles', () => {
     expect(Physics.getBounceAngle(2)).toBe(Physics.getBounceAngle(1));
   });
 
-  it('ignores tiny paddle speeds and caps the spin nudge', () => {
-    expect(Physics.getSpinAngle(0)).toBe(0);
-    expect(Physics.getSpinAngle(SPIN.DEADZONE)).toBe(0);
-    expect(Physics.getSpinAngle(300)).toBeGreaterThan(0);
-    expect(Physics.getSpinAngle(-300)).toBeCloseTo(-Physics.getSpinAngle(300));
-    expect(Physics.getSpinAngle(100000)).toBeLessThanOrEqual(SPIN.MAX_ANGLE);
+  it('ignores tiny paddle speeds and caps the steer', () => {
+    expect(Physics.getSteerAngle(0)).toBe(0);
+    expect(Physics.getSteerAngle(STEER.DEADZONE)).toBe(0);
+    expect(Physics.getSteerAngle(300)).toBeGreaterThan(0);
+    expect(Physics.getSteerAngle(-300)).toBeCloseTo(-Physics.getSteerAngle(300));
+    expect(Physics.getSteerAngle(100000)).toBeLessThanOrEqual(STEER.MAX_ANGLE);
   });
 });

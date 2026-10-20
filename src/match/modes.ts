@@ -8,13 +8,14 @@ export interface GameMode {
 
 /**
  * Every mode, in the order the PLAY menu lists them. A new mode is an entry here and its name in
- * both languages; the compiler insists on the name. The story (stage 8) is on the menu before it
+ * both languages; the compiler insists on the name. The story (stage 9) is on the menu before it
  * is playable.
  */
 export const MODES = {
   story: { isPlayable: false },
   quick: { isPlayable: true },
   challenges: { isPlayable: true },
+  tutorial: { isPlayable: true },
 } as const satisfies Record<string, GameMode>;
 
 export type ModeId = keyof typeof MODES;

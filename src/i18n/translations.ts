@@ -2,10 +2,54 @@ import { ChallengeId, ChallengeTier } from '@/match/challenges';
 import { ModifierId } from '@/match/modifiers/Modifier';
 import { DifficultyLevel } from '@/match/difficulty';
 import { ModeId } from '@/match/modes';
+import { TutorialCard, TutorialFeedback, TutorialStep } from '@/match/tutorial';
 import { BackgroundChoice } from '@/shared/scenes';
 export type Language = 'en' | 'ru';
 
 export type DifficultyDescription = [name: string, description: string];
+
+/** The tutorial's texts (step 4.8): its offer, each step, its hint and its card, its end. */
+export interface TutorialTexts {
+  /** Offered on PLAY until gone through or turned down: its title, its question, the answers. */
+  offerTitle: string;
+  offerText: string;
+  yes: string;
+  no: string;
+  /** What each step asks, over the court; moving as a person with keys or a finger does it. */
+  steps: Record<TutorialStep, string>;
+  moveByTouch: string;
+  /** Shown in a step's place once a few tries have missed it. */
+  hints: Record<TutorialStep, string>;
+  /** Overdrive charged: what the very next return does. */
+  charged: string;
+  /** Told for a moment after a try that didn't count: why not. */
+  feedback: Record<TutorialFeedback, string>;
+  /**
+   * The cards that open the steps, the match paused: the move, what it gives, and its catch or
+   * how it is made. Their button.
+   */
+  cards: Record<TutorialCard, { title: string; why: string; how: string }>;
+  ok: string;
+  /** Its end. */
+  doneTitle: string;
+  doneText: string;
+}
+
+/** The controls screen (in the settings): each row's name, and how keys or a touch do it. */
+export interface ControlsTexts {
+  title: string;
+  /** The heading over the shots. */
+  shots: string;
+  rows: Record<ControlId, { name: string; keys: string; touch: string }>;
+}
+
+/** The controls screen's rows, the controls' and then the shots'. */
+export const CONTROL_ROWS = {
+  controls: ['paddle', 'pause', 'fullscreen', 'music', 'twoPlayers'],
+  shots: ['perfect', 'angle', 'aim', 'overdrive'],
+} as const;
+
+export type ControlId = (typeof CONTROL_ROWS)[keyof typeof CONTROL_ROWS][number];
 
 /** A challenge's name, and what it takes to pass it and what sets its match apart. */
 export type ChallengeDescription = [name: string, goal: string];
@@ -41,6 +85,8 @@ export interface TranslationSchema {
   mode: string;
   /** Every game mode's name, by mode. */
   modes: Record<ModeId, string>;
+  tutorial: TutorialTexts;
+  controls: ControlsTexts;
   /** The quick match's setup: its title is the mode's name; its options and start button. */
   background: string;
   points: string;
@@ -141,7 +187,86 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     ready: 'GET READY',
     decider: 'MATCH POINT',
     mode: 'GAME MODE',
-    modes: { story: 'STORY', challenges: 'CHALLENGE', quick: 'QUICK MATCH' },
+    modes: { story: 'STORY', challenges: 'CHALLENGE', quick: 'QUICK MATCH', tutorial: 'TUTORIAL' },
+    tutorial: {
+      offerTitle: 'FIRST TIME?',
+      offerText: 'Take the tutorial? It’s a minute on the controls and the shots',
+      yes: 'YES',
+      no: 'NO',
+      steps: {
+        move: 'MOVE: W/S, ↑/↓ OR THE MOUSE',
+        hit: 'RETURN THE BALL',
+        angle: 'A STEEP RETURN OFF AN EDGE',
+        perfect: 'PERFECT HIT',
+        overdrive: 'PERFECT HITS IN A ROW',
+      },
+      moveByTouch: 'MOVE: SLIDE A FINGER',
+      hints: {
+        move: 'MOVE THE PADDLE',
+        hit: 'GET IN THE BALL’S PATH',
+        angle: 'TAKE IT NEARER THE PADDLE’S END',
+        perfect: 'TAKE IT ON THE LIT MIDDLE',
+        overdrive: 'HOLD STILL, TAKE IT ON THE MIDDLE',
+      },
+      charged: 'CHARGED: THE NEXT HIT IS A POWER SHOT',
+      feedback: {
+        flat: 'TOO FLAT',
+        offCenter: 'OFF CENTER',
+        chargeLost: 'OFF CENTER: METER EMPTIED',
+        missed: 'MISSED',
+      },
+      cards: {
+        angle: {
+          title: 'ANGLE',
+          why: 'The nearer the paddle’s end, the steeper the return. A steep ball comes off the walls and is harder to read.',
+          how: 'The risk: right at the end, it’s easy to miss.',
+        },
+        perfect: {
+          title: 'PERFECT HIT',
+          why: 'A hit off the paddle’s middle is perfect: the ball speeds up and the opponent reacts later.',
+          how: 'Perfect hits in a row build up Overdrive.',
+        },
+        overdrive: {
+          title: 'OVERDRIVE',
+          why: 'Three perfect hits in a row charge the meter: your next hit is a power shot, very hard to return.',
+          how: 'A hit that isn’t perfect empties the meter.',
+        },
+      },
+      ok: 'GOT IT',
+      doneTitle: 'WELL PLAYED!',
+      doneText: 'Now for a real match',
+    },
+    controls: {
+      title: 'CONTROLS',
+      shots: 'SHOTS',
+      rows: {
+        paddle: { name: 'Paddle', keys: 'W/S · ↑/↓ · mouse', touch: 'Slide a finger' },
+        pause: { name: 'Pause', keys: 'P · Esc · right click', touch: 'The ❚❚ button' },
+        fullscreen: { name: 'Fullscreen', keys: 'F', touch: 'Install the app' },
+        music: { name: 'Music', keys: 'M', touch: 'In the settings' },
+        twoPlayers: { name: 'Two players', keys: 'W/S and ↑/↓', touch: 'Each on their half' },
+        perfect: {
+          name: 'Perfect hit',
+          keys: 'Off the middle: a faster ball',
+          touch: 'Off the middle: a faster ball',
+        },
+        angle: {
+          name: 'Angle',
+          keys: 'Off an end: a steeper return',
+          touch: 'Off an end: a steeper return',
+        },
+        aim: {
+          name: 'Aim',
+          keys: 'Perfect on the move: goes your way',
+          touch: 'Perfect on the move: goes your way',
+        },
+        overdrive: {
+          name: 'Overdrive',
+          keys: '3 perfect in a row: a power shot',
+          touch: '3 perfect in a row: a power shot',
+        },
+      },
+    },
     background: 'BACKGROUND',
     points: 'POINTS',
     start: 'START',
@@ -271,7 +396,86 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     ready: 'GET READY',
     decider: 'MATCH POINT',
     mode: 'РЕЖИМ ИГРЫ',
-    modes: { story: 'СЮЖЕТ', challenges: 'ИСПЫТАНИЕ', quick: 'БЫСТРЫЙ МАТЧ' },
+    modes: { story: 'СЮЖЕТ', challenges: 'ИСПЫТАНИЕ', quick: 'БЫСТРЫЙ МАТЧ', tutorial: 'ОБУЧЕНИЕ' },
+    tutorial: {
+      offerTitle: 'ВПЕРВЫЕ?',
+      offerText: 'Пройти обучение? Это минута на управление и приёмы',
+      yes: 'ДА',
+      no: 'НЕТ',
+      steps: {
+        move: 'ДВИГАЙ РАКЕТКУ: W/S, ↑/↓ ИЛИ МЫШЬ',
+        hit: 'ОТБЕЙ МЯЧ',
+        angle: 'КРУТОЙ ОТСКОК КРАЕМ',
+        perfect: 'ИДЕАЛЬНЫЙ УДАР',
+        overdrive: 'ИДЕАЛЬНЫЕ ПОДРЯД',
+      },
+      moveByTouch: 'ВЕДИ РАКЕТКУ ПАЛЬЦЕМ',
+      hints: {
+        move: 'ДВИГАЙ РАКЕТКУ',
+        hit: 'ВСТАНЬ НА ПУТЬ МЯЧА',
+        angle: 'ЛОВИ МЯЧ БЛИЖЕ К КОНЦУ РАКЕТКИ',
+        perfect: 'ЛОВИ МЯЧ ПОДСВЕЧЕННОЙ СЕРЕДИНОЙ',
+        overdrive: 'СТОЙ И ЛОВИ СЕРЕДИНОЙ',
+      },
+      charged: 'ЗАРЯЖЕНО: СЛЕДУЮЩИЙ УДАР МОЩНЫЙ',
+      feedback: {
+        flat: 'СЛИШКОМ ПРЯМО',
+        offCenter: 'НЕ ПО ЦЕНТРУ',
+        chargeLost: 'НЕ ПО ЦЕНТРУ — ШКАЛА СБРОШЕНА',
+        missed: 'МИМО',
+      },
+      cards: {
+        angle: {
+          title: 'УГОЛ',
+          why: 'Чем ближе к краю ракетки, тем круче отскок. Крутой мяч отражается от стен, и его труднее прочитать.',
+          how: 'Риск: у самого края легко промахнуться.',
+        },
+        perfect: {
+          title: 'ИДЕАЛЬНЫЙ УДАР',
+          why: 'Удар серединой ракетки — идеальный: мяч ускоряется, и соперник реагирует позже.',
+          how: 'Идеальные удары подряд копят Overdrive.',
+        },
+        overdrive: {
+          title: 'OVERDRIVE',
+          why: 'Три идеальных удара подряд заряжают шкалу: следующий удар — мощный, его очень трудно отбить.',
+          how: 'Неидеальный удар обнуляет шкалу.',
+        },
+      },
+      ok: 'ПОНЯТНО',
+      doneTitle: 'ГОТОВО!',
+      doneText: 'Теперь — настоящий матч',
+    },
+    controls: {
+      title: 'УПРАВЛЕНИЕ',
+      shots: 'ПРИЁМЫ',
+      rows: {
+        paddle: { name: 'Ракетка', keys: 'W/S · ↑/↓ · мышь', touch: 'Веди пальцем' },
+        pause: { name: 'Пауза', keys: 'P · Esc · правая кнопка', touch: 'Кнопка ❚❚' },
+        fullscreen: { name: 'Полный экран', keys: 'F', touch: 'Установи приложение' },
+        music: { name: 'Музыка', keys: 'M', touch: 'В настройках' },
+        twoPlayers: { name: 'Двое', keys: 'W/S и ↑/↓', touch: 'Каждый на своей половине' },
+        perfect: {
+          name: 'Идеальный удар',
+          keys: 'Серединой: мяч быстрее',
+          touch: 'Серединой: мяч быстрее',
+        },
+        angle: {
+          name: 'Угол',
+          keys: 'Краем: отскок круче',
+          touch: 'Краем: отскок круче',
+        },
+        aim: {
+          name: 'Прицел',
+          keys: 'Идеальный на ходу: мяч, куда ведёшь',
+          touch: 'Идеальный на ходу: мяч, куда ведёшь',
+        },
+        overdrive: {
+          name: 'Overdrive',
+          keys: '3 идеальных подряд: удар мощнее',
+          touch: '3 идеальных подряд: удар мощнее',
+        },
+      },
+    },
     background: 'ФОН',
     points: 'ОЧКИ',
     start: 'НАЧАТЬ',

@@ -36,7 +36,14 @@ const MIGRATIONS: ((saved: Record<string, unknown>) => Record<string, unknown>)[
   (saved) => ({ ...saved, version: 2, stats: getEmptyStatistics() }),
   // 2 → 3: the challenges begin, none passed
   (saved) => ({ ...saved, version: 3, challenges: getEmptyChallengeProgress() }),
+  // 3 → 4: the tutorial begins; someone who has played a match already knows the game, and isn't
+  // offered it (it stays on the PLAY menu)
+  (saved) => ({ ...saved, version: 4, tutorial: hasPlayed(saved) ? 'skipped' : null }),
 ];
+
+/** Whether a saved profile records a finished match. */
+const hasPlayed = (saved: Record<string, unknown>): boolean =>
+  isRecord(saved.stats) && typeof saved.stats.played === 'number' && saved.stats.played > 0;
 
 /** The saved data's version: whatever lacks one predates profiles. */
 const versionOf = (saved: Record<string, unknown>): number =>
