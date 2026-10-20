@@ -206,7 +206,9 @@ paddle's `perfectZoneScale` widens its perfect zone for a hit. It never changes 
 score, and it reports what the player should notice with `host.report`, a `skill` event the
 effects give its sound and burst. What lasts on court is drawn by layers (`SkillRenderer`): the
 spin's streaks, the slowed world's cast (`flow.timeWarp`), its label. For developers,
-`?skills=arc,reflex` gives the player those skills in every match against the CPU. A
+`?skills=arc,reflex` gives the player those skills in every match against the CPU, and the debug
+overlay's skill menu (`debug/SkillMenu.ts`) switches them at once (`flow.giveSkills`) and counts
+their uses in the match. A
 challenge's modifier (4.5) joins the same hooks.
 
 **Planned, not there yet** (see the roadmap): the AI reading curves and using skills on purpose

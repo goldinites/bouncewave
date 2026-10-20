@@ -35,7 +35,8 @@ after showing the user the new pictures. In the browser: `?debug` or F3 shows th
 backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts`);
 `?challenge=<id>` makes every match that challenge (ids in `src/match/challenges.ts`), its last
 verdict shown in the debug overlay; `?skills=arc,reflex` gives the player those skills in every
-match against the CPU (ids in `src/match/skills/Skill.ts`).
+match against the CPU (ids in `src/match/skills/Skill.ts`); the debug overlay has switches for
+them and counts their uses.
 
 ## Architecture
 

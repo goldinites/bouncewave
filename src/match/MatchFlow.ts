@@ -316,6 +316,17 @@ export class MatchFlow {
     }));
   }
 
+  /**
+   * Gives paddle `index` other skills at once, in the match being played (a developer's switch
+   * for playtesting; the demo's paddles keep none). What its old skills were doing stops.
+   */
+  public giveSkills(index: number, skills: readonly SkillId[]): void {
+    if (this.isDemo) return;
+    this.useLineup(
+      this.lineup.map((participant, i) => (i === index ? { ...participant, skills } : participant)),
+    );
+  }
+
   /** Whether a person plays this paddle (an index into the match's paddles) in this match. */
   public isPlayerPaddle(index: number): boolean {
     return this.lineup[index]?.controller instanceof HumanController;

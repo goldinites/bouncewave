@@ -315,6 +315,27 @@ describe('A match with skills', () => {
     expect(used).toEqual(new Set([false, 'arc', 'reflex']));
   });
 
+  it('gives a paddle other skills in the middle of a match, never in the demo', () => {
+    const paddles = court();
+    const flow = new MatchFlow({
+      paddles,
+      ball: new Ball(),
+      input: { pollPlayerMovement: () => {} },
+      getDifficulty: () => DifficultyLevel.NORMAL,
+      onEvent: () => {},
+      random: seeded(1),
+    });
+    flow.startAttract();
+    flow.giveSkills(0, ['reflex']);
+    expect(flow.overdriveCharges).toEqual([null, null]);
+
+    flow.startMatch();
+    paddles[0].perfectZoneScale = 1.5; // as a Reflex in the middle of a save leaves it
+    flow.giveSkills(0, ['arc']);
+    expect(paddles[0].perfectZoneScale).toBe(1);
+    expect(flow.overdriveCharges).toEqual([0, null]);
+  });
+
   it('reports no skill when no one has one', () => {
     expect(play(7, []).events.some((event) => event.type === 'skill')).toBe(false);
   });
