@@ -147,6 +147,25 @@ function neonLayers(
     }
   };
 
+  // The HUD; the final score takes its place at the end of a match
+  const drawHud = (c: CanvasRenderingContext2D, frame: RenderFrame, state: SceneState) => {
+    const { court, hud: view, isRotated } = frame;
+    if (court.isDemo || state.finalSign) return;
+    hud.render(
+      c,
+      state.realDt,
+      court.paddles,
+      court.scores,
+      court.serveTime,
+      view.readyText,
+      court.time,
+      isRotated,
+      view.condition,
+      view.sideLabels,
+      view.isConditionOnCourt,
+    );
+  };
+
   // In the dark, a ball flashes wherever it bounces (it turns around, up or down or across)
   const flashes: Flash[] = [];
   const headings = new Map<Ball, { vx: number; vy: number }>();
@@ -229,24 +248,11 @@ function neonLayers(
       render: (c, { court }) => ModifierRenderer.renderBumpers(c, court.conditions.bumpers),
     },
     {
-      // The final score takes the HUD's place at the end of a match
       id: 'hud',
       space: 'court',
-      render: (c, { court, hud: view, isRotated }, state) => {
-        if (court.isDemo || state.finalSign) return;
-        hud.render(
-          c,
-          state.realDt,
-          court.paddles,
-          court.scores,
-          court.serveTime,
-          view.readyText,
-          court.time,
-          isRotated,
-          view.condition,
-          view.sideLabels,
-          view.isConditionOnCourt,
-        );
+      render: (c, frame, state) => {
+        // In the dark it is written over the dark instead, so it glows in it
+        if (!frame.court.modifiers.includes('darkness')) drawHud(c, frame, state);
       },
     },
     {
@@ -347,11 +353,12 @@ function neonLayers(
       // Over the balls, so one in the dark middle is unseen; the paddles' lanes stay lit
       id: 'darkness',
       space: 'court',
-      render: (c, { court, hud: view }, { realDt }) => {
-        followFlashes(court.balls, realDt);
+      render: (c, frame, state) => {
+        const { court } = frame;
+        followFlashes(court.balls, state.realDt);
         if (!court.modifiers.includes('darkness')) return;
-        const isConditionShown = view.condition !== null && view.isConditionOnCourt;
-        ModifierRenderer.renderDarkness(c, flashes, isConditionShown);
+        ModifierRenderer.renderDarkness(c, court.paddles, flashes);
+        drawHud(c, frame, state);
       },
     },
     {

@@ -338,11 +338,11 @@ describe('Renderer', () => {
       baseFrame({ court: { isDemo: false, balls: [ball], ball, modifiers: ['darkness'] } });
 
     renderer.render(frame(), 0.016);
-    expect(dark.mock.calls.at(-1)![1]).toHaveLength(0);
+    expect(dark.mock.calls.at(-1)![2]).toHaveLength(0);
     // Off the top wall: it turns around, and there is a flash where it did
     ball.vy = 200;
     renderer.render(frame(), 0.016);
-    expect(dark.mock.calls.at(-1)![1]).toEqual([{ x: 400, y: 30, age: 0 }]);
+    expect(dark.mock.calls.at(-1)![2]).toEqual([{ x: 400, y: 30, age: 0 }]);
 
     renderer.render(baseFrame({ court: { isDemo: false, balls: [ball], ball } }), 0.016);
     expect(dark).toHaveBeenCalledTimes(2);

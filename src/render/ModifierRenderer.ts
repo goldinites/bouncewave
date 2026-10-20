@@ -1,7 +1,7 @@
 import { COURT } from '@/match/config';
 import { Bumper } from '@/match/court';
 import { INVISIBLE_BAND, WIND } from '@/match/modifiers/modifiers';
-import { HUD_LAYOUT } from '@/render/HudRenderer';
+import { Paddle } from '@/match/Paddle';
 import { TWO_PI } from '@/shared/math';
 
 // Wind: streaks drifting across the court the way it blows, and chevrons in the middle that
@@ -16,19 +16,21 @@ const WIND_LOOK = {
   CHEVRON: 9, // px across
 } as const;
 
-// Darkness: the middle of the court is dark; only the paddles' lanes are lit, the player's wider.
-// A ball crossing the middle can't be seen but where it strikes a wall or a post, which flashes:
-// the opponent's hit and the bounces are there to read its flight by
+// Darkness: the court is dark but for light cast from the paddles: full along each goal line
+// (the player's reaches further), fading smoothly toward the middle, with a warm pool around each
+// paddle like a lantern's. A ball crossing the middle can't be seen but where it strikes a wall
+// or a post, which flashes: the opponent's hit and the bounces are there to read its flight by
 export const DARKNESS = {
   RGB: '3, 0, 10',
   ALPHA: 0.95,
-  PLAYER_LANE: 190, // px from the left edge, lit
-  OPPONENT_LANE: 160, // px from the right edge, lit
-  EDGE: 50, // px the lanes' light fades over
+  PLAYER_LIGHT: 170, // px from the left edge lit in full...
+  OPPONENT_LIGHT: 140, // ...from the right edge
+  FADE: 110, // px the light fades over, into the dark
+  LANTERN: 150, // px around a paddle its own pool of light reaches
   FLASH: 55, // px across a bounce's flash...
   FLASH_LIFE: 0.45, // ...and seconds it lasts
-  SCORE_LIGHT: 50, // px around each score, which stays readable
-  CONDITION_LIGHT: { WIDTH: 420, HEIGHT: 44, Y: 142 }, // px, around the condition line on court
+  // The dark is worked out at this share of the court's size and drawn stretched: smooth, cheap
+  MASK_SCALE: 0.25,
 } as const;
 
 /** A bounce's flash in the dark, and seconds since it went off. */
@@ -118,64 +120,74 @@ export class ModifierRenderer {
     ctx.restore();
   }
 
+  /** The dark, worked out small once a frame and drawn stretched over the court. */
+  private static darkMask: HTMLCanvasElement | null = null;
+
   /**
-   * The middle of the court in the dark: the paddles' lanes lit, and wherever a ball has just
-   * bounced, a flash. The scores (and the condition line, when drawn on court) stay readable.
+   * The court in the dark but for the light cast from the paddles and the flashes where a ball
+   * has just bounced. Drawn over the balls (one in the dark can't be seen); the HUD goes over it.
    */
   public static renderDarkness(
     ctx: CanvasRenderingContext2D,
+    paddles: readonly Paddle[],
     flashes: readonly Flash[],
-    isConditionShown: boolean,
   ): void {
-    const { EDGE } = DARKNESS;
-    const left = DARKNESS.PLAYER_LANE;
-    const right = COURT.WIDTH - DARKNESS.OPPONENT_LANE;
-    const dark = `rgba(${DARKNESS.RGB}, ${DARKNESS.ALPHA})`;
-    const clear = `rgba(${DARKNESS.RGB}, 0)`;
-    beginLayer(ctx);
-
-    // The dark core, with holes: the flashes, the scores, the condition line
-    ctx.beginPath();
-    ctx.rect(left + EDGE, 0, right - left - EDGE * 2, COURT.HEIGHT);
-    const hole = (x: number, y: number, radius: number) => {
-      ctx.moveTo(x + radius, y);
-      ctx.arc(x, y, radius, 0, TWO_PI);
-    };
-    for (const { x, y } of flashes) hole(x, y, DARKNESS.FLASH);
-    for (const x of [COURT.WIDTH / 2 - HUD_LAYOUT.SCORE_X, COURT.WIDTH / 2 + HUD_LAYOUT.SCORE_X]) {
-      hole(x, HUD_LAYOUT.SCORE_Y, DARKNESS.SCORE_LIGHT);
+    const mask = ModifierRenderer.darkMask ?? document.createElement('canvas');
+    ModifierRenderer.darkMask = mask;
+    const scale = DARKNESS.MASK_SCALE;
+    // Sized once: setting a canvas's size clears and reallocates it
+    const width = Math.ceil(COURT.WIDTH * scale);
+    if (mask.width !== width) {
+      mask.width = width;
+      mask.height = Math.ceil(COURT.HEIGHT * scale);
     }
-    if (isConditionShown) {
-      const { WIDTH, HEIGHT, Y } = DARKNESS.CONDITION_LIGHT;
-      ctx.rect(COURT.WIDTH / 2 - WIDTH / 2, Y - HEIGHT / 2, WIDTH, HEIGHT);
-    }
-    ctx.fillStyle = dark;
-    ctx.fill('evenodd');
+    const m = mask.getContext('2d');
+    if (!m) return;
 
-    // The lanes' light fades into it
-    for (const [from, to] of [
-      [left, left + EDGE],
-      [right, right - EDGE],
+    m.save();
+    m.scale(scale, scale);
+    m.globalCompositeOperation = 'copy';
+    m.fillStyle = `rgb(${DARKNESS.RGB})`;
+    m.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
+    // Light takes the dark away: wherever two lights meet, the brighter wins out
+    m.globalCompositeOperation = 'destination-out';
+    const lit = 'rgba(0, 0, 0, 1)';
+    const unlit = 'rgba(0, 0, 0, 0)';
+
+    // Along each goal line, fading toward the middle
+    for (const [edge, reach] of [
+      [0, DARKNESS.PLAYER_LIGHT],
+      [COURT.WIDTH, -DARKNESS.OPPONENT_LIGHT],
     ]) {
-      const fade = ctx.createLinearGradient(from, 0, to, 0);
-      fade.addColorStop(0, clear);
-      fade.addColorStop(1, dark);
-      ctx.fillStyle = fade;
-      ctx.fillRect(Math.min(from, to), 0, EDGE, COURT.HEIGHT);
+      const end = edge + reach + Math.sign(reach) * DARKNESS.FADE;
+      const lane = m.createLinearGradient(edge, 0, end, 0);
+      lane.addColorStop(0, lit);
+      lane.addColorStop(Math.abs(reach) / Math.abs(end - edge), lit);
+      lane.addColorStop(1, unlit);
+      m.fillStyle = lane;
+      m.fillRect(Math.min(edge, end), 0, Math.abs(end - edge), COURT.HEIGHT);
     }
-
-    // A flash dims back into the dark as it ages, from its rim inward
+    // A lantern's pool around each paddle, and a flash wherever a ball bounced
+    const pool = (x: number, y: number, radius: number, strength: number) => {
+      const glow = m.createRadialGradient(x, y, 0, x, y, radius);
+      glow.addColorStop(0, `rgba(0, 0, 0, ${strength})`);
+      glow.addColorStop(0.45, `rgba(0, 0, 0, ${strength * 0.75})`);
+      glow.addColorStop(1, unlit);
+      m.fillStyle = glow;
+      m.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    };
+    for (const paddle of paddles) {
+      pool(paddle.x + paddle.spec.width / 2, paddle.drawY, DARKNESS.LANTERN, 1);
+    }
     for (const { x, y, age } of flashes) {
-      const life = Math.max(0, 1 - age / DARKNESS.FLASH_LIFE);
-      const glow = ctx.createRadialGradient(x, y, 0, x, y, DARKNESS.FLASH);
-      glow.addColorStop(0, `rgba(${DARKNESS.RGB}, ${DARKNESS.ALPHA * (1 - life)})`);
-      glow.addColorStop(life, `rgba(${DARKNESS.RGB}, ${DARKNESS.ALPHA * (1 - life)})`);
-      glow.addColorStop(1, dark);
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(x, y, DARKNESS.FLASH, 0, TWO_PI);
-      ctx.fill();
+      pool(x, y, DARKNESS.FLASH, Math.max(0, 1 - age / DARKNESS.FLASH_LIFE));
     }
+    m.restore();
+
+    beginLayer(ctx);
+    ctx.globalAlpha = DARKNESS.ALPHA;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(mask, 0, 0, COURT.WIDTH, COURT.HEIGHT);
     ctx.restore();
   }
 
