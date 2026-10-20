@@ -27,11 +27,11 @@ describe("the challenges' own scenes", () => {
     expect(isPickableScene('fuji')).toBe(true);
   });
 
-  it('go one to a tier: three challenges each, in the order of the list', () => {
+  it('go one to a tier: six challenges each, in the order of the list', () => {
     expect(CHALLENGE_IDS.map((id) => CHALLENGES[id].scene)).toEqual([
-      ...Array(3).fill('warehouse'),
-      ...Array(3).fill('dojo'),
-      ...Array(3).fill('brokenNet'),
+      ...Array(6).fill('warehouse'),
+      ...Array(6).fill('dojo'),
+      ...Array(6).fill('brokenNet'),
     ]);
   });
 });

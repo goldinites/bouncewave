@@ -1,15 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { Ball } from '@/match/Ball';
-import { COURT, PADDLE } from '@/match/config';
+import { BALL, COURT, PADDLE } from '@/match/config';
 import { CourtConditions } from '@/match/court';
 import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { forecastArrival } from '@/match/forecast';
-import { MatchFlow } from '@/match/MatchFlow';
-import { ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
-import { BUMPERS, HALVES, ICE, MODIFIERS, SHRINK, TURBO, WIND } from '@/match/modifiers/modifiers';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { MODIFIER_IDS, ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
+import {
+  BRICK_WALL,
+  BRICKS,
+  BUMPERS,
+  HALVES,
+  ICE,
+  MODIFIERS,
+  SHRINK,
+  TURBO,
+  WIND,
+} from '@/match/modifiers/modifiers';
 import { quickMatchRules } from '@/match/modes';
 import { Paddle } from '@/match/Paddle';
-import { Physics } from '@/match/Physics';
+import { Physics, PhysicsEvent } from '@/match/Physics';
+import { MatchRules } from '@/match/rules';
 
 const STEP = 1 / 240;
 const CONFIG = DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL];
@@ -96,6 +107,26 @@ describe('The court’s conditions in the physics', () => {
     }
     expect(ball.vx).toBeLessThan(0);
     expect(events.some((event) => event.type === 'wallBounce')).toBe(true);
+  });
+
+  it('bounces the ball off a brick, leaving the breaking of it to the match', () => {
+    const conditions = new CourtConditions();
+    const brick = { x: 400, y: 230, width: 14, height: 40 };
+    conditions.bricks = [brick];
+    const ball = ballOver(conditions, 300, 250, 400, 60);
+    const events: PhysicsEvent[] = [];
+    for (let i = 0; i < 120 && ball.vx > 0; i++) {
+      events.push(...Physics.step(ball, [], CONFIG, STEP));
+    }
+    expect(ball.vx).toBeLessThan(0);
+    expect(ball.vy).toBeGreaterThan(0); // off the face: only its way across turns back
+    expect(events).toContainEqual(expect.objectContaining({ type: 'brickHit', brick }));
+    expect(conditions.bricks).toEqual([brick]);
+
+    // A forecast sees it sent back, and breaks nothing
+    const next = ballOver(conditions, 300, 250, 400);
+    expect(forecastArrival(next, 700, CONFIG)).toBeNull();
+    expect(conditions.bricks).toEqual([brick]);
   });
 
   it('flies a forecast through the wind as the ball will fly', () => {
@@ -206,6 +237,28 @@ describe('The modifiers', () => {
     expect(paddles[0].spec.height).toBe(PADDLE.HEIGHT);
   });
 
+  it('builds a wall of bricks with an opening for the serve, whole again at every serve', () => {
+    const { modifier, conditions } = make('bricks');
+    modifier.start!();
+    expect(conditions.bricks).toBe(BRICK_WALL);
+    expect(BRICK_WALL).toHaveLength(BRICKS.COLUMNS.length * BRICKS.ROWS * 2);
+    for (const { y, height } of BRICK_WALL) {
+      // Clear of the opening a serve flies through, and within the walls
+      const isClear =
+        y + height <= COURT.HEIGHT / 2 - BRICKS.OPENING / 2 ||
+        y >= COURT.HEIGHT / 2 + BRICKS.OPENING / 2;
+      expect(isClear).toBe(true);
+      expect(y).toBeGreaterThanOrEqual(COURT.TOP_WALL);
+      expect(y + height).toBeLessThanOrEqual(COURT.HEIGHT - COURT.BOTTOM_WALL);
+    }
+
+    conditions.bricks = BRICK_WALL.slice(3);
+    modifier.onServe!();
+    expect(conditions.bricks).toBe(BRICK_WALL);
+    modifier.end!();
+    expect(conditions.bricks).toEqual([]);
+  });
+
   it('makes every paddle slide on the ice: it lags its aim, then runs past it', () => {
     const { modifier, paddles } = make('ice');
     modifier.start!();
@@ -278,5 +331,122 @@ describe('Two opponents', () => {
     flow.returnToMenu();
     expect([flow.court.wind, flow.court.turbo, flow.court.bumpers.length]).toEqual([0, 0, 0]);
     expect(flow.activeModifiers).toEqual([]);
+  });
+});
+
+describe('Bricks in a match', () => {
+  it('breaks a brick the ball bounces off, and says so', () => {
+    const events: MatchEvent[] = [];
+    const ball = new Ball();
+    const flow = new MatchFlow({
+      paddles: court(),
+      ball,
+      input: { pollPlayerMovement: () => {} },
+      getDifficulty: () => DifficultyLevel.NORMAL,
+      onEvent: (event) => events.push(event),
+      random: () => 0.4,
+    });
+    flow.startMatch({ ...quickMatchRules(5), modifiers: ['bricks'] });
+    while (flow.serveTime > 0) flow.update(STEP);
+
+    // Straight at the first brick of the left column
+    const brick = BRICK_WALL[0];
+    Object.assign(ball, { x: brick.x - 60, y: brick.y + brick.height / 2, vx: 400, vy: 0 });
+    for (let i = 0; i < 60 && ball.vx > 0; i++) flow.update(STEP);
+
+    expect(ball.vx).toBeLessThan(0);
+    expect(flow.court.bricks).toHaveLength(BRICK_WALL.length - 1);
+    expect(flow.court.bricks).not.toContain(brick);
+    expect(events).toContainEqual(expect.objectContaining({ type: 'brickBreak', brick }));
+  });
+});
+
+describe('Modifiers taking turns (Chaos)', () => {
+  const ALL_BUT_TWO = MODIFIER_IDS.filter((id) => id !== 'twoOpponents');
+  const rotating = (points = 2): MatchRules => ({
+    ...quickMatchRules(7),
+    rotation: { modifiers: ALL_BUT_TWO, points },
+  });
+
+  const setup = (seed = 7) => {
+    const ball = new Ball();
+    let state = seed;
+    const flow = new MatchFlow({
+      paddles: court(),
+      ball,
+      input: { pollPlayerMovement: () => {} },
+      getDifficulty: () => DifficultyLevel.NORMAL,
+      onEvent: () => {},
+      random: () => ((state = (state * 16807) % 2147483647) - 1) / 2147483646,
+    });
+    /** Puts the ball past a goal line so the next update scores it. */
+    const scoreFor = (scorer: 0 | 1) => {
+      while (flow.serveTime > 0) flow.update(STEP);
+      ball.x =
+        scorer === 0 ? COURT.WIDTH + BALL.OUT_OF_BOUNDS_OFFSET + 1 : -BALL.OUT_OF_BOUNDS_OFFSET - 1;
+      ball.vx = scorer === 0 ? 10 : -10;
+      flow.update(0.001);
+    };
+    return { flow, scoreFor };
+  };
+
+  it('plays one at a time, the next shown ahead, and hands over after its points', () => {
+    const { flow, scoreFor } = setup();
+    flow.startMatch(rotating());
+    const [first] = flow.activeModifiers;
+    const { id: second } = flow.upcomingModifier!;
+    expect(flow.activeModifiers).toHaveLength(1);
+    expect(second).not.toBe(first);
+    expect(flow.upcomingModifier).toEqual({ id: second, inPoints: 2 });
+
+    scoreFor(0);
+    expect(flow.activeModifiers).toEqual([first]);
+    expect(flow.upcomingModifier).toEqual({ id: second, inPoints: 1 });
+
+    scoreFor(1);
+    expect(flow.activeModifiers).toEqual([second]);
+    expect(flow.upcomingModifier?.inPoints).toBe(2);
+  });
+
+  it('puts the court back between turns: what one changed leaves with it', () => {
+    const { flow, scoreFor } = setup();
+    flow.startMatch(rotating(1));
+    // A point each: every modifier in turn, and the court as each one has it
+    for (let point = 0; point < ALL_BUT_TWO.length; point++) {
+      const [now] = flow.activeModifiers;
+      expect(flow.court.wind !== 0, now).toBe(now === 'wind');
+      expect(flow.court.turbo !== 0, now).toBe(now === 'turbo');
+      expect(flow.court.bricks.length > 0, now).toBe(now === 'bricks');
+      scoreFor((point % 2) as 0 | 1);
+    }
+  });
+
+  it('deals the order afresh for every match, each of them in it once', () => {
+    const order = (seed: number) => {
+      const { flow, scoreFor } = setup(seed);
+      flow.startMatch(rotating(1));
+      const dealt: ModifierId[] = [];
+      for (let point = 0; point < ALL_BUT_TWO.length; point++) {
+        dealt.push(...flow.activeModifiers);
+        scoreFor((point % 2) as 0 | 1);
+      }
+      return dealt;
+    };
+    expect([...order(7)].sort()).toEqual([...ALL_BUT_TWO].sort());
+    expect(order(7)).toEqual(order(7));
+    expect(order(7)).not.toEqual(order(11));
+  });
+
+  it('has nothing to show without a rotation, and refuses Two opponents in one', () => {
+    const { flow } = setup();
+    expect(flow.upcomingModifier).toBeNull();
+    flow.startMatch(quickMatchRules(5));
+    expect(flow.upcomingModifier).toBeNull();
+    expect(() =>
+      flow.startMatch({
+        ...quickMatchRules(5),
+        rotation: { modifiers: ['wind', 'twoOpponents'], points: 2 },
+      }),
+    ).toThrow();
   });
 });

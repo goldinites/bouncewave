@@ -104,7 +104,7 @@ function bench(scene: string) {
     skills: ['arc', 'analyzer', 'reflex'] as const,
   }));
   // The drawn modifiers' layers in the measure too (Hard's level of everything at once)
-  const modifiers = ['wind', 'darkness', 'bumpers', 'invisibleBand', 'ice'] as const;
+  const modifiers = ['wind', 'darkness', 'bumpers', 'invisibleBand', 'ice', 'bricks'] as const;
   flow.startMatch({ ...STANDARD_RULES, winningScores: firstTo(99), balls: 2, modifiers }, lineup);
   renderer.pinBackground(scene as never);
 

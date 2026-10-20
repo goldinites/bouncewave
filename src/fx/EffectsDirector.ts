@@ -11,6 +11,7 @@ import { Paddle } from '@/match/Paddle';
 import { Side } from '@/match/side';
 import { REFLEX } from '@/match/skills/Reflex';
 import { finalScoreText } from '@/render/FinalScoreRenderer';
+import { brickColor } from '@/render/ModifierRenderer';
 import { Renderer } from '@/render/Renderer';
 import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
@@ -51,6 +52,8 @@ const BURST = {
   FIREWORK_SPEED: 340,
   POWER_COUNT: 36, // per color, twice over
   POWER_SPEED: 560,
+  BRICK_COUNT: 14, // a broken brick's shards, in its colour
+  BRICK_SPEED: 220,
 } as const;
 
 // Overdrive: the meter filling up, and the power shot going off
@@ -291,6 +294,21 @@ export class EffectsDirector {
         this.renderer.addShake(SHAKE.WALL_BOUNCE);
         this.audio.sfx.playWallBounce();
         break;
+
+      case 'brickBreak': {
+        // It bounces like a wall and shatters in its own colour
+        const { brick } = event;
+        this.renderer.addShake(SHAKE.WALL_BOUNCE);
+        this.audio.sfx.playWallBounce();
+        this.particles.burst(
+          brick.x + brick.width / 2,
+          brick.y + brick.height / 2,
+          brickColor(brick),
+          BURST.BRICK_COUNT,
+          BURST.BRICK_SPEED,
+        );
+        break;
+      }
 
       case 'paddleHit':
         this.onPaddleHit(event);

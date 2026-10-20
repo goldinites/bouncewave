@@ -1,6 +1,6 @@
 import { COURT } from '@/match/config';
-import { Bumper } from '@/match/court';
-import { INVISIBLE_BAND, WIND } from '@/match/modifiers/modifiers';
+import { Brick, Bumper } from '@/match/court';
+import { BRICKS, INVISIBLE_BAND, WIND } from '@/match/modifiers/modifiers';
 import { Paddle } from '@/match/Paddle';
 import { TWO_PI } from '@/shared/math';
 
@@ -42,6 +42,23 @@ const BAND = { RGB: '200, 140, 255', ALPHA: 0.35, DASH: [8, 8] } as const;
 
 // Bumpers: neon posts, a hot core in a glowing ring
 const BUMPER_LOOK = { COLOR: '#ff2bd6', CORE: '#ffd0f4', GLOW: 10 } as const;
+
+// Bricks: neon blocks, a colour to a row as in Arkanoid, from the opening in the middle out to
+// the walls; a faint glow and a hot inner line
+const BRICK_LOOK = {
+  COLORS: ['#19f0ff', '#7b5cff', '#ff2bd6', '#ff7a3d', '#ffd23f'],
+  GLOW: 4, // px
+  INSET: 3, // px of the inner line from the edge
+} as const;
+
+/** A brick's colour: its row's, counted from the opening out. */
+export const brickColor = (brick: Brick): string => {
+  const fromMiddle = Math.abs(brick.y + brick.height / 2 - COURT.HEIGHT / 2);
+  const row = Math.round(
+    (fromMiddle - BRICKS.OPENING / 2 - BRICKS.HEIGHT / 2) / (BRICKS.HEIGHT + BRICKS.GAP),
+  );
+  return BRICK_LOOK.COLORS[Math.max(0, Math.min(BRICK_LOOK.COLORS.length - 1, row))];
+};
 
 // Ice: the court frozen over. A cold cast, frost thick along the walls, cracks in the ice, a
 // sheen drifting across it and glints twinkling in it
@@ -236,6 +253,35 @@ export class ModifierRenderer {
       ctx.beginPath();
       ctx.arc(x, y, radius * 0.4, 0, TWO_PI);
       ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** The wall of bricks still standing. */
+  public static renderBricks(ctx: CanvasRenderingContext2D, bricks: readonly Brick[]): void {
+    if (bricks.length === 0) return;
+    beginLayer(ctx);
+    const { GLOW, INSET } = BRICK_LOOK;
+    for (const brick of bricks) {
+      const { x, y, width, height } = brick;
+      const color = brickColor(brick);
+      // A glow as a wider faint block rather than shadowBlur
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.18;
+      ctx.fillRect(x - GLOW, y - GLOW, width + GLOW * 2, height + GLOW * 2);
+      ctx.globalAlpha = 0.45;
+      ctx.fillRect(x, y, width, height);
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = color;
+      ctx.strokeRect(x + 1, y + 1, width - 2, height - 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.globalAlpha = 0.6;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + width / 2, y + INSET);
+      ctx.lineTo(x + width / 2, y + height - INSET);
+      ctx.stroke();
     }
     ctx.restore();
   }

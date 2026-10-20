@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { ChallengeVerdict } from '@/match/ChallengeJudge';
-import { CHALLENGE_IDS, ChallengeId } from '@/match/challenges';
+import { CHALLENGE_IDS, ChallengeId, CHALLENGES } from '@/match/challenges';
 import { MatchEvent } from '@/match/MatchFlow';
 import {
   ChallengeProgress,
@@ -21,13 +21,16 @@ import { UIManager } from '@/ui/UIManager';
 
 const progressOf = (...passed: ChallengeId[]): ChallengeProgress => ({ passed });
 
+/** The tier tab shown in the challenges' list, as it reads. */
+const shownTier = () => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent;
+
 describe('progress through the challenges', () => {
   it('has every challenge open from the start, in any order', () => {
     const states = (progress: ChallengeProgress) =>
       CHALLENGE_IDS.slice(0, 4).map((id) => challengeState(progress, id));
 
     expect(states(progressOf())).toEqual(['open', 'open', 'open', 'open']);
-    expect(states(progressOf('longRally', 'blitz'))).toEqual(['open', 'passed', 'open', 'passed']);
+    expect(states(progressOf('twoBalls', 'bricks'))).toEqual(['open', 'passed', 'open', 'passed']);
   });
 
   it('keeps the passed ones once each, in the order of the list', () => {
@@ -41,7 +44,7 @@ describe('progress through the challenges', () => {
   });
 
   it('knows which comes next, and that none comes after the last', () => {
-    expect(nextChallenge('warmUp')).toBe('longRally');
+    expect(nextChallenge('warmUp')).toBe('twoBalls');
     expect(nextChallenge(CHALLENGE_IDS[CHALLENGE_IDS.length - 1])).toBeNull();
   });
 
@@ -72,9 +75,7 @@ describe('the challenges in words', () => {
 
     expect(describeShortfall(en, verdict('longRally', 18, 20))).toBe('RALLY: 18 OF 20');
     expect(describeShortfall(ru, verdict('survival', 7, 15))).toBe('ОЧКИ: 7 ИЗ 15');
-    expect(describeShortfall(en, verdict('overload', 3, 5))).toBe('OVERDRIVE SHOTS: 3 OF 5');
     // The goal reached, the attempt spoilt another way
-    expect(describeShortfall(en, verdict('overload', 5, 5))).toBe('THE MATCH WAS LOST');
     expect(describeShortfall(en, verdict('shutout', 3, 3))).toBe('A POINT WAS LOST');
     expect(describeShortfall(en, verdict('shutout', 1, 3))).toBe('POINTS: 1 OF 3');
   });
@@ -111,12 +112,6 @@ describe('the challenges in words', () => {
     });
     expect(sign('shutout', [2, 3], 1, 'points', [2, 1]).label).toBe('POINT LOST');
     expect(sign('survival', [7, 10], 1, 'points', [7, 3]).label).toBe('OUT OF LIVES');
-    // Overload won short of its shots is no win; lost, it is simply lost
-    expect(sign('overload', [3, 5], 0, 'points', [7, 4])).toEqual({
-      label: 'NOT ENOUGH OVERDRIVE',
-      text: '3 / 5',
-    });
-    expect(sign('overload', [5, 5], 1, 'points', [4, 7]).label).toBe('GAME OVER');
     expect(sign('warmUp', [1, 3], 1, 'points', [1, 3]).label).toBe('GAME OVER');
   });
 });
@@ -161,45 +156,85 @@ describe('the challenges in the menus', () => {
     return { menu, actions, screenButtons, button, title, subtitle, text };
   };
 
-  it('opens the list from PLAY: every challenge open, the passed ones ticked', () => {
+  it('opens the list from PLAY a tier at a time: every challenge open, the passed ones ticked', () => {
     const { menu, screenButtons, button, title, subtitle } = setup(['warmUp', 'giant']);
     menu.showPlayMenu();
     button('CHALLENGE').click();
 
     expect(title()).toBe('CHALLENGE');
-    expect(subtitle()).toBe('PASSED: 2 / 9');
-    const items = screenButtons().slice(0, CHALLENGE_IDS.length);
-    expect(items.map((b) => b.textContent)).toEqual([
-      'WARM-UP',
-      'LONG RALLY',
-      'TWO BALLS',
-      'BLITZ',
-      'SHUTOUT',
-      'GIANT',
-      'SURVIVAL',
-      'OVERLOAD',
-      'INSANITY',
+    expect(subtitle()).toBe('PASSED: 2 / 18');
+    const tabs = () => [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    const items = () => screenButtons().filter((b) => b.matches('.challenge-list__item'));
+    const names = () => items().map((b) => b.textContent);
+
+    // Every tier a tab, with how many of its six are passed; the first one's shown
+    expect(tabs().map((tab) => tab.textContent)).toEqual([
+      'ROOKIE 1/6',
+      'MASTER 0/6',
+      'LEGEND 1/6',
     ]);
-    expect(items.every((b) => !b.disabled)).toBe(true);
-    expect(items[0].classList).toContain('challenge-list__item--passed');
-    expect(items[5].classList).toContain('challenge-list__item--passed');
-    expect(items[8].classList).toContain('challenge-list__item--open');
+    expect(shownTier()).toBe('ROOKIE 1/6');
+    expect(names()).toEqual([
+      'FIRST SERVE',
+      'SPLIT',
+      'MARATHON',
+      'BREAKOUT',
+      'CROSSWIND',
+      'OVERHEAT',
+    ]);
+    expect(items().every((b) => !b.disabled)).toBe(true);
+    expect(items()[0].classList).toContain('challenge-list__item--passed');
+    expect(items()[1].classList).toContain('challenge-list__item--open');
+    tabs()[1].click();
+    expect(shownTier()).toBe('MASTER 0/6');
+    expect(names()).toEqual([
+      'ATTRITION',
+      'BLACKOUT',
+      'COUNTDOWN',
+      'PINBALL',
+      'SLIDE',
+      'DEAD ZONE',
+    ]);
+    tabs()[2].click();
+    expect(names()).toEqual([
+      'TAG TEAM',
+      'GOLIATH',
+      'PERFECT GAME',
+      'SURVIVAL',
+      'INSANITY',
+      'CHAOS',
+    ]);
+    expect(items()[1].classList).toContain('challenge-list__item--passed');
     expect(screenButtons().at(-1)?.textContent).toBe('BACK');
+  });
+
+  it('opens on the tier of the first challenge still to pass, and keeps the last one opened', () => {
+    const warehouse = CHALLENGE_IDS.filter((id) => CHALLENGES[id].scene === 'warehouse');
+    const { menu, button, title } = setup(warehouse);
+    menu.showPlayMenu();
+    button('CHALLENGE').click();
+    expect(shownTier()).toBe('MASTER 0/6');
+
+    // Back to the list from a card of another tier: that tier's page
+    menu.showChallengeCard('insanity');
+    expect(menu.goBack()).toBe(true);
+    expect(title()).toBe('CHALLENGE');
+    expect(shownTier()).toBe('LEGEND 0/6');
   });
 
   it("shows a challenge's card, starts it, and steps back on Esc to the list and PLAY", () => {
     const { menu, actions, button, title, subtitle, text } = setup();
     menu.showChallengeList();
-    button('GIANT').click();
+    button('CROSSWIND').click();
 
-    expect(title()).toBe('GIANT');
+    expect(title()).toBe('CROSSWIND');
     expect(subtitle()).toBe(
-      'Win to 5 against a Normal opponent whose paddle is half as long again',
+      'Win to 5 against a Normal opponent in a gusting wind that turns now and then',
     );
     expect(text('.challenge-card__passed')).toBeUndefined();
 
     button('START').click();
-    expect(actions.onStartChallenge).toHaveBeenCalledWith('giant');
+    expect(actions.onStartChallenge).toHaveBeenCalledWith('wind');
     expect(actions.onUnlockAudio).toHaveBeenCalled();
 
     expect(menu.goBack()).toBe(true);
@@ -227,13 +262,13 @@ describe('the challenges in the menus', () => {
       isAllPassed: false,
     });
     expect(title()).toBe('PASSED!');
-    expect(subtitle()).toBe('WARM-UP');
+    expect(subtitle()).toBe('FIRST SERVE');
     expect(text('.challenge-result__message')).toBe('');
     expect(screenButtons().map((b) => b.textContent)).toEqual(['NEXT', 'ALL CHALLENGES']);
 
     button('NEXT').click();
     expect(actions.onReturnToMainMenu).toHaveBeenCalledOnce();
-    expect(title()).toBe('LONG RALLY');
+    expect(title()).toBe('SPLIT');
   });
 
   it('shows a failed attempt: what it fell short by, TRY AGAIN and the list', () => {
@@ -266,7 +301,7 @@ describe('the challenges in the menus', () => {
 
     // After the last in the list there is no NEXT
     menu.showChallengeResult({
-      verdict: { challenge: 'insanity', isPassed: true, progress: 5, target: 5 },
+      verdict: { challenge: 'chaos', isPassed: true, progress: 7, target: 7 },
       isAllPassed: false,
     });
     expect(screenButtons().map((b) => b.textContent)).toEqual(['ALL CHALLENGES']);

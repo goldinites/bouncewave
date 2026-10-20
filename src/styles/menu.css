@@ -363,7 +363,8 @@
   min-width: clamp(170px, 38%, 280px);
 }
 
-/* The challenges: three to a row, so all nine and BACK fit a short phone's court unscrolled */
+/* The challenges a tier at a time: its six three to a row under the tiers' tabs, so they and
+   BACK fit a short phone's court unscrolled */
 .challenge-list {
   display: flex;
   flex-direction: column;
@@ -372,6 +373,68 @@
 
   max-width: 100%;
   margin-bottom: auto;
+}
+
+/* The tiers as tabs: plain words, the one shown lit and underlined, the rest dim; a tier with
+   every challenge passed turns green. Each says how many of its six are passed */
+.challenge-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.challenge-tabs__tab {
+  --tab-color: var(--cyan);
+
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+
+  padding: 0.35em 0.8em;
+
+  border: none;
+  border-bottom: 2px solid transparent;
+
+  background: none;
+
+  color: var(--tab-color);
+  font-family: inherit;
+  font-size: clamp(10px, 1.7vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+
+  opacity: 0.5;
+  cursor: pointer;
+
+  transition: opacity 0.15s;
+}
+
+.challenge-tabs__tab:hover,
+.challenge-tabs__tab:focus-visible {
+  opacity: 0.85;
+  outline: none;
+}
+
+.challenge-tabs__tab--current {
+  border-bottom-color: var(--tab-color);
+
+  opacity: 1;
+  text-shadow: 0 0 4px var(--tab-color);
+}
+
+.challenge-tabs__tab--current:hover,
+.challenge-tabs__tab--current:focus-visible {
+  opacity: 1;
+}
+
+.challenge-tabs__tab--done {
+  --tab-color: var(--green);
+}
+
+.challenge-tabs__count {
+  font-size: 0.8em;
+  font-weight: 400;
+  opacity: 0.8;
 }
 
 /* Three equal columns only as wide as the longest name needs (up to the court's width, where a
@@ -561,7 +624,7 @@
 
 /* The court is on its side here (stage.css), so the menu is turned back upright over it */
 @media (orientation: portrait) and (max-width: 900px) {
-  /* A phone held upright is too narrow for three names a row: two, the odd last one centered */
+  /* A phone held upright is too narrow for three names a row: two */
   .challenge-list__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: 90%;
@@ -571,12 +634,6 @@
   .challenge-list .game-button {
     padding: 0.85em 0.6em;
     font-size: 14px;
-  }
-
-  .challenge-list__item:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-    justify-self: center;
-    width: calc(50% - 5px);
   }
 
   .game__ui {

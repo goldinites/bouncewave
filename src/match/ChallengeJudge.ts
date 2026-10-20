@@ -8,18 +8,17 @@ export interface ChallengeVerdict {
   readonly challenge: ChallengeId;
   readonly isPassed: boolean;
   /**
-   * The goal's own measure, for "18 of 20": the longest rally, the Overdrive shots, or the
-   * player's points (for a goal of winning).
+   * The goal's own measure, for "18 of 20": the longest rally, or the player's points (for a goal
+   * of winning).
    */
   readonly progress: number;
-  /** What `progress` had to reach: the hits, the shots, or the player's winning score. */
+  /** What `progress` had to reach: the hits, or the player's winning score. */
   readonly target: number;
 }
 
 export interface ChallengeJudgeDeps {
-  /** Who plays what in the match on court: the player's paddles and side. */
+  /** Who plays what in the match on court: the player's side. */
   match: {
-    isPlayerPaddle(index: number): boolean;
     readonly playerSide: Side | null;
     readonly rules: { readonly winningScores: readonly [number, number] };
   };
@@ -32,7 +31,6 @@ interface Attempt {
   readonly challenge: ChallengeId;
   readonly side: Side;
   longestRally: number;
-  powerShots: number;
   pointsWon: number;
   pointsLost: number;
 }
@@ -94,7 +92,6 @@ export class ChallengeJudge {
                 challenge: this.challenge,
                 side,
                 longestRally: 0,
-                powerShots: 0,
                 pointsWon: 0,
                 pointsLost: 0,
               };
@@ -103,9 +100,6 @@ export class ChallengeJudge {
       case 'paddleHit':
         if (!this.attempt) return;
         this.attempt.longestRally = Math.max(this.attempt.longestRally, event.rally);
-        if (event.isPowerShot && this.deps.match.isPlayerPaddle(event.paddleIndex)) {
-          this.attempt.powerShots++;
-        }
         break;
       case 'score':
         if (!this.attempt || event.isDemo) return;
@@ -132,8 +126,6 @@ export class ChallengeJudge {
         return isWin && attempt.pointsLost === 0;
       case 'rally':
         return attempt.longestRally >= goal.hits;
-      case 'powerShots':
-        return isWin && attempt.powerShots >= goal.count;
     }
   }
 
@@ -141,8 +133,6 @@ export class ChallengeJudge {
     switch (CHALLENGES[attempt.challenge].goal.type) {
       case 'rally':
         return attempt.longestRally;
-      case 'powerShots':
-        return attempt.powerShots;
       case 'win':
       case 'shutout':
         return attempt.pointsWon;
@@ -154,8 +144,6 @@ export class ChallengeJudge {
     switch (goal.type) {
       case 'rally':
         return goal.hits;
-      case 'powerShots':
-        return goal.count;
       case 'win':
       case 'shutout':
         return this.deps.match.rules.winningScores[attempt.side];
