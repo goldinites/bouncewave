@@ -216,28 +216,25 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       ],
       turbo: ['OVERHEAT', 'Win to 5 against a Normal opponent: the ball speeds up in flight'],
       shrinkingPaddle: [
-        'MELTDOWN',
+        'ATTRITION',
         'Keep a rally going for 20 hits within a minute; your paddle shrinks with every hit',
       ],
       darkness: ['BLACKOUT', 'Win to 5 against a Normal opponent on a court in the dark'],
       blitz: ['COUNTDOWN', 'Win to 3 before the two minutes are up'],
       bumpers: ['PINBALL', 'Win to 5 against a Hard opponent, posts standing on the centre line'],
-      ice: ['BLACK ICE', 'Win to 5 against a Hard opponent on ice: the paddles slide'],
-      ghost: [
-        'BLIND SPOT',
-        'Win to 5 against a Hard opponent: the ball vanishes across the middle',
-      ],
+      ice: ['DRIFT', 'Win to 5 against a Hard opponent on ice: the paddles slide'],
+      ghost: ['DEAD ZONE', 'Win to 5 against a Hard opponent: the ball vanishes across the middle'],
       twoOnOne: [
         'TAG TEAM',
         'Win to 5 against two Normal opponents, each holding half of the court',
       ],
       giant: ['GOLIATH', 'Win to 5 against a Normal opponent whose paddle is half as long again'],
-      shutout: ['FLAWLESS', 'Win to 3 without losing a single point'],
+      shutout: ['PERFECT GAME', 'Win to 3 without losing a single point'],
       survival: [
-        'LAST STAND',
+        'SURVIVAL',
         'Score 10 before you lose three lives; the opponent grows stronger every point',
       ],
-      insanity: ['REDLINE', 'Win to 5 against an Insane opponent'],
+      insanity: ['INSANITY', 'Win to 5 against an Insane opponent'],
       chaos: [
         'SYSTEM CRASH',
         'Win to 7 against a Hard opponent while the modifiers take turns, two points each',
@@ -340,7 +337,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       twoBalls: ['ДУБЛЬ', 'Выиграй до 5 очков, когда в игре сразу два мяча'],
       longRally: ['МАРАФОН', 'Розыгрыш в 20 ударов за минуту'],
       bricks: [
-        'ПРОЛОМ',
+        'НАПРОЛОМ',
         'Выиграй до 5 очков у противника средней сложности сквозь стену из кирпичей, которые мяч разбивает',
       ],
       wind: [
@@ -352,7 +349,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         'Выиграй до 5 очков у противника средней сложности: мяч разгоняется в полёте',
       ],
       shrinkingPaddle: [
-        'ОГАРОК',
+        'ИСТОЩЕНИЕ',
         'Розыгрыш в 20 ударов за минуту; твоя ракетка короче с каждым ударом',
       ],
       darkness: ['БЛЭКАУТ', 'Выиграй до 5 очков у противника средней сложности на тёмном корте'],
@@ -361,9 +358,9 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         'ПИНБОЛ',
         'Выиграй до 5 очков у сложного противника, когда на центральной линии стоят отбойники',
       ],
-      ice: ['ГОЛОЛЁД', 'Выиграй до 5 очков у сложного противника на льду: ракетки скользят'],
+      ice: ['ДРИФТ', 'Выиграй до 5 очков у сложного противника на льду: ракетки скользят'],
       ghost: [
-        'СЛЕПАЯ ЗОНА',
+        'МЁРТВАЯ ЗОНА',
         'Выиграй до 5 очков у сложного противника: в середине корта мяч невидим',
       ],
       twoOnOne: [
@@ -374,12 +371,12 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         'ГОЛИАФ',
         'Выиграй до 5 очков у противника средней сложности с ракеткой в полтора раза длиннее',
       ],
-      shutout: ['БЕЗ ОШИБОК', 'Выиграй до 3 очков, не пропустив ни одного'],
+      shutout: ['ИДЕАЛЬНАЯ ИГРА', 'Выиграй до 3 очков, не пропустив ни одного'],
       survival: [
-        'ПОСЛЕДНИЙ БОЙ',
+        'ВЫЖИВАНИЕ',
         'Набери 10 очков, пока не кончились три жизни; противник сильнее с каждым очком',
       ],
-      insanity: ['КРАСНАЯ ЗОНА', 'Выиграй до 5 очков у безумного противника'],
+      insanity: ['БЕЗУМИЕ', 'Выиграй до 5 очков у безумного противника'],
       chaos: [
         'СИСТЕМНЫЙ СБОЙ',
         'Выиграй до 7 очков у сложного противника, пока модификаторы сменяют друг друга каждые 2 очка',

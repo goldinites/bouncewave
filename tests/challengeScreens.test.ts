@@ -188,20 +188,20 @@ describe('the challenges in the menus', () => {
     tabs()[1].click();
     expect(shownTier()).toBe('MASTER 0/6');
     expect(names()).toEqual([
-      'MELTDOWN',
+      'ATTRITION',
       'BLACKOUT',
       'COUNTDOWN',
       'PINBALL',
-      'BLACK ICE',
-      'BLIND SPOT',
+      'DRIFT',
+      'DEAD ZONE',
     ]);
     tabs()[2].click();
     expect(names()).toEqual([
       'TAG TEAM',
       'GOLIATH',
-      'FLAWLESS',
-      'LAST STAND',
-      'REDLINE',
+      'PERFECT GAME',
+      'SURVIVAL',
+      'INSANITY',
       'SYSTEM CRASH',
     ]);
     expect(items()[1].classList).toContain('challenge-list__item--passed');
