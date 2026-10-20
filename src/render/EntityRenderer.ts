@@ -26,17 +26,25 @@ export class EntityRenderer {
   /** @param ctx
    @param paddle
    @param glow hit glow in [0, 1]
-   @param overdrivePulse > 0 while the paddle's Overdrive is charged: its core pulses yellow */
+   @param overdrivePulse > 0 while the paddle's Overdrive is charged: its core pulses yellow
+   @param tilt radians it leans by, about its center, positive clockwise */
   public static renderPaddle(
     ctx: CanvasRenderingContext2D,
     paddle: Paddle,
     glow: number,
     overdrivePulse = 0,
+    tilt = 0,
   ): void {
     const { width, height } = paddle.spec;
     const topY = paddle.drawY - height / 2;
 
     ctx.save();
+    if (tilt !== 0) {
+      const centerX = paddle.x + width / 2;
+      ctx.translate(centerX, paddle.drawY);
+      ctx.rotate(tilt);
+      ctx.translate(-centerX, -paddle.drawY);
+    }
     // Pre-rendered neon; a hit fades the hot one in on top
     this.drawPaddleGlow(ctx, paddle, topY, PADDLE_GLOW.BASE);
     if (glow > 0.01) {

@@ -79,7 +79,7 @@ const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
       // No core: the streak is the charges
       overdriveStreaks: hud?.overdriveStreaks ?? hud?.overdriveCharges ?? [0, null],
     },
-    drama: { climax: 0, vignette: 0, zoom: 1, paddleGlow: [0, 0], ...drama },
+    drama: { climax: 0, vignette: 0, zoom: 1, paddleGlow: [0, 0], paddleTilt: [0, 0], ...drama },
     particles: new ParticleSystem(),
     analyser: null,
     isRotated: false,

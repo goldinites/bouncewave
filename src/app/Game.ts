@@ -692,6 +692,7 @@ export class Game {
         vignette: this.effects.vignette,
         zoom: this.effects.cameraZoom,
         paddleGlow: this.effects.paddleGlow,
+        paddleTilt: this.effects.paddleTilt,
       },
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),

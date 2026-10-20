@@ -177,6 +177,11 @@ export class EffectsDirector {
     return this.paddleFx.glow;
   }
 
+  /** How far each paddle leans, radians (a whip off a spinning hit). */
+  public get paddleTilt(): readonly number[] {
+    return this.paddleFx.tilt;
+  }
+
   /** A side's color: its first paddle's. */
   private colorOf(side: Side): string {
     return this.paddles.find((p) => p.side === side)!.color;
@@ -334,9 +339,12 @@ export class EffectsDirector {
   /** A skill's sound and burst; what lasts (a spin, a slowed world) the renderer draws itself. */
   private onSkill(use: Extract<MatchEvent, { type: 'skill' }>): void {
     switch (use.skill) {
-      case 'arc':
+      case 'arc': {
+        const paddle = this.paddles[use.paddleIndex];
+        this.paddleFx.onWhip(use.paddleIndex, paddle.side, paddle.velocity, use.strength);
         this.audio.sfx.playSpin(use.strength);
         break;
+      }
       case 'reflex':
         this.particles.shockwave(use.x, use.y, TIME_WARP_COLOR, SHOCKWAVE_SPEED.TIME_WARP);
         this.audio.sfx.playTimeWarp();

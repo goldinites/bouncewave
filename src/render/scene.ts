@@ -61,6 +61,8 @@ export interface DramaView {
   zoom: number;
   /** Hit glow of each paddle in [0, 1], in the order of `paddles`. */
   paddleGlow: readonly number[];
+  /** How far each paddle leans, in radians, positive clockwise (a whip off a spinning hit). */
+  paddleTilt: readonly number[];
 }
 
 /** Everything the renderer needs to draw (and animate toward) one frame, by who reads it. */
