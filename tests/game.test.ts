@@ -295,23 +295,28 @@ describe('Game', () => {
       // Started, it isn't offered again, even if left halfway
       expect(tutorialState()).toBe('skipped');
 
-      // Its first step opens on a card, the match paused behind it
+      // It starts with moving, told by the line over the court
       frame(1000);
+      frame(1016);
+      expect($('#gameCondition').textContent).toBe('MOVE: W/S, ↑/↓ OR THE MOUSE');
+
+      // A move that needs explaining opens on a card, the match paused behind it
+      const { tutorialCoach } = game as unknown as {
+        tutorialCoach: { reset(step: string): void; stepIndex: number };
+      };
+      tutorialCoach.reset('perfect');
+      frame(1024);
       expect(isMenuOpen()).toBe(true);
-      expect($('#gameTitle').textContent).toBe('YOUR PADDLE');
+      expect($('#gameTitle').textContent).toBe('PERFECT HIT');
       expect($('.tutorial-card__demo')).not.toBeNull();
       expect(isPauseButtonShown()).toBe(false);
       screenButton('GOT IT').click();
       expect(isMenuOpen()).toBe(false);
       expect(isPauseButtonShown()).toBe(true);
-      frame(1016);
-      frame(1032);
-      expect($('#gameCondition').textContent).toBe('MOVE: W/S, ↑/↓ OR THE MOUSE');
 
       // Every step done: its end comes up, and it is kept as gone through
-      const { tutorialCoach } = game as unknown as { tutorialCoach: { stepIndex: number } };
       tutorialCoach.stepIndex = 6;
-      frame(1048);
+      frame(1032);
       expect($('#gameTitle').textContent).toBe('WELL PLAYED!');
       expect(labels()).toEqual(['QUICK MATCH', 'MAIN MENU']);
       expect(tutorialState()).toBe('done');

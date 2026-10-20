@@ -518,7 +518,7 @@ export class MenuController {
           body: h(TutorialCardScreen, {
             card,
             why,
-            how: card === 'move' && isTouchFirst() ? texts.moveHowByTouch : how,
+            how,
             okLabel: texts.ok,
             onOk,
             isMotionReduced: isMotionReduced(),

@@ -93,10 +93,6 @@ test('offers the tutorial to someone new, and plays it on court', async ({ page 
   await button(page, 'PLAY').click();
   await expect(page.locator('#gameTitle')).toHaveText('FIRST TIME?');
   await button(page, 'TUTORIAL').click();
-  // Its first step opens on a card, with an example, over the paused match
-  await expect(page.locator('#gameTitle')).toHaveText('YOUR PADDLE');
-  await expectOnCourt(page, button(page, 'GOT IT'));
-  await button(page, 'GOT IT').click();
   await expect(menu(page)).toHaveClass(/game__ui--hidden/);
   // Its first step, above the court (a phone on its side writes it on the court instead)
   const viewport = page.viewportSize()!;
@@ -110,6 +106,17 @@ test('offers the tutorial to someone new, and plays it on court', async ({ page 
   await button(page, 'MAIN MENU').click();
   await button(page, 'PLAY').click();
   await expect(page.locator('#gameTitle')).toHaveText('GAME MODE');
+});
+
+test('opens a tutorial move on a card that fits the court', async ({ page }) => {
+  await page.goto('?tutorial=perfect');
+  await button(page, 'PLAY').click();
+  await button(page, 'TUTORIAL').click();
+  await expect(page.locator('#gameTitle')).toHaveText('PERFECT HIT');
+  await expectOnCourt(page, page.locator('.tutorial-card'));
+  await button(page, 'GOT IT').click();
+  await expect(menu(page)).toHaveClass(/game__ui--hidden/);
+  await page.waitForTimeout(SETTLE_MS);
 });
 
 test('plays a match of two from MULTIPLAYER, both steering at once', async ({ page }) => {

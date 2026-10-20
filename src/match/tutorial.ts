@@ -19,10 +19,10 @@ export const TUTORIAL_STEPS = ['move', 'hit', 'angle', 'perfect', 'aim', 'overdr
 export type TutorialStep = (typeof TUTORIAL_STEPS)[number];
 
 /**
- * The steps that open on a card (the match paused): why the move is worth making and an example
- * of it. Returning the ball is the first card's own point.
+ * The steps that open on a card (the match paused): what the move gives and an example of it.
+ * Moving and returning the ball need none: their line says the controls, and the rest is Pong.
  */
-export const TUTORIAL_CARDS = ['move', 'angle', 'perfect', 'aim', 'overdrive'] as const;
+export const TUTORIAL_CARDS = ['angle', 'perfect', 'aim', 'overdrive'] as const;
 
 export type TutorialCard = (typeof TUTORIAL_CARDS)[number];
 
@@ -157,6 +157,7 @@ export class TutorialCoach {
 
   constructor(deps: TutorialCoachDeps) {
     this.deps = deps;
+    this.begin(0);
   }
 
   /** The step being learnt, or null once every step is done. */

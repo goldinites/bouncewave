@@ -85,15 +85,6 @@ interface Example {
 const MID = DEMO.HEIGHT / 2;
 
 const EXAMPLES: Record<TutorialCard, Example> = {
-  // The paddle slides over to where the ball is coming, and sends it back
-  move: {
-    path: `M ${DEMO.WIDTH - 10} 28 L ${FACE} 42 L ${DEMO.WIDTH - 10} 54`,
-    points: [0, 0.5, 1],
-    times: [0, 0.5, 1],
-    paddle: [82, 42, 42, 82],
-    paddleTimes: [0, 0.45, 0.8, 1],
-    still: { point: 0.5, paddle: 42 },
-  },
   // Off the lower end it goes off steep, down into the wall and away up the court
   angle: {
     path: `M ${DEMO.WIDTH - 10} 40 L ${FACE} 73 L 64 ${DEMO.HEIGHT - DEMO.WALL - DEMO.BALL} L ${DEMO.WIDTH - 10} 14`,

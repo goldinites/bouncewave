@@ -695,6 +695,8 @@
   gap: 8px;
 
   width: min(440px, 88%);
+  /* The screen's last block: its auto margin and the title's keep the column centered */
+  margin-bottom: auto;
   text-align: center;
 }
 
