@@ -15,7 +15,7 @@ import { loadProfile } from '@/profile/migrations';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { getDefaultSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
-import { describeShortfall } from '@/ui/challengeTexts';
+import { describeFinale, describeShortfall } from '@/ui/challengeTexts';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
 
@@ -77,6 +77,47 @@ describe('the challenges in words', () => {
     expect(describeShortfall(en, verdict('overload', 5, 5))).toBe('THE MATCH WAS LOST');
     expect(describeShortfall(en, verdict('shutout', 3, 3))).toBe('A POINT WAS LOST');
     expect(describeShortfall(en, verdict('shutout', 1, 3))).toBe('POINTS: 1 OF 3');
+  });
+
+  it('ends each attempt on a sign that says what decided it, not just GAME OVER', () => {
+    const en = new I18nManager('en');
+    const sign = (
+      challenge: ChallengeId,
+      [progress, target]: [number, number],
+      winnerIndex: 0 | 1,
+      reason: 'points' | 'time' | 'rally',
+      scores: [number, number],
+      isPassed = false,
+    ) =>
+      describeFinale(
+        en,
+        { challenge, isPassed, progress, target },
+        { winnerIndex, reason, scores },
+      );
+
+    // Long Rally's score means nothing: its sign counts the hits, the clock or the goal reached
+    expect(sign('longRally', [18, 20], 1, 'time', [2, 3])).toEqual({
+      label: 'TIME UP',
+      text: '18 / 20',
+    });
+    expect(sign('longRally', [20, 20], 0, 'rally', [0, 1], true)).toEqual({
+      label: 'YOU WIN',
+      text: '20 / 20',
+    });
+    expect(sign('blitz', [2, 3], 1, 'time', [2, 1])).toEqual({ label: 'TIME UP', text: '2 : 1' });
+    expect(sign('blitz', [1, 3], 1, 'points', [1, 3])).toEqual({
+      label: 'GAME OVER',
+      text: '1 : 3',
+    });
+    expect(sign('shutout', [2, 3], 1, 'points', [2, 1]).label).toBe('POINT LOST');
+    expect(sign('survival', [7, 10], 1, 'points', [7, 3]).label).toBe('OUT OF LIVES');
+    // Overload won short of its shots is no win; lost, it is simply lost
+    expect(sign('overload', [3, 5], 0, 'points', [7, 4])).toEqual({
+      label: 'NOT ENOUGH OVERDRIVE',
+      text: '3 / 5',
+    });
+    expect(sign('overload', [5, 5], 1, 'points', [4, 7]).label).toBe('GAME OVER');
+    expect(sign('warmUp', [1, 3], 1, 'points', [1, 3]).label).toBe('GAME OVER');
   });
 });
 

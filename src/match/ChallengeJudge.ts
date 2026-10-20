@@ -63,6 +63,21 @@ export class ChallengeJudge {
     return this.attempt ? this.measure(this.attempt) : null;
   }
 
+  /**
+   * How the attempt being played goes if `winner` wins its match: asked at the finale's start, it
+   * is already the verdict told at its end, since nothing is counted in between. Null outside one.
+   */
+  public verdictFor(winner: Side): ChallengeVerdict | null {
+    const attempt = this.attempt;
+    if (!attempt) return null;
+    return {
+      challenge: attempt.challenge,
+      isPassed: this.isPassed(CHALLENGES[attempt.challenge].goal, attempt, winner === attempt.side),
+      progress: this.measure(attempt),
+      target: this.target(attempt),
+    };
+  }
+
   /** @returns a function that stops listening */
   public listenTo(events: EventBus<MatchEvent>): () => void {
     return events.subscribe((event) => this.handle(event));
@@ -98,16 +113,9 @@ export class ChallengeJudge {
         else this.attempt.pointsLost++;
         break;
       case 'gameOver': {
-        const attempt = this.attempt;
-        if (!attempt) return;
+        const verdict = this.verdictFor(event.winnerIndex);
         this.attempt = null;
-        const isWin = event.winnerIndex === attempt.side;
-        this.deps.onVerdict({
-          challenge: attempt.challenge,
-          isPassed: this.isPassed(CHALLENGES[attempt.challenge].goal, attempt, isWin),
-          progress: this.measure(attempt),
-          target: this.target(attempt),
-        });
+        if (verdict) this.deps.onVerdict(verdict);
         break;
       }
       case 'returnToMenu':

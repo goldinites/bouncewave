@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AudioEngine } from '@/audio/AudioEngine';
-import { EffectsDirector } from '@/fx/EffectsDirector';
+import { EffectsDirector, EffectsDirectorDeps } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
@@ -50,7 +50,11 @@ const makeAudio = () => ({
 const fakeFlow = (overrides: Partial<MatchFlow> = {}): MatchFlow =>
   ({ phase: 'finale', rally: 0, isBallLive: false, ...overrides }) as unknown as MatchFlow;
 
-const makeDirector = (matchScene?: () => SceneId | null, isTwoPlayer?: () => boolean) => {
+const makeDirector = (
+  matchScene?: () => SceneId | null,
+  isTwoPlayer?: () => boolean,
+  deps: Partial<EffectsDirectorDeps> = {},
+) => {
   const renderer = makeRenderer();
   const audio = makeAudio();
   const particles = new ParticleSystem();
@@ -74,6 +78,7 @@ const makeDirector = (matchScene?: () => SceneId | null, isTwoPlayer?: () => boo
     translate,
     matchScene,
     isTwoPlayer,
+    ...deps,
   });
 
   return { effects, renderer, audio, particles, paddles };
@@ -123,6 +128,19 @@ describe('EffectsDirector.handle', () => {
     scene = null;
     handle(effects, { type: 'matchStart' });
     expect(renderer.switchChannel).toHaveBeenLastCalledWith(true, null);
+  });
+
+  it('keeps the backdrop and its song when the match on court is restarted', () => {
+    const { effects, audio, renderer } = makeDirector(undefined, undefined, {
+      isRestart: () => true,
+    });
+
+    handle(effects, { type: 'matchStart' });
+
+    expect(renderer.switchChannel).not.toHaveBeenCalled();
+    expect(audio.music.enterScene).not.toHaveBeenCalled();
+    expect(audio.sfx.playChannelSurf).not.toHaveBeenCalled();
+    expect(renderer.addFlash).toHaveBeenCalled();
   });
 
   it('keeps the background on returnToMenu', () => {
@@ -239,14 +257,20 @@ describe('EffectsDirector.handle', () => {
   it('shows the final score, fireworks and a victory sting when the player wins', () => {
     const { effects, renderer, audio } = makeDirector();
 
-    handle(effects, { type: 'finaleStart', winnerIndex: 0, ballY: 250, scores: [10, 7] });
+    handle(effects, {
+      type: 'finaleStart',
+      winnerIndex: 0,
+      ballY: 250,
+      scores: [10, 7],
+      reason: 'points',
+    });
 
     expect(renderer.triggerVictoryEffect).toHaveBeenCalledOnce();
     expect(renderer.celebrate).toHaveBeenCalledOnce();
     expect(audio.sfx.playVictory).toHaveBeenCalledOnce();
     expect(audio.music.duck).toHaveBeenCalledOnce();
     expect(renderer.showFinalScore).toHaveBeenCalledWith({
-      scores: [10, 7],
+      text: '10 : 7',
       label: 'YOU WIN',
       color: COLORS.CYAN,
       isWin: true,
@@ -256,13 +280,19 @@ describe('EffectsDirector.handle', () => {
   it('glitches the screen and tape-stops the music when the player loses', () => {
     const { effects, renderer, audio } = makeDirector();
 
-    handle(effects, { type: 'finaleStart', winnerIndex: 1, ballY: 250, scores: [7, 10] });
+    handle(effects, {
+      type: 'finaleStart',
+      winnerIndex: 1,
+      ballY: 250,
+      scores: [7, 10],
+      reason: 'points',
+    });
 
     expect(renderer.triggerCrtGlitch).toHaveBeenCalledOnce();
     expect(audio.sfx.playDefeat).toHaveBeenCalledOnce();
     expect(audio.music.tapeStop).toHaveBeenCalledOnce();
     expect(renderer.showFinalScore).toHaveBeenCalledWith({
-      scores: [7, 10],
+      text: '7 : 10',
       label: 'YOU LOSE',
       color: COLORS.PINK,
       isWin: false,
@@ -272,15 +302,44 @@ describe('EffectsDirector.handle', () => {
   it('celebrates the right player’s win as a win, in their color, in a match of two', () => {
     const { effects, renderer, audio } = makeDirector(undefined, () => true);
 
-    handle(effects, { type: 'finaleStart', winnerIndex: 1, ballY: 250, scores: [3, 5] });
+    handle(effects, {
+      type: 'finaleStart',
+      winnerIndex: 1,
+      ballY: 250,
+      scores: [3, 5],
+      reason: 'points',
+    });
 
     expect(renderer.triggerVictoryEffect).toHaveBeenCalledOnce();
     expect(audio.music.tapeStop).not.toHaveBeenCalled();
     expect(renderer.showFinalScore).toHaveBeenCalledWith({
-      scores: [3, 5],
+      text: '3 : 5',
       label: 'PLAYER 2 WINS',
       color: COLORS.PINK,
       isWin: true,
+    });
+  });
+
+  it('ends a failed attempt as a defeat with its own sign, though its match was won', () => {
+    const { effects, renderer, audio } = makeDirector(undefined, undefined, {
+      challengeFinale: () => ({ label: 'NOT ENOUGH OVERDRIVE', text: '3 / 5', isPassed: false }),
+    });
+
+    handle(effects, {
+      type: 'finaleStart',
+      winnerIndex: 0,
+      ballY: 250,
+      scores: [7, 4],
+      reason: 'points',
+    });
+
+    expect(renderer.triggerVictoryEffect).not.toHaveBeenCalled();
+    expect(audio.sfx.playDefeat).toHaveBeenCalledOnce();
+    expect(renderer.showFinalScore).toHaveBeenCalledWith({
+      text: '3 / 5',
+      label: 'NOT ENOUGH OVERDRIVE',
+      color: COLORS.PINK,
+      isWin: false,
     });
   });
 
@@ -288,7 +347,13 @@ describe('EffectsDirector.handle', () => {
     const { effects, renderer, audio } = makeDirector();
     renderer.showsEffects = false;
 
-    handle(effects, { type: 'finaleStart', winnerIndex: 0, ballY: 250, scores: [10, 7] });
+    handle(effects, {
+      type: 'finaleStart',
+      winnerIndex: 0,
+      ballY: 250,
+      scores: [10, 7],
+      reason: 'points',
+    });
     effects.afterSimulation(0, fakeFlow());
 
     // A non-classic win fires its first shot immediately (see VictoryFireworks' own tests);
@@ -299,7 +364,13 @@ describe('EffectsDirector.handle', () => {
   it('pops the first firework shot right away outside classic mode', () => {
     const { effects, audio } = makeDirector();
 
-    handle(effects, { type: 'finaleStart', winnerIndex: 0, ballY: 250, scores: [10, 7] });
+    handle(effects, {
+      type: 'finaleStart',
+      winnerIndex: 0,
+      ballY: 250,
+      scores: [10, 7],
+      reason: 'points',
+    });
     effects.afterSimulation(0, fakeFlow());
 
     expect(audio.sfx.playFireworkPop).toHaveBeenCalledOnce();

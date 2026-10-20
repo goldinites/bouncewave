@@ -89,6 +89,14 @@ export interface TranslationSchema {
   shortPowerShots: string;
   shortConceded: string;
   shortLost: string;
+  /**
+   * The finale's sign over a failed attempt, in place of `lose` where it would mislead: the clock
+   * ran out, a point was lost in a shutout, the lives ran out, a match won with too few shots.
+   */
+  finaleTimeUp: string;
+  finaleConceded: string;
+  finaleNoLives: string;
+  finaleNoOverdrive: string;
   /** Every backdrop's name, and random's, by choice. */
   backgrounds: Record<BackgroundChoice, string>;
   /** Name and description of every difficulty level, by level. */
@@ -162,6 +170,10 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     shortPowerShots: 'OVERDRIVE SHOTS: {n} OF {target}',
     shortConceded: 'A POINT WAS LOST',
     shortLost: 'THE MATCH WAS LOST',
+    finaleTimeUp: 'TIME UP',
+    finaleConceded: 'POINT LOST',
+    finaleNoLives: 'OUT OF LIVES',
+    finaleNoOverdrive: 'NOT ENOUGH OVERDRIVE',
     backgrounds: {
       random: 'RANDOM',
       lasers: 'LASERS',
@@ -254,6 +266,11 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     shortPowerShots: 'УДАРЫ OVERDRIVE: {n} ИЗ {target}',
     shortConceded: 'ПРОПУЩЕНО ОЧКО',
     shortLost: 'МАТЧ ПРОИГРАН',
+    // In English, as the finale's GAME OVER is
+    finaleTimeUp: 'TIME UP',
+    finaleConceded: 'POINT LOST',
+    finaleNoLives: 'OUT OF LIVES',
+    finaleNoOverdrive: 'NOT ENOUGH OVERDRIVE',
     backgrounds: {
       random: 'СЛУЧАЙНЫЙ',
       lasers: 'ЛАЗЕРНЫЙ',

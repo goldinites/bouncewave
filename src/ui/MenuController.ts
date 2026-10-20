@@ -58,6 +58,11 @@ export interface ChallengeOutcome {
 export interface GameMenuActions {
   /** Starts the same match again from 0:0, set up as it was (restart, play again). */
   onStartGame: () => void;
+  /**
+   * Starts the match on court again from 0:0 (the pause's restart): as `onStartGame`, but on the
+   * same backdrop, with no channels flicking over. `onStartGame` stands in when left out.
+   */
+  onRestartGame?: () => void;
   /** Starts a quick match, as the player last set it up (the settings keep the setup). */
   onStartQuickMatch: () => void;
   /** Starts an attempt at a challenge. */
@@ -637,7 +642,7 @@ export class MenuController {
               id: 'restart',
               label: this.i18n.t('restart'),
               color: 'yellow',
-              onClick: () => this.actions.onStartGame(),
+              onClick: () => (this.actions.onRestartGame ?? this.actions.onStartGame)(),
             },
             {
               id: 'settings',

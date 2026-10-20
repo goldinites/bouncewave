@@ -144,7 +144,13 @@ describe('Game', () => {
     press('Escape'); // pause
     expect(labels()).toEqual(['RESUME', 'RESTART', 'SETTINGS', 'MAIN MENU']);
 
+    // The same match again, on the backdrop it was being played on: no channels flick over
+    const { renderer } = game as unknown as { renderer: { scene: string; switchChannel(): void } };
+    const scene = renderer.scene;
+    const switchChannel = vi.spyOn(renderer, 'switchChannel');
     buttons()[1].click(); // restart
+    expect(switchChannel).not.toHaveBeenCalled();
+    expect(renderer.scene).toBe(scene);
     expect(isMenuOpen()).toBe(false);
     expect(isPauseButtonShown()).toBe(true);
     press('Escape');

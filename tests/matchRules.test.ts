@@ -92,7 +92,12 @@ describe('a match under its rules', () => {
     scoreFor(0);
     expect(flow.scores[0]).toBe(3);
     expect(flow.phase).toBe('finale');
-    expect(events.at(-1)).toMatchObject({ type: 'finaleStart', winnerIndex: 0, scores: [3, 2] });
+    expect(events.at(-1)).toMatchObject({
+      type: 'finaleStart',
+      winnerIndex: 0,
+      scores: [3, 2],
+      reason: 'points',
+    });
   });
 
   it('charges Overdrive with perfect hits only when the rules have it on', () => {

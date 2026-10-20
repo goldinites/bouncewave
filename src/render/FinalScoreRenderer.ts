@@ -15,11 +15,12 @@ export const FINAL_SIGN = {
 export const FINAL_SIGN_LAYOUT = { LABEL_Y: -62, SCORE_Y: 22 } as const;
 
 /** "7 : 4", the final score as the sign writes it. */
-export const finalScoreText = (sign: FinalScoreSign): string =>
-  `${sign.scores[0]} : ${sign.scores[1]}`;
+export const finalScoreText = (scores: readonly [number, number]): string =>
+  `${scores[0]} : ${scores[1]}`;
 
 export interface FinalScoreSign {
-  scores: [number, number];
+  /** The big line: the final score, or a challenge's own count ("18 / 20"). */
+  text: string;
   label: string;
   color: string;
   isWin: boolean;
@@ -72,7 +73,7 @@ export class FinalScoreRenderer {
     isRotated: boolean,
   ): void {
     const brightness = this.getBrightness(age, sign.isWin);
-    const scoreText = finalScoreText(sign);
+    const scoreText = sign.text;
     const color = sign.color;
 
     ctx.save();
