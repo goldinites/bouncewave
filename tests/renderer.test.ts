@@ -66,6 +66,7 @@ const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
       serveTime: 0,
       rally: 0,
       timeWarp: null,
+      shotReads: [],
       ...court,
     },
     hud: {
@@ -74,12 +75,19 @@ const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
       isConditionOnCourt: false,
       sideLabels: null,
       overdriveCharges: [0, null],
-      timeWarpLabel: 'REFLEX',
       ...hud,
       // No core: the streak is the charges
       overdriveStreaks: hud?.overdriveStreaks ?? hud?.overdriveCharges ?? [0, null],
     },
-    drama: { climax: 0, vignette: 0, zoom: 1, paddleGlow: [0, 0], paddleTilt: [0, 0], ...drama },
+    drama: {
+      climax: 0,
+      vignette: 0,
+      zoom: 1,
+      paddleGlow: [0, 0],
+      paddleTilt: [0, 0],
+      meterSpent: [0, 0],
+      ...drama,
+    },
     particles: new ParticleSystem(),
     analyser: null,
     isRotated: false,
@@ -256,7 +264,6 @@ describe('Renderer', () => {
   it('shows a spinning ball and a slowed world only while they last', () => {
     const spin = vi.spyOn(SkillRenderer, 'renderSpin');
     const tint = vi.spyOn(SkillRenderer, 'renderTint');
-    const label = vi.spyOn(SkillRenderer, 'renderLabel');
     const { renderer } = makeRenderer();
     const ball = new Ball();
 
@@ -271,15 +278,43 @@ describe('Renderer', () => {
     );
     expect(spin).toHaveBeenCalledWith(expect.anything(), ball, expect.any(Number));
     expect(tint).toHaveBeenCalledOnce();
-    // Its label, just come up
-    const [, text, , age] = label.mock.calls.at(-1)!;
-    expect(text).toBe('REFLEX');
-    expect(age).toBeCloseTo(0.016);
 
     // Back to speed, the cast is gone a moment later
     renderer.render(baseFrame({ court: { isDemo: false, balls: [ball], ball } }), 1);
     renderer.render(baseFrame({ court: { isDemo: false, balls: [ball], ball } }), 0.016);
     expect(tint).toHaveBeenCalledOnce();
+    vi.restoreAllMocks();
+  });
+
+  it('shows each shot read ahead over the paddle reading it, and a spent charge flaring', () => {
+    const read = vi.spyOn(SkillRenderer, 'renderShotRead');
+    const meter = vi.spyOn(EntityRenderer, 'renderOverdriveMeter');
+    const { renderer } = makeRenderer();
+    const shot = {
+      paddleIndex: 0,
+      path: [
+        { x: 400, y: 250 },
+        { x: 56, y: 120 },
+      ],
+      age: 0.1,
+    };
+
+    renderer.render(
+      baseFrame({
+        court: { isDemo: false, shotReads: [shot] },
+        hud: { overdriveCharges: [0, null] },
+        drama: { meterSpent: [0.8, 0] },
+      }),
+      0.016,
+    );
+    expect(read).toHaveBeenCalledWith(
+      expect.anything(),
+      shot,
+      expect.objectContaining({ side: 0 }),
+      expect.any(Number),
+      expect.any(Boolean),
+    );
+    expect(meter.mock.calls[0][5]).toBe(0.8);
     vi.restoreAllMocks();
   });
 

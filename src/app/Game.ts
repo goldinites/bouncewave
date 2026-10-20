@@ -153,7 +153,7 @@ export class Game {
     // the debug overlay shows how the last attempt went
     const challenge = new URLSearchParams(window.location.search).get('challenge');
     if (isChallengeId(challenge)) this.pinnedChallenge = challenge;
-    // ?skills=arc,reflex gives the player those skills (match/skills/Skill.ts)
+    // ?skills=arc,analyzer,reflex gives the player those skills (match/skills/Skill.ts)
     const skills = new URLSearchParams(window.location.search).get('skills') ?? '';
     this.pinnedSkills = skills.split(',').filter(isSkillId);
     this.backgroundMenu = new BackgroundMenu(
@@ -677,6 +677,7 @@ export class Game {
         serveTime: this.flow.serveTime,
         rally: this.flow.rally,
         timeWarp: this.flow.timeWarp,
+        shotReads: this.flow.shotReads,
       },
       hud: {
         readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
@@ -685,7 +686,6 @@ export class Game {
         sideLabels: this.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
         overdriveCharges: this.flow.overdriveCharges,
         overdriveStreaks: this.flow.overdriveStreaks,
-        timeWarpLabel: this.i18n.t('timeWarp'),
       },
       drama: {
         climax: this.effects.climaxLevel,
@@ -693,6 +693,7 @@ export class Game {
         zoom: this.effects.cameraZoom,
         paddleGlow: this.effects.paddleGlow,
         paddleTilt: this.effects.paddleTilt,
+        meterSpent: this.effects.meterSpent,
       },
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),

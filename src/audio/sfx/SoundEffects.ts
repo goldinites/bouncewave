@@ -125,6 +125,12 @@ export class SoundEffects {
     this.beep(freq, 0.34, 'sine', 0.025 + 0.025 * strength, 1.35);
   }
 
+  /** A shot read ahead (Analyzer): a quiet machine chirp, two short rising blips. */
+  public playScan(): void {
+    this.beep(1760, 0.05, 'square', 0.018, 1.2);
+    this.beep(2349, 0.07, 'sine', 0.02, 1.1);
+  }
+
   /** The world slows down (Reflex): a glitch, then a falling drone. */
   public playTimeWarp(): void {
     this.beep(1320, 0.06, 'square', 0.035, 0.5);

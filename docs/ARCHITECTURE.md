@@ -200,13 +200,15 @@ maker in `SKILLS` (`match/skills/SkillSet.ts`). It is built for the paddle whose
 lists it (`Participant.skills`) and sees the match through its `SkillHost`: the paddles, the
 balls, its owner's meter (`spend`), the ball's pace. Its hooks run inside the fixed step:
 `beforeStep`, `afterHit`, `timeScale` (how fast a paddle or the balls move this step; Reflex
-slows the world but its owner) and `onServe`. What changes the flight is the ball's own state,
+slows the world but its owner) and `onServe`; a skill that shows its owner something keeps it
+in `read` (Analyzer's read shot, `flow.shotReads`). What changes the flight is the ball's own state,
 moved by `Physics` (`ball.spin`, which Arc sets), so `forecastArrival` and the AI see it too; a
 paddle's `perfectZoneScale` widens its perfect zone for a hit. It never changes the rules or the
 score, and it reports what the player should notice with `host.report`, a `skill` event the
 effects give its sound and burst. What lasts on court is drawn by layers (`SkillRenderer`): the
-spin's streaks, the slowed world's cast (`flow.timeWarp`), its label. For developers,
-`?skills=arc,reflex` gives the player those skills in every match against the CPU, and the debug
+spin's streaks and trail, the slowed world's cast (`flow.timeWarp`), a read shot's wireframe and
+sight; skills have no written labels, so each must look and sound like no other. For developers,
+`?skills=arc,analyzer,reflex` gives the player those skills in every match against the CPU, and the debug
 overlay's skill menu (`debug/SkillMenu.ts`) switches them at once (`flow.giveSkills`) and counts
 their uses in the match. A
 challenge's modifier (4.5) joins the same hooks.

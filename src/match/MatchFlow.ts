@@ -16,7 +16,7 @@ import { Physics, PhysicsEvent } from '@/match/Physics';
 import { cpuRank, paceAt } from '@/match/ramp';
 import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
-import { IMPLANTS, SkillHost, SkillId, SkillUse } from '@/match/skills/Skill';
+import { IMPLANTS, ShotRead, SkillHost, SkillId, SkillUse } from '@/match/skills/Skill';
 import { SkillSet, TimeWarp } from '@/match/skills/SkillSet';
 
 // Seconds the ball waits at center before each kind of serve
@@ -195,6 +195,11 @@ export class MatchFlow {
   /** Whoever is slowing the world down right now (Reflex); null when no one is. */
   public get timeWarp(): TimeWarp | null {
     return this._phase === 'rally' ? this.skills.timeWarp : null;
+  }
+
+  /** The shots read ahead for whoever has an Analyzer, while the ball is in play. */
+  public get shotReads(): ShotRead[] {
+    return this._phase === 'rally' ? this.skills.reads : [];
   }
 
   /** Whether paddle `index` charges Overdrive: in a real match, if it and the rules have it. */

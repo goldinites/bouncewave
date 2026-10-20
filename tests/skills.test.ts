@@ -10,6 +10,7 @@ import { Paddle } from '@/match/Paddle';
 import { AiPaddleController } from '@/match/PaddleController';
 import { Physics } from '@/match/Physics';
 import { firstTo, STANDARD_RULES } from '@/match/rules';
+import { Analyzer } from '@/match/skills/Analyzer';
 import { Arc, ARC } from '@/match/skills/Arc';
 import { Reflex, REFLEX } from '@/match/skills/Reflex';
 import { SkillHost, SkillId } from '@/match/skills/Skill';
@@ -87,6 +88,14 @@ describe('Overdrive with an implants core', () => {
     meter.onHit(true);
     meter.onHit(false);
     expect([meter.charge, meter.streak]).toEqual([0, 0]);
+  });
+
+  it('gives back charges, up to a full meter, leaving the streak', () => {
+    const meter = new Overdrive();
+    meter.useCore(true);
+    [true, true, false].forEach((isPerfect) => meter.onHit(isPerfect));
+    meter.restore(5);
+    expect([meter.charge, meter.streak]).toEqual([3, 0]);
   });
 
   it('spends charges it holds; spending from a full meter costs the power shot', () => {
@@ -218,6 +227,81 @@ describe('Arc', () => {
   });
 });
 
+describe('Analyzer', () => {
+  /** The opponent (right) has just hit `ball` at the left paddle, which has an Analyzer. */
+  const shotAt = (ball: Ball, charges: number | null = 1) => {
+    const paddles = court();
+    const { host, report } = hostFor(paddles, [ball], charges);
+    const analyzer = new Analyzer(host);
+    analyzer.afterHit({ paddleIndex: 1, ball, isPerfect: false, isPowerShot: ball.isPowerShot });
+    analyzer.beforeStep(STEP);
+    return { analyzer, report, meter: host.meter(), paddles };
+  };
+  // Two walls or more on the way: hard; flat across: easy
+  const zigzag = () => ballAt(700, 250, -450, 700);
+  const flat = () => ballAt(700, 250, -450, 20);
+
+  it('reads a hard shot for a charge: its flight, ending where it meets the paddle', () => {
+    const ball = zigzag();
+    const { analyzer, report, meter } = shotAt(ball);
+
+    expect(report).toHaveBeenCalledWith(expect.objectContaining({ skill: 'analyzer' }));
+    expect(meter!.charge).toBe(0);
+    const read = analyzer.read!;
+    expect(read.paddleIndex).toBe(0);
+    expect(read.path.at(-1)!.x).toBeCloseTo(PADDLE.OFFSET_X + PADDLE.WIDTH + ball.radius);
+    expect(read.path.at(-1)!.y).toBeCloseTo(forecastArrival(ball, read.path.at(-1)!.x, CONFIG)!.y);
+
+    analyzer.beforeStep(0.1);
+    expect(analyzer.read!.age).toBeCloseTo(STEP + 0.1);
+  });
+
+  it('reads a curve or a power shot however flat, and leaves an easy shot alone', () => {
+    expect(shotAt(flat()).report).not.toHaveBeenCalled();
+
+    const curve = flat();
+    curve.spin = -0.3;
+    expect(shotAt(curve).report).toHaveBeenCalled();
+    const power = flat();
+    power.isPowerShot = true;
+    expect(shotAt(power).report).toHaveBeenCalled();
+  });
+
+  it('needs a charge, and never takes one from a full meter', () => {
+    expect(shotAt(zigzag(), 0).report).not.toHaveBeenCalled();
+    expect(shotAt(zigzag(), null).report).not.toHaveBeenCalled();
+    expect(shotAt(zigzag(), 3).report).not.toHaveBeenCalled();
+  });
+
+  it('gives the charge back for a perfect return of the ball it read', () => {
+    const ball = zigzag();
+    const { analyzer, meter } = shotAt(ball, 2);
+    analyzer.afterHit({ paddleIndex: 0, ball, isPerfect: true, isPowerShot: false });
+    expect(meter!.charge).toBe(2);
+    expect(analyzer.read).toBeNull();
+
+    const missed = zigzag();
+    const other = shotAt(missed, 2);
+    other.analyzer.afterHit({ paddleIndex: 0, ball: missed, isPerfect: false, isPowerShot: false });
+    expect(other.meter!.charge).toBe(1);
+  });
+
+  it('reads once a rally', () => {
+    const ball = zigzag();
+    const { analyzer, report } = shotAt(ball, 2);
+    analyzer.afterHit({ paddleIndex: 0, ball, isPerfect: false, isPowerShot: false });
+    Object.assign(ball, { x: 700, vx: -450, vy: 700 });
+    analyzer.afterHit({ paddleIndex: 1, ball, isPerfect: false, isPowerShot: false });
+    analyzer.beforeStep(STEP);
+    expect(report).toHaveBeenCalledOnce();
+
+    analyzer.onServe();
+    analyzer.afterHit({ paddleIndex: 1, ball, isPerfect: false, isPowerShot: false });
+    analyzer.beforeStep(STEP);
+    expect(report).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('Reflex', () => {
   // Ball low on the left, flying flat at the left paddle; the paddle somewhere above it
   const flyAt = (paddleY: number, ballY = 420, charges: number | null = 1) => {
@@ -311,20 +395,20 @@ describe('A match with skills', () => {
   };
 
   it('replays the same from the same seed', () => {
-    const first = play(2, ['arc', 'reflex']);
-    const second = play(2, ['arc', 'reflex']);
+    const first = play(2, ['arc', 'analyzer', 'reflex']);
+    const second = play(2, ['arc', 'analyzer', 'reflex']);
     expect(second.trace).toEqual(first.trace);
     expect(second.events).toEqual(first.events);
   });
 
-  it('plays both skills in matches of AIs that have them', () => {
-    // Reflex goes off in some matches only: a few seeds between them see both
+  it('plays every skill in matches of AIs that have them', () => {
+    // The implants go off in some matches only: a few seeds between them see every skill
     const used = new Set(
       [1, 2, 3, 4]
-        .flatMap((seed) => play(seed, ['arc', 'reflex']).events)
+        .flatMap((seed) => play(seed, ['arc', 'analyzer', 'reflex']).events)
         .map((event) => event.type === 'skill' && event.skill),
     );
-    expect(used).toEqual(new Set([false, 'arc', 'reflex']));
+    expect(used).toEqual(new Set([false, 'arc', 'analyzer', 'reflex']));
   });
 
   it('gives a paddle other skills in the middle of a match, never in the demo', () => {

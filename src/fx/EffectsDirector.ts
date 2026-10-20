@@ -177,6 +177,11 @@ export class EffectsDirector {
     return this.paddleFx.glow;
   }
 
+  /** How brightly the charge each paddle's implant just spent still burns, in [0, 1]. */
+  public get meterSpent(): readonly number[] {
+    return this.paddleFx.spent;
+  }
+
   /** How far each paddle leans, radians (a whip off a spinning hit). */
   public get paddleTilt(): readonly number[] {
     return this.paddleFx.tilt;
@@ -345,7 +350,12 @@ export class EffectsDirector {
         this.audio.sfx.playSpin(use.strength);
         break;
       }
+      case 'analyzer':
+        this.paddleFx.onSpend(use.paddleIndex);
+        this.audio.sfx.playScan();
+        break;
       case 'reflex':
+        this.paddleFx.onSpend(use.paddleIndex);
         this.particles.shockwave(use.x, use.y, TIME_WARP_COLOR, SHOCKWAVE_SPEED.TIME_WARP);
         this.audio.sfx.playTimeWarp();
         this.audio.music.holdTape(REFLEX.MAX_DURATION);

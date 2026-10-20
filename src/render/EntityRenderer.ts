@@ -120,6 +120,7 @@ export class EntityRenderer {
     charge: number,
     time: number,
     streak: number = charge,
+    spent = 0,
   ): void {
     const { SEGMENT, HALO, PULSE_SPEED, ENERGY_ALPHA } = OVERDRIVE_METER;
     const isFull = streak >= OVERDRIVE.CHARGE;
@@ -129,6 +130,14 @@ export class EntityRenderer {
     ctx.save();
     this.meterSegments(paddle).forEach(({ x, y }, i) => {
       const isLit = i < charge;
+      if (i === charge && spent > 0) {
+        // The charge an implant just spent: a white flare that flickers out
+        const flicker = spent > 0.5 ? (Math.floor(time * 30) % 2 === 0 ? 1 : 0.4) : 1;
+        ctx.globalAlpha = spent * flicker;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x - HALO, y - HALO, SEGMENT.WIDTH + HALO * 2, SEGMENT.HEIGHT + HALO * 2);
+        return;
+      }
       if (isLit && i >= streak) {
         // Energy only: no halo, no pulse
         ctx.globalAlpha = ENERGY_ALPHA;

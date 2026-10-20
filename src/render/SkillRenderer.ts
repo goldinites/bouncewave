@@ -1,9 +1,8 @@
 import { Ball } from '@/match/Ball';
-import { COURT } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
+import { ShotRead } from '@/match/skills/Skill';
+import { COURT } from '@/match/config';
 import { Arc } from '@/match/skills/Arc';
-import { measureText, paintText, sprites } from '@/render/SpriteCache';
-import { gameFont } from '@/shared/fonts';
 import { TWO_PI } from '@/shared/math';
 
 // Arc: two streaks circling a spinning ball, the way it spins; brighter the harder it does
@@ -30,21 +29,26 @@ export interface TrailPoint {
   age: number;
 }
 
+// Analyzer: a scan line sweeps the court from its owner, the read flight shows as a dashed
+// wireframe, then a sight stays on where the ball arrives. Machine green, unlike any other sign
+const SHOT_READ = {
+  COLOR: '#5dff9a',
+  SCAN_TIME: 0.25, // s the scan line takes across the court
+  SCAN_WIDTH: 3, // px
+  FRAME_TIME: 0.35, // s the wireframe shows for, fading out over its last third
+  FRAME_DASH: [6, 6],
+  FRAME_ALPHA: 0.8,
+  SIGHT_RADIUS: 13, // px
+  SIGHT_TICK: 6, // px of each tick outside the ring
+  SIGHT_PULSE: 9, // rad/s
+} as const;
+
 // Reflex: the slowed world turns blue and its balls split into red and cyan ghosts
 const TIME_WARP = {
   TINT: '40, 110, 255',
   TINT_ALPHA: 0.2, // at full strength
   GHOST_OFFSET: 4, // px either side of the ball
   GHOST_ALPHA: 0.45,
-} as const;
-
-// Its label: over the slowing paddle, flickering in and fading out
-const WARP_LABEL = {
-  FONT: gameFont(800, 20),
-  GLOW: 8,
-  COLOR: '#7fb6ff',
-  RISE: 64, // px over the paddle's center
-  DURATION: 0.9, // s it shows for
 } as const;
 
 /** How skills look on the court (docs/PROGRESSION.md): each has a sign the player can read. */
@@ -93,6 +97,73 @@ export class SkillRenderer {
     ctx.restore();
   }
 
+  /**
+   * A shot read ahead for `paddle`: the scan line sweeping away from it, the wireframe of the
+   * flight, and the sight on the arrival.
+   * @param isMotionReduced no sweeping line for a player who asked for less motion
+   */
+  public static renderShotRead(
+    ctx: CanvasRenderingContext2D,
+    read: ShotRead,
+    paddle: Paddle,
+    time: number,
+    isMotionReduced: boolean,
+  ): void {
+    const { path, age } = read;
+    const arrival = path.at(-1);
+    if (!arrival) return;
+    ctx.save();
+    ctx.strokeStyle = SHOT_READ.COLOR;
+    ctx.lineCap = 'round';
+
+    if (age < SHOT_READ.SCAN_TIME && !isMotionReduced) {
+      const share = age / SHOT_READ.SCAN_TIME;
+      const fromX = paddle.x + paddle.spec.width / 2;
+      const toX = paddle.side === 0 ? COURT.WIDTH : 0;
+      const x = fromX + (toX - fromX) * share;
+      ctx.globalAlpha = 0.9 * (1 - share);
+      ctx.lineWidth = SHOT_READ.SCAN_WIDTH;
+      ctx.beginPath();
+      ctx.moveTo(x, COURT.TOP_WALL);
+      ctx.lineTo(x, COURT.HEIGHT - COURT.BOTTOM_WALL);
+      ctx.stroke();
+    }
+
+    if (age < SHOT_READ.FRAME_TIME) {
+      const fadeFrom = (SHOT_READ.FRAME_TIME * 2) / 3;
+      const fade = age < fadeFrom ? 1 : 1 - (age - fadeFrom) / (SHOT_READ.FRAME_TIME - fadeFrom);
+      ctx.globalAlpha = SHOT_READ.FRAME_ALPHA * fade;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash(SHOT_READ.FRAME_DASH);
+      ctx.beginPath();
+      ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // The sight: a ring with four ticks, breathing a little
+    const radius = SHOT_READ.SIGHT_RADIUS * (1 + 0.08 * Math.sin(time * SHOT_READ.SIGHT_PULSE));
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(arrival.x, arrival.y, radius, 0, TWO_PI);
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      ctx.moveTo(arrival.x + dx * (radius - 3), arrival.y + dy * (radius - 3));
+      ctx.lineTo(
+        arrival.x + dx * (radius + SHOT_READ.SIGHT_TICK),
+        arrival.y + dy * (radius + SHOT_READ.SIGHT_TICK),
+      );
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
   /** A blue cast over everything while the world is slowed, `level` in [0, 1]. */
   public static renderTint(ctx: CanvasRenderingContext2D, level: number): void {
     ctx.fillStyle = `rgba(${TIME_WARP.TINT}, ${TIME_WARP.TINT_ALPHA * level})`;
@@ -113,44 +184,6 @@ export class SkillRenderer {
       ctx.arc(ball.drawX + dx, ball.drawY, ball.radius, 0, TWO_PI);
       ctx.fill();
     }
-    ctx.restore();
-  }
-
-  /**
-   * The slowed world's label over the paddle that slowed it, `age` seconds after.
-   * @param isRotated the picture is turned for a phone held upright: the label is turned back
-   */
-  public static renderLabel(
-    ctx: CanvasRenderingContext2D,
-    text: string,
-    paddle: Paddle,
-    age: number,
-    isRotated: boolean,
-  ): void {
-    if (age >= WARP_LABEL.DURATION) return;
-    const share = age / WARP_LABEL.DURATION;
-    // A glitch: it flickers on for the first frames, then fades
-    const flicker = share < 0.2 ? (Math.floor(age * 40) % 2 === 0 ? 1 : 0.35) : 1;
-    const towardMiddle = paddle.side === 0 ? 1 : -1;
-
-    ctx.save();
-    ctx.globalAlpha = flicker * (1 - share * share);
-    if (isRotated) {
-      // Upright, it reads beside the paddle, toward the middle of the court
-      ctx.translate(paddle.x + towardMiddle * WARP_LABEL.RISE, paddle.drawY);
-      ctx.rotate(Math.PI / 2);
-    } else {
-      const y = paddle.drawY - WARP_LABEL.RISE;
-      ctx.translate(paddle.x + towardMiddle * WARP_LABEL.RISE, Math.max(y, COURT.TOP_WALL + 24));
-    }
-    sprites.draw(
-      ctx,
-      `warp|${text}`,
-      0,
-      0,
-      (measureCtx, scale) => measureText(measureCtx, scale, text, WARP_LABEL.FONT, WARP_LABEL.GLOW),
-      (spriteCtx) => paintText(spriteCtx, text, WARP_LABEL.FONT, WARP_LABEL.COLOR, WARP_LABEL.GLOW),
-    );
     ctx.restore();
   }
 }

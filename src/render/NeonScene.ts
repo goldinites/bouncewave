@@ -138,17 +138,11 @@ function neonLayers(
     }
   };
 
-  // The slowed world (Reflex): its cast eases in and out, and its label stays up a while after
-  // it began, over the paddle that slowed it. Followed once a frame by the first of its layers
-  const warp = { level: 0, age: Infinity, paddleIndex: 0, wasOn: false };
+  // The slowed world (Reflex): its cast eases in and out. Followed once a frame by the first of
+  // its layers
+  const warp = { level: 0 };
   const followWarp = ({ court }: RenderFrame, { realDt }: SceneState) => {
     const isOn = court.timeWarp !== null;
-    if (court.timeWarp) {
-      if (!warp.wasOn) warp.age = 0;
-      warp.paddleIndex = court.timeWarp.paddleIndex;
-    }
-    warp.wasOn = isOn;
-    warp.age += realDt;
     warp.level = approach(warp.level, isOn ? 1 : 0, TIME_WARP_FADE, realDt);
   };
 
@@ -202,7 +196,14 @@ function neonLayers(
           const tilt = isMotionReduced() ? 0 : (drama.paddleTilt[i] ?? 0);
           EntityRenderer.renderPaddle(c, paddle, drama.paddleGlow[i], pulse, tilt);
           if (charge !== null && !state.finalSign) {
-            EntityRenderer.renderOverdriveMeter(c, paddle, charge, court.time, streak);
+            EntityRenderer.renderOverdriveMeter(
+              c,
+              paddle,
+              charge,
+              court.time,
+              streak,
+              drama.meterSpent[i] ?? 0,
+            );
           }
         });
       },
@@ -214,6 +215,17 @@ function neonLayers(
       render: (c, { court }, { realDt }) => {
         followArcTrails(court.serveTime > 0 ? [] : court.balls, realDt);
         for (const { points } of arcTrails.values()) SkillRenderer.renderArcTrail(c, points);
+      },
+    },
+    {
+      // The shots read ahead for their paddles (Analyzer)
+      id: 'shotReads',
+      space: 'court',
+      render: (c, { court }) => {
+        for (const read of court.shotReads) {
+          const paddle = court.paddles[read.paddleIndex];
+          SkillRenderer.renderShotRead(c, read, paddle, court.time, isMotionReduced());
+        }
       },
     },
     {
@@ -252,15 +264,6 @@ function neonLayers(
       render: (c, { particles }) => {
         EntityRenderer.renderParticles(c, particles.particles);
         EntityRenderer.renderShockwaves(c, particles.rings);
-      },
-    },
-    {
-      id: 'timeWarpLabel',
-      space: 'court',
-      render: (c, { court, hud: view, isRotated }, state) => {
-        const paddle = court.paddles[warp.paddleIndex];
-        if (court.isDemo || state.finalSign || !paddle) return;
-        SkillRenderer.renderLabel(c, view.timeWarpLabel, paddle, warp.age, isRotated);
       },
     },
     {

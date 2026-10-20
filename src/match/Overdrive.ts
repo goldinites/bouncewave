@@ -70,6 +70,11 @@ export class Overdrive {
     return true;
   }
 
+  /** Gives back `charges` of energy, as far as the meter holds them; the streak stays as it is. */
+  public restore(charges: number): void {
+    this._charge = Math.min(OVERDRIVE.CHARGE, this._charge + charges);
+  }
+
   public reset(): void {
     this._charge = 0;
     this._streak = 0;

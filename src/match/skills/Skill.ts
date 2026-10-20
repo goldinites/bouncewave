@@ -1,20 +1,21 @@
-import { Ball } from '@/match/Ball';
+import { Ball, Point } from '@/match/Ball';
 import { DifficultyConfig } from '@/match/difficulty';
 import { Overdrive } from '@/match/Overdrive';
 import { Paddle } from '@/match/Paddle';
 
 /**
- * Every skill the match can play (docs/PROGRESSION.md): so far the two prototypes, one of each
- * branch, which only developers turn on (?skills=arc,reflex). The rest join with stage 6.
+ * Every skill the match can play (docs/PROGRESSION.md): so far the prototypes, mastery's first
+ * and the implants' first two, which only developers turn on (?skills=arc,analyzer,reflex, or
+ * the debug overlay). The rest join with stage 6.
  */
-export const SKILL_IDS = ['arc', 'reflex'] as const;
+export const SKILL_IDS = ['arc', 'analyzer', 'reflex'] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
 
 export const isSkillId = (value: string): value is SkillId =>
   (SKILL_IDS as readonly string[]).includes(value);
 
 /** The implants: they run on the meter's energy, so their owner's meter has a core. */
-export const IMPLANTS: readonly SkillId[] = ['reflex'];
+export const IMPLANTS: readonly SkillId[] = ['analyzer', 'reflex'];
 
 /** Something a skill did that the match reports (`skill` in MatchEvent). */
 export interface SkillUse {
@@ -25,6 +26,24 @@ export interface SkillUse {
   y: number;
   /** How strongly, in [0, 1]. */
   strength: number;
+}
+
+/** Whether `ball` is flying at the goal `paddle` guards. */
+export const isComingAt = (paddle: Paddle, ball: Ball): boolean =>
+  paddle.side === 0 ? ball.vx < 0 : ball.vx > 0;
+
+/** The line `ball`'s center crosses when it meets `paddle`'s face. */
+export const faceLine = (paddle: Paddle, ball: Ball): number =>
+  paddle.side === 0 ? paddle.x + paddle.spec.width + ball.radius : paddle.x - ball.radius;
+
+/** A shot read ahead for its owner (Analyzer): where it will fly and arrive. */
+export interface ShotRead {
+  /** The paddle that reads it, an index into the match's. */
+  paddleIndex: number;
+  /** The points it will fly through, the arrival last. */
+  path: readonly Point[];
+  /** Seconds of the owner's time since it was read. */
+  age: number;
 }
 
 /** What a skill may read and change of the match: everything as its owner's paddle sees it. */
@@ -68,4 +87,6 @@ export interface Skill {
   timeScale?(target: number | 'balls'): number;
   /** A point is about to be served (and a match is starting): what lasts a rally starts over. */
   onServe?(): void;
+  /** The shot it is reading for its owner now, to show them; null when none. */
+  readonly read?: ShotRead | null;
 }

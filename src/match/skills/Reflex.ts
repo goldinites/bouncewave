@@ -1,7 +1,7 @@
 import { Ball } from '@/match/Ball';
 import { PADDLE } from '@/match/config';
 import { forecastArrival } from '@/match/forecast';
-import { Skill, SkillHit, SkillHost } from '@/match/skills/Skill';
+import { faceLine, isComingAt, Skill, SkillHit, SkillHost } from '@/match/skills/Skill';
 
 // Reflex: when the ball is about to get past, the world slows down for everyone but its owner
 export const REFLEX = {
@@ -44,23 +44,18 @@ export class Reflex implements Skill {
     return this.host.paddles[this.host.owner];
   }
 
-  /** Whether `ball` is flying at the owner's goal. */
-  private isComing(ball: Ball): boolean {
-    return this.paddle.side === 0 ? ball.vx < 0 : ball.vx > 0;
-  }
-
   public beforeStep(dt: number): void {
     if (this.save) {
       // The wider perfect zone waits for the ball even once the world is back to speed
       this.save.elapsed += dt;
-      if (!this.isComing(this.save.ball)) this.stop();
+      if (!isComingAt(this.paddle, this.save.ball)) this.stop();
       return;
     }
 
     const meter = this.host.meter();
     if (this.isUsed || !meter || meter.charge < REFLEX.COST) return;
     for (const ball of this.host.balls) {
-      if (this.isComing(ball) && !this.judged.has(ball) && this.judge(ball)) {
+      if (isComingAt(this.paddle, ball) && !this.judged.has(ball) && this.judge(ball)) {
         meter.spend(REFLEX.COST);
         this.isUsed = true;
         this.save = { ball, elapsed: 0 };
@@ -78,8 +73,7 @@ export class Reflex implements Skill {
    */
   private judge(ball: Ball): boolean {
     const paddle = this.paddle;
-    const faceX =
-      paddle.side === 0 ? paddle.x + paddle.spec.width + ball.radius : paddle.x - ball.radius;
+    const faceX = faceLine(paddle, ball);
     // Too far off to be worth flying ahead yet
     if (Math.abs(faceX - ball.x) > Math.abs(ball.vx * ball.speedMultiplier) * REFLEX.LEAD * 2) {
       return false;
