@@ -1,7 +1,7 @@
 import { Ball } from '@/match/Ball';
 import { COURT } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
-import { ARC } from '@/match/skills/Arc';
+import { Arc } from '@/match/skills/Arc';
 import { measureText, paintText, sprites } from '@/render/SpriteCache';
 import { gameFont } from '@/shared/fonts';
 import { TWO_PI } from '@/shared/math';
@@ -35,7 +35,10 @@ const WARP_LABEL = {
 export class SkillRenderer {
   /** Streaks circling a spinning ball, so a curve can be told from its first frames. */
   public static renderSpin(ctx: CanvasRenderingContext2D, ball: Ball, time: number): void {
-    const strength = Math.min(1, Math.abs(ball.spin) / ARC.MAX_SPIN);
+    const strength = Math.min(
+      1,
+      Math.abs(ball.spin) / Arc.fullSpin(ball.speed * ball.speedMultiplier),
+    );
     if (strength < 0.05) return;
 
     const turn = time * SPIN_STREAKS.TURN * Math.sign(ball.spin);

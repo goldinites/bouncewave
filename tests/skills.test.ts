@@ -158,30 +158,42 @@ describe('forecastArrival', () => {
 
 describe('Arc', () => {
   it('puts no spin on from a paddle that is only tracking the ball', () => {
-    expect(Arc.spinFor(ARC.THRESHOLD - 1, 400, true)).toBe(0);
+    expect(Arc.spinFor(ARC.THRESHOLD - 1, 400, 400, true)).toBe(0);
   });
 
   it('bends the ball back against the paddle’s motion, twice as hard off a perfect hit', () => {
     // Left paddle moving down sends the ball right: it curves up
-    const normal = Arc.spinFor(700, 400, false);
+    const normal = Arc.spinFor(700, 400, 400, false);
     expect(normal).toBeLessThan(0);
-    expect(Arc.spinFor(700, 400, true)).toBeCloseTo(normal * ARC.PERFECT_FACTOR);
+    expect(Arc.spinFor(700, 400, 400, true)).toBeCloseTo(normal * ARC.PERFECT_FACTOR);
     // Right paddle moving down sends the ball left: it curves up too
     const fromRight = ballAt(400, 250, -400);
-    fromRight.spin = Arc.spinFor(700, -400, false);
+    fromRight.spin = Arc.spinFor(700, -400, 400, false);
     Physics.step(fromRight, [], CONFIG, 0.1);
     expect(fromRight.vy).toBeLessThan(0);
   });
 
-  it('lands a perfect hit at serve speed within a third of the court of the straight shot', () => {
-    const ball = ballAt(60, COURT.HEIGHT / 2, 380);
-    ball.spin = Arc.spinFor(1e6, ball.vx, true);
+  /** How far off the straight line a flat shot at `speed` lands across the court. */
+  const bendOf = (speed: number, paddleVelocity: number, isPerfect: boolean) => {
+    const faceX = PADDLE.OFFSET_X + PADDLE.WIDTH;
+    const ball = ballAt(faceX, COURT.HEIGHT / 2, speed);
+    ball.spin = Arc.spinFor(paddleVelocity, speed, speed, isPerfect);
     ball.spinDecay = ARC.DECAY;
-    while (ball.x < COURT.WIDTH - 60) Physics.step(ball, [], CONFIG, STEP);
+    while (ball.x < COURT.WIDTH - faceX) Physics.step(ball, [], CONFIG, STEP);
+    return Math.abs(ball.y - COURT.HEIGHT / 2);
+  };
 
-    const offset = Math.abs(ball.y - COURT.HEIGHT / 2);
-    expect(offset).toBeLessThanOrEqual(COURT.HEIGHT / 3);
-    expect(offset).toBeGreaterThan(60); // and it is a curve one sees
+  it('bends a perfect hit no more than a third of the court, at any speed', () => {
+    for (const speed of [380, 600, 840, 1080]) {
+      expect(bendOf(speed, 1e6, true)).toBeLessThanOrEqual(COURT.HEIGHT / 3);
+    }
+  });
+
+  it('bends a hit from a paddle at the keyboard’s speed far enough to see, fast or slow', () => {
+    for (const speed of [380, 1080]) {
+      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, false)).toBeGreaterThan(55);
+      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, true)).toBeGreaterThan(110);
+    }
   });
 
   it('spins its owner’s hits on the move and reports them', () => {
@@ -294,8 +306,8 @@ describe('A match with skills', () => {
   };
 
   it('replays the same from the same seed, both skills played', () => {
-    const first = play(7, ['arc', 'reflex']);
-    const second = play(7, ['arc', 'reflex']);
+    const first = play(2, ['arc', 'reflex']);
+    const second = play(2, ['arc', 'reflex']);
     expect(second.trace).toEqual(first.trace);
     expect(second.events).toEqual(first.events);
 
