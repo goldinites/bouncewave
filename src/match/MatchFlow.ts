@@ -555,6 +555,7 @@ export class MatchFlow {
       this.paddles[i].useSpec(paddle ?? STANDARD_PADDLE);
       this.paddles[i].perfectZoneScale = 1;
       this.overdrives[i].useCore(skills.some((id) => IMPLANTS.includes(id)));
+      lineup[i].controller.useSkills?.(skills);
     });
     this.skills.use(
       lineup.map(({ skills = [] }) => skills),

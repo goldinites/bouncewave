@@ -22,6 +22,7 @@ const skill = (overrides: Partial<AiSkill> = {}): AiSkill => ({
   angleShots: 0,
   nerves: 0,
   perfectAim: 0,
+  curveRead: 0,
   overdrive: false,
   ...overrides,
 });
@@ -50,6 +51,47 @@ describe('The AI reads the physics', () => {
     ai.readShot(cpu, skill(), undefined, ball);
     ai.update(cpu, ball, skill({ speed: 1e5 }), 1, playerPaddle());
     expect(cpu.targetY).toBeCloseTo(curved.y, 0);
+  });
+
+  /** A ball curving hard up, and where it really arrives at the CPU's face, and straight on. */
+  const curving = () => {
+    const cpu = cpuPaddle();
+    const ball = ballAt(150, 300, 450, 0);
+    ball.spin = -0.4;
+    ball.spinDecay = 0.6;
+    const faceX = cpu.x - ball.radius;
+    const curved = forecastArrival(ball, faceX)!.y;
+    const straight = predictArrival(faceX, ball.x, ball.y, ball.vx, ball.vy, ball.radius).y;
+    return { cpu, ball, curved, straight };
+  };
+
+  /** Where a CPU with `curveRead` aims after watching a curving ball for `seconds`. */
+  const aimAfter = (curveRead: number, seconds: number, sharpen = false) => {
+    const { cpu, ball, curved, straight } = curving();
+    const reader = skill({ curveRead, speed: 1e5 });
+    const ai = new AiController(() => 0.9);
+    ai.readShot(cpu, reader, undefined, ball);
+    if (sharpen) ai.sharpen();
+    for (let t = 0; t < seconds - 1e-9; t += 0.01)
+      ai.update(cpu, ball, reader, 0.01, playerPaddle());
+    // 0 aims where it would fly straight on, 1 where the curve takes it
+    return (cpu.targetY - straight) / (curved - straight);
+  };
+
+  it('expects a curve to fly on straight at first, and sees it as it watches', () => {
+    expect(aimAfter(0.4, 0.01)).toBeLessThan(0.1);
+    expect(aimAfter(0.4, 0.2)).toBeGreaterThan(0.3);
+    expect(aimAfter(0.4, 0.2)).toBeLessThan(0.7);
+    // A ball faster than the serve takes longer to see through: 0.4 s at 340 px/s is ~0.53 s here
+    expect(aimAfter(0.4, 0.6)).toBeCloseTo(1, 1);
+  });
+
+  it('sees a curve sooner the better it plays, and at once with its Analyzer', () => {
+    const at = (level: DifficultyLevel) => aimAfter(DIFFICULTY_CONFIGS[level].curveRead, 0.15);
+    expect(at(DifficultyLevel.INSANE)).toBeGreaterThan(at(DifficultyLevel.HARD));
+    expect(at(DifficultyLevel.HARD)).toBeGreaterThan(at(DifficultyLevel.NORMAL));
+    expect(at(DifficultyLevel.NORMAL)).toBeGreaterThan(at(DifficultyLevel.EASY));
+    expect(aimAfter(0.6, 0.01, true)).toBeCloseTo(1, 1);
   });
 
   it('reads each ball’s shot on its own: a second ball does not upset the first', () => {
@@ -126,6 +168,32 @@ describe('The AI hits perfect on purpose', () => {
       expect(Math.sign(result.cpu.velocity)).toBe(away);
       expect(Math.sign(result.ball.vy)).toBe(away);
       expect(Math.abs(result.cpu.velocity)).toBeGreaterThan(250);
+    }
+  });
+
+  it('with Arc, swings its angled returns toward the opponent, off center, for the curve', () => {
+    for (const opponentY of [100, 400]) {
+      const player = playerPaddle();
+      player.y = opponentY;
+      const cpu = cpuPaddle();
+      const ball = ballAt(300, 250, 450, 0);
+      const curver = skill({ angleShots: 1 });
+      const ai = new AiController(() => 0.5);
+      ai.usesArc = true;
+      ai.readShot(cpu, curver, undefined, ball);
+      const config = DIFFICULTY_CONFIGS[DifficultyLevel.HARD];
+      let hit = null;
+      for (let t = 0; t < 3 && !hit; t += STEP) {
+        ai.update(cpu, ball, curver, STEP, player);
+        cpu.update(STEP);
+        hit = Physics.step(ball, [player, cpu], config, STEP).find((e) => e.type === 'paddleHit');
+      }
+      const toward = opponentY < COURT.HEIGHT / 2 ? -1 : 1;
+      expect(hit).toMatchObject({ isPerfect: false });
+      expect(Math.sign(cpu.velocity)).toBe(toward);
+      // Fast enough for Arc to spin it (ARC.THRESHOLD)
+      expect(Math.abs(cpu.velocity)).toBeGreaterThan(250);
+      expect(Math.sign(ball.vy)).toBe(toward);
     }
   });
 

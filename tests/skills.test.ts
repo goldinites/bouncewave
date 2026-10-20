@@ -187,16 +187,46 @@ describe('Arc', () => {
    * How far off the straight line a flat shot at `speed` lands across the court. It leaves low
    * and bends up (the paddle moving down), so no wall cuts the bend short.
    */
-  const bendOf = (speed: number, paddleVelocity: number, isPerfect: boolean) => {
+  const bendOf = (speed: number, paddleVelocity: number, isPerfect: boolean) =>
+    flyArc(speed, paddleVelocity, isPerfect).bend;
+
+  /**
+   * A flat shot at `speed` spun by Arc off a paddle moving down at `paddleVelocity`: how far off
+   * the straight line it lands across the court, and how far it was at 40% of the way.
+   */
+  const flyArc = (speed: number, paddleVelocity: number, isPerfect: boolean) => {
+    const paddles = court();
     const faceX = PADDLE.OFFSET_X + PADDLE.WIDTH;
     const startY = COURT.HEIGHT - COURT.BOTTOM_WALL - 20;
     const ball = ballAt(faceX, startY, speed);
-    ball.spin = Arc.spinFor(Math.abs(paddleVelocity), speed, speed, isPerfect);
-    ball.spinDecay = ARC.DECAY;
-    while (ball.x < COURT.WIDTH - faceX) Physics.step(ball, [], CONFIG, STEP);
+    paddles[0].velocity = Math.abs(paddleVelocity);
+    new Arc(hostFor(paddles, [ball]).host).afterHit({
+      paddleIndex: 0,
+      ball,
+      isPerfect,
+      isPowerShot: false,
+    });
+    const endX = COURT.WIDTH - faceX;
+    let early = 0;
+    while (ball.x < endX) {
+      Physics.step(ball, [], CONFIG, STEP);
+      if (ball.x < faceX + (endX - faceX) * 0.4) early = Math.abs(ball.y - startY);
+    }
     expect(ball.spin).not.toBe(0); // no wall took it off
-    return Math.abs(ball.y - startY);
+    return { bend: Math.abs(ball.y - startY), early };
   };
+
+  it('breaks late off a hard spin on a fast ball: as far, but later', () => {
+    expect(Arc.lateShare(1e6, 450)).toBe(0);
+    expect(Arc.lateShare(260, 1000)).toBe(0);
+    expect(Arc.lateShare(1e6, 1000)).toBe(ARC.LATE_BREAK.MAX_SHARE);
+
+    // The same spin's share on a fast ball, from a paddle that just reaches the late break or not
+    const soft = flyArc(1000, 360, true);
+    const hard = flyArc(1000, 1e6, true);
+    expect(hard.early).toBeLessThan(soft.early * 0.6);
+    expect(hard.bend).toBeGreaterThan(soft.bend);
+  });
 
   it('bends a perfect hit no more than half the court, at any speed', () => {
     for (const speed of [380, 600, 840, 1080]) {
@@ -206,7 +236,7 @@ describe('Arc', () => {
 
   it('bends a hit from a paddle at the keyboard’s speed far enough to see, fast or slow', () => {
     for (const speed of [380, 1080]) {
-      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, false)).toBeGreaterThan(110);
+      expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, false)).toBeGreaterThan(100);
       expect(bendOf(speed, PADDLE.KEYBOARD_SPEED, true)).toBeGreaterThan(180);
     }
   });

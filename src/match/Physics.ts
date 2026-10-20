@@ -82,6 +82,7 @@ export class Physics {
         ball.y = topBoundary;
         ball.vy = Math.abs(ball.vy);
         ball.spin = 0;
+        ball.spinDelay = 0;
         events.push({ type: 'wallBounce', x: ball.x, y: ball.y });
       }
 
@@ -90,6 +91,7 @@ export class Physics {
         ball.y = bottomBoundary;
         ball.vy = -Math.abs(ball.vy);
         ball.spin = 0;
+        ball.spinDelay = 0;
         events.push({ type: 'wallBounce', x: ball.x, y: ball.y });
       }
 
@@ -139,6 +141,7 @@ export class Physics {
           ball.vx = direction * Math.cos(bounceAngle) * ball.speed;
           ball.vy = Math.sin(bounceAngle) * ball.speed;
           ball.spin = 0;
+          ball.spinDelay = 0;
           ball.x = isLeft ? paddle.x + spec.width + ball.radius : paddle.x - ball.radius;
 
           events.push({
@@ -173,6 +176,11 @@ export class Physics {
    * the ball neither turns back toward its hitter nor crawls along a wall.
    */
   private static turn(ball: Ball, dt: number): void {
+    // A late break flies straight first, its spin held
+    if (ball.spinDelay > 0) {
+      ball.spinDelay = Math.max(0, ball.spinDelay - dt);
+      return;
+    }
     const angle = ball.spin * dt;
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);

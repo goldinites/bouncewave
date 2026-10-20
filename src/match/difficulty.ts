@@ -30,6 +30,12 @@ export interface DifficultyConfig {
    * paddle swings through it, which steers it hard away from the player. See AiController.
    */
   perfectAim: number;
+  /**
+   * Seconds of watching (a ball at the serve's speed; a faster one takes longer) for the CPU to
+   * see a curve for what it is. Until then it expects the ball to fly on straight, as an eye
+   * does at first, and the curve fools it. See AiController.
+   */
+  curveRead: number;
   /** Whether the CPU charges Overdrive, where the match's rules let it (`cpuOverdrive`). */
   overdrive: boolean;
   /**
@@ -52,6 +58,7 @@ export type AiSkill = Pick<
   | 'angleShots'
   | 'nerves'
   | 'perfectAim'
+  | 'curveRead'
   | 'overdrive'
 >;
 
@@ -64,6 +71,7 @@ export const DEMO_AI_SKILL: AiSkill = {
   angleShots: 0.3,
   nerves: 1,
   perfectAim: 0.15,
+  curveRead: 0.5,
   overdrive: false,
 };
 
@@ -76,6 +84,7 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     angleShots: 0,
     nerves: 1,
     perfectAim: 0,
+    curveRead: 0.6,
     overdrive: false,
     adaptivity: 0.4,
     acceleration: 0.075,
@@ -89,6 +98,7 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     angleShots: 0.25,
     nerves: 0.8,
     perfectAim: 0.1,
+    curveRead: 0.45,
     overdrive: false,
     adaptivity: 0.2,
     acceleration: 0.095,
@@ -102,6 +112,7 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     angleShots: 0.4,
     nerves: 0.6,
     perfectAim: 0.25,
+    curveRead: 0.32,
     overdrive: true,
     adaptivity: 0,
     acceleration: 0.115,
@@ -117,6 +128,7 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     angleShots: 0.55,
     nerves: 0.4,
     perfectAim: 0.4,
+    curveRead: 0.22,
     overdrive: true,
     adaptivity: 0,
     acceleration: 0.135,

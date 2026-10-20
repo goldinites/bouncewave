@@ -23,6 +23,7 @@ describe('skillAt', () => {
         angleShots: config.angleShots,
         nerves: config.nerves,
         perfectAim: config.perfectAim,
+        curveRead: config.curveRead,
         overdrive: config.overdrive,
       });
     });

@@ -7,7 +7,7 @@ import { Paddle } from '@/match/Paddle';
 import { cpuRank } from '@/match/ramp';
 import { isDecidingPoint, MatchRules } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
-import { SkillUse } from '@/match/skills/Skill';
+import { SkillId, SkillUse } from '@/match/skills/Skill';
 
 /** Anything that can steer the player's paddle (keyboard, pointer, touch). */
 export interface PlayerInput {
@@ -40,6 +40,8 @@ export interface PaddleController {
   readonly chargesOverdrive?: boolean;
   /** px/s it can move `paddle` at, at most: what a skill takes for its owner's own speed. */
   topSpeed(paddle: Paddle): number;
+  /** The skills its paddle has for the match about to be played, so it can play them. */
+  useSkills?(skills: readonly SkillId[]): void;
   /** A point of a real match was won by the side `scorer`. */
   onPoint(paddle: Paddle, scorer: Side): void;
   /** Forgets everything it has learnt (back to the menu). */
@@ -108,6 +110,10 @@ export class AiPaddleController implements PaddleController {
   /** A match's CPU at a level that charges Overdrive; never the demo's. */
   public get chargesOverdrive(): boolean {
     return this.form !== null && this._skill.overdrive;
+  }
+
+  public useSkills(skills: readonly SkillId[]): void {
+    this.ai.usesArc = skills.includes('arc');
   }
 
   public onSkillUse(_paddle: Paddle, use: SkillUse): void {
