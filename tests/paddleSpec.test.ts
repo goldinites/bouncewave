@@ -35,7 +35,7 @@ const shoot = (paddleSpec: PaddleSpec, offset: number, velocity = 0) => {
 describe('PaddleSpec', () => {
   it('makes the standard paddle the one the game has always had', () => {
     expect([STANDARD_PADDLE.height, STANDARD_PADDLE.width]).toEqual([PADDLE.HEIGHT, PADDLE.WIDTH]);
-    expect(STANDARD_PADDLE).toMatchObject({ power: 1, spin: 1, speed: 1 });
+    expect(STANDARD_PADDLE).toMatchObject({ power: 1, steer: 1, speed: 1 });
     expect(new Paddle(0, 34, '#fff').spec).toBe(STANDARD_PADDLE);
   });
 
@@ -70,14 +70,14 @@ describe('PaddleSpec', () => {
     );
   });
 
-  it('steers the ball further off a paddle with more spin', () => {
+  it('steers the ball further off a paddle with more steer', () => {
     const standard = shoot(STANDARD_PADDLE, 20, 500).ball;
-    const spinning = shoot(spec({ spin: 2 }), 20, 500).ball;
+    const steered = shoot(spec({ steer: 2 }), 20, 500).ball;
 
-    expect(Math.atan2(spinning.vy, spinning.vx)).not.toBeCloseTo(
+    expect(Math.atan2(steered.vy, steered.vx)).not.toBeCloseTo(
       Math.atan2(standard.vy, standard.vx),
     );
-    expect(Math.abs(spinning.vy)).toBeGreaterThan(Math.abs(standard.vy));
+    expect(Math.abs(steered.vy)).toBeGreaterThan(Math.abs(standard.vy));
   });
 
   it('follows its target faster when it is quicker', () => {

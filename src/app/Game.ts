@@ -548,7 +548,7 @@ export class Game {
    * perfect hits.
    */
   private get perfectZoneMark(): number | null {
-    if (!this.isTutorial || this.flow.isDemo || this.tutorialCoach.isPraising) return null;
+    if (!this.isTutorial || this.flow.isDemo || this.tutorialCoach.isBetweenSteps) return null;
     const step = this.tutorialCoach.progress?.step;
     return step === 'perfect' || step === 'overdrive' ? 0 : null;
   }

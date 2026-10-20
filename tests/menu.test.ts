@@ -286,7 +286,8 @@ describe('settings menu', () => {
       [...row.children].map((cell) => cell.textContent),
     );
     expect(rows).toContainEqual(['Pause', 'P · Esc · right click']);
-    expect(rows).toContainEqual(['Overdrive', '3 perfect in a row']);
+    expect(rows).toContainEqual(['Overdrive', '3 perfect in a row: a power shot']);
+    expect(rows).toContainEqual(['Aim', 'Perfect on the move: goes your way']);
     expect(buttons().map((b) => text(b))).toEqual(['BACK']);
     buttons()[0].click();
     expect(document.getElementById('gameTitle')?.textContent).toBe('SETTINGS');

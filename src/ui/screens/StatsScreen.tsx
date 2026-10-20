@@ -16,6 +16,8 @@ export interface StatsScreenProps {
   reset?: { label: string; confirmLabel: string; onReset: () => void };
   backLabel: string;
   onBack: () => void;
+  /** A variant's class on the screen: its sections laid out its own way (the controls'). */
+  variant?: 'controls';
 }
 
 /**
@@ -24,7 +26,7 @@ export interface StatsScreenProps {
  * pressed twice: the first press asks. Texts come in ready to show. The controls screen lists its
  * rows the same way, with no RESET.
  */
-export function StatsScreen({ sections, reset, backLabel, onBack }: StatsScreenProps) {
+export function StatsScreen({ sections, reset, backLabel, onBack, variant }: StatsScreenProps) {
   const [isConfirming, setConfirming] = useState(false);
   const pressReset = () => {
     if (!reset) return;
@@ -37,7 +39,7 @@ export function StatsScreen({ sections, reset, backLabel, onBack }: StatsScreenP
   };
 
   return (
-    <div class="stats">
+    <div class={variant ? `stats stats--${variant}` : 'stats'}>
       <div class="stats__sections">
         {sections.map((section, index) => (
           <section key={index} class="stats__section">

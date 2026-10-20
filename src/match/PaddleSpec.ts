@@ -16,8 +16,11 @@ export interface PaddleSpec {
   readonly perfectZone: number;
   /** How much each hit speeds the ball up, on top of the difficulty's acceleration. */
   readonly power: number;
-  /** How far its own motion steers the ball it hits. */
-  readonly spin: number;
+  /**
+   * How far its own motion turns the ball it hits off its line (the steer): the ball still flies
+   * straight, unlike a spinning one (Arc).
+   */
+  readonly steer: number;
   /** How quickly it follows where it is steered, and how fast its player can steer it. */
   readonly speed: number;
 }
@@ -30,6 +33,6 @@ export const STANDARD_PADDLE: PaddleSpec = {
   // hard to charge
   perfectZone: 0.2,
   power: 1,
-  spin: 1,
+  steer: 1,
   speed: 1,
 };

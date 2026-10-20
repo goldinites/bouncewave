@@ -5,7 +5,6 @@ import { Condition } from '@/ui/challengeTexts';
 /** What the tutorial's line needs to know of where the learner is. */
 export interface TutorialLine {
   readonly progress: TutorialProgress | null;
-  readonly isPraising: boolean;
   readonly feedback: TutorialFeedback | null;
   /** A step's card is up: the line gives way to it. */
   readonly card: TutorialCard | null;
@@ -13,17 +12,16 @@ export interface TutorialLine {
 
 /**
  * The tutorial's line over the court, in the challenges' condition line's place (above the court,
- * or on it on a phone on its side), standing in for the score, which counts nothing here. The
- * praise for a step just done; else what the step asks, or its hint once the learner has tried a
- * few times, and for a moment after each try whether it counted or why not; with how far they are
- * ("RETURN THE BALL · 1 / 2") whatever it says, so the count is never out of sight. Moving is told
- * as the device moves the paddle, with keys and a mouse or a finger; a charged Overdrive says the
- * very next return fires it.
+ * or on it on a phone on its side), standing in for the score, which counts nothing here: the move
+ * the step asks for with how far the learner is ("PERFECT HIT · 1 / 2"), its hint once they have
+ * tried a few times, and for a moment after a try that didn't count, why not; the count is never
+ * out of sight. Moving is told as the device moves the paddle, with keys and a mouse or a finger;
+ * a charged Overdrive says the very next hit fires it. Nothing while a step's card is up.
  * @param isTouch whether the device is played by touch first
  */
 export function describeTutorial(
   i18n: I18nManager,
-  { progress, isPraising, feedback, card }: TutorialLine,
+  { progress, feedback, card }: TutorialLine,
   isTouch: boolean,
 ): Condition | null {
   const texts = i18n.t('tutorial');
@@ -34,7 +32,6 @@ export function describeTutorial(
     replacesScore: true,
   });
   if (card) return null;
-  if (isPraising) return line(texts.praise);
   if (!progress) return null;
 
   const { step, done, target, isHinted, isCharged } = progress;

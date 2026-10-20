@@ -963,6 +963,7 @@ export class MenuController {
             ],
             backLabel: this.i18n.t('back'),
             onBack: this.back,
+            variant: 'controls',
           }),
         };
       },

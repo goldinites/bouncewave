@@ -8,7 +8,7 @@ export type Language = 'en' | 'ru';
 
 export type DifficultyDescription = [name: string, description: string];
 
-/** The tutorial's texts (step 4.8): its offer, each step and its hint, the praise, its end. */
+/** The tutorial's texts (step 4.8): its offer, each step, its hint and its card, its end. */
 export interface TutorialTexts {
   /** Offered on the first PLAY: its title, what it is, and the way past it. */
   offerTitle: string;
@@ -21,7 +21,7 @@ export interface TutorialTexts {
   hints: Record<TutorialStep, string>;
   /** Overdrive charged: what the very next return does. */
   charged: string;
-  /** Told for a moment after every try: it counted, or why it didn't. */
+  /** Told for a moment after a try that didn't count: why not. */
   feedback: Record<TutorialFeedback, string>;
   /**
    * The cards that open the steps, the match paused: the move, what it gives, and its catch or
@@ -29,8 +29,6 @@ export interface TutorialTexts {
    */
   cards: Record<TutorialCard, { title: string; why: string; how: string }>;
   ok: string;
-  /** Between two steps. */
-  praise: string;
   /** Its end. */
   doneTitle: string;
   doneText: string;
@@ -47,7 +45,7 @@ export interface ControlsTexts {
 /** The controls screen's rows, the controls' and then the shots'. */
 export const CONTROL_ROWS = {
   controls: ['paddle', 'pause', 'fullscreen', 'music', 'twoPlayers'],
-  shots: ['perfect', 'angle', 'overdrive'],
+  shots: ['perfect', 'angle', 'aim', 'overdrive'],
 } as const;
 
 export type ControlId = (typeof CONTROL_ROWS)[keyof typeof CONTROL_ROWS][number];
@@ -210,7 +208,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       },
       charged: 'CHARGED: THE NEXT HIT IS A POWER SHOT',
       feedback: {
-        counted: 'GOOD',
         flat: 'TOO FLAT',
         offCenter: 'OFF CENTER',
         chargeLost: 'OFF CENTER: METER EMPTIED',
@@ -234,7 +231,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         },
       },
       ok: 'GOT IT',
-      praise: 'NICE!',
       doneTitle: 'WELL PLAYED!',
       doneText: 'Now for a real match',
     },
@@ -247,13 +243,26 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         fullscreen: { name: 'Fullscreen', keys: 'F', touch: 'Install the app' },
         music: { name: 'Music', keys: 'M', touch: 'In the settings' },
         twoPlayers: { name: 'Two players', keys: 'W/S and ↑/↓', touch: 'Each on their half' },
-        perfect: { name: 'Perfect hit', keys: 'The paddle’s center', touch: 'The paddle’s center' },
-        angle: {
-          name: 'An angle',
-          keys: 'An edge, or the center on the move',
-          touch: 'An edge, or the center on the move',
+        perfect: {
+          name: 'Perfect hit',
+          keys: 'Off the middle: a faster ball',
+          touch: 'Off the middle: a faster ball',
         },
-        overdrive: { name: 'Overdrive', keys: '3 perfect in a row', touch: '3 perfect in a row' },
+        angle: {
+          name: 'Angle',
+          keys: 'Off an end: a steeper return',
+          touch: 'Off an end: a steeper return',
+        },
+        aim: {
+          name: 'Aim',
+          keys: 'Perfect on the move: goes your way',
+          touch: 'Perfect on the move: goes your way',
+        },
+        overdrive: {
+          name: 'Overdrive',
+          keys: '3 perfect in a row: a power shot',
+          touch: '3 perfect in a row: a power shot',
+        },
       },
     },
     background: 'BACKGROUND',
@@ -407,7 +416,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       },
       charged: 'ЗАРЯЖЕНО: СЛЕДУЮЩИЙ УДАР МОЩНЫЙ',
       feedback: {
-        counted: 'ЕСТЬ',
         flat: 'СЛИШКОМ ПРЯМО',
         offCenter: 'НЕ ПО ЦЕНТРУ',
         chargeLost: 'НЕ ПО ЦЕНТРУ — ШКАЛА СБРОШЕНА',
@@ -431,7 +439,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         },
       },
       ok: 'ПОНЯТНО',
-      praise: 'ОТЛИЧНО!',
       doneTitle: 'ГОТОВО!',
       doneText: 'Теперь — настоящий матч',
     },
@@ -444,9 +451,26 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
         fullscreen: { name: 'Полный экран', keys: 'F', touch: 'Установи приложение' },
         music: { name: 'Музыка', keys: 'M', touch: 'В настройках' },
         twoPlayers: { name: 'Двое', keys: 'W/S и ↑/↓', touch: 'Каждый на своей половине' },
-        perfect: { name: 'Идеальный удар', keys: 'Центр ракетки', touch: 'Центр ракетки' },
-        angle: { name: 'Угол', keys: 'Край или центр на ходу', touch: 'Край или центр на ходу' },
-        overdrive: { name: 'Overdrive', keys: '3 идеальных подряд', touch: '3 идеальных подряд' },
+        perfect: {
+          name: 'Идеальный удар',
+          keys: 'Серединой: мяч быстрее',
+          touch: 'Серединой: мяч быстрее',
+        },
+        angle: {
+          name: 'Угол',
+          keys: 'Краем: отскок круче',
+          touch: 'Краем: отскок круче',
+        },
+        aim: {
+          name: 'Прицел',
+          keys: 'Идеальный на ходу: мяч, куда ведёшь',
+          touch: 'Идеальный на ходу: мяч, куда ведёшь',
+        },
+        overdrive: {
+          name: 'Overdrive',
+          keys: '3 идеальных подряд: удар мощнее',
+          touch: '3 идеальных подряд: удар мощнее',
+        },
       },
     },
     background: 'ФОН',

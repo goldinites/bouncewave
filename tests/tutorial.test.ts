@@ -36,8 +36,8 @@ const setup = () => {
       ...more,
     });
   const miss = () => events.emit({ type: 'score', scoringPlayerIndex: 1, y: 0, isDemo: false });
-  /** Lets the praise between two steps (or a try's verdict) run out. */
-  const wait = () => coach.update(Math.max(TUTORIAL.PRAISE, TUTORIAL.FEEDBACK));
+  /** Lets the pause between two steps (or a try's verdict) run out. */
+  const wait = () => coach.update(Math.max(TUTORIAL.BETWEEN, TUTORIAL.FEEDBACK));
   const move = (distance: number) => {
     coach.update(0);
     paddle.y += distance;
@@ -58,8 +58,9 @@ describe('the tutorial', () => {
     move(-100);
     expect(coach.progress?.done).toBeCloseTo(200 / TUTORIAL.MOVE_DISTANCE);
     move(TUTORIAL.MOVE_DISTANCE);
-    expect(coach.isPraising).toBe(true);
-    expect(line(coach)).toBe('NICE!');
+    // A step done is seen, not praised: the next one is told at once
+    expect(coach.isBetweenSteps).toBe(true);
+    expect(line(coach)).toBe('RETURN THE BALL · 0 / 2');
     expect(coach.progress?.step).toBe('hit');
     wait();
     expect(coach.card).toBeNull();
@@ -84,25 +85,23 @@ describe('the tutorial', () => {
     expect(line(coach, true)).toBe('MOVE: SLIDE A FINGER');
   });
 
-  it('waits for the praise to end before the next card, and a resume with none due reads none', () => {
+  it('waits a moment before the next card, and a resume with none due reads none', () => {
     const { coach, hit, wait } = setup();
     coach.reset('hit');
     hit();
     hit();
     expect(coach.progress?.step).toBe('angle');
-    expect(coach.card).toBeNull(); // the praise first
-    coach.acknowledge(); // a pause left during the praise
+    expect(coach.card).toBeNull(); // the moment between steps first
+    coach.acknowledge(); // a pause left in that moment
     wait();
     expect(coach.card).toBe('angle');
   });
 
-  it('says after every try whether it counted, and why not, the count always in sight', () => {
+  it("says why a try didn't count, and nothing when it did, the count always in sight", () => {
     const { coach, hit, wait } = setup();
     coach.reset('hit');
     expect(line(coach)).toBe('RETURN THE BALL · 0 / 2');
     hit();
-    expect(line(coach)).toBe('GOOD · 1 / 2');
-    wait();
     expect(line(coach)).toBe('RETURN THE BALL · 1 / 2');
     hit();
     wait();
@@ -143,7 +142,7 @@ describe('the tutorial', () => {
 
     meter.streak = 1;
     hit({ isPerfect: true });
-    expect(line(coach)).toBe('GOOD · 1 / 3');
+    expect(line(coach)).toBe('PERFECT HITS IN A ROW · 1 / 3');
     // A plain hit empties the meter: it says so
     meter.streak = 0;
     hit();
@@ -192,7 +191,7 @@ describe('the tutorial', () => {
     move(TUTORIAL.MOVE_DISTANCE);
     coach.reset();
     expect(coach.progress).toMatchObject({ step: 'move', done: 0 });
-    expect(coach.isPraising).toBe(false);
+    expect(coach.isBetweenSteps).toBe(false);
     coach.reset('overdrive');
     expect(coach.progress?.step).toBe('overdrive');
   });

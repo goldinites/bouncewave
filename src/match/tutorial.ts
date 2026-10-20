@@ -39,8 +39,10 @@ export const TUTORIAL = {
   STEEP_ANGLE: 0.45, // rad, ~26°
   // Tries at a step (a return that wasn't it, a ball missed) before its hint shows
   HINT_AFTER: 3,
-  PRAISE: 2, // s the praise shows between steps
-  // A try's verdict (it counted, or why not) stays this long, long enough to read
+  // A pause between steps, nothing said: the hit that passed one doesn't count for the next,
+  // and the next card comes once the ball is on its way. A step done is seen, not praised
+  BETWEEN: 0.8, // s
+  // Why a try didn't count stays up this long, long enough to read
   FEEDBACK: 2.5, // s
 } as const;
 
@@ -102,11 +104,11 @@ export class TrainerController implements PaddleController {
 }
 
 /**
- * What a learner's last try came to, told at once so they learn what counts: it did, or why it
- * didn't (a flat return where a steep one was asked, off the center, a charge lost to a plain hit,
- * a ball missed).
+ * Why a learner's last try didn't count, told at once so they learn what does: a flat return where
+ * a steep one was asked, off the center, a charge lost to a plain hit, a ball missed. A try that
+ * counted needs no word: the count goes up.
  */
-export type TutorialFeedback = 'counted' | 'flat' | 'offCenter' | 'chargeLost' | 'missed';
+export type TutorialFeedback = 'flat' | 'offCenter' | 'chargeLost' | 'missed';
 
 /** Where the learner is: the step, how far into it, and whether its hint is due. */
 export interface TutorialProgress {
@@ -133,8 +135,8 @@ export interface TutorialCoachDeps {
 /**
  * Follows the learner through the steps, from the match's events and their paddle. A step with a
  * card waits for it to be read (`card`, then `acknowledge`); then the coach counts what the step
- * asks for, tells after every try whether it counted and why not, and moves on once it is done,
- * with a moment of praise between steps. It only watches: the tutorial's match plays as any other.
+ * asks for, tells after a try that didn't count why not, and moves on once it is done,
+ * with a moment between steps. It only watches: the tutorial's match plays as any other.
  */
 export class TutorialCoach {
   private readonly deps: TutorialCoachDeps;
@@ -143,8 +145,8 @@ export class TutorialCoach {
   private tries = 0;
   private travelled = 0;
   private lastY: number | null = null;
-  /** Seconds of praise left after a step is done; the next one is told after it. */
-  private _praise = 0;
+  /** Seconds left of the pause after a step is done; the next one begins after it. */
+  private between = 0;
   private _feedback: TutorialFeedback | null = null;
   private feedbackFor = 0;
   /** The meter's streak as last seen: a hit empties it before its event comes, so look back. */
@@ -187,12 +189,12 @@ export class TutorialCoach {
   }
 
   /**
-   * The card due now, to be shown with the match paused: the step's, once the praise for the last
+   * The card due now, to be shown with the match paused: the step's, once the pause after the last
    * one is over and until it is acknowledged; null otherwise.
    */
   public get card(): TutorialCard | null {
     const step = TUTORIAL_STEPS[this.stepIndex];
-    return step && hasCard(step) && !this.isIntroduced && !this.isPraising ? step : null;
+    return step && hasCard(step) && !this.isIntroduced && !this.isBetweenSteps ? step : null;
   }
 
   /** The card due has been read: the step begins. Nothing, when no card is due. */
@@ -200,19 +202,19 @@ export class TutorialCoach {
     if (this.card) this.isIntroduced = true;
   }
 
-  /** Whether a step has just been done and is being praised. */
-  public get isPraising(): boolean {
-    return this._praise > 0;
+  /** Whether a step has just been done, and the next not yet begun. */
+  public get isBetweenSteps(): boolean {
+    return this.between > 0;
   }
 
-  /** What the learner's last try came to, for a moment after it; null otherwise. */
+  /** Why the learner's last try didn't count, for a moment after it; null otherwise. */
   public get feedback(): TutorialFeedback | null {
     return this.feedbackFor > 0 ? this._feedback : null;
   }
 
-  /** Every step is done and the last praise is over: the tutorial is through. */
+  /** Every step is done and the pause after the last is over: the tutorial is through. */
   public get isFinished(): boolean {
-    return this.stepIndex >= TUTORIAL_STEPS.length && this._praise <= 0;
+    return this.stepIndex >= TUTORIAL_STEPS.length && this.between <= 0;
   }
 
   /**
@@ -223,12 +225,12 @@ export class TutorialCoach {
     this.begin(TUTORIAL_STEPS.indexOf(from));
     this.travelled = 0;
     this.lastY = null;
-    this._praise = 0;
+    this.between = 0;
   }
 
   /** Call every frame of the tutorial: it watches the paddle move and counts the moments down. */
   public update(dt: number): void {
-    if (this._praise > 0) this._praise = Math.max(0, this._praise - dt);
+    if (this.between > 0) this.between = Math.max(0, this.between - dt);
     if (this.feedbackFor > 0) this.feedbackFor = Math.max(0, this.feedbackFor - dt);
     const { y } = this.deps.player().paddle;
     if (this.lastY !== null && this.progress?.step === 'move' && this.isPlaying) {
@@ -244,9 +246,9 @@ export class TutorialCoach {
     return events.subscribe((event) => this.handle(event));
   }
 
-  /** Whether the step is being played: its card read, no praise showing. */
+  /** Whether the step is being played: its card read, the pause before it over. */
   private get isPlaying(): boolean {
-    return this.isIntroduced && !this.isPraising;
+    return this.isIntroduced && !this.isBetweenSteps;
   }
 
   private handle(event: MatchEvent): void {
@@ -271,7 +273,8 @@ export class TutorialCoach {
       case 'overdrive':
         // The meter counts the perfect hits in a row; the hit after it is full fires it
         if (event.isPowerShot) return this.pass();
-        if (event.isPerfect) return this.tell('counted');
+        // A perfect hit charges the meter, which the line counts: no word needed
+        if (event.isPerfect) return this.quiet();
         return this.fail(streakBefore > 0 ? 'chargeLost' : 'offCenter');
     }
   }
@@ -280,12 +283,17 @@ export class TutorialCoach {
     this.done++;
     const progress = this.progress;
     if (progress && this.done >= progress.target) this.pass();
-    else this.tell('counted');
+    else this.quiet();
   }
 
   private fail(feedback: TutorialFeedback): void {
     this.tries++;
     this.tell(feedback);
+  }
+
+  /** A try that counted: the count says so; a verdict still up from a miss before it goes. */
+  private quiet(): void {
+    this.feedbackFor = 0;
   }
 
   private tell(feedback: TutorialFeedback): void {
@@ -295,7 +303,7 @@ export class TutorialCoach {
 
   private pass(): void {
     this.begin(this.stepIndex + 1);
-    this._praise = TUTORIAL.PRAISE;
+    this.between = TUTORIAL.BETWEEN;
   }
 
   /** Starts the step at `index`: nothing done or tried yet, its card (if any) still to read. */
