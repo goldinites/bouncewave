@@ -120,16 +120,6 @@ describe('the tutorial', () => {
     expect(line(coach)).toBe('OFF CENTER · 0 / 2');
     hit({ isPerfect: true });
     hit({ isPerfect: true });
-    wait();
-
-    // Aim: a perfect hit that goes off angled, the paddle on the move
-    coach.acknowledge();
-    hit({ angle: 1 });
-    expect(line(coach)).toBe('OFF CENTER · 0 / 2');
-    hit({ isPerfect: true, angle: 0 });
-    expect(line(coach)).toBe('THE PADDLE WAS STILL · 0 / 2');
-    hit({ isPerfect: true, angle: TUTORIAL.AIM_ANGLE });
-    hit({ isPerfect: true, angle: 0.8 });
     expect(coach.progress?.step).toBe('overdrive');
   });
 
@@ -186,7 +176,7 @@ describe('the tutorial', () => {
     hit({ isPerfect: true });
     hit({ isPerfect: true });
     wait();
-    expect(coach.progress).toMatchObject({ step: 'aim', isHinted: false });
+    expect(coach.progress).toMatchObject({ step: 'overdrive', isHinted: false });
   });
 
   it('ignores the trainer’s returns and the points it loses', () => {
@@ -203,8 +193,8 @@ describe('the tutorial', () => {
     coach.reset();
     expect(coach.progress).toMatchObject({ step: 'move', done: 0 });
     expect(coach.isPraising).toBe(false);
-    coach.reset('aim');
-    expect(coach.progress?.step).toBe('aim');
+    coach.reset('overdrive');
+    expect(coach.progress?.step).toBe('overdrive');
   });
 
   it('plays a match that points never end, with a slow ball and a trainer that returns it', () => {

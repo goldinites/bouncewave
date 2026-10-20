@@ -315,7 +315,7 @@ describe('Game', () => {
       expect(isPauseButtonShown()).toBe(true);
 
       // Every step done: its end comes up, and it is kept as gone through
-      tutorialCoach.stepIndex = 6;
+      tutorialCoach.stepIndex = 5;
       frame(1032);
       expect($('#gameTitle').textContent).toBe('WELL PLAYED!');
       expect(labels()).toEqual(['QUICK MATCH', 'MAIN MENU']);

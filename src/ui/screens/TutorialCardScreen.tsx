@@ -74,8 +74,6 @@ interface Example {
   showsCenter?: boolean;
   /** The paddle's end it meets the ball with lit (the angle). */
   litEnd?: 1 | -1;
-  /** An arrow beside the paddle the way it moves as it strikes (the aim). */
-  arrow?: 1 | -1;
   /** The meter's charges lighting one by one, at these times; the ball blazes after the last. */
   meter?: readonly number[];
   /** Seconds the loop lasts, when not DURATION. */
@@ -104,17 +102,6 @@ const EXAMPLES: Record<TutorialCard, Example> = {
     paddleTimes: [0, 1],
     still: { point: 0.5, paddle: MID },
     showsCenter: true,
-  },
-  // The paddle sweeps up through the ball, center on: it goes off up the court
-  aim: {
-    path: `M ${DEMO.WIDTH - 10} ${MID} L ${FACE} ${MID} L 120 ${DEMO.WALL + DEMO.BALL} L ${DEMO.WIDTH - 10} 40`,
-    points: [0, 0.45, 1],
-    times: [0, 0.55, 1],
-    paddle: [78, 78, 42, 42],
-    paddleTimes: [0, 0.4, 0.7, 1],
-    still: { point: 0.45, paddle: MID },
-    showsCenter: true,
-    arrow: -1,
   },
   // Three perfect hits light the meter; the fourth goes off as a power shot
   overdrive: {
@@ -217,16 +204,6 @@ function TutorialDemo({
               width={PADDLE.WIDTH + 4}
               height="9"
               rx="2"
-            />
-          )}
-          {example.arrow && (
-            <path
-              class="tutorial-demo__arrow"
-              d={
-                example.arrow < 0
-                  ? `M 6 ${stillPaddle + 8} L 6 ${stillPaddle - 10} M 2 ${stillPaddle - 5} L 6 ${stillPaddle - 10} L 10 ${stillPaddle - 5}`
-                  : `M 6 ${stillPaddle - 8} L 6 ${stillPaddle + 10} M 2 ${stillPaddle + 5} L 6 ${stillPaddle + 10} L 10 ${stillPaddle + 5}`
-              }
             />
           )}
         </g>

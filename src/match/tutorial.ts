@@ -11,10 +11,11 @@ import { EventBus } from '@/shared/EventBus';
 
 /**
  * The tutorial's steps (step 4.8), in order, each passed by doing it: moving, returning the ball,
- * a steep return off the paddle's edge, a perfect hit off its center, a perfect hit struck on the
- * move to aim it, and Overdrive from three perfect hits in a row.
+ * a steep return off the paddle's edge, a perfect hit off its center, and Overdrive from three
+ * perfect hits in a row. Aiming a perfect hit on the move is left out: an advanced move, for
+ * players to find for themselves (the controls screen names it).
  */
-export const TUTORIAL_STEPS = ['move', 'hit', 'angle', 'perfect', 'aim', 'overdrive'] as const;
+export const TUTORIAL_STEPS = ['move', 'hit', 'angle', 'perfect', 'overdrive'] as const;
 
 export type TutorialStep = (typeof TUTORIAL_STEPS)[number];
 
@@ -22,7 +23,7 @@ export type TutorialStep = (typeof TUTORIAL_STEPS)[number];
  * The steps that open on a card (the match paused): what the move gives and an example of it.
  * Moving and returning the ball need none: their line says the controls, and the rest is Pong.
  */
-export const TUTORIAL_CARDS = ['angle', 'perfect', 'aim', 'overdrive'] as const;
+export const TUTORIAL_CARDS = ['angle', 'perfect', 'overdrive'] as const;
 
 export type TutorialCard = (typeof TUTORIAL_CARDS)[number];
 
@@ -32,13 +33,10 @@ const hasCard = (step: TutorialStep): step is TutorialCard =>
 export const TUTORIAL = {
   MOVE_DISTANCE: 220, // px the paddle has to travel, either way, to pass the first step
   /** How many of each a step asks for. */
-  COUNTS: { hit: 2, angle: 2, perfect: 2, aim: 2 },
+  COUNTS: { hit: 2, angle: 2, perfect: 2 },
   // A return counts as steep (the edge's step) from this angle off the flat one: an edge hit's,
   // which a flat hit nudged by the paddle's motion never reaches
   STEEP_ANGLE: 0.45, // rad, ~26°
-  // A perfect hit counts as aimed from this angle: the paddle met the ball on the move, a little
-  // under 200 px/s
-  AIM_ANGLE: 0.4, // rad, ~23°
   // Tries at a step (a return that wasn't it, a ball missed) before its hint shows
   HINT_AFTER: 3,
   PRAISE: 2, // s the praise shows between steps
@@ -105,11 +103,10 @@ export class TrainerController implements PaddleController {
 
 /**
  * What a learner's last try came to, told at once so they learn what counts: it did, or why it
- * didn't (a flat return where a steep one was asked, off the center, a perfect hit that went out
- * flat with the paddle standing still, a charge lost to a plain hit, a ball missed).
+ * didn't (a flat return where a steep one was asked, off the center, a charge lost to a plain hit,
+ * a ball missed).
  */
-export type TutorialFeedback =
-  'counted' | 'flat' | 'offCenter' | 'stoodStill' | 'chargeLost' | 'missed';
+export type TutorialFeedback = 'counted' | 'flat' | 'offCenter' | 'chargeLost' | 'missed';
 
 /** Where the learner is: the step, how far into it, and whether its hint is due. */
 export interface TutorialProgress {
@@ -271,9 +268,6 @@ export class TutorialCoach {
         return event.angle >= TUTORIAL.STEEP_ANGLE ? this.count() : this.fail('flat');
       case 'perfect':
         return event.isPerfect ? this.count() : this.fail('offCenter');
-      case 'aim':
-        if (!event.isPerfect) return this.fail('offCenter');
-        return event.angle >= TUTORIAL.AIM_ANGLE ? this.count() : this.fail('stoodStill');
       case 'overdrive':
         // The meter counts the perfect hits in a row; the hit after it is full fires it
         if (event.isPowerShot) return this.pass();
