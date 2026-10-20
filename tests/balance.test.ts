@@ -6,8 +6,11 @@ import { PlayerId, playerPointShare, simulateMany } from './helpers/simulation';
 // AI against AI, seeded: the balance's floor, checked on every change. The numbers themselves are
 // for the report (npm run sim); these only catch what would be plainly broken
 const QUICK = quickMatchRules(5);
+// Each check plays some hundred matches, a few seconds on a fast machine: room for a slow one (CI,
+// or a machine busy with something else), past vitest's 5 s
+const TIMEOUT = 30_000; // ms
 
-describe('the balance, AI against AI', () => {
+describe('the balance, AI against AI', { timeout: TIMEOUT }, () => {
   it('plays every level out: a quick match always ends, on points', () => {
     for (const level of DIFFICULTY_LEVELS) {
       for (const report of simulateMany({ rules: QUICK, difficulty: level, player: level }, 6)) {
