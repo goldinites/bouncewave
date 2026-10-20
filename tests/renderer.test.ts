@@ -78,6 +78,7 @@ const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
       condition: null,
       isConditionOnCourt: false,
       sideLabels: null,
+      overtimeText: null,
       overdriveCharges: [0, null],
       ...hud,
       // No core: the streak is the charges

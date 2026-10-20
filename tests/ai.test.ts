@@ -28,6 +28,7 @@ const skill = (overrides: Partial<AiSkill> = {}): AiSkill => ({
   perfectAim: 0,
   curveRead: 0,
   overdrive: false,
+  fatigue: 0,
   ...overrides,
 });
 

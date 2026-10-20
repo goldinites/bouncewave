@@ -17,6 +17,20 @@ export const HUD_LAYOUT = {
   LABEL_OFFSET: 46, // px under the score's center, each side's label with two players
   LABEL_ALPHA: 0.75,
 } as const;
+// OVERTIME while a rally is in it: at the foot of the court, clear of the scores and a challenge's
+// line; on a court turned on a portrait phone, between the two scores, across the net, where it
+// reads level. It throbs gently (steady with reduced motion)
+export const OVERTIME_SIGN = {
+  Y: 456, // court px
+  Y_ROTATED: 98, // court px: the scores' row, clear of the wall the sign runs toward
+  ALPHA: 1,
+  PULSE: 5, // rad/s
+} as const;
+/** Where OVERTIME stands on the court, its center's y. */
+export const overtimeSignY = (isRotated: boolean): number =>
+  isRotated ? OVERTIME_SIGN.Y_ROTATED : OVERTIME_SIGN.Y;
+const OVERTIME_FONT = gameFont(700, 22);
+const OVERTIME_GLOW = 10;
 // Each side's label under its score with two players, which says whose score is whose
 const SIDE_LABEL_FONT = gameFont(700, 18);
 // A challenge's condition line, under the scores or in their place
@@ -133,6 +147,7 @@ export class HudRenderer {
    * @param sideLabels each side's label under its score, [left, right] (two players); null for none
    * @param isConditionOnCourt whether the condition's line is drawn here; elsewhere the strip above
    *   the court shows it (ui/ConditionBar), and the court only leaves out the scores it replaces
+   * @param overtimeText OVERTIME while the rally is in it; null otherwise
    */
   public render(
     ctx: CanvasRenderingContext2D,
@@ -146,6 +161,7 @@ export class HudRenderer {
     condition: HudCondition | null = null,
     sideLabels: readonly [string, string] | null = null,
     isConditionOnCourt = true,
+    overtimeText: string | null = null,
   ): void {
     scores.forEach((score, index) => {
       if (this.displayedScores[index] === -1) {
@@ -218,6 +234,8 @@ export class HudRenderer {
       this.renderCondition(ctx, condition, time);
     }
 
+    if (overtimeText) this.renderOvertime(ctx, overtimeText, time, isRotated);
+
     // "GET READY" indicator
     if (serveTime > 0) {
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 12);
@@ -243,6 +261,30 @@ export class HudRenderer {
         ? 0.6 + 0.4 * Math.abs(Math.sin(time * CONDITION.URGENT_PULSE))
         : CONDITION.ALPHA,
     });
+  }
+
+  /** OVERTIME in pink, turned with the court on a phone held upright (see OVERTIME_SIGN). */
+  private renderOvertime(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    time: number,
+    isRotated: boolean,
+  ): void {
+    ctx.save();
+    ctx.globalAlpha = this.isMotionReduced()
+      ? OVERTIME_SIGN.ALPHA
+      : OVERTIME_SIGN.ALPHA * (0.9 + 0.1 * Math.sin(time * OVERTIME_SIGN.PULSE));
+    ctx.translate(COURT.WIDTH / 2, overtimeSignY(isRotated));
+    if (isRotated) ctx.rotate(Math.PI / 2);
+    sprites.draw(
+      ctx,
+      `overtime|${text}`,
+      0,
+      0,
+      (measureCtx, scale) => measureText(measureCtx, scale, text, OVERTIME_FONT, OVERTIME_GLOW),
+      (spriteCtx) => paintText(spriteCtx, text, OVERTIME_FONT, COLORS.PINK, OVERTIME_GLOW),
+    );
+    ctx.restore();
   }
 
   private renderReadyText(

@@ -145,6 +145,7 @@ function bench(scene: string) {
         condition: null,
         isConditionOnCourt: false,
         sideLabels: null,
+        overtimeText: null,
         overdriveCharges: flow.overdriveCharges,
         overdriveStreaks: flow.overdriveStreaks,
       },

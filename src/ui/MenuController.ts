@@ -717,6 +717,11 @@ export class MenuController {
   public showGameOverMenu(winnerIndex: number, scores: [number, number]): void {
     // Asked now: whether two played is the match's that has just ended
     const isTwoPlayers = this.actions.isTwoPlayerMatch?.() ?? false;
+    // A quick match won: the next level up is a tap away, so a newcomer, who starts at the easiest
+    // (step 4.7), sees where to go from there
+    const level = this.settings.current.difficulty;
+    const harder = DIFFICULTY_LEVELS[DIFFICULTY_LEVELS.indexOf(level) + 1];
+    const offersHarder = !isTwoPlayers && winnerIndex === 0 && harder !== undefined;
     this.stack.reset({
       id: 'gameOver',
       view: () => ({
@@ -728,6 +733,21 @@ export class MenuController {
         body: h(ButtonMenu, {
           items: [
             { id: 'again', label: this.i18n.t('again'), onClick: () => this.actions.onStartGame() },
+            ...(offersHarder
+              ? [
+                  {
+                    id: 'harder',
+                    label: this.i18n.format('harder', {
+                      level: this.i18n.getDifficultyInfo(harder)[0],
+                    }),
+                    color: 'yellow' as const,
+                    onClick: () => {
+                      this.settings.update({ difficulty: harder });
+                      this.actions.onStartGame();
+                    },
+                  },
+                ]
+              : []),
             {
               id: 'settings',
               label: this.i18n.t('settings'),

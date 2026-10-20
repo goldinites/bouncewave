@@ -14,6 +14,10 @@ export interface TranslationSchema {
   play: string;
   settings: string;
   again: string;
+  /** A won quick match's end: play again a level up; `{level}` is its name. */
+  harder: string;
+  /** Over the court while a long rally is in overtime (match/overtime.ts). */
+  overtime: string;
   resume: string;
   restart: string;
   menu: string;
@@ -117,6 +121,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     play: 'PLAY',
     settings: 'SETTINGS',
     again: 'PLAY AGAIN',
+    harder: 'TRY {level}',
+    overtime: 'OVERTIME',
     resume: 'RESUME',
     restart: 'RESTART',
     menu: 'MAIN MENU',
@@ -245,6 +251,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     play: 'ИГРАТЬ',
     settings: 'НАСТРОЙКИ',
     again: 'ИГРАТЬ СНОВА',
+    harder: 'СЛОЖНЕЕ: {level}',
+    overtime: 'ОВЕРТАЙМ',
     resume: 'ПРОДОЛЖИТЬ',
     restart: 'ЗАНОВО',
     menu: 'В МЕНЮ',

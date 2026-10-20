@@ -45,6 +45,8 @@ export interface HudView {
   isConditionOnCourt: boolean;
   /** Each side's label under its score, [left, right]; null to show none (only two players have them). */
   sideLabels: readonly [string, string] | null;
+  /** OVERTIME, while the rally on court is in it (match/overtime.ts); null otherwise. */
+  overtimeText: string | null;
   /**
    * Charges in each paddle's Overdrive meter (0..OVERDRIVE.CHARGE), in the order of `paddles`;
    * null for a paddle that shows none (the CPU's, every one under rules without Overdrive).

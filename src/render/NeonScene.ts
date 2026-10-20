@@ -163,6 +163,7 @@ function neonLayers(
       view.condition,
       view.sideLabels,
       view.isConditionOnCourt,
+      view.overtimeText,
     );
   };
 

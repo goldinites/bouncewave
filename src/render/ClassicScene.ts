@@ -5,7 +5,7 @@ import { Side } from '@/match/side';
 import { COURT_LINES } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FINAL_SIGN_LAYOUT, FinalScoreSign } from '@/render/FinalScoreRenderer';
-import { drawConditionLine, HUD_LAYOUT } from '@/render/HudRenderer';
+import { drawConditionLine, HUD_LAYOUT, overtimeSignY } from '@/render/HudRenderer';
 import { CourtView, HudView, RenderFrame, Scene, SceneState } from '@/render/scene';
 import { COLORS } from '@/shared/palette';
 
@@ -106,6 +106,18 @@ export class ClassicScene implements Scene {
       ctx.restore();
     });
     ctx.restore();
+
+    // OVERTIME where the neon look writes it, plain
+    if (hud.overtimeText) {
+      ctx.save();
+      ctx.translate(COURT.WIDTH / 2, overtimeSignY(isRotated));
+      if (isRotated) ctx.rotate(Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = MONO(CLASSIC.SIDE_LABEL);
+      ctx.fillText(hud.overtimeText, 0, 0);
+      ctx.restore();
+    }
 
     // As in the neon look: on the court only where there is no strip above it, never across a
     // turned court

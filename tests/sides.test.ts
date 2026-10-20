@@ -112,11 +112,13 @@ describe('a side with more than one paddle', () => {
       paddles[1],
       expect.anything(),
       expect.anything(),
+      expect.any(Number),
     );
     expect(controllers[2].onIncomingShot).toHaveBeenCalledWith(
       paddles[2],
       expect.anything(),
       expect.anything(),
+      expect.any(Number),
     );
   });
 
