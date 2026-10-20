@@ -192,6 +192,11 @@ export class MatchFlow {
     return this.overdrives.map((overdrive, i) => (this.hasOverdrive(i) ? overdrive.streak : null));
   }
 
+  /** Whether each paddle's meter has an implants' core (its charges are energy), in order. */
+  public get implantCores(): boolean[] {
+    return this.overdrives.map((overdrive) => overdrive.hasImplantCore);
+  }
+
   /** Whoever is slowing the world down right now (Reflex); null when no one is. */
   public get timeWarp(): TimeWarp | null {
     return this._phase === 'rally' ? this.skills.timeWarp : null;

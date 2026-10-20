@@ -63,7 +63,7 @@ export interface DramaView {
   /** Hit glow of each paddle in [0, 1], in the order of `paddles`. */
   paddleGlow: readonly number[];
   /**
-   * How brightly the charge each paddle's implant just spent still burns, in [0, 1], in the
+   * How brightly the charge each paddle's meter just lost still burns, in [0, 1], in the
    * order of `paddles`: the segment flares and goes out, so the player sees where it went.
    */
   meterSpent: readonly number[];

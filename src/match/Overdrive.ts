@@ -34,6 +34,11 @@ export class Overdrive {
     return this._streak >= OVERDRIVE.CHARGE;
   }
 
+  /** Whether it has an implants' core: its charges are energy, lost one at a time. */
+  public get hasImplantCore(): boolean {
+    return this.hasCore;
+  }
+
   /** Puts an implants' core in the meter, or takes it out (a match's participant brings it). */
   public useCore(hasCore: boolean): void {
     this.hasCore = hasCore;

@@ -3,7 +3,8 @@ import { Paddle } from '@/match/Paddle';
 import { randomRange } from '@/shared/math';
 
 const GLOW_DECAY = 4; // 1/s, from a fresh hit (1) to unlit (0)
-// An implant spending a charge: the segment it took flares, flickers and goes out
+// A charge lost from an implants' core (spent, or to a hit that wasn't perfect): the segment
+// flares, flickers and goes out
 const SPENT_DECAY = 1.6; // 1/s, from the flare (1) to out (0)
 const SPARK_SPEED_MIN = 30;
 const SPARK_SPEED_MAX = 100;
@@ -40,12 +41,12 @@ export class PaddleEffects {
     this.leanFor = new Array<number>(paddleCount).fill(0);
   }
 
-  /** How brightly the charge each paddle's implant just spent still burns, in [0, 1]. */
+  /** How brightly the charge each paddle's meter just lost still burns, in [0, 1]. */
   public get spent(): readonly number[] {
     return this._spent;
   }
 
-  /** An implant of the paddle has spent a charge of its meter. */
+  /** The paddle's implants' core has lost a charge of its meter. */
   public onSpend(paddleIndex: number): void {
     this._spent[paddleIndex] = 1;
   }
