@@ -17,6 +17,7 @@ import {
 import { OVERDRIVE, Overdrive } from '@/match/Overdrive';
 import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Physics, PhysicsEvent } from '@/match/Physics';
+import { overtimeAt } from '@/match/overtime';
 import { cpuRank, paceAt } from '@/match/ramp';
 import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
@@ -276,6 +277,21 @@ export class MatchFlow {
    */
   public get difficulty(): DifficultyLevel {
     return this.matchDifficulty ?? this.getDifficulty();
+  }
+
+  /**
+   * Whether the rally on court has gone to overtime: the paddles squeezed (match/overtime.ts), as
+   * the level and the rules have it.
+   */
+  public get isOvertime(): boolean {
+    return this.hasOvertime && overtimeAt(this._rally) < 1;
+  }
+
+  /** Whether a long rally goes to overtime in this match. */
+  private get hasOvertime(): boolean {
+    return (
+      !this.isDemo && this._rules.rallyPressure && DIFFICULTY_CONFIGS[this.difficulty].overtime
+    );
   }
 
   /** Seconds left on the match clock; null when the match has none (and in the demo). */
@@ -694,11 +710,11 @@ export class MatchFlow {
     return this.paddles.find((p) => p.side === side)!;
   }
 
-  /** Tells every paddle of `side` that a shot is on its way. */
-  private shotAt(side: Side, threat: ShotThreat, ball: Ball): void {
+  /** Tells every paddle of `side` that a shot is on its way, `rally` hits into the rally. */
+  private shotAt(side: Side, threat: ShotThreat, ball: Ball, rally: number): void {
     this.lineup.forEach(({ controller }, i) => {
       const paddle = this.paddles[i];
-      if (paddle.side === side) controller.onIncomingShot(paddle, threat, ball);
+      if (paddle.side === side) controller.onIncomingShot(paddle, threat, ball, rally);
     });
   }
 
@@ -713,6 +729,10 @@ export class MatchFlow {
         break;
       case 'paddleHit': {
         this._rally++;
+        if (this.hasOvertime) {
+          const share = overtimeAt(this._rally);
+          this.paddles.forEach((paddle) => paddle.squeeze(share));
+        }
         // Overdrive charges in a real match, for a paddle that has it, if the rules have it on
         const hitter = event.paddleIndex;
         const overdrive = this.overdrives[hitter];
@@ -732,7 +752,7 @@ export class MatchFlow {
           : event.isPerfect
             ? SHOT_THREAT.PERFECT
             : SHOT_THREAT.NORMAL;
-        this.shotAt(otherSide(this.paddles[hitter].side), threat, ball);
+        this.shotAt(otherSide(this.paddles[hitter].side), threat, ball, this._rally);
         this.emit({ ...event, rally: this._rally, isPowerShot, chargedOverdrive });
         this.skills.afterHit({
           paddleIndex: hitter,
@@ -864,9 +884,11 @@ export class MatchFlow {
     this.lineup.forEach(({ controller }, i) => {
       controller.onServe(this.paddles[i], this.scores, this._rules);
     });
-    this._balls.forEach((ball) => this.shotAt(ball.vx > 0 ? 1 : 0, SHOT_THREAT.NORMAL, ball));
+    this._balls.forEach((ball) => this.shotAt(ball.vx > 0 ? 1 : 0, SHOT_THREAT.NORMAL, ball, 0));
     this.skills.onServe();
     this.modifiers.onServe();
+    // Overtime is over with the point: the paddles at full height again
+    this.paddles.forEach((paddle) => paddle.squeeze(1));
     this._rally = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });

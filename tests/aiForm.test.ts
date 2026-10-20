@@ -25,6 +25,7 @@ describe('skillAt', () => {
         perfectAim: config.perfectAim,
         curveRead: config.curveRead,
         overdrive: config.overdrive,
+        fatigue: config.fatigue,
       });
     });
   });

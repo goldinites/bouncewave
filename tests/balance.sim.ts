@@ -3,13 +3,13 @@ import { CHALLENGE_IDS, CHALLENGES } from '@/match/challenges';
 import { DIFFICULTY_LEVELS, DifficultyLevel } from '@/match/difficulty';
 import { quickMatchRules } from '@/match/modes';
 import { SKILL_IDS } from '@/match/skills/Skill';
-import { playerPointShare, SimReport, simulateMany } from './helpers/simulation';
+import { PLAYERS, PlayerId, playerPointShare, SimReport, simulateMany } from './helpers/simulation';
 
 /**
- * The balance report (npm run sim): AI against AI, the AI in the player's seat playing at each
- * level in turn, and the tables the balancing steps decide by (4.7, 6.6–6.7, 6.10). Seeded, so it
- * reads the same every run until the game changes. SIM_MATCHES sets the matches a cell
- * (default 40: some 300 points, about ±6 points of share either way).
+ * The balance report (npm run sim): AI against AI, the AI in the player's seat standing in for
+ * players of four strengths (PLAYERS), and the tables the balancing steps decide by (4.7, 6.6–6.7,
+ * 6.10). Seeded, so it reads the same every run until the game changes. SIM_MATCHES sets the
+ * matches a cell (default 40: some 300 points, about ±6 points of share either way).
  */
 
 const MATCHES = Number(process.env.SIM_MATCHES ?? 40);
@@ -22,6 +22,21 @@ const LEVEL_NAMES: Record<DifficultyLevel, string> = {
   [DifficultyLevel.NORMAL]: 'Normal',
   [DifficultyLevel.HARD]: 'Hard',
   [DifficultyLevel.INSANE]: 'Insane',
+};
+
+const PLAYER_IDS = Object.keys(PLAYERS) as PlayerId[];
+const PLAYER_NAMES: Record<PlayerId, string> = {
+  weak: 'Weak',
+  average: 'Average',
+  strong: 'Strong',
+  expert: 'Expert',
+};
+// The level each player is a match for, as the levels were before step 4.7
+const LEVEL_OF: Record<PlayerId, DifficultyLevel> = {
+  weak: DifficultyLevel.EASY,
+  average: DifficultyLevel.NORMAL,
+  strong: DifficultyLevel.HARD,
+  expert: DifficultyLevel.INSANE,
 };
 
 const write = (text = '') => process.stdout.write(`${text}\n`);
@@ -45,45 +60,48 @@ const quantile = (values: readonly number[], share: number) => {
 it('reports the balance', () => {
   write(`\n# Balance report: ${MATCHES} matches a cell, quick matches to 5\n`);
 
-  // Every level against every level: the steps between them, and the edge the player's Overdrive
-  // gives (the CPU charges its own only at Hard and Insane)
-  write("## Points the player wins: the player's level down, the CPU's across\n");
+  // Every player against every level: the steps between the levels (step 4.7 aims at some 15
+  // points of share each for the average player), and the edge the player's Overdrive gives (the
+  // CPU charges its own only at Hard and Insane)
+  write("## Points the player wins: the player down, the CPU's level across\n");
+  const shareAgainst = (player: PlayerId, playerOverdrive = true) =>
+    DIFFICULTY_LEVELS.map((difficulty) =>
+      percent(
+        playerPointShare(
+          simulateMany({ rules: QUICK, difficulty, player, playerOverdrive }, MATCHES),
+        ),
+      ),
+    );
   table(
     ['player \\ CPU', ...DIFFICULTY_LEVELS.map((level) => LEVEL_NAMES[level])],
     [
-      ...DIFFICULTY_LEVELS.map((player) => [
-        LEVEL_NAMES[player],
-        ...DIFFICULTY_LEVELS.map((difficulty) =>
-          percent(playerPointShare(simulateMany({ rules: QUICK, difficulty, player }, MATCHES))),
-        ),
-      ]),
-      [
-        'same, no Overdrive',
-        ...DIFFICULTY_LEVELS.map((level) =>
-          percent(
-            playerPointShare(
-              simulateMany(
-                { rules: QUICK, difficulty: level, player: level, playerOverdrive: false },
-                MATCHES,
-              ),
-            ),
-          ),
-        ),
-      ],
+      ...PLAYER_IDS.map((player) => [PLAYER_NAMES[player], ...shareAgainst(player)]),
+      ['Average, no Overdrive', ...shareAgainst('average', false)],
     ],
   );
 
-  // How long the rallies run between equals
-  write('## Rallies between equals\n');
+  // How long the rallies run, and how often the match is won, for each player at the level that
+  // is a match for them: what a person playing at their own level sits through
+  write('## Rallies, each player at their level\n');
   table(
-    ['level', 'hits a point', 'median, s', '90%, s', 'longest, s', `over ${LONG_RALLY} s`],
-    DIFFICULTY_LEVELS.map((level) => {
-      const played = simulateMany({ rules: QUICK, difficulty: level, player: level }, MATCHES);
+    [
+      'player at level',
+      'matches won',
+      'hits a point',
+      'median, s',
+      '90%, s',
+      'longest, s',
+      `over ${LONG_RALLY} s`,
+    ],
+    PLAYER_IDS.map((player) => {
+      const difficulty = LEVEL_OF[player];
+      const played = simulateMany({ rules: QUICK, difficulty, player }, MATCHES);
       const all = played.flatMap((report) => report.points);
       const seconds = all.map((point) => point.seconds);
       const hits = all.reduce((sum, point) => sum + point.hits, 0) / all.length;
       return [
-        LEVEL_NAMES[level],
+        `${PLAYER_NAMES[player]} at ${LEVEL_NAMES[difficulty]}`,
+        percent(played.filter((report) => report.winner === 0).length / played.length),
         hits.toFixed(0),
         quantile(seconds, 0.5).toFixed(0),
         quantile(seconds, 0.9).toFixed(0),
@@ -93,29 +111,31 @@ it('reports the balance', () => {
     }),
   );
 
-  // Each skill's worth, against an equal opponent: the player with it, and the CPU with it.
+  // Each skill's worth: the player with it, and the CPU with it, against the share without.
   // The aim (docs/PROGRESSION.md): +3 to +5 points of share, never past +8
-  write("## Skills: change in the player's share of points, between equals\n");
-  const SKILL_LEVELS = [DifficultyLevel.NORMAL, DifficultyLevel.HARD];
+  write("## Skills: change in the player's share of points\n");
+  const SKILL_PLAYERS: readonly PlayerId[] = ['average', 'strong'];
   const baseline = new Map(
-    SKILL_LEVELS.map((level) => [
-      level,
-      playerPointShare(simulateMany({ rules: QUICK, difficulty: level, player: level }, MATCHES)),
+    SKILL_PLAYERS.map((player) => [
+      player,
+      playerPointShare(
+        simulateMany({ rules: QUICK, difficulty: LEVEL_OF[player], player }, MATCHES),
+      ),
     ]),
   );
   table(
     [
       'skill',
-      ...SKILL_LEVELS.flatMap((level) => [
-        `player's, ${LEVEL_NAMES[level]}`,
-        `CPU's, ${LEVEL_NAMES[level]}`,
-      ]),
+      ...SKILL_PLAYERS.flatMap((player) => {
+        const at = `${PLAYER_NAMES[player]} at ${LEVEL_NAMES[LEVEL_OF[player]]}`;
+        return [`player's, ${at}`, `CPU's, ${at}`];
+      }),
     ],
     SKILL_IDS.map((skill) => [
       skill,
-      ...SKILL_LEVELS.flatMap((level) => {
-        const match = { rules: QUICK, difficulty: level, player: level };
-        const base = baseline.get(level)!;
+      ...SKILL_PLAYERS.flatMap((player) => {
+        const match = { rules: QUICK, difficulty: LEVEL_OF[player], player };
+        const base = baseline.get(player)!;
         const mine = playerPointShare(simulateMany({ ...match, playerSkills: [skill] }, MATCHES));
         const theirs = playerPointShare(simulateMany({ ...match, cpuSkills: [skill] }, MATCHES));
         return [points(mine - base), points(theirs - base)];
@@ -123,20 +143,20 @@ it('reports the balance', () => {
     ]),
   );
 
-  // Every challenge, by how often the AI in the player's seat passes it at each level: the list
-  // is the difficulty curve, so the rates should fall down it. The dark and the invisible band
-  // hide nothing from the AI: the challenges on them read easier here than they play
-  write("## Challenges passed, by the player's level\n");
+  // Every challenge, by how often each player passes it: the list is the difficulty curve, so
+  // the rates should fall down it. The dark and the invisible band hide nothing from the AI: the
+  // challenges on them read easier here than they play
+  write('## Challenges passed, by the player\n');
   const passes = (report: SimReport, id: (typeof CHALLENGE_IDS)[number]) =>
     CHALLENGES[id].goal.type === 'rally' ? report.reason === 'rally' : report.winner === 0;
   table(
-    ['#', 'challenge', ...DIFFICULTY_LEVELS.map((level) => LEVEL_NAMES[level])],
+    ['#', 'challenge', ...PLAYER_IDS.map((player) => PLAYER_NAMES[player])],
     CHALLENGE_IDS.map((id, i) => {
       const { rules, difficulty, paddles } = CHALLENGES[id];
       return [
         String(i + 1),
         id,
-        ...DIFFICULTY_LEVELS.map((player) => {
+        ...PLAYER_IDS.map((player) => {
           const played = simulateMany({ rules, difficulty, player, paddles }, MATCHES);
           return percent(played.filter((report) => passes(report, id)).length / played.length);
         }),

@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
+import { DifficultyLevel } from '@/match/difficulty';
 import { SettingsStore } from '@/settings/SettingsStore';
 import { getDefaultSettings } from '@/settings/UserSettings';
-import { MenuController } from '@/ui/MenuController';
+import { GameMenuActions, MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
 
 /** What an item says: a button its text, a choice its name and value. */
@@ -20,7 +21,7 @@ const makeUIManager = (i18n: I18nManager) => {
   return manager;
 };
 
-const setup = () => {
+const setup = (more: Partial<GameMenuActions> = {}) => {
   const store = new SettingsStore({
     load: () => ({ ...getDefaultSettings(), musicMuted: true }),
     save: () => {},
@@ -34,6 +35,7 @@ const setup = () => {
     onResumeGame: vi.fn(),
     onReturnToMainMenu: vi.fn(),
     onUnlockAudio: vi.fn(),
+    ...more,
   };
   const menu = new MenuController(makeUIManager(i18n), i18n, sfx, store, actions);
   // What the keyboard walks, in a menu or a screen (the settings): buttons, and a choice's value
@@ -43,7 +45,7 @@ const setup = () => {
         '#gameScreen button, #gameScreen [data-menu-item]',
       ),
     ].filter((item) => item.tabIndex >= 0);
-  return { menu, buttons, store };
+  return { menu, buttons, store, actions };
 };
 
 describe('settings menu', () => {
@@ -212,12 +214,40 @@ describe('settings menu', () => {
     const { menu, buttons } = setup();
     const title = () => document.getElementById('gameTitle')?.textContent;
     menu.showGameOverMenu(0, [5, 3]);
-    buttons()[1].click(); // settings
+    buttons()[2].click(); // settings, after the next level's offer
     expect(title()).toBe('SETTINGS');
 
     expect(menu.goBack()).toBe(true);
     expect(title()).toBe('YOU WIN');
     expect(document.getElementById('gameSubtitle')?.textContent).toBe('5 : 3');
+  });
+
+  it('offers the next level up once a match against the CPU is won', () => {
+    const { menu, buttons, store, actions } = setup();
+    const labels = () => buttons().map((b) => text(b));
+    // A newcomer starts at the easiest
+    expect(store.current.difficulty).toBe(DifficultyLevel.EASY);
+
+    menu.showGameOverMenu(1, [2, 5]);
+    expect(labels()).toEqual(['PLAY AGAIN', 'SETTINGS', 'MAIN MENU']);
+
+    menu.showGameOverMenu(0, [5, 2]);
+    expect(labels()).toEqual(['PLAY AGAIN', 'TRY NORMAL', 'SETTINGS', 'MAIN MENU']);
+    buttons()[1].click();
+    expect(store.current.difficulty).toBe(DifficultyLevel.NORMAL);
+    expect(actions.onStartGame).toHaveBeenCalledTimes(1);
+
+    // Nothing above the hardest
+    store.update({ difficulty: DifficultyLevel.INSANE });
+    menu.showGameOverMenu(0, [5, 2]);
+    expect(labels()).not.toContain('TRY NORMAL');
+    expect(labels()).toHaveLength(3);
+  });
+
+  it('offers no level up after a match of two', () => {
+    const { menu, buttons } = setup({ isTwoPlayerMatch: () => true });
+    menu.showGameOverMenu(0, [5, 2]);
+    expect(buttons().map((b) => text(b))).toEqual(['PLAY AGAIN', 'SETTINGS', 'MAIN MENU']);
   });
 
   it('opens the same settings from the pause', () => {

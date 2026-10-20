@@ -47,6 +47,13 @@ export interface MatchRules {
    */
   readonly cpuOverdrive: boolean;
   /**
+   * Whether a long rally presses on, so it ends before it drags: at the lower levels it tires the
+   * CPU (match/fatigue.ts), at the upper both paddles shrink in overtime (match/overtime.ts), as
+   * the level says. On wherever rallies end in points, off where a long rally is the player's
+   * goal, which the pressure would cut short.
+   */
+  readonly rallyPressure: boolean;
+  /**
    * Balls in play at once. Every serve sends them off alternately toward one side and the other;
    * the first one out wins the point, which ends it for all of them.
    */
@@ -91,6 +98,7 @@ export const STANDARD_RULES: MatchRules = {
   cpuRamp: null,
   overdrive: true,
   cpuOverdrive: false,
+  rallyPressure: true,
   balls: 1,
   modifiers: [],
   rotation: null,

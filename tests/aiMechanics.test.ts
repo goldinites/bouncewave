@@ -24,6 +24,7 @@ const skill = (overrides: Partial<AiSkill> = {}): AiSkill => ({
   perfectAim: 0,
   curveRead: 0,
   overdrive: false,
+  fatigue: 0,
   ...overrides,
 });
 
@@ -199,7 +200,7 @@ describe('The AI hits perfect on purpose', () => {
   });
 
   it('just gets a ball back that is too fast to swing at', () => {
-    const result = swingAt(900, 250, 100)!;
+    const result = swingAt(1200, 250, 100)!;
     expect(result).not.toBeNull();
     expect(Math.abs(result.cpu.velocity)).toBeLessThan(100);
   });

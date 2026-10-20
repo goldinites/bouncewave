@@ -39,6 +39,17 @@ export interface DifficultyConfig {
   /** Whether the CPU charges Overdrive, where the match's rules let it (`cpuOverdrive`). */
   overdrive: boolean;
   /**
+   * How much a long rally tires the CPU, in [0, 1], where the rules let it (`rallyPressure`): 1 the
+   * full FATIGUE of match/fatigue.ts, 0 never. Only the lower levels tire: a CPU that tires at the
+   * top would hand a strong player every long rally, and outlasting it would beat it.
+   */
+  fatigue: number;
+  /**
+   * Whether a long rally goes to overtime, where the rules let it (`rallyPressure`): both paddles
+   * shrink (match/overtime.ts). The upper levels' answer to long rallies, where the lower ones tire.
+   */
+  overtime: boolean;
+  /**
    * How far, in levels, the CPU's form may drift with the score to keep matches close
    * (weaker while it leads, stronger while it trails). See AiForm.
    */
@@ -60,6 +71,7 @@ export type AiSkill = Pick<
   | 'perfectAim'
   | 'curveRead'
   | 'overdrive'
+  | 'fatigue'
 >;
 
 /** Both paddles of the attract-mode demo behind the menu, whatever the difficulty. */
@@ -73,8 +85,15 @@ export const DEMO_AI_SKILL: AiSkill = {
   perfectAim: 0.15,
   curveRead: 0.5,
   overdrive: false,
+  fatigue: 0,
 };
 
+/**
+ * The levels, balanced in step 4.7 by simulating players of four strengths against each (npm run
+ * sim, tests/helpers/simulation.ts): steps of some 13–17 points of share for the average player
+ * up to Hard, and Insane an even match for the strongest. A long rally tires Easy and Normal
+ * (`fatigue`), their attack making up for it, and goes to overtime at Hard and Insane.
+ */
 export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
   [DifficultyLevel.EASY]: {
     speed: 440,
@@ -86,40 +105,46 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     perfectAim: 0,
     curveRead: 0.6,
     overdrive: false,
+    fatigue: 1,
+    overtime: false,
     adaptivity: 0.4,
     acceleration: 0.075,
     maxSpeed: 840,
   },
   [DifficultyLevel.NORMAL]: {
     speed: 560,
-    reaction: 0.14,
+    reaction: 0.12,
     error: 28,
     errorPerBounce: 75,
     angleShots: 0.25,
     nerves: 0.8,
-    perfectAim: 0.1,
+    perfectAim: 0.4,
     curveRead: 0.45,
     overdrive: false,
+    fatigue: 1,
+    overtime: false,
     adaptivity: 0.2,
     acceleration: 0.095,
     maxSpeed: 920,
   },
   [DifficultyLevel.HARD]: {
     speed: 640,
-    reaction: 0.1,
-    error: 20,
+    reaction: 0.11,
+    error: 24,
     errorPerBounce: 50,
     angleShots: 0.4,
     nerves: 0.6,
-    perfectAim: 0.25,
+    perfectAim: 0.2,
     curveRead: 0.32,
     overdrive: true,
+    fatigue: 0,
+    overtime: true,
     adaptivity: 0,
     acceleration: 0.115,
     maxSpeed: 1000,
   },
   // A step past Hard, as each level is past the one below: quicker, sharper, steadier, and a ball
-  // that speeds up harder to a higher top speed. A starting point for playtesting
+  // that speeds up harder to a higher top speed. It never tires: a strong player has to beat it
   [DifficultyLevel.INSANE]: {
     speed: 720,
     reaction: 0.07,
@@ -130,6 +155,8 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     perfectAim: 0.4,
     curveRead: 0.22,
     overdrive: true,
+    fatigue: 0,
+    overtime: true,
     adaptivity: 0,
     acceleration: 0.135,
     maxSpeed: 1080,

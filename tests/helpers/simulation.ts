@@ -1,23 +1,77 @@
 import { Ball } from '@/match/Ball';
 import { COURT, PADDLE } from '@/match/config';
-import { DifficultyLevel } from '@/match/difficulty';
+import { AiController, ShotThreat } from '@/match/AiController';
+import { AiSkill, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
-import {
-  AiPaddleController,
-  HumanController,
-  PaddleController,
-  PlayerInput,
-} from '@/match/PaddleController';
+import { HumanController, PaddleController, PlayerInput } from '@/match/PaddleController';
 import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { MatchRules } from '@/match/rules';
 import { Side } from '@/match/side';
-import { SkillId } from '@/match/skills/Skill';
+import { SkillId, SkillUse } from '@/match/skills/Skill';
 
 // The simulation's fixed step, the game's own, and the longest a match may run before it is
 // called off (a match that long is a finding in itself)
 const STEP = 1 / 240; // s
 const MAX_MATCH = 30 * 60; // s
+
+/**
+ * Players of four strengths to stand in for people: the levels as they played before step 4.7
+ * balanced them (the same steps up from a weak player to an expert), frozen here so the yardstick
+ * stays put whatever the levels become. The levels are balanced for the average one.
+ */
+export const PLAYERS = {
+  weak: {
+    speed: 440,
+    reaction: 0.2,
+    error: 45,
+    errorPerBounce: 90,
+    angleShots: 0,
+    nerves: 1,
+    perfectAim: 0,
+    curveRead: 0.6,
+    overdrive: false,
+    fatigue: 0,
+  },
+  average: {
+    speed: 560,
+    reaction: 0.14,
+    error: 28,
+    errorPerBounce: 75,
+    angleShots: 0.25,
+    nerves: 0.8,
+    perfectAim: 0.1,
+    curveRead: 0.45,
+    overdrive: false,
+    fatigue: 0,
+  },
+  strong: {
+    speed: 640,
+    reaction: 0.1,
+    error: 20,
+    errorPerBounce: 50,
+    angleShots: 0.4,
+    nerves: 0.6,
+    perfectAim: 0.25,
+    curveRead: 0.32,
+    overdrive: false,
+    fatigue: 0,
+  },
+  expert: {
+    speed: 720,
+    reaction: 0.07,
+    error: 13,
+    errorPerBounce: 30,
+    angleShots: 0.55,
+    nerves: 0.4,
+    perfectAim: 0.4,
+    curveRead: 0.22,
+    overdrive: false,
+    fatigue: 0,
+  },
+} as const satisfies Record<string, AiSkill>;
+
+export type PlayerId = keyof typeof PLAYERS;
 
 /** A seeded stand-in for Math.random, so a simulated match plays the same every run. */
 export const seeded = (seed: number) => () => {
@@ -32,43 +86,38 @@ export const seeded = (seed: number) => () => {
 const PersonSeat = HumanController as new (input: PlayerInput) => PaddleController;
 
 /**
- * The AI in the player's seat, playing at a level of its own. The match takes it for a person,
- * so whatever is the player's alone (Overdrive by default, the shrinking paddle) is its.
+ * The AI in the player's seat, playing at a skill of its own. The match takes it for a person,
+ * so whatever is the player's alone (Overdrive by default, the shrinking paddle) is its. Like a
+ * person it plays as it plays: no form drifting with the score, no tiring in a long rally.
  */
 class SimPlayer extends PersonSeat {
-  private readonly ai: AiPaddleController;
+  private readonly ai: AiController;
+  private readonly skill: AiSkill;
 
-  constructor(ai: AiPaddleController) {
+  constructor(random: () => number, skill: AiSkill) {
     super({ pollPlayerMovement: () => {} });
-    this.ai = ai;
+    this.ai = new AiController(random);
+    this.skill = skill;
   }
 
-  public steer(...args: Parameters<AiPaddleController['steer']>): void {
-    this.ai.steer(...args);
+  public steer(paddle: Paddle, ball: Ball, opponent: Paddle, dt: number): void {
+    this.ai.update(paddle, ball, this.skill, dt, opponent);
   }
 
   public topSpeed(paddle: Paddle): number {
-    return this.ai.topSpeed(paddle);
+    return this.skill.speed * paddle.spec.speed;
   }
 
-  public onServe(...args: Parameters<AiPaddleController['onServe']>): void {
-    this.ai.onServe(...args);
+  public onIncomingShot(paddle: Paddle, threat: ShotThreat, ball: Ball): void {
+    this.ai.readShot(paddle, this.skill, threat, ball);
   }
 
-  public onIncomingShot(...args: Parameters<AiPaddleController['onIncomingShot']>): void {
-    this.ai.onIncomingShot(...args);
-  }
-
-  public onSkillUse(...args: Parameters<AiPaddleController['onSkillUse']>): void {
-    this.ai.onSkillUse(...args);
+  public onSkillUse(_paddle: Paddle, use: SkillUse): void {
+    if (use.skill === 'analyzer') this.ai.sharpen();
   }
 
   public useSkills(skills: readonly SkillId[]): void {
-    this.ai.useSkills(skills);
-  }
-
-  public onPoint(...args: Parameters<AiPaddleController['onPoint']>): void {
-    this.ai.onPoint(...args);
+    this.ai.usesArc = skills.includes('arc');
   }
 
   public reset(): void {
@@ -81,8 +130,8 @@ export interface SimMatch {
   readonly rules: MatchRules;
   /** The match's level: the CPU's play and the ball's pace. */
   readonly difficulty: DifficultyLevel;
-  /** The level the AI in the player's seat plays at. */
-  readonly player: DifficultyLevel;
+  /** How the AI in the player's seat plays: one of PLAYERS, or a level's skill. */
+  readonly player: PlayerId | DifficultyLevel;
   readonly paddles?: readonly [PaddleSpec, PaddleSpec];
   /** Whether the player's perfect hits charge Overdrive (the rules permitting); yes by default. */
   readonly playerOverdrive?: boolean;
@@ -152,7 +201,10 @@ export function simulate(match: SimMatch): SimReport {
     random,
   });
 
-  const player = new SimPlayer(new AiPaddleController(random, () => match.player));
+  const player = new SimPlayer(
+    random,
+    typeof match.player === 'number' ? DIFFICULTY_CONFIGS[match.player] : PLAYERS[match.player],
+  );
   const [, cpu] = flow.playerVsCpu(
     match.paddles ?? [STANDARD_PADDLE, STANDARD_PADDLE],
     match.playerSkills,

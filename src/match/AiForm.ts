@@ -96,6 +96,7 @@ export function skillAt(rank: number): AiSkill {
     nerves: clamp(lerp(from.nerves, to.nerves, t), 0, 1),
     perfectAim: clamp(lerp(from.perfectAim, to.perfectAim, t), 0, 1),
     curveRead: Math.max(0, lerp(from.curveRead, to.curveRead, t)),
+    fatigue: clamp(lerp(from.fatigue, to.fatigue, t), 0, 1),
     // A switch, not a blend: the nearer level's
     overdrive: t < 0.5 ? from.overdrive : to.overdrive,
   };

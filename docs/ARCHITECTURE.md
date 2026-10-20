@@ -76,15 +76,15 @@ simulation's randomness is injected, the same seed and inputs replay the same ma
 
 `MatchFlow` runs a match; its pieces each answer one question:
 
-| Question                             | Answer                                                                                                                     |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score by side, clock, rally goal, CPU ramp, Overdrive, balls                            |
-| Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)                                                       |
-| What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed                                                 |
-| Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle                                                      |
-| How the ball moves and bounces       | `Physics.step`, one ball at a time; `forecastArrival` flies a copy ahead to where it will cross                            |
-| What a paddle can do beyond the base | its participant's skills (`match/skills/`), played through hooks by the match's `SkillSet`                                 |
-| How the AI plays                     | `AiController` (reading each ball's shot through the physics, aiming, perfect swings, nerves) and `AiForm` (form by score) |
+| Question                             | Answer                                                                                                                                                                              |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score by side, clock, rally goal, CPU ramp, Overdrive, balls                                                                                     |
+| Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)                                                                                                                |
+| What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, spin, speed                                                                                                          |
+| Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle                                                                                                               |
+| How the ball moves and bounces       | `Physics.step`, one ball at a time; `forecastArrival` flies a copy ahead to where it will cross                                                                                     |
+| What a paddle can do beyond the base | its participant's skills (`match/skills/`), played through hooks by the match's `SkillSet`                                                                                          |
+| How the AI plays                     | `AiController` (reading each ball's shot through the physics, aiming, perfect swings, nerves), `AiForm` (form by score) and `fatigue` (worn by a long rally, `rules.rallyPressure`) |
 
 Points belong to sides and are kept by the match (`flow.scores`). The first ball out wins the
 point and ends it for every ball. The demo behind the menus is a match with its own lineup of two

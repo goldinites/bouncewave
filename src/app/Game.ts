@@ -728,6 +728,7 @@ export class Game {
         condition,
         isConditionOnCourt: this.isConditionOnCourt,
         sideLabels: this.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
+        overtimeText: this.flow.isOvertime ? this.i18n.t('overtime') : null,
         overdriveCharges: this.flow.overdriveCharges,
         overdriveStreaks: this.flow.overdriveStreaks,
       },

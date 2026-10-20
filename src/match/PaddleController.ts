@@ -3,6 +3,7 @@ import { AiForm, skillAt } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
 import { PADDLE } from '@/match/config';
 import { AiSkill, DEMO_AI_SKILL, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
+import { fatigueAt, tired } from '@/match/fatigue';
 import { Paddle } from '@/match/Paddle';
 import { cpuRank } from '@/match/ramp';
 import { isDecidingPoint, MatchRules } from '@/match/rules';
@@ -29,8 +30,9 @@ export interface PaddleController {
   /**
    * A shot is on its way to `paddle`: the serve, or a hit by the other side.
    * @param ball the ball it is on
+   * @param rally hits in the rally so far, this shot's included (0 for the serve)
    */
-  onIncomingShot(paddle: Paddle, threat: ShotThreat, ball: Ball): void;
+  onIncomingShot(paddle: Paddle, threat: ShotThreat, ball: Ball, rally: number): void;
   /** One of `paddle`'s own skills has just done something (match/skills/). */
   onSkillUse?(paddle: Paddle, use: SkillUse): void;
   /**
@@ -75,7 +77,8 @@ export class HumanController implements PaddleController {
  * The AI playing a paddle. Without a difficulty it plays the demo behind the menus at its own
  * level; given one, it is the CPU of a match: that level, in whatever form the score has put it
  * (see AiForm), picked afresh on every serve. Under rules with a `cpuRamp` it has no form: it
- * plays as strong as its opponent's points have made it.
+ * plays as strong as its opponent's points have made it. Where the rules say so, a long rally
+ * tires it (match/fatigue.ts), and it is fresh again for the next point.
  */
 export class AiPaddleController implements PaddleController {
   private readonly ai: AiController;
@@ -83,6 +86,10 @@ export class AiPaddleController implements PaddleController {
   /** The CPU's form in a match; none in the demo. */
   private readonly form: AiForm | null;
   private _skill: AiSkill = DEMO_AI_SKILL;
+  /** How it plays the shot coming at it: the point's skill, worn down by a long rally. */
+  private playing: AiSkill = DEMO_AI_SKILL;
+  /** Whether a long rally tires it: a match's CPU, where the rules say so. */
+  private tires = false;
 
   /**
    * @param random the match's source of randomness, so a seeded match replays the same
@@ -100,7 +107,7 @@ export class AiPaddleController implements PaddleController {
   }
 
   public steer(paddle: Paddle, ball: Ball, opponent: Paddle, dt: number): void {
-    this.ai.update(paddle, ball, this._skill, dt, opponent);
+    this.ai.update(paddle, ball, this.playing, dt, opponent);
   }
 
   public topSpeed(paddle: Paddle): number {
@@ -122,17 +129,21 @@ export class AiPaddleController implements PaddleController {
   }
 
   public onServe(paddle: Paddle, scores: Scores, rules: MatchRules): void {
-    if (!this.form || !this.getDifficulty) {
-      this._skill = DEMO_AI_SKILL;
-      return;
-    }
+    this._skill = this.skillForPoint(paddle, scores, rules);
+    // Fresh for every point, however long the last rally ran
+    this.playing = this._skill;
+    this.tires = this.form !== null && rules.rallyPressure;
+  }
+
+  /** How it plays the point about to be served, picked from the level, the rules and its form. */
+  private skillForPoint(paddle: Paddle, scores: Scores, rules: MatchRules): AiSkill {
+    if (!this.form || !this.getDifficulty) return DEMO_AI_SKILL;
 
     const level = this.getDifficulty();
     // A ramping CPU plays at the strength the opponent's points have given it, with no form
     if (rules.cpuRamp) {
       const opponentPoints = scores[otherSide(paddle.side)];
-      this._skill = skillAt(cpuRank(level, rules.cpuRamp, opponentPoints));
-      return;
+      return skillAt(cpuRank(level, rules.cpuRamp, opponentPoints));
     }
 
     // AiForm reads the score as [opponent, CPU]
@@ -141,15 +152,17 @@ export class AiPaddleController implements PaddleController {
     // The deciding point is read from the real sides: each may have its own winning score
     const isDeciding = isDecidingPoint(scores, rules);
     this.form.update(fromCpuSide, DIFFICULTY_CONFIGS[level].adaptivity, isDeciding);
-    this._skill = this.form.skillFor(level);
+    return this.form.skillFor(level);
   }
 
   public onIncomingShot(
     paddle: Paddle,
     threat: ShotThreat = SHOT_THREAT.NORMAL,
     ball?: Ball,
+    rally = 0,
   ): void {
-    this.ai.readShot(paddle, this._skill, threat, ball ?? null);
+    this.playing = this.tires ? tired(this._skill, fatigueAt(rally)) : this._skill;
+    this.ai.readShot(paddle, this.playing, threat, ball ?? null);
   }
 
   public onPoint(paddle: Paddle, scorer: Side): void {

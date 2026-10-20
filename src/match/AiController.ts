@@ -42,8 +42,10 @@ const SWING = {
   TIME: 0.14, // s before the ball arrives that the swing starts
   SPEED: 420, // px/s, the paddle's speed through the ball, if the AI is that quick
   // It tries it only on a ball it is comfortable with, as a player would: no faster than this
-  // (boosts included), off no more walls than this. A hard ball it just gets back
-  MAX_BALL_SPEED: 750, // px/s
+  // (boosts included), off no more walls than this. A hard ball it just gets back. Up to every
+  // level's top speed (step 4.7; it was 750): its attack in a long rally at full speed is what
+  // keeps a match as hard now that a long rally tires it
+  MAX_BALL_SPEED: 1100, // px/s
   MAX_BOUNCES: 1,
 } as const;
 

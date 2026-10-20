@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DIFFICULTY_LEVELS, DifficultyLevel } from '@/match/difficulty';
 import { quickMatchRules } from '@/match/modes';
-import { playerPointShare, simulateMany } from './helpers/simulation';
+import { PlayerId, playerPointShare, simulateMany } from './helpers/simulation';
 
 // AI against AI, seeded: the balance's floor, checked on every change. The numbers themselves are
 // for the report (npm run sim); these only catch what would be plainly broken
@@ -17,11 +17,12 @@ describe('the balance, AI against AI', () => {
   });
 
   it('gives neither side of the court an edge', () => {
-    // Equals, Overdrive for neither: the right side is the CPU, the left the AI in the player's seat
+    // Equals, Overdrive for neither and no tiring CPU: the right side is the CPU, the left the AI in
+    // the player's seat
     const share = playerPointShare(
       simulateMany(
         {
-          rules: QUICK,
+          rules: { ...QUICK, rallyPressure: false },
           difficulty: DifficultyLevel.NORMAL,
           player: DifficultyLevel.NORMAL,
           playerOverdrive: false,
@@ -34,14 +35,24 @@ describe('the balance, AI against AI', () => {
   });
 
   it('lets a stronger player win more points against the same CPU', () => {
-    const shareOf = (player: DifficultyLevel) =>
+    const shareOf = (player: PlayerId) =>
       playerPointShare(
         simulateMany({ rules: QUICK, difficulty: DifficultyLevel.NORMAL, player }, 30),
       );
-    const easy = shareOf(DifficultyLevel.EASY);
-    const normal = shareOf(DifficultyLevel.NORMAL);
-    const insane = shareOf(DifficultyLevel.INSANE);
-    expect(easy).toBeLessThan(normal - 0.08);
-    expect(normal).toBeLessThan(insane - 0.15);
+    const weak = shareOf('weak');
+    const average = shareOf('average');
+    const expert = shareOf('expert');
+    expect(weak).toBeLessThan(average - 0.08);
+    expect(average).toBeLessThan(expert - 0.15);
+  });
+
+  it('makes every level harder than the one below for the average player', () => {
+    // Step 4.7 set the steps at some 15 points of share; less than 5 is a step lost
+    const shares = DIFFICULTY_LEVELS.map((difficulty) =>
+      playerPointShare(simulateMany({ rules: QUICK, difficulty, player: 'average' }, 30)),
+    );
+    for (let i = 1; i < shares.length; i++) {
+      expect(shares[i], `level ${DIFFICULTY_LEVELS[i]}`).toBeLessThan(shares[i - 1] - 0.05);
+    }
   });
 });

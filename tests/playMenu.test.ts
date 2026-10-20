@@ -226,10 +226,10 @@ describe('the PLAY menu and the setup, in the menus', () => {
     screenButtons()[1].click(); // quick match
 
     expect(title()).toBe('QUICK MATCH');
-    expect(subtitle()).toBe('Opponent: balanced');
+    expect(subtitle()).toBe('Opponent: calm, to warm up on');
     expect(labels()).toEqual([
       'BACKGROUND: RANDOM',
-      'DIFFICULTY: NORMAL',
+      'DIFFICULTY: EASY',
       'POINTS: 5',
       'START',
       'BACK',
@@ -243,8 +243,8 @@ describe('the PLAY menu and the setup, in the menus', () => {
       difficulty: getDefaultSettings().difficulty + 1,
       matchPoints: 7,
     });
-    expect(labels().slice(0, 3)).toEqual(['BACKGROUND: LASERS', 'DIFFICULTY: HARD', 'POINTS: 7']);
-    expect(subtitle()).toBe('Opponent: fast and accurate');
+    expect(labels().slice(0, 3)).toEqual(['BACKGROUND: LASERS', 'DIFFICULTY: NORMAL', 'POINTS: 7']);
+    expect(subtitle()).toBe('Opponent: balanced');
   });
 
   it('keeps every value’s room in its row, so the row never jumps as the choice steps', () => {
@@ -272,9 +272,8 @@ describe('the PLAY menu and the setup, in the menus', () => {
 
     arrows('Previous')[0].click();
     arrows('Previous')[2].click();
-    expect(labels().slice(0, 3)).toEqual(['BACKGROUND: JUNGLE', 'DIFFICULTY: NORMAL', 'POINTS: 3']);
+    expect(labels().slice(0, 3)).toEqual(['BACKGROUND: JUNGLE', 'DIFFICULTY: EASY', 'POINTS: 3']);
     arrows('Next')[0].click();
-    arrows('Previous')[1].click();
     arrows('Previous')[1].click(); // below the easiest, round to the hardest
     expect(store.current).toMatchObject({ matchBackground: 'random', matchPoints: 3 });
     expect(labels()[1]).toBe('DIFFICULTY: INSANE');
@@ -367,7 +366,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     document.activeElement?.dispatchEvent(
       new KeyboardEvent('keydown', { code: 'ArrowRight', bubbles: true }),
     );
-    expect(labels()[1]).toBe('DIFFICULTY: HARD');
+    expect(labels()[1]).toBe('DIFFICULTY: NORMAL');
     expect(document.activeElement).toBe(keyButtons()[1]);
     arrows('Next')[1].click(); // its arrow leaves the focus on the value
     expect(document.activeElement).toBe(keyButtons()[1]);
