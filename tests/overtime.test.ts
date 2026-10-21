@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { Ball } from '@/match/Ball';
 import { COURT, PADDLE } from '@/match/config';
 import { DifficultyLevel } from '@/match/difficulty';
-import { MatchFlow } from '@/match/MatchFlow';
+import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
-import { OVERTIME, overtimeAt } from '@/match/overtime';
+import { OVERTIME, isOvertimeAt } from '@/match/overtime';
 import { Paddle } from '@/match/Paddle';
 import { STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { PhysicsEvent } from '@/match/Physics';
@@ -15,16 +15,17 @@ const setup = (level: DifficultyLevel) => {
     new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, '#ff2bd6'),
   ];
   const ball = new Ball();
+  const events: MatchEvent[] = [];
   const flow = new MatchFlow({
     paddles,
     ball,
     input: { pollPlayerMovement: () => {} },
     getDifficulty: () => level,
-    onEvent: () => {},
+    onEvent: (event) => events.push(event),
     random: () => 0.5,
   });
-  /** Plays `count` hits into the rally, the paddles taking turns. */
-  const hit = (count: number) => {
+  /** Plays `count` hits into the rally, the paddles taking turns, perfect ones if `isPerfect`. */
+  const hit = (count: number, isPerfect = false) => {
     const handle = (
       flow as unknown as { handlePhysicsEvent(event: PhysicsEvent, ball: Ball): void }
     ).handlePhysicsEvent.bind(flow);
@@ -33,7 +34,7 @@ const setup = (level: DifficultyLevel) => {
         {
           type: 'paddleHit',
           paddleIndex: i % 2,
-          isPerfect: false,
+          isPerfect,
           x: 0,
           y: 0,
           speed: 500,
@@ -46,60 +47,71 @@ const setup = (level: DifficultyLevel) => {
   /** Serves the next point, as a point scored does. */
   const serve = () =>
     (flow as unknown as { serve(direction: number, delay: number): void }).serve(1, 0);
-  return { flow, paddles, hit, serve };
+  /** Whether each of the last `count` hits was a power shot, in order. */
+  const powerShots = (count: number) =>
+    events
+      .filter((event) => event.type === 'paddleHit')
+      .slice(-count)
+      .map((event) => event.type === 'paddleHit' && event.isPowerShot);
+  return { flow, paddles, ball, hit, serve, powerShots };
 };
 
 describe('overtime', () => {
-  it('squeezes the paddles from FROM hits, a little more each hit, down to FLOOR', () => {
-    expect(overtimeAt(0)).toBe(1);
-    expect(overtimeAt(OVERTIME.FROM)).toBe(1);
-    expect(overtimeAt(OVERTIME.FROM + 1)).toBeCloseTo(1 - OVERTIME.PER_HIT);
-    expect(overtimeAt(OVERTIME.FROM + 1000)).toBe(OVERTIME.FLOOR);
+  it('starts past FROM hits', () => {
+    expect(isOvertimeAt(0)).toBe(false);
+    expect(isOvertimeAt(OVERTIME.FROM)).toBe(false);
+    expect(isOvertimeAt(OVERTIME.FROM + 1)).toBe(true);
   });
 
-  it('squeezes a paddle on top of its spec, a shrinking paddle shrinking further', () => {
-    const paddle = new Paddle(0, PADDLE.OFFSET_X, '#fff');
-    paddle.squeeze(0.5);
-    expect(paddle.spec.height).toBe(STANDARD_PADDLE.height * 0.5);
-    paddle.useSpec({ ...STANDARD_PADDLE, height: 60 });
-    expect(paddle.spec.height).toBe(30);
-    paddle.squeeze(1);
-    expect(paddle.spec.height).toBe(60);
-  });
-
-  it('comes at Hard and Insane, to both paddles alike, and is over with the point', () => {
+  it("makes either side's perfect hits power shots at Hard and Insane, until the point", () => {
     for (const level of [DifficultyLevel.HARD, DifficultyLevel.INSANE]) {
-      const { flow, paddles, hit, serve } = setup(level);
+      const { flow, paddles, hit, serve, powerShots } = setup(level);
       flow.startMatch(quickMatchRules(5));
-      hit(OVERTIME.FROM);
+      hit(OVERTIME.FROM - 1);
+      hit(1, true);
       expect(flow.isOvertime).toBe(false);
-      hit(2);
+      expect(powerShots(1)).toEqual([false]);
+
+      hit(2, true);
       expect(flow.isOvertime).toBe(true);
-      for (const paddle of paddles) {
-        expect(paddle.spec.height).toBeCloseTo(
-          STANDARD_PADDLE.height * overtimeAt(OVERTIME.FROM + 2),
-        );
-      }
+      expect(powerShots(2)).toEqual([true, true]);
+      hit(1);
+      expect(powerShots(1)).toEqual([false]);
+      // The paddles stay as they are: a player keeps the reach they have learned
+      for (const paddle of paddles) expect(paddle.spec.height).toBe(STANDARD_PADDLE.height);
 
       serve();
       expect(flow.isOvertime).toBe(false);
-      for (const paddle of paddles) expect(paddle.spec.height).toBe(STANDARD_PADDLE.height);
+      hit(1, true);
+      expect(powerShots(1)).toEqual([false]);
     }
+  });
+
+  it("leaves the Overdrive meters as they were: overtime's shots are its own", () => {
+    const { flow, hit } = setup(DifficultyLevel.INSANE);
+    flow.startMatch(quickMatchRules(5));
+    hit(OVERTIME.FROM);
+    const before = flow.overdriveCharges;
+    expect(before[0]).not.toBeNull();
+    hit(2, true);
+    expect(flow.overdriveCharges).toEqual(
+      before.map((charge) => (charge === null ? null : charge + 1)),
+    );
   });
 
   it('never comes at the levels that tire instead, nor where the rules say not', () => {
     for (const level of [DifficultyLevel.EASY, DifficultyLevel.NORMAL]) {
-      const { flow, paddles, hit } = setup(level);
-      flow.startMatch(quickMatchRules(5));
-      hit(OVERTIME.FROM + 10);
+      const { flow, hit, powerShots } = setup(level);
+      flow.startMatch({ ...quickMatchRules(5), overdrive: false });
+      hit(OVERTIME.FROM + 10, true);
       expect(flow.isOvertime).toBe(false);
-      for (const paddle of paddles) expect(paddle.spec.height).toBe(STANDARD_PADDLE.height);
+      expect(powerShots(1)).toEqual([false]);
     }
 
-    const { flow, paddles, hit } = setup(DifficultyLevel.INSANE);
-    flow.startMatch({ ...quickMatchRules(5), rallyPressure: false });
-    hit(OVERTIME.FROM + 10);
+    const { flow, hit, powerShots } = setup(DifficultyLevel.INSANE);
+    flow.startMatch({ ...quickMatchRules(5), overdrive: false, rallyPressure: false });
+    hit(OVERTIME.FROM + 10, true);
     expect(flow.isOvertime).toBe(false);
-    for (const paddle of paddles) expect(paddle.spec.height).toBe(STANDARD_PADDLE.height);
+    expect(powerShots(1)).toEqual([false]);
   });
 });

@@ -1,14 +1,14 @@
-// Overtime (step 4.7): at the upper levels a long rally squeezes both paddles alike, from FROM
-// hits by PER_HIT of their height a hit down to FLOOR, so the rally ends in someone's miss
-// without a faster ball or a CPU that tires (one that tired would hand a strong player every long
-// rally). The same for both, and shown (OVERTIME over the court); back to full after the point
+// Overtime (step 4.7): at the upper levels a long rally turns every perfect hit, either side's,
+// into a power shot from FROM hits on, so the rally ends in someone's strong shot without a faster
+// ball for everyone or a CPU that tires (one that tired would hand a strong player every long
+// rally). The paddles stay as they are: a player who has learned their reach keeps it, where a
+// paddle shrinking mid-rally made a catch they knew they had a miss (playtest, 21.10.2026). The
+// same for both, and shown (OVERTIME over the court); over with the point
 export const OVERTIME = {
   FROM: 12, // hits in the rally
-  PER_HIT: 0.06, // share of the height lost each hit past FROM
-  FLOOR: 0.5, // share of the height left at most squeezed: half, still easy to see and to catch with
 } as const;
 
-/** Share of their height the paddles have `rally` hits into a rally in overtime, in [FLOOR, 1]. */
-export function overtimeAt(rally: number): number {
-  return Math.max(OVERTIME.FLOOR, 1 - OVERTIME.PER_HIT * Math.max(0, rally - OVERTIME.FROM));
+/** Whether `rally` hits into a rally is overtime, where the level and the rules have it. */
+export function isOvertimeAt(rally: number): boolean {
+  return rally > OVERTIME.FROM;
 }

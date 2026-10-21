@@ -17,7 +17,7 @@ import {
 import { OVERDRIVE, Overdrive } from '@/match/Overdrive';
 import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Physics, PhysicsEvent } from '@/match/Physics';
-import { overtimeAt } from '@/match/overtime';
+import { isOvertimeAt } from '@/match/overtime';
 import { cpuRank, paceAt } from '@/match/ramp';
 import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
@@ -282,11 +282,11 @@ export class MatchFlow {
   }
 
   /**
-   * Whether the rally on court has gone to overtime: the paddles squeezed (match/overtime.ts), as
-   * the level and the rules have it.
+   * Whether the rally on court has gone to overtime: every perfect hit a power shot
+   * (match/overtime.ts), as the level and the rules have it.
    */
   public get isOvertime(): boolean {
-    return this.hasOvertime && overtimeAt(this._rally) < 1;
+    return this.hasOvertime && isOvertimeAt(this._rally);
   }
 
   /** Whether a long rally goes to overtime in this match. */
@@ -732,16 +732,15 @@ export class MatchFlow {
         break;
       case 'paddleHit': {
         this._rally++;
-        if (this.hasOvertime) {
-          const share = overtimeAt(this._rally);
-          this.paddles.forEach((paddle) => paddle.squeeze(share));
-        }
         // Overdrive charges in a real match, for a paddle that has it, if the rules have it on
         const hitter = event.paddleIndex;
         const overdrive = this.overdrives[hitter];
         const hasOverdrive = this.hasOverdrive(hitter);
         const wasCharged = overdrive.isCharged;
-        const isPowerShot = hasOverdrive && overdrive.onHit(event.isPerfect);
+        const isOverdriveShot = hasOverdrive && overdrive.onHit(event.isPerfect);
+        // In overtime a perfect hit is a power shot for anyone, meter or not, and leaves the meter
+        // as it was: overtime's own rule, not Overdrive's
+        const isPowerShot = isOverdriveShot || (this.isOvertime && event.isPerfect);
         const chargedOverdrive = hasOverdrive && !wasCharged && overdrive.isCharged;
 
         ball.isPowerShot = isPowerShot;
@@ -890,8 +889,6 @@ export class MatchFlow {
     this._balls.forEach((ball) => this.shotAt(ball.vx > 0 ? 1 : 0, SHOT_THREAT.NORMAL, ball, 0));
     this.skills.onServe();
     this.modifiers.onServe();
-    // Overtime is over with the point: the paddles at full height again
-    this.paddles.forEach((paddle) => paddle.squeeze(1));
     this._rally = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });

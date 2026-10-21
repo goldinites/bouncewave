@@ -90,6 +90,7 @@ describe("a challenge's condition in the HUD", () => {
   });
 
   it('names the modifier in play and the next one, urgent the point before it comes (Chaos)', () => {
+    // The opponent's five points are lives, as in Survival
     const { rules, goal } = CHALLENGES.chaos;
     const chaos = (inPoints: number) =>
       match(rules, [1, 0], {
@@ -97,13 +98,13 @@ describe("a challenge's condition in the HUD", () => {
         upcomingModifier: { id: 'darkness', inPoints },
       });
     expect(describeCondition(ru, chaos(2), goal)).toEqual({
-      text: 'ВЕТЕР · ДАЛЕЕ: ТЬМА',
-      lives: null,
+      text: 'ОЧКИ 1 / 7 · ВЕТЕР · ДАЛЕЕ: ТЬМА',
+      lives: { left: 5, total: 5 },
       isUrgent: false,
-      replacesScore: false,
+      replacesScore: true,
     });
     expect(describeCondition(en, chaos(1), goal)).toMatchObject({
-      text: 'WIND · NEXT: DARKNESS',
+      text: 'POINTS 1 / 7 · WIND · NEXT: DARKNESS',
       isUrgent: true,
     });
   });
