@@ -41,12 +41,7 @@ export class Paddle {
   public perfectZoneScale = 1;
   /** The side of the court it plays on; its points are that side's. */
   public readonly side: Side;
-  /** What it plays like, as given (`useSpec`), before overtime squeezes it. */
-  private given: PaddleSpec;
-  /** What it plays like now: the given spec, its height squeezed by overtime. */
   private _spec: PaddleSpec;
-  /** Share of its given height overtime leaves it (see `squeeze`); 1 outside overtime. */
-  private _squeeze = 1;
   /** Range of its center, so the whole paddle stays clear of the walls. */
   private minY = 0;
   private maxY = 0;
@@ -58,7 +53,6 @@ export class Paddle {
   /** @param spec what it is like to play with; the standard paddle when left out */
   constructor(side: Side, x: number, color: string, spec: PaddleSpec = STANDARD_PADDLE) {
     this.side = side;
-    this.given = spec;
     this._spec = spec;
     this.x = x;
     this.y = COURT.HEIGHT / 2;
@@ -69,23 +63,9 @@ export class Paddle {
     this.useSpec(spec);
   }
 
-  /** Its size and how it hits, as it plays now (overtime's squeeze included). */
+  /** Its size and how it hits. */
   public get spec(): PaddleSpec {
     return this._spec;
-  }
-
-  /** Share of its height overtime leaves it; 1 outside overtime. */
-  public get squeezed(): number {
-    return this._squeeze;
-  }
-
-  /**
-   * Squeezes it to `share` of its height, on top of whatever spec it is given (a shrinking paddle
-   * shrinks further), until squeezed back to 1 (overtime, match/overtime.ts).
-   */
-  public squeeze(share: number): void {
-    this._squeeze = share;
-    this.useSpec(this.given);
   }
 
   /**
@@ -93,10 +73,8 @@ export class Paddle {
    * of the court it stands at, so a wider right paddle grows toward the middle, and stays clear
    * of the walls.
    */
-  public useSpec(given: PaddleSpec): void {
-    const spec = this._squeeze === 1 ? given : { ...given, height: given.height * this._squeeze };
+  public useSpec(spec: PaddleSpec): void {
     if (this.side === 1) this.x += this._spec.width - spec.width;
-    this.given = given;
     this._spec = spec;
     const { top, bottom } = this.zone;
     this.minY = Math.max(PADDLE.TOP_MARGIN, top) + spec.height / 2;
@@ -126,7 +104,7 @@ export class Paddle {
    */
   public confine(top: number = 0, bottom: number = COURT.HEIGHT): void {
     this.zone = { top, bottom };
-    this.useSpec(this.given);
+    this.useSpec(this._spec);
   }
 
   /** The middle of the stretch it covers, where it stands to begin with. */

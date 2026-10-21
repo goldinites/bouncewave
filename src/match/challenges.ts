@@ -64,6 +64,10 @@ const CHAOS = {
     'bricks',
   ],
   POINTS: 2,
+  // Points to win: the player's, and the opponent's. Since overtime turned perfect hits into power
+  // shots rather than squeezing the paddles, the finale played easier than Survival; giving the
+  // opponent fewer points to win puts it back, where a longer match only favoured strong players
+  SCORES: [7, 5],
 } as const;
 
 /** A match to `points` played with `modifiers`. */
@@ -232,7 +236,7 @@ export const CHALLENGES = {
   chaos: {
     rules: {
       ...STANDARD_RULES,
-      winningScores: firstTo(7),
+      winningScores: CHAOS.SCORES,
       rotation: { modifiers: CHAOS.MODIFIERS, points: CHAOS.POINTS },
     },
     difficulty: DifficultyLevel.HARD,

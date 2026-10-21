@@ -48,7 +48,7 @@ export interface MatchRules {
   readonly cpuOverdrive: boolean;
   /**
    * Whether a long rally presses on, so it ends before it drags: at the lower levels it tires the
-   * CPU (match/fatigue.ts), at the upper both paddles shrink in overtime (match/overtime.ts), as
+   * CPU (match/fatigue.ts), at the upper overtime makes every perfect hit a power shot (match/overtime.ts), as
    * the level says. On wherever rallies end in points, off where a long rally is the player's
    * goal, which the pressure would cut short.
    */

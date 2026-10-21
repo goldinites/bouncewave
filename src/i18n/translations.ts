@@ -368,7 +368,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       insanity: ['INSANITY', 'Win to 5 against an Insane opponent'],
       chaos: [
         'CHAOS',
-        'Win to 7 against a Hard opponent while the modifiers take turns, two points each',
+        'Score 7 before a Hard opponent scores 5, while the modifiers take turns, two points each',
       ],
     },
   },
@@ -591,7 +591,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       insanity: ['БЕЗУМИЕ', 'Выиграй до 5 очков у безумного противника'],
       chaos: [
         'ХАОС',
-        'Выиграй до 7 очков у сложного противника, пока модификаторы сменяют друг друга каждые 2 очка',
+        'Набери 7 очков раньше, чем сложный противник наберёт 5; модификаторы сменяются каждые 2 очка',
       ],
     },
   },

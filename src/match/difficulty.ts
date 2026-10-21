@@ -45,8 +45,9 @@ export interface DifficultyConfig {
    */
   fatigue: number;
   /**
-   * Whether a long rally goes to overtime, where the rules let it (`rallyPressure`): both paddles
-   * shrink (match/overtime.ts). The upper levels' answer to long rallies, where the lower ones tire.
+   * Whether a long rally goes to overtime, where the rules let it (`rallyPressure`): every perfect
+   * hit is a power shot (match/overtime.ts). The upper levels' answer to long rallies, where the
+   * lower ones tire.
    */
   overtime: boolean;
   /**
@@ -134,7 +135,7 @@ export const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
     errorPerBounce: 50,
     angleShots: 0.4,
     nerves: 0.6,
-    perfectAim: 0.15,
+    perfectAim: 0.25,
     curveRead: 0.32,
     overdrive: true,
     fatigue: 0,
