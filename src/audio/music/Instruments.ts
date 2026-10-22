@@ -71,6 +71,8 @@ interface NoteShape {
   cutoff?: { from: number; to: number; over: number };
   /** Vibrato fading in on held notes. */
   vibrato?: boolean;
+  /** Portamento: the note slides in from this MIDI note over `glide.time` seconds. */
+  glide?: { from: number; time: number };
 }
 
 export class Instruments {
@@ -156,7 +158,14 @@ export class Instruments {
 
     const source = this.ac.createBufferSource();
     source.buffer = note.buffer;
-    source.playbackRate.value = note.rate;
+    if (shape.glide) {
+      // Slide from the note before, as a synth lead held over legato does
+      const from = note.rate * 2 ** ((shape.glide.from - midiNote) / 12);
+      source.playbackRate.setValueAtTime(from, time);
+      source.playbackRate.exponentialRampToValueAtTime(note.rate, time + shape.glide.time);
+    } else {
+      source.playbackRate.value = note.rate;
+    }
     if (note.loop) {
       source.loop = true;
       source.loopStart = note.loop.start;
@@ -348,6 +357,7 @@ export class Instruments {
     volume: number,
     destination: AudioNode,
     filterCutoff: number,
+    glide?: { from: number; time: number },
   ): void {
     const sampled = SAMPLED_LEADS[voice];
     if (sampled) {
@@ -366,6 +376,7 @@ export class Instruments {
               release: 0.12,
               cutoff: { from: filterCutoff * 1.6, to: filterCutoff, over: 0.2 },
               vibrato: true,
+              glide,
             };
       if (this.playNote(sampled, midiNote, time, duration, volume, destination, shape)) return;
     }

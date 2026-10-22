@@ -3,6 +3,20 @@ import { compileSong, Song, SongDef } from '@/audio/music/score';
 
 // ——— Lines written by processes (audio/music/compose.ts), for the Laser backdrop's sketches ———
 
+/** B: a five-note cell cycling over Em, C, Am and B, two bars each, and its pulsing bass. */
+const HYPNOTIC = {
+  arp: cycle([
+    { cell: ['E4', 'G4', 'B4', 'E5', 'B4'], bars: 2 },
+    { cell: ['E4', 'G4', 'C5', 'E5', 'C5'], bars: 2 },
+    { cell: ['E4', 'A4', 'C5', 'E5', 'C5'], bars: 2 },
+    { cell: ['D#4', 'F#4', 'B4', 'D#5', 'B4'], bars: 2 },
+  ]),
+  bass: `E1 . E1 . E2 . E1 . E1 . E1 . E2 . D2 . | E1 . E1 . E2 . E1 . E1 . E1 . E2 . G1 .
+                 | C2 . C2 . C2 . G1 . C2 . C2 . G1 . B1 . | C2 . C2 . C2 . G1 . C2 . C2 . E2 . G1 .
+                 | A1 . A1 . A2 . A1 . A1 . A1 . A2 . G1 . | A1 . A1 . A2 . A1 . A1 . A1 . E2 . A1 .
+                 | B1 . B1 . B1 . F#1 . B1 . B1 . D#2 . F#2 . | B1 . B1 . B1 . F#1 . B1 . B1 . A1 . F#1 .`,
+};
+
 /** B2: three ostinatos of five, seven and twelve steps over Dm, Bb, Gm and A, two bars each. */
 const PHASES = {
   arp: cycle([
@@ -68,6 +82,28 @@ const TWO_ARPS = {
     euclid(8, 16),
   ),
 };
+
+// ——— Melodies for the sketches over B and B5 (eighths: 8 a bar; sixteenths: 16) ———
+
+/** M1, over Em Em C C Am Am B B: an arch of long notes reached by pickups. */
+const M1 = `B4 - - - . G4 A4 B4 | E5 - - - D5 - B4 - | C5 - - - . A4 B4 C5 | G5 - - - E5 - - -
+          | A5 - - - G5 - E5 - | E5 - - D5 C5 - B4 - | D#5 - - - F#5 - - - | B4 - - - - - - -`;
+
+/** M2, over Em Em C C Am Am B B: a 3+3+2 figure of repeated notes, answered by climbing runs. */
+const M2 = `E5 - - G5 - - F#5 - E5 - - - B4 - - - | . . D5 - E5 - G5 - F#5 - - - . . . .
+          | E5 - - G5 - - F#5 - E5 - - - C5 - - - | . . B4 - C5 - D5 - E5 - - - - - - -
+          | A5 - - G5 - - E5 - G5 - - - E5 - - - | . . C5 - D5 - E5 - D5 - - - C5 - B4 -
+          | D#5 - - F#5 - - B5 - A5 - - - F#5 - - - | D#5 - - - - - - - B4 - - - - - - -`;
+
+/** M3, over Cm Cm Ab Ab Eb Eb Bb Bb: long aching notes leaning off the chord on the strong beats. */
+const M3 = `G5 - - - - - Eb5 F5 | G5 - - - Bb5 - G5 - | C6 - - - - - Bb5 Ab5 | Bb5 - - - G5 - - -
+          | G5 - - - - - Bb5 C6 | D6 - - - C6 - Bb5 - | F5 - - - D5 - - - | F5 - - - - - Eb5 F5`;
+
+/** M4, over Cm Cm Ab Ab Eb Eb Bb Bb: a phrase, a rest for the arpeggios to answer, a climbing run. */
+const M4 = `C5 - - Eb5 - - G5 - - - - - . . . . | . . Bb4 - C5 - D5 - Eb5 - - - D5 - C5 -
+          | C5 - - Eb5 - - Ab5 - - - - - . . . . | . . G5 - Ab5 - Bb5 - C6 - - - Bb5 - Ab5 -
+          | G5 - - - - - Eb5 - Bb5 - - - G5 - - - | . . F5 - G5 - Ab5 - G5 - - - F5 - Eb5 -
+          | D5 - - F5 - - Bb5 - - - - - Ab5 - - - | G5 - - - F5 - - - D5 - - - - - - -`;
 
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
@@ -1753,6 +1789,160 @@ const SONG_DEFS: SongDef[] = [
         counter: TWO_ARPS.high,
         lead: `C5 - - - - - - - | Eb5 - - - D5 - - - | C5 - - - - - - - | Eb5 - - - F5 - - -
              | G5 - - - - - - - | Bb5 - - - G5 - - - | F5 - - - - - - - | D5 - - - Bb4 - - -`,
+        bass: 'drive',
+        drums: 'drive',
+        fill: 'toms',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  // ——— Melodies over the chosen processes: a tune to hum on top of B's and B5's ostinatos ———
+  {
+    // B + M1: long notes reached by pickups, the phrase an arch — asked over Em and C, answered
+    // from the high A down to the leading tone; the square lead slides between its notes
+    title: 'Lasers B M1 Arch',
+    bpm: 118,
+    swing: 0,
+    sketch: true,
+    kit: 'dark',
+    level: -1,
+    voices: { lead: 'square', counter: 'saw', arp: 'arpPulse', bass: 'bassReese', glide: 0.07 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M1,
+        arpLine: HYPNOTIC.arp,
+        bassLine: HYPNOTIC.bass,
+        drums: 'drive',
+        fill: 'stop',
+        pad: 'hold',
+        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M1,
+        leadVoice: 'saw',
+        arpLine: HYPNOTIC.arp,
+        bass: 'pulse16',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // B + M2: rhythm first — a 3+3+2 figure of repeated notes in sixteenths, answered by a run
+    // that climbs; the lead leans on 9ths and suspended 4ths before it lands
+    title: 'Lasers B M2 Pulse',
+    bpm: 118,
+    swing: 0,
+    sketch: true,
+    kit: 'dark',
+    level: -1,
+    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassReese', glide: 0.05 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M2,
+        arpLine: HYPNOTIC.arp,
+        bassLine: HYPNOTIC.bass,
+        drums: 'drive',
+        fill: 'stop',
+        pad: 'hold',
+        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M2,
+        arpLine: HYPNOTIC.arp,
+        bass: 'pulse16',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // B5 + M3: a slow, aching line over the two arpeggios — long notes, each strong beat
+    // leaning on a note just off the chord (a 9th, a major 7th) before it gives way
+    title: 'Lasers B5 M3 Ache',
+    bpm: 100,
+    swing: 0,
+    sketch: true,
+    level: -2,
+    voices: { lead: 'square', counter: 'square', arp: 'arpPulse', bass: 'bassFm', glide: 0.09 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Cm | Cm | Ab | Ab | Eb | Eb | Bb | Bb',
+        lead: M3,
+        arpLine: TWO_ARPS.low,
+        counter: TWO_ARPS.high,
+        bass: 'long',
+        drums: 'four',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { drums: 0.35, counter: 0.45 },
+        sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Cm | Cm | Ab | Ab | Eb | Eb | Bb | Bb',
+        lead: M3,
+        leadVoice: 'saw',
+        arpLine: TWO_ARPS.low,
+        counter: TWO_ARPS.high,
+        bass: 'drive',
+        drums: 'drive',
+        fill: 'toms',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // B5 + M4: call and response with the arpeggios — a phrase climbs the chord in a 3+3+2
+    // rhythm, rests while the arpeggios answer, then a run climbs to the next
+    title: 'Lasers B5 M4 Call',
+    bpm: 100,
+    swing: 0,
+    sketch: true,
+    level: -2,
+    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassFm', glide: 0.05 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Cm | Cm | Ab | Ab | Eb | Eb | Bb | Bb',
+        lead: M4,
+        arpLine: TWO_ARPS.low,
+        bass: 'long',
+        drums: 'four',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { drums: 0.35 },
+        sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Cm | Cm | Ab | Ab | Eb | Eb | Bb | Bb',
+        lead: M4,
+        arpLine: TWO_ARPS.low,
+        counter: TWO_ARPS.high,
         bass: 'drive',
         drums: 'drive',
         fill: 'toms',

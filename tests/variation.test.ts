@@ -244,3 +244,61 @@ describe('sweepAt', () => {
     expect(sweepAt(section, 'pads', 32)).toBe(1);
   });
 });
+
+describe('portamento', () => {
+  const songWith = (lead: string, glide?: number) =>
+    compileSong({
+      title: 'Glide',
+      bpm: 120,
+      swing: 0,
+      voices: { lead: 'square', counter: 'bell', arp: 'square', bass: 'sawtooth', glide },
+      sections: [
+        {
+          name: 'hook',
+          tier: 'groove',
+          chords: 'Am',
+          lead,
+          bass: 'long',
+          drums: 'none',
+          pad: 'none',
+        },
+      ],
+    });
+
+  const glides = (lead: string, glide?: number) => {
+    const song = songWith(lead, glide);
+    const { ctx } = fakeAudioContext();
+    const graph = new MusicGraph(ctx);
+    const play = new Instruments(graph, new SampleBank());
+    const spy = vi.spyOn(play, 'lead');
+    const arrangement = new Arrangement(play, graph);
+    for (let s = 0; s < STEPS_PER_BAR; s++) {
+      arrangement.playStep({
+        time: s * 0.125,
+        stepDuration: 0.125,
+        song,
+        section: song.sections[0],
+        bar: 0,
+        stepInBar: s,
+        isLastBar: false,
+        nextBarChord: song.sections[0].chords[0],
+        intensity: 1,
+        climaxLevel: 0,
+        difficulty: DifficultyLevel.NORMAL,
+      });
+    }
+    return spy.mock.calls.map((call) => call[7]);
+  };
+
+  it('slides a lead note in from the one it follows without a gap', () => {
+    expect(glides('A4 - C5 - . . E5 -', 0.07)).toEqual([
+      undefined,
+      { from: 69, time: 0.07 },
+      undefined, // after a rest it starts afresh
+    ]);
+  });
+
+  it('plays every note straight without a glide set', () => {
+    expect(glides('A4 - C5 - E5 - A5 -')).toEqual([undefined, undefined, undefined, undefined]);
+  });
+});

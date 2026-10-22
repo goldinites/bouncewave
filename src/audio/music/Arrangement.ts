@@ -172,6 +172,8 @@ export class Arrangement {
   private voicing: number[] | null = null;
   /** The drums of the song playing; the drop, which comes between steps, plays on them too. */
   private kit: DrumKit = KITS.synthwave;
+  /** The lead's last note and when it ends, for a legato note to slide in from it. */
+  private lastLead: { note: number; end: number } | null = null;
   /** The layers the heat has brought in this bar (updateLayers). */
   private readonly layersIn = new Set<MusicLayer>();
   /** The section the layers were last decided for. */
@@ -250,7 +252,7 @@ export class Arrangement {
 
     const leadVoice = section.leadVoice ?? song.voices.lead;
     if (this.plays('lead')) {
-      this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context);
+      this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context, true);
     }
     if (this.plays('counter')) {
       this.playMelody(
@@ -459,19 +461,31 @@ export class Arrangement {
     voice: LeadVoice,
     share: number,
     context: StepContext,
+    isLead = false,
   ): void {
     if (!melodyNote) return;
-    const { stepDuration, intensity: I, difficulty } = context;
+    const { stepDuration, intensity: I, difficulty, song } = context;
     const brightness = DIFFICULTY_SIGNATURES[difficulty].leadBrightness;
+    const duration = melodyNote.steps * stepDuration * 0.95;
+
+    // A lead note straight after the last one, with no rest between, slides in from it
+    const last = isLead ? this.lastLead : null;
+    const isLegato = last !== null && time - last.end < stepDuration * 0.5;
+    const glide =
+      song.voices.glide && isLegato && last.note !== melodyNote.note
+        ? { from: last.note, time: song.voices.glide }
+        : undefined;
+    if (isLead) this.lastLead = { note: melodyNote.note, end: time + duration };
 
     this.play.lead(
       voice,
       melodyNote.note,
       time,
-      melodyNote.steps * stepDuration * 0.95,
+      duration,
       LEAD_VOLUME[voice] * share * (0.65 + 0.35 * I),
       this.melody,
       (1800 + I * 2200) * brightness,
+      glide,
     );
   }
 

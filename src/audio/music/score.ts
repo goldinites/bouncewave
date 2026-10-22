@@ -113,6 +113,11 @@ export interface SongDef {
     counter: LeadVoice;
     arp: OscillatorType | ArpVoice;
     bass: OscillatorType | BassVoice;
+    /**
+     * Portamento on the lead, in seconds: a note that follows another without a gap slides in
+     * from it, so the line sings rather than steps. None if left out.
+     */
+    glide?: number;
   };
   /**
    * The backdrop this song belongs to: it plays only behind that one, and first whenever that
