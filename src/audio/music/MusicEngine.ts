@@ -11,6 +11,7 @@ import {
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
+import { SampleBank } from '@/audio/samples/SampleBank';
 import { chordAt, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { StepScheduler } from '@/audio/music/StepScheduler';
@@ -50,6 +51,8 @@ export interface MusicPosition {
  */
 export class MusicEngine {
   private graph: MusicGraph | null = null;
+  private instruments: Instruments | null = null;
+  private samples = new SampleBank();
   private readonly harmony = new HarmonyTimeline(HARMONY_HISTORY);
 
   private state: MusicState = INITIAL_MUSIC_STATE;
@@ -72,12 +75,19 @@ export class MusicEngine {
   /**
    * Builds the audio graph and starts the scheduler; safe to call more than once.
    * @param output where the music goes: the mixer's music bus
+   * @param samples the rendered instruments; until one is ready its live synth plays
    */
-  public init(audioContext: AudioContext, output: AudioNode = audioContext.destination): void {
+  public init(
+    audioContext: AudioContext,
+    output: AudioNode = audioContext.destination,
+    samples: SampleBank = this.samples,
+  ): void {
     if (this.graph) return;
 
     const graph = new MusicGraph(audioContext, output);
-    const arrangement = new Arrangement(new Instruments(graph), graph, this.mutedLayers);
+    this.samples = samples;
+    this.instruments = new Instruments(graph, samples);
+    const arrangement = new Arrangement(this.instruments, graph, this.mutedLayers);
     this.graph = graph;
 
     this.scheduler = new StepScheduler(
@@ -184,6 +194,23 @@ export class MusicEngine {
   /** The way into the auditioned section again, from the next bar line. */
   public replayTransition(): void {
     this.conductor.replayTransition();
+  }
+
+  /**
+   * The listening stand plays one rendered sound on the drums stem, its next variant each time.
+   * @returns false if it isn't rendered (or the audio hasn't started)
+   */
+  public playSample(id: string, volume = 0.8): boolean {
+    const buffer = this.samples.pick(id);
+    if (!buffer || !this.graph || !this.instruments) return false;
+    this.instruments.sample(
+      buffer,
+      this.graph.context.currentTime + 0.01,
+      volume,
+      1,
+      this.graph.drums,
+    );
+    return true;
   }
 
   /** The listening stand silences a part of the arrangement, or brings it back. */

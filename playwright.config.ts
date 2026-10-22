@@ -31,8 +31,9 @@ export default defineConfig({
   },
   projects: [
     {
+      // The rendered instruments are checked once, on the desktop: the browser renders them alike
       name: 'desktop',
-      testMatch: 'smoke.spec.ts',
+      testMatch: ['smoke.spec.ts', 'samples.spec.ts'],
       use: { ...devices['Desktop Chrome'] },
     },
     {

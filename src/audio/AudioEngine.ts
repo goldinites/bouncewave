@@ -2,6 +2,8 @@ import { MasterLevels, Mixer } from '@/audio/Mixer';
 import { MusicState } from '@/audio/music/intensity';
 import { MusicEngine } from '@/audio/music/MusicEngine';
 import { Ps1MusicEngine } from '@/audio/music/Ps1MusicEngine';
+import { DRUM_SAMPLES } from '@/audio/samples/drums';
+import { SampleBank } from '@/audio/samples/SampleBank';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { Look } from '@/shared/look';
 
@@ -14,6 +16,8 @@ export class AudioEngine {
   private mixer: Mixer | null = null;
   public readonly sfx: SoundEffects;
   public readonly music = new MusicEngine();
+  /** The instruments rendered from code once the audio starts (docs/AUDIO.md). */
+  public readonly samples = new SampleBank();
   /** The classic look's own loop, independent of the synthwave mix. */
   private readonly classicMusic = new Ps1MusicEngine();
   /** The look the music follows: the classic one plays its loop in place of the synthwave mix. */
@@ -113,8 +117,12 @@ export class AudioEngine {
       this.playSilence(ac);
     }
 
-    this.mixer ??= new Mixer(ac);
-    this.music.init(ac, this.mixer.music);
+    if (!this.mixer) {
+      this.mixer = new Mixer(ac);
+      // Rendered off the frame, in the background; the live synths play until they are ready
+      void this.samples.render(ac.sampleRate, DRUM_SAMPLES);
+    }
+    this.music.init(ac, this.mixer.music, this.samples);
     this.classicMusic.init(ac, this.mixer.music);
   }
 

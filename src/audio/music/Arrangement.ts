@@ -1,4 +1,5 @@
-import { Instruments } from '@/audio/music/Instruments';
+import { Instruments, TOM_RATES } from '@/audio/music/Instruments';
+import { DrumKit, DrumRole, KITS } from '@/audio/music/kits';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import {
   ARP_PATTERNS,
@@ -135,6 +136,8 @@ export class Arrangement {
   private readonly melody: AudioNode;
   /** The pad's last voicing, so the next chord moves as little as possible from it. */
   private voicing: number[] | null = null;
+  /** The drums of the song playing; the drop, which comes between steps, plays on them too. */
+  private kit: DrumKit = KITS.synthwave;
   /** Layers the listening stand has silenced; read live on every step. */
   private readonly muted: ReadonlySet<MusicLayer>;
 
@@ -161,10 +164,11 @@ export class Arrangement {
     // Swing pushes the off-beat 16ths late
     const time = context.time + (s % 2 ? song.swing * stepDuration : 0);
     const isGroove = section.tier === 'groove';
+    this.kit = KITS[song.kit ?? 'synthwave'];
 
     if (sectionStep === 0) {
       // A crash marks every new section except the quiet ones
-      if (section.tier !== 'calm' && this.has('drums')) this.play.noise(time, 1.2, 0.12, 3000);
+      if (section.tier !== 'calm' && this.has('drums')) this.drum('crash', time, 0.12);
       if (section.riser && this.has('fx')) {
         const duration = section.bars * STEPS_PER_BAR * stepDuration;
         this.play.riser(time, duration, RISER_VOLUME * (0.6 + 0.4 * I));
@@ -222,8 +226,9 @@ export class Arrangement {
   /** One-shot impact when the build-up peaks: crash, heavy kick and a long held bass note. */
   public playDrop(time: number, chord: Chord, stepDuration: number): void {
     if (this.has('drums')) {
-      this.play.noise(time, 1.6, 0.22, 2500);
-      this.play.kick(time, 1.0);
+      this.drum('crash', time, 0.22);
+      this.drum('kick', time, 1.0);
+      this.play.impact(this.kit, time, 0.8);
     }
     if (!this.has('bass')) return;
     // Bass root register (not an octave lower) so it stays audible on phone speakers
@@ -343,11 +348,11 @@ export class Arrangement {
       const i = s - 8;
       this.playKick(time, hit(fill.kick, i), I);
       const snare = hit(fill.snare, i);
-      if (snare) this.play.snare(time, snare * (0.18 + 0.12 * I));
+      if (snare) this.drum('snare', time, snare * (0.18 + 0.12 * I));
       const tom = fill.tom?.[i];
-      if (tom && tom !== '.') this.play.tom(tom, time, 0.35);
+      if (tom && tom !== '.') this.drum('tom', time, 0.35, TOM_RATES[tom]);
       const open = hit(fill.open, i);
-      if (open) this.play.noise(time, 0.3, open * 0.08, 8000);
+      if (open) this.drum('open', time, open * 0.08);
       this.playTaiko(time, hit(fill.taiko, i), I);
       return;
     }
@@ -357,26 +362,34 @@ export class Arrangement {
     this.playTaiko(time, hit(beat.taiko, s), I);
 
     const snare = hit(beat.snare, s);
-    if (snare) this.play.snare(time, snare * (0.18 + 0.12 * I));
+    if (snare) this.drum('snare', time, snare * (0.18 + 0.12 * I));
     const clap = hit(beat.clap, s);
-    if (clap) this.play.clap(time, clap * (0.22 + 0.1 * I));
+    if (clap) this.drum('clap', time, clap * (0.22 + 0.1 * I));
 
     const hat = hit(beat.hat, s);
     if (hat) {
-      this.play.noise(time, 0.05, hat * (0.05 + 0.05 * I), 7000);
+      this.drum('hat', time, hat * (0.05 + 0.05 * I));
     } else if (section.tier === 'groove' && I > GROOVE_EXTRA_HATS_INTENSITY && s % 2 === 0) {
-      this.play.noise(time, 0.03, clamp((I - 0.4) * 0.08, 0, 0.035), 8000);
+      this.drum('hat', time, clamp((I - 0.4) * 0.08, 0, 0.035));
     }
     const open = hit(beat.open, s);
-    if (open) this.play.noise(time, 0.18, open * (0.05 + 0.04 * I), 8000);
+    if (open) this.drum('open', time, open * (0.05 + 0.04 * I));
+    const metal = hit(beat.metal, s);
+    if (metal) this.drum('metal', time, metal * (0.08 + 0.06 * I));
+    const perc = hit(beat.perc, s);
+    if (perc) this.drum('perc', time, perc * (0.06 + 0.05 * I));
+  }
+
+  private drum(role: DrumRole, time: number, volume: number, rate = 1): void {
+    this.play.drum(this.kit, role, time, volume, rate);
   }
 
   private playKick(time: number, velocity: number, intensity: number): void {
-    if (velocity) this.play.kick(time, velocity * (0.4 + 0.35 * intensity));
+    if (velocity) this.drum('kick', time, velocity * (0.4 + 0.35 * intensity));
   }
 
   private playTaiko(time: number, velocity: number, intensity: number): void {
-    if (velocity) this.play.taiko(time, velocity * (0.35 + 0.25 * intensity));
+    if (velocity) this.drum('taiko', time, velocity * (0.35 + 0.25 * intensity));
   }
 
   /** Extra layers that only play during the climax, on top of the full mix. */
@@ -386,12 +399,12 @@ export class Arrangement {
     if (this.has('drums')) {
       // Crash on every bar
       if (s === 0) {
-        this.play.noise(time, 0.9, 0.12 * mix, 4000);
+        this.drum('crash', time, 0.12 * mix);
       }
 
       // Open hats on the off-beats
       if (s % 4 === 2) {
-        this.play.noise(time, 0.12, 0.07 * mix, 9000);
+        this.drum('open', time, 0.07 * mix);
       }
     }
     if (!this.has('arp')) return;

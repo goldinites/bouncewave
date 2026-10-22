@@ -14,6 +14,10 @@ export interface DrumPattern {
   open?: string;
   /** A big festival drum under the kit. */
   taiko?: string;
+  /** The kit's metal: industrial clangs. */
+  metal?: string;
+  /** The kit's small percussion: a rim or a shaker. */
+  perc?: string;
 }
 
 export const DRUM_PATTERNS = {
@@ -52,6 +56,14 @@ export const DRUM_PATTERNS = {
     snare: '....X.......X...',
     hat: '..x...x...x...x.',
     taiko: '......x.....x.xX',
+  },
+  // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
+  foundry: {
+    kick: 'X...X...X...X.x.',
+    snare: '....X.......X...',
+    hat: 'x.x.x.x.x.x.x.x.',
+    metal: '..o....x..o...X.',
+    perc: '.o.....o.o.....o',
   },
 } satisfies Record<string, DrumPattern>;
 

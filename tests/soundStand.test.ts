@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { SONGS } from '@/audio/music/songs';
+import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { SoundStand, STAND_SOUNDS } from '@/debug/SoundStand';
 
 describe('SoundStand', () => {
@@ -108,6 +109,16 @@ describe('SoundStand', () => {
         get<HTMLButtonElement>(`button[data-sound="${sound.name}"]`).click(),
       ).not.toThrow();
     }
+  });
+
+  it('plays every rendered instrument on its own, one button each', () => {
+    const { audio, get } = setup();
+    const play = vi.spyOn(audio.music, 'playSample');
+
+    for (const id of Object.keys(DRUM_SAMPLES)) {
+      get<HTMLButtonElement>(`button[data-sample="${id}"]`).click();
+    }
+    expect(play.mock.calls.map(([id]) => id)).toEqual(Object.keys(DRUM_SAMPLES));
   });
 
   it('stops a series it was playing when disposed', () => {

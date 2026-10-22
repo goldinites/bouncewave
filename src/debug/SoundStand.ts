@@ -1,6 +1,7 @@
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MUSIC_LAYERS, MusicLayer } from '@/audio/music/Arrangement';
 import { SONGS } from '@/audio/music/songs';
+import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -129,6 +130,7 @@ export class SoundStand {
       this.slider('intensity', (level) => this.audio.music.pinIntensity(level)),
       this.slider('climax', (level) => this.audio.music.pinClimax(level)),
       this.layerRows(),
+      this.sampleButtons(),
       this.soundButtons(),
       this.readout,
     );
@@ -196,7 +198,7 @@ export class SoundStand {
     const latency = this.audio.getLatency();
     const ms = (seconds: number) => (seconds * 1000).toFixed(0);
     const delay = latency ? `\nlatency ${ms(latency.base)} + out ${ms(latency.output)} ms` : '';
-    this.readout.textContent = `${songId} · ${part} · bar ${bar + 1}${delay}${this.describeLevels()}`;
+    this.readout.textContent = `${songId} · ${part} · bar ${bar + 1}${delay}${this.describeSamples()}${this.describeLevels()}`;
     this.readout.style.whiteSpace = 'pre-wrap';
   }
 
@@ -260,6 +262,32 @@ export class SoundStand {
     );
     rows.style.flexWrap = 'wrap';
     return rows;
+  }
+
+  /** Every rendered instrument, each press its next variant, to hear them one by one. */
+  private sampleButtons(): HTMLElement {
+    const buttons = this.row(
+      ...Object.keys(DRUM_SAMPLES).map((id) => {
+        const button = this.button(id, () => {
+          this.audio.unlock();
+          this.audio.music.playSample(id);
+        });
+        button.dataset.sample = id;
+        button.style.color = '#ff6ad5';
+        return button;
+      }),
+    );
+    buttons.style.flexWrap = 'wrap';
+    return buttons;
+  }
+
+  /** How many instruments are rendered, the memory they take and how long they took. */
+  private describeSamples(): string {
+    const { samples } = this.audio;
+    const count = samples.ids.length;
+    if (count === 0) return '';
+    const megabytes = (samples.bytes / 1024 / 1024).toFixed(1);
+    return `\nsamples ${count} · ${megabytes} MB · ${samples.renderTime.toFixed(0)} ms`;
   }
 
   private soundButtons(): HTMLElement {

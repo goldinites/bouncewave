@@ -1,4 +1,6 @@
+import { DrumKit, DrumRole } from '@/audio/music/kits';
 import { MusicGraph, PAD_SPREAD } from '@/audio/music/MusicGraph';
+import { SampleBank } from '@/audio/samples/SampleBank';
 import { LeadVoice } from '@/audio/music/score';
 import { midiToFrequency } from '@/shared/math';
 
@@ -21,13 +23,101 @@ const FLUTE = {
 } as const;
 const TOM_PITCHES: Record<string, number> = { '1': 220, '2': 160, '3': 115 };
 const TAIKO_PITCH = 78; // Hz: deep enough to read as a big drum, high enough for phone speakers
+// The rendered tom is tuned mid; fills play it faster or slower for the high and low ones
+export const TOM_RATES: Record<string, number> = { '1': 1.3, '2': 1, '3': 0.75 };
+// No two hits alike: each drum sample is played a little louder or softer, higher or lower
+const HUMANIZE = {
+  VOLUME: 0.07, // ± share of the volume
+  CENTS: { kick: 4, snare: 15, clap: 20, hat: 35, open: 25, perc: 25, default: 12 },
+} as const;
+// Rendered samples peak at full scale, the live synths they replace a little higher or lower:
+// each role's sample is scaled so a song keeps its balance
+const SAMPLE_GAIN: Partial<Record<DrumRole, number>> = {
+  snare: 1.5,
+  clap: 1.2,
+  metal: 0.6,
+  perc: 0.8,
+};
 
 /** One-shot synth voices, each scheduled at an exact audio-clock time. */
 export class Instruments {
   private readonly graph: MusicGraph;
+  private readonly samples: SampleBank;
 
-  constructor(graph: MusicGraph) {
+  /** @param samples the rendered sounds; until one is rendered its live synth plays instead */
+  constructor(graph: MusicGraph, samples: SampleBank = new SampleBank()) {
     this.graph = graph;
+    this.samples = samples;
+  }
+
+  /**
+   * A drum of the song's kit, on the drums stem: its rendered sample, humanized, or, before the
+   * samples are ready, the live synth. A kick makes the bass and pads breathe.
+   * @param rate playback speed (a fill's high and low toms)
+   */
+  public drum(kit: DrumKit, role: DrumRole, time: number, volume: number, rate = 1): void {
+    const buffer = this.samples.pick(kit[role]);
+    if (!buffer) {
+      this.liveDrum(role, time, volume, rate);
+      return;
+    }
+    if (role === 'kick') this.graph.pump(time, volume);
+    const cents = (HUMANIZE.CENTS as Record<string, number>)[role] ?? HUMANIZE.CENTS.default;
+    this.sample(
+      buffer,
+      time,
+      volume * (SAMPLE_GAIN[role] ?? 1) * (1 + (Math.random() * 2 - 1) * HUMANIZE.VOLUME),
+      rate * 2 ** (((Math.random() * 2 - 1) * cents) / 1200),
+      this.graph.drums,
+    );
+  }
+
+  /** A drum's extra hit under the drop, if its kit has one. */
+  public impact(kit: DrumKit, time: number, volume: number): void {
+    const buffer = kit.impact ? this.samples.pick(kit.impact) : null;
+    if (buffer) this.sample(buffer, time, volume, 1, this.graph.drums);
+  }
+
+  /** A rendered sound at `time`, as loud as `volume`, sped up or slowed by `rate`. */
+  public sample(
+    buffer: AudioBuffer,
+    time: number,
+    volume: number,
+    rate: number,
+    destination: AudioNode,
+  ): void {
+    const source = this.ac.createBufferSource();
+    const gain = this.ac.createGain();
+    source.buffer = buffer;
+    source.playbackRate.value = rate;
+    gain.gain.value = volume;
+    source.connect(gain);
+    gain.connect(destination);
+    source.start(time);
+  }
+
+  /** The drums as they were before the samples: what plays until the samples are rendered. */
+  private liveDrum(role: DrumRole, time: number, volume: number, rate: number): void {
+    switch (role) {
+      case 'kick':
+        return this.kick(time, volume);
+      case 'snare':
+        return this.snare(time, volume);
+      case 'clap':
+        return this.clap(time, volume);
+      case 'hat':
+        return this.noise(time, 0.05, volume, 7000);
+      case 'open':
+        return this.noise(time, 0.18, volume, 8000);
+      case 'crash':
+        return this.noise(time, 1.2, volume, 3000);
+      case 'tom':
+        return this.tom(rate > 1 ? '1' : rate < 1 ? '3' : '2', time, volume);
+      case 'taiko':
+        return this.taiko(time, volume);
+      default:
+      // Metal and percussion have no live synth: silent until rendered
+    }
   }
 
   private get ac(): AudioContext {
