@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LeadVoice } from '@/audio/music/score';
+import { LeadVoice, SongDef } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
@@ -82,13 +82,17 @@ describe('the soundtrack', () => {
 });
 
 describe('sketches', () => {
-  it('are never played by the game: no backdrop, never picked as the next song', async () => {
+  it('are never played by the game: never picked as the next song', async () => {
     const { Conductor } = await import('@/audio/music/Conductor');
-    const sketches = SONGS.filter((song) => song.sketch);
-    expect(sketches.length).toBeGreaterThan(0);
-    expect(sketches.every((song) => song.scene === undefined)).toBe(true);
+    const { compileSong } = await import('@/audio/music/score');
+    const sketch = compileSong({
+      ...SONG_DEFS_FOR_TEST,
+      title: 'A Sketch',
+      sketch: true,
+    });
+    const songs = [...SONGS.filter((song) => !song.sketch), sketch];
     for (const roll of [0, 0.25, 0.5, 0.75, 0.99]) {
-      const conductor = new Conductor(SONGS, 0, 'groove', () => roll);
+      const conductor = new Conductor(songs, 0, 'groove', () => roll);
       conductor.enterScene('lasers');
       for (let i = 0; i < 6; i++) {
         conductor.skip('groove');
@@ -98,3 +102,13 @@ describe('sketches', () => {
     }
   });
 });
+
+/** A song of one section, enough for the sketch above. */
+const SONG_DEFS_FOR_TEST: Omit<SongDef, 'title'> = {
+  bpm: 120,
+  swing: 0,
+  voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'sawtooth' },
+  sections: [
+    { name: 'hook', tier: 'groove', chords: 'Am', bass: 'long', drums: 'four', pad: 'hold' },
+  ],
+};
