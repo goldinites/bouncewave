@@ -38,3 +38,11 @@ describe('compose', () => {
     expect(bars[1].split(' ').slice(0, 4)).toEqual(['A', 'B', 'C', 'A']);
   });
 });
+
+describe('transpose', () => {
+  it('moves the notes and keeps the holds and rests', async () => {
+    const { transpose } = await import('@/audio/music/compose');
+    expect(transpose('C5 - Eb5 . Bb4 -', 4)).toBe('E5 - G5 . D5 -');
+    expect(transpose('G5 - - - | Ab5 . C6 -', -8)).toBe('B4 - - - | C5 . E5 -');
+  });
+});

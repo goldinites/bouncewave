@@ -1,4 +1,5 @@
 import { STEPS_PER_BAR } from '@/audio/music/score';
+import { parseNote } from '@/audio/music/theory';
 
 /**
  * Processes that write lines in the score's notation (sixteenths, `.` a rest), for tracks built
@@ -62,4 +63,17 @@ export function euclid(pulses: number, steps: number, rotate = 0): boolean[] {
     { length: steps },
     (_, i) => (((i + rotate) % steps) * pulses) % steps < pulses,
   );
+}
+
+const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+/**
+ * A line moved by `semitones`, in the score's notation: notes moved, holds and rests kept.
+ * Notes come out with sharps, which suit the sharp keys the soundtrack transposes into.
+ */
+export function transpose(line: string, semitones: number): string {
+  return line.replace(/\b([A-G][#b]?)(-?\d)\b/g, (name) => {
+    const midi = parseNote(name) + semitones;
+    return `${SHARP_NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
+  });
 }

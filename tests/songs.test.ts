@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LeadVoice } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
+import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { isSceneId } from '@/shared/scenes';
 
@@ -9,6 +10,13 @@ const SAMPLED: Partial<Record<LeadVoice, PitchedSampleId>> = {
   saw: 'supersaw',
   square: 'squareLead',
   pluck: 'pluck',
+};
+/** The roots a lead voice is rendered at, from the core palette or the extra leads. */
+const rootsOf = (voice: LeadVoice): number[] | null => {
+  const core = SAMPLED[voice];
+  if (core) return PITCHED_SAMPLES[core].roots;
+  const extra = EXTRA_LEAD_FOR[voice];
+  return extra ? EXTRA_LEADS[extra].roots : null;
 };
 const STRETCH = 3; // semitones: further, a note played from its root starts to sound stretched
 
@@ -21,9 +29,8 @@ describe('the soundtrack', () => {
           [song.voices.counter, section.counter],
         ];
         for (const [voice, line] of lines) {
-          const sample = SAMPLED[voice];
-          if (!sample || !line) continue;
-          const { roots } = PITCHED_SAMPLES[sample];
+          const roots = rootsOf(voice);
+          if (!roots || !line) continue;
           for (const note of line) {
             if (!note) continue;
             expect(note.note, `${song.title} ${section.name} ${voice}`).toBeGreaterThanOrEqual(

@@ -1,4 +1,4 @@
-import { additive, cycle, euclid } from '@/audio/music/compose';
+import { additive, cycle, euclid, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef } from '@/audio/music/score';
 
 // ——— Lines written by processes (audio/music/compose.ts), for the Laser backdrop's sketches ———
@@ -104,6 +104,27 @@ const M4 = `C5 - - Eb5 - - G5 - - - - - . . . . | . . Bb4 - C5 - D5 - Eb5 - - - 
           | C5 - - Eb5 - - Ab5 - - - - - . . . . | . . G5 - Ab5 - Bb5 - C6 - - - Bb5 - Ab5 -
           | G5 - - - - - Eb5 - Bb5 - - - G5 - - - | . . F5 - G5 - Ab5 - G5 - - - F5 - Eb5 -
           | D5 - - F5 - - Bb5 - - - - - Ab5 - - - | G5 - - - F5 - - - D5 - - - - - - -`;
+
+/**
+ * The Laser track's material, in E minor (5.6a, chosen on the stand): B's five-note arpeggio
+ * under M1 and M2, and B5's two arpeggios with M3 and M4 moved over from C minor — their chords
+ * (Cm Ab Eb Bb) become Em C G D, the same key as B's.
+ */
+const CATHEDRAL = {
+  arps: cycle([
+    { cell: ['E4', 'G4', 'B4', 'E5', 'B4', 'G4'], bars: 2 },
+    { cell: ['E4', 'G4', 'C5', 'E5', 'C5', 'G4'], bars: 2 },
+    { cell: ['D4', 'G4', 'B4', 'D5', 'B4', 'G4'], bars: 2 },
+    { cell: ['D4', 'F#4', 'A4', 'D5', 'A4', 'F#4'], bars: 2 },
+  ]),
+  // M3, down into the warm middle of the range
+  ache: transpose(M3, -8),
+  // M4, up for the chorus, its peak bar rewritten to top out at D6
+  call: transpose(M4, 4)
+    .split('|')
+    .map((bar, i) => (i === 3 ? ' . . A5 - B5 - C6 - D6 - - - C6 - B5 - ' : bar))
+    .join('|'),
+};
 
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
@@ -1096,102 +1117,101 @@ const SONG_DEFS: SongDef[] = [
   // ——— The new soundtrack (5.6, docs/AUDIO.md). Each track belongs to its backdrop, walks a
   // form of its own, and keeps its chorus for a hot rally ———
   {
-    // F minor darksynth for the Laser backdrop, after Perturbator: a driven saw bass in straight
-    // sixteenths, a triplet arpeggio crossing the four-on-the-floor, a two-bar hook that keeps
-    // coming back, and a harmonic-minor C pulling it home
+    // E minor for the Laser backdrop, built from the sketches chosen on the stand: hypnotic
+    // arpeggios (a five-note cell over four beats, two interlocking ones) carrying melodies on
+    // a polysynth brass lead — M1's arch in the verse, M2's pulse in the second, M3's ache on a
+    // hard-sync lead in the bridge, M4's call at the chorus
     title: 'Neon Cathedral',
     bpm: 118,
     swing: 0,
-    level: -1.5,
+    level: -1,
     scene: 'lasers',
     kit: 'dark',
-    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese', glide: 0.04 },
     form: [
       'intro',
       'verse',
-      'answer',
+      'verse2',
       'breakdown',
       'build',
       'chorus',
-      'verse3',
       'bridge',
       'verse',
-      'answer',
+      'verse2',
       'breakdown',
       'build',
       'chorus',
       'bridge',
-      'verse3',
+      'verse2',
     ],
     sections: [
       {
+        // The two arpeggios alone, opening slowly: the menus' music too
         name: 'intro',
         tier: 'calm',
-        chords: 'Fm | Db | Ab | Eb',
-        counter: `C5 . . . F5 . . . | Ab4 . . . Db5 . . . | C5 . . . Eb5 . . . | G4 . . . Bb4 . . .`,
+        chords: 'Em | Em | C | C | G | G | D | D',
+        arpLine: CATHEDRAL.arps,
         bass: 'long',
-        arp: 'sparse',
-        drums: 'pulse',
+        drums: 'none',
         pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
       },
       {
         name: 'verse',
         tier: 'groove',
-        chords: 'Fm | Db | Ab | Eb | Fm | Db | Bbm | C',
-        lead: `C5 - F5 - Ab5 - G5 F5 | Ab5 - - - F5 - Db5 - | C5 - Eb5 - Ab5 - G5 Eb5 | G5 - - - Bb4 - - -
-             | C5 - F5 - Ab5 - C6 - | Db6 - C6 - Ab5 - F5 - | F5 - Db5 - Bb4 - Db5 F5 | E5 - - - G5 - - -`,
-        bass: 'pulse16',
-        arp: 'triplet',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M1,
+        arpLine: HYPNOTIC.arp,
+        bassLine: HYPNOTIC.bass,
+        drums: 'drive',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3, drums: 0.3 },
+        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M2,
+        arpLine: HYPNOTIC.arp,
+        bassLine: HYPNOTIC.bass,
         drums: 'darkdrive',
         fill: 'roll',
         pad: 'hold',
-        layers: { lead: 0.32, arp: 0.45, counter: 0.6 },
-      },
-      {
-        // The hook asked again with gaps, for the counter voice to answer on a repeat
-        name: 'answer',
-        tier: 'groove',
-        chords: 'Fm | Db | Ab | Eb | Fm | Db | Bbm | C',
-        lead: `F5 - - Ab5 - - C6 - | . . . . . . . . | Eb5 - - Ab5 - - C6 - | . . . . . . . .
-             | F5 - - Ab5 - - Db6 - | . . . . . . . . | Db5 - F5 - Bb5 - Ab5 - | G5 - - - E5 - - -`,
-        bass: 'drive',
-        arp: 'up',
-        drums: 'darkdrive',
-        fill: 'toms',
-        pad: 'hold',
-        layers: { lead: 0.32, arp: 0.4 },
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.6] },
       },
       {
         name: 'breakdown',
         tier: 'calm',
-        chords: 'Db | Eb | Fm | Fm',
-        counter: `Ab4 . . . Db5 . . . | G4 . . . Bb4 . . . | F4 . . . Ab4 . . . | C5 . . . . . . .`,
+        chords: 'Em | Em | C | C | G | G | D | D',
+        arpLine: CATHEDRAL.arps,
         bass: 'long',
-        arp: 'sparse',
         drums: 'halftime',
         pad: 'swell',
         silence: 4,
+        sweep: { arp: [1.2, 0.4] },
       },
       {
         name: 'build',
         tier: 'rise',
-        chords: 'Bbm | C',
-        lead: `Bb4 - Db5 - F5 - Bb5 - | C5 - E5 - G5 - C6 -`,
-        bass: 'pulse16',
+        chords: 'Am | B',
         arp: 'up',
+        bass: 'pulse16',
         drums: 'drive',
         fill: 'roll',
         pad: 'hold',
         riser: true,
+        sweep: { arp: [0.5, 2] },
       },
       {
         name: 'chorus',
         tier: 'high',
-        chords: 'Db | Eb | Fm | Fm | Db | Eb | C | C',
-        lead: `Ab5 - - - Db6 - C6 - | Bb5 - - - G5 - Eb5 - | C6 - - - Ab5 - F5 - | Ab5 - G5 - F5 - - -
-             | Ab5 - - - Db6 - C6 - | Bb5 - - - G5 - Bb5 - | C6 - - - G5 - E5 - | G5 - - - C6 - - -`,
-        bass: 'pulse16',
-        arp: 'triplet',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: CATHEDRAL.call,
+        arpLine: CATHEDRAL.arps,
+        bass: 'drive',
         drums: 'darkdrive',
         fill: 'toms',
         pad: 'hold',
@@ -1199,33 +1219,18 @@ const SONG_DEFS: SongDef[] = [
         drop: true,
       },
       {
-        // The lead steps aside: a square counter-line over a darker turn of the chords
         name: 'bridge',
         tier: 'groove',
-        chords: 'Bbm | Fm | Db | C',
-        counter: `Db5 - - F5 - - Bb5 - | Ab5 - - - . . . . | F5 - - Ab5 - - Db6 - | C6 - - - . . . .`,
-        bass: 'sync',
-        arp: 'broken',
-        drums: 'break',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: CATHEDRAL.ache,
+        leadVoice: 'sync',
+        arpLine: CATHEDRAL.arps,
+        bass: 'long',
+        drums: 'four',
         fill: 'stop',
         pad: 'hold',
-        layers: { counter: 0.28, arp: 0.4 },
-      },
-      {
-        // The hook once more, the beat doubled and the arpeggio tumbling down
-        name: 'verse3',
-        tier: 'groove',
-        chords: 'Fm | Db | Ab | Eb | Fm | Db | Bbm | C',
-        lead: `C5 - F5 - Ab5 - G5 F5 | Ab5 - - - F5 - Db5 - | C5 - Eb5 - Ab5 - G5 Eb5 | G5 - - - Bb4 - - -
-             | C5 - F5 - Ab5 - C6 - | Db6 - C6 - Ab5 - F5 - | F5 - Db5 - Bb4 - Db5 F5 | E5 - - - G5 - - -`,
-        leadVoice: 'square',
-        bass: 'drive',
-        arp: 'cascade',
-        drums: 'darkdrive',
-        feel: 'double',
-        fill: 'roll',
-        pad: 'hold',
-        layers: { lead: 0.32, arp: 0.45 },
+        layers: { drums: 0.35 },
+        sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
       },
     ],
   },

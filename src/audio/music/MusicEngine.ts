@@ -12,10 +12,10 @@ import {
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { PitchedSampleId } from '@/audio/samples/pitched';
-import { AUDITION_LEADS, AuditionLeadId } from '@/audio/samples/leads';
+import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
-import { chordAt, LeadVoice, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import { chordAt, LeadVoice, MusicLayer, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { StepScheduler } from '@/audio/music/StepScheduler';
 import { placeAbove } from '@/audio/music/theory';
@@ -105,6 +105,7 @@ export class MusicEngine {
     arrangement.leadOverride = this.leadOverride;
     this.arrangement = arrangement;
     this.graph = graph;
+    this.prepare(this.conductor.song);
 
     this.scheduler = new StepScheduler(
       audioContext,
@@ -288,15 +289,28 @@ export class MusicEngine {
   public setLeadVoice(voice: LeadVoice | null): void {
     this.leadOverride = voice;
     if (this.arrangement) this.arrangement.leadOverride = voice;
-    const audition: Partial<Record<LeadVoice, AuditionLeadId>> = {
-      soft: 'leadSoft',
-      brass: 'leadBrass',
-      sync: 'leadSync',
-      pwm: 'leadPwm',
-    };
-    const id = voice && audition[voice];
-    if (id && this.graph) {
-      void this.samples.renderPitched(this.graph.context.sampleRate, { [id]: AUDITION_LEADS[id] });
+    if (voice) this.renderLeads([voice]);
+  }
+
+  /**
+   * Renders the extra leads (audio/samples/leads.ts) a song plays, ahead of it: called while it
+   * waits its turn, so they are ready by its first bar. A lead already rendered is skipped.
+   */
+  private prepare(song: Song): void {
+    const voices = [
+      song.voices.lead,
+      song.voices.counter,
+      ...song.sections.map((s) => s.leadVoice),
+    ];
+    this.renderLeads(voices.filter((voice): voice is LeadVoice => voice !== undefined));
+  }
+
+  private renderLeads(voices: LeadVoice[]): void {
+    if (!this.graph) return;
+    for (const voice of voices) {
+      const id = EXTRA_LEAD_FOR[voice];
+      if (id)
+        void this.samples.renderPitched(this.graph.context.sampleRate, { [id]: EXTRA_LEADS[id] });
     }
   }
 
@@ -394,6 +408,8 @@ export class MusicEngine {
     if (stepInBar === 0 && this.currentStep > 0) conductor.advance();
     if (stepInBar === PLAN_STEP) {
       conductor.plan(this.wantedTier());
+      // The song the next bar plays gets its extra leads rendered now, if it needs any
+      this.prepare(conductor.upcomingSong);
     }
 
     const { song, section, bar } = conductor;

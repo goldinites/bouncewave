@@ -318,3 +318,17 @@ describe('Instruments with rendered notes', () => {
     expect(pickNote).not.toHaveBeenCalled();
   });
 });
+
+describe('SampleBank render time', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('stays as it was when asked again for what is already rendered', async () => {
+    stubOfflineContext();
+    const bank = new SampleBank();
+    await bank.render(48000, { thump: recipe(1) });
+    const took = bank.renderTime;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await bank.render(48000, { thump: recipe(1) });
+    expect(bank.renderTime).toBe(took);
+  });
+});

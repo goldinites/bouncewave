@@ -1,3 +1,4 @@
+import { LeadVoice } from '@/audio/music/score';
 import { LOOP, LOOPED } from '@/audio/samples/pitched';
 import { PitchedRecipe } from '@/audio/samples/SampleBank';
 import { cents, chain, drive, filter, level, osc } from '@/audio/samples/synth';
@@ -32,11 +33,11 @@ function syncWave(ctx: BaseAudioContext): PeriodicWave {
 }
 
 /**
- * Lead sounds to audition on the listening stand (5.6a): the same melody in another voice, to
- * hear whether a tune or its sound is what isn't right. Rendered only when the stand asks, so
- * the game's memory doesn't grow; the ones not chosen are dropped.
+ * Lead sounds beyond the core palette (5.6a), first auditioned on the listening stand: rendered
+ * only when a song that plays them is coming up, or the stand asks, so a voice no song in play
+ * uses takes no memory.
  */
-export const AUDITION_LEADS = {
+export const EXTRA_LEADS = {
   /** Soft: a triangle and sines with a slow chorus, warm and round, after "Nightcall" and M83. */
   leadSoft: {
     roots: ROOTS,
@@ -108,4 +109,12 @@ export const AUDITION_LEADS = {
   },
 } satisfies Record<string, PitchedRecipe>;
 
-export type AuditionLeadId = keyof typeof AUDITION_LEADS;
+export type ExtraLeadId = keyof typeof EXTRA_LEADS;
+
+/** The lead voices played from an extra lead. */
+export const EXTRA_LEAD_FOR: Partial<Record<LeadVoice, ExtraLeadId>> = {
+  soft: 'leadSoft',
+  brass: 'leadBrass',
+  sync: 'leadSync',
+  pwm: 'leadPwm',
+};

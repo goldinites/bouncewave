@@ -84,7 +84,7 @@ test('renders every pitched instrument at every root, its loops seamless', async
       const { PITCHED_SAMPLES } = (await import(
         /* @vite-ignore */ source('pitched.ts')
       )) as typeof import('../src/audio/samples/pitched');
-      const { AUDITION_LEADS } = (await import(
+      const { EXTRA_LEADS } = (await import(
         /* @vite-ignore */ source('leads.ts')
       )) as typeof import('../src/audio/samples/leads');
       const bank = new SampleBank();
@@ -92,8 +92,8 @@ test('renders every pitched instrument at every root, its loops seamless', async
       // The leads auditioned on the stand are checked too, in a bank of their own: they are
       // rendered only on the stand's asking, so they don't count toward the game's memory
       const auditions = new SampleBank();
-      await auditions.renderPitched(rate, AUDITION_LEADS);
-      const recipes = { ...PITCHED_SAMPLES, ...AUDITION_LEADS };
+      await auditions.renderPitched(rate, EXTRA_LEADS);
+      const recipes = { ...PITCHED_SAMPLES, ...EXTRA_LEADS };
       const notes = Object.entries(recipes).flatMap(([id, recipe]) =>
         recipe.roots.map((root) => {
           const note = (bank.pickNote(id, root) ?? auditions.pickNote(id, root))!;

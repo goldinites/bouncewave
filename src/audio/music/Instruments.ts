@@ -1,7 +1,7 @@
 import { DrumKit, DrumRole } from '@/audio/music/kits';
 import { MusicGraph, PAD_SPREAD } from '@/audio/music/MusicGraph';
 import { ArpVoice, BassVoice, LeadVoice } from '@/audio/music/score';
-import { AuditionLeadId } from '@/audio/samples/leads';
+import { ExtraLeadId } from '@/audio/samples/leads';
 import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { TransitionSampleId } from '@/audio/samples/transitions';
@@ -53,7 +53,7 @@ const LIVE_BASS: Record<BassVoice, OscillatorType> = {
 const LIVE_ARP: Record<ArpVoice, OscillatorType> = { arpPulse: 'square', pluck: 'sawtooth' };
 const OSCILLATOR_TYPES: readonly string[] = ['sine', 'square', 'sawtooth', 'triangle'];
 // Lead voices that have a rendered instrument
-const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId | AuditionLeadId>> = {
+const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId | ExtraLeadId>> = {
   saw: 'supersaw',
   square: 'squareLead',
   pluck: 'pluck',
@@ -146,7 +146,7 @@ export class Instruments {
    * @returns false if the instrument isn't rendered yet (play the live synth instead)
    */
   private playNote(
-    id: PitchedSampleId | AuditionLeadId,
+    id: PitchedSampleId | ExtraLeadId,
     midiNote: number,
     time: number,
     duration: number,
