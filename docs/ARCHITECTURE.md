@@ -119,7 +119,9 @@ offers it, nor does random deal it. Whatever starts a match sets the scene it is
 `switchChannel` for it on `matchStart`.
 
 **A song.** An entry in `SONG_DEFS` (`audio/music/songs.ts`); its `scene` ties it to a background,
-which then plays it first. Its id is its title in lower case with dashes; listen to it, part by
+which then plays it first. Its `form` is the order its sections play in; the `Conductor` walks it,
+jumping to a peak (a build and its chorus) only on a hot rally and coming back after. A
+section's `layers` say from what intensity each part comes in. Its id is its title in lower case with dashes; listen to it, part by
 part and layer by layer, on the debug overlay's sound stand (`debug/SoundStand.ts`,
 `?song=night-drive&part=chorus&mute=drums`). Its `level` evens out its loudness against the others,
 read off the stand's meter.

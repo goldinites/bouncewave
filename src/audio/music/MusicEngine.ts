@@ -1,4 +1,4 @@
-import { Arrangement, BASS_LOW, MusicLayer } from '@/audio/music/Arrangement';
+import { Arrangement, BASS_LOW } from '@/audio/music/Arrangement';
 import { Conductor } from '@/audio/music/Conductor';
 import { Harmony, HarmonyTimeline } from '@/audio/music/HarmonyTimeline';
 import { Instruments } from '@/audio/music/Instruments';
@@ -14,7 +14,7 @@ import { MusicGraph } from '@/audio/music/MusicGraph';
 import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
-import { chordAt, STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import { chordAt, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { StepScheduler } from '@/audio/music/StepScheduler';
 import { placeAbove } from '@/audio/music/theory';
@@ -38,11 +38,16 @@ function pickSharedSong(): number {
   return shared[Math.floor(Math.random() * shared.length)] ?? 0;
 }
 
-/** Where the music is, for the listening stand: the song, its section and bar (from 0). */
+/**
+ * Where the music is, for the listening stand: the song, its section and bar (from 0), and the
+ * step of the song's form (from 0, -1 off the form) of how many.
+ */
 export interface MusicPosition {
   songId: string;
   part: string;
   bar: number;
+  step: number;
+  steps: number;
 }
 
 /**
@@ -286,7 +291,12 @@ export class MusicEngine {
   /** Where the music is now. */
   public getPosition(): MusicPosition {
     const { conductor } = this;
-    return { songId: conductor.song.id, part: conductor.section.name, bar: conductor.bar };
+    return {
+      songId: conductor.song.id,
+      part: conductor.section.name,
+      bar: conductor.bar,
+      ...conductor.formStep,
+    };
   }
 
   /** Another song, at random, from the next bar line. */

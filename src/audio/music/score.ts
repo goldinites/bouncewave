@@ -11,6 +11,16 @@ import { Chord, parseChord, parseNote } from '@/audio/music/theory';
 import { SceneId } from '@/shared/scenes';
 
 export const STEPS_PER_BAR = 16;
+
+/**
+ * The parts of the arrangement, each coming in with the heat (`SectionDef.layers`) and each
+ * silenced on its own on the listening stand: drums (crashes included), bass, pads (and stabs),
+ * arpeggio (and the climax sparkle), lead, counter-melody, and fx (transitions and a song's
+ * faults).
+ */
+export const MUSIC_LAYERS = ['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as const;
+
+export type MusicLayer = (typeof MUSIC_LAYERS)[number];
 const STEPS_PER_CHORD_SLOT = 8; // chords may change on the bar or halfway through it
 
 /**
@@ -57,6 +67,12 @@ export interface SectionDef {
   stabs?: StabPatternName;
   /** A noise sweep rising over the whole section, into what follows. */
   riser?: boolean;
+  /**
+   * The intensity (0–1) each layer comes in from in this section, so a part sounds sparse while
+   * serving and full in a hot rally; a layer not named plays always. Left out, a groove brings
+   * its arpeggio in from 0.4 and its counter-melody from 0.55.
+   */
+  layers?: Partial<Record<MusicLayer, number>>;
   /** Faults on the whole mix over the section's last bar, for a song that breaks down. */
   glitch?: GlitchPatternName;
 }
@@ -77,6 +93,12 @@ export interface SongDef {
    * backdrop comes up. Songs without one play behind any backdrop.
    */
   scene?: SceneId;
+  /**
+   * The order the song's sections play in, by name; a section may come more than once. The
+   * conductor walks it, jumping to its peaks (builds and choruses) only on a hot rally. The
+   * sections in the order written if left out.
+   */
+  form?: string[];
   /** The song's drums (audio/music/kits.ts); synthwave if left out. */
   kit?: KitName;
   /**
@@ -103,7 +125,9 @@ export interface Section extends Omit<SectionDef, 'chords' | 'lead' | 'counter'>
   counter: (MelodyNote | null)[] | null;
 }
 
-export interface Song extends Omit<SongDef, 'sections'> {
+export interface Song extends Omit<SongDef, 'sections' | 'form'> {
+  /** The form as section indices. */
+  form: number[];
   /** The title in lower case with dashes, for links to it (`?song=night-drive`). */
   id: string;
   sections: Section[];
@@ -177,7 +201,12 @@ export function compileSong(def: SongDef): Song {
       counter: counter ? compileMelody(counter, bars) : null,
     };
   });
-  return { ...def, id: songId(def.title), sections };
+  const form = (def.form ?? def.sections.map((s) => s.name)).map((name) => {
+    const index = def.sections.findIndex((s) => s.name === name);
+    if (index < 0) throw new Error(`"${def.title}" has no section "${name}" for its form`);
+    return index;
+  });
+  return { ...def, id: songId(def.title), sections, form };
 }
 
 /** The chord sounding on `step` of a section. */
