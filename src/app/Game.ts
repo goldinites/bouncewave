@@ -6,6 +6,7 @@ import { BackgroundMenu } from '@/debug/BackgroundMenu';
 import { FpsMeter } from '@/debug/FpsMeter';
 import { ModifierMenu } from '@/debug/ModifierMenu';
 import { SkillMenu, SkillOwner } from '@/debug/SkillMenu';
+import { SoundStand } from '@/debug/SoundStand';
 import { ClassicSwitch } from '@/easterEgg/ClassicSwitch';
 import { EffectsDirector } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
@@ -135,6 +136,7 @@ export class Game {
   private readonly skillMenu: SkillMenu;
   /** Switches the match modifiers on and off for the next quick match. */
   private readonly modifierMenu: ModifierMenu;
+  private readonly soundStand: SoundStand;
   /** How often each skill went off in the match on court, for the skill menu. */
   private readonly skillUses = new Map<SkillId, [number, number]>();
   /** The background the debug overlay last showed, to notice when the next match changes it. */
@@ -198,8 +200,11 @@ export class Game {
     this.modifierMenu = new ModifierMenu(MODIFIER_IDS, this.pinnedModifiers, (modifiers) => {
       this.pinnedModifiers = modifiers.filter(isModifierId);
     });
+    // ?song=night-drive&part=chorus&mute=drums holds the music there (the listening stand)
+    this.soundStand = new SoundStand(this.audio);
     this.fpsMeter = new FpsMeter((isVisible) => {
       this.modifierMenu.setVisible(isVisible);
+      this.soundStand.setVisible(isVisible);
       this.backgroundMenu.setVisible(isVisible);
       this.skillMenu.setVisible(isVisible);
     });
@@ -862,5 +867,6 @@ export class Game {
     this.backgroundMenu.dispose();
     this.skillMenu.dispose();
     this.modifierMenu.dispose();
+    this.soundStand.dispose();
   }
 }

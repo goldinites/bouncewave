@@ -169,4 +169,74 @@ describe('Conductor', () => {
       expect(titles).toEqual(new Set(['One', 'Two']));
     });
   });
+
+  describe('on the listening stand', () => {
+    it('loops the pinned part from the next bar line, whatever the game wants', () => {
+      const conductor = new Conductor(SONGS, 0);
+      conductor.plan('calm');
+      conductor.pinTo(1, 3);
+      conductor.advance();
+
+      expect(conductor.song.title).toBe('Two');
+      expect(play(conductor, 'calm', 20)).toEqual(Array(20).fill('chorus'));
+    });
+
+    it('fills into the pinned part each time it loops', () => {
+      const conductor = new Conductor(SONGS, 0);
+      conductor.pinTo(0, 2); // the 2-bar build
+      conductor.advance();
+
+      const lastBars = Array.from({ length: 4 }, () => {
+        conductor.plan('groove');
+        const isLast = conductor.isLastBar;
+        conductor.advance();
+        return isLast;
+      });
+      expect(lastBars).toEqual([false, true, false, true]);
+    });
+
+    it('keeps the pinned song with any part, never moving on to another', () => {
+      const conductor = new Conductor(SONGS, 0);
+      conductor.pinTo(1);
+      conductor.advance();
+      conductor.requestNewSong();
+      conductor.enterScene('fuji');
+
+      play(conductor, 'calm', SONG_BARS * 2);
+      expect(conductor.song.title).toBe('Two');
+      // ...but still follows the game from section to section
+      expect(play(conductor, 'groove', 4)).toContain('verse');
+    });
+
+    it('replays the way in: the end of the section before, then the pinned part', () => {
+      const conductor = new Conductor(SONGS, 0);
+      conductor.pinTo(0, 1); // the 8-bar verse, after the 4-bar intro
+      conductor.advance();
+      play(conductor, 'groove', 3);
+
+      conductor.replayTransition();
+      expect(play(conductor, 'groove', 6)).toEqual(['verse', ...Array(4).fill('intro'), 'verse']);
+
+      // A longer section before: only its last four bars
+      conductor.pinTo(0, 2); // the build, after the 8-bar verse
+      conductor.advance();
+      conductor.replayTransition();
+      play(conductor, 'groove', 1);
+      expect(conductor.section.name).toBe('verse');
+      expect(conductor.bar).toBe(4);
+    });
+
+    it('lets the game lead again, back to the backdrop’s own song', () => {
+      const conductor = new Conductor(WITH_SCENES, 0);
+      conductor.enterScene('neonCity');
+      conductor.pinTo(1, 0);
+      conductor.advance();
+      play(conductor, 'calm', 4);
+      expect(conductor.song.title).toBe('Two');
+
+      conductor.pinTo(null);
+      play(conductor, 'calm', 8);
+      expect(conductor.song.title).toBe('City');
+    });
+  });
 });

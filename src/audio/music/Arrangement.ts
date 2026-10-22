@@ -16,6 +16,15 @@ import { Chord, placeAbove, voiceChord } from '@/audio/music/theory';
 import { DifficultyLevel } from '@/match/difficulty';
 import { clamp } from '@/shared/math';
 
+/**
+ * The parts the listening stand can silence one by one: drums (crashes included), bass, pads
+ * (and stabs), arpeggio (and the climax sparkle), lead, counter-melody, and fx (risers and a
+ * song's faults).
+ */
+export const MUSIC_LAYERS = ['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as const;
+
+export type MusicLayer = (typeof MUSIC_LAYERS)[number];
+
 /** Everything that decides what one 16th-note step plays. */
 export interface StepContext {
   time: number;
@@ -126,12 +135,23 @@ export class Arrangement {
   private readonly aux: AudioNode;
   /** The pad's last voicing, so the next chord moves as little as possible from it. */
   private voicing: number[] | null = null;
+  /** Layers the listening stand has silenced; read live on every step. */
+  private readonly muted: ReadonlySet<MusicLayer>;
 
-  constructor(instruments: Instruments, graph: MusicGraph) {
+  constructor(
+    instruments: Instruments,
+    graph: MusicGraph,
+    muted: ReadonlySet<MusicLayer> = new Set(),
+  ) {
     this.play = instruments;
     this.graph = graph;
     this.bus = graph.bus;
     this.aux = graph.aux;
+    this.muted = muted;
+  }
+
+  private has(layer: MusicLayer): boolean {
+    return !this.muted.has(layer);
   }
 
   public playStep(context: StepContext): void {
@@ -144,23 +164,25 @@ export class Arrangement {
 
     if (sectionStep === 0) {
       // A crash marks every new section except the quiet ones
-      if (section.tier !== 'calm') this.play.noise(time, 1.2, 0.12, 3000);
-      if (section.riser) {
+      if (section.tier !== 'calm' && this.has('drums')) this.play.noise(time, 1.2, 0.12, 3000);
+      if (section.riser && this.has('fx')) {
         const duration = section.bars * STEPS_PER_BAR * stepDuration;
         this.play.riser(time, duration, RISER_VOLUME * (0.6 + 0.4 * I));
       }
     }
 
-    this.playHarmony(time, sectionStep, chord, context);
-    this.playBass(time, chord, context);
+    if (this.has('pads')) this.playHarmony(time, sectionStep, chord, context);
+    if (this.has('bass')) this.playBass(time, chord, context);
 
-    if (section.arp && (!isGroove || I > GROOVE_ARP_INTENSITY)) {
+    if (section.arp && (!isGroove || I > GROOVE_ARP_INTENSITY) && this.has('arp')) {
       this.playArp(time, chord, context);
     }
 
     const leadVoice = section.leadVoice ?? song.voices.lead;
-    this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context);
-    if (!isGroove || I > GROOVE_COUNTER_INTENSITY) {
+    if (this.has('lead')) {
+      this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context);
+    }
+    if ((!isGroove || I > GROOVE_COUNTER_INTENSITY) && this.has('counter')) {
       this.playMelody(
         time,
         section.counter?.[sectionStep],
@@ -170,12 +192,14 @@ export class Arrangement {
       );
     }
 
-    this.playDrums(time, context);
+    if (this.has('drums')) this.playDrums(time, context);
 
     if (context.climaxLevel > 0.01) {
       this.playClimaxLayers(time, chord, context);
     }
-    if (section.glitch && context.isLastBar) this.playGlitch(context.time, context);
+    if (section.glitch && context.isLastBar && this.has('fx')) {
+      this.playGlitch(context.time, context);
+    }
   }
 
   /** The section's faults on the whole mix, over its last bar: drop-outs and a rewind. */
@@ -197,8 +221,11 @@ export class Arrangement {
 
   /** One-shot impact when the build-up peaks: crash, heavy kick and a long held bass note. */
   public playDrop(time: number, chord: Chord, stepDuration: number): void {
-    this.play.noise(time, 1.6, 0.22, 2500);
-    this.play.kick(time, 1.0);
+    if (this.has('drums')) {
+      this.play.noise(time, 1.6, 0.22, 2500);
+      this.play.kick(time, 1.0);
+    }
+    if (!this.has('bass')) return;
     // Bass root register (not an octave lower) so it stays audible on phone speakers
     const root = placeAbove(chord.root, BASS_LOW);
     this.play.note('sawtooth', root, time, stepDuration * 8, 0.22, this.bus, 900);
@@ -356,15 +383,18 @@ export class Arrangement {
   private playClimaxLayers(time: number, chord: Chord, context: StepContext): void {
     const { stepInBar: s, stepDuration, climaxLevel: mix, section } = context;
 
-    // Crash on every bar
-    if (s === 0) {
-      this.play.noise(time, 0.9, 0.12 * mix, 4000);
-    }
+    if (this.has('drums')) {
+      // Crash on every bar
+      if (s === 0) {
+        this.play.noise(time, 0.9, 0.12 * mix, 4000);
+      }
 
-    // Open hats on the off-beats
-    if (s % 4 === 2) {
-      this.play.noise(time, 0.12, 0.07 * mix, 9000);
+      // Open hats on the off-beats
+      if (s % 4 === 2) {
+        this.play.noise(time, 0.12, 0.07 * mix, 9000);
+      }
     }
+    if (!this.has('arp')) return;
 
     // Sparkle arpeggio an octave above the chord, running ahead of the section's own
     const pattern = ARP_PATTERNS[section.arp ?? 'up'];

@@ -89,4 +89,56 @@ describe('MusicEngine', () => {
     expect(engine.getSongTitle()).not.toBe(before);
     expect(SONGS.map((song) => song.title)).toContain(engine.getSongTitle());
   });
+
+  describe('on the listening stand', () => {
+    it('holds the music to a song and a part, named as in a link', () => {
+      const { engine, play } = track(setup());
+
+      expect(engine.audition('ghost-signal', 'chorus')).toBe(true);
+      play(20);
+      expect(engine.getPosition()).toMatchObject({ songId: 'ghost-signal', part: 'chorus' });
+    });
+
+    it('changes nothing for a song or part there is not', () => {
+      const { engine } = track(setup());
+      const before = engine.getPosition();
+
+      expect(engine.audition('no-such-song')).toBe(false);
+      expect(engine.audition('night-drive', 'drop')).toBe(false);
+      expect(engine.getPosition()).toEqual(before);
+    });
+
+    it('stays on the song when the backdrop changes or the player skips', () => {
+      const { engine, play } = track(setup());
+      engine.audition('night-drive');
+      engine.enterScene('fuji');
+      engine.skipSong();
+      play(30);
+
+      expect(engine.getPosition().songId).toBe('night-drive');
+    });
+
+    it('plays silenced layers no more', () => {
+      const { engine, notes, play } = track(setup());
+      engine.audition('night-drive', 'chorus');
+      play(1);
+      for (const layer of ['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as const) {
+        engine.setLayerMuted(layer, true);
+      }
+      play(0.3); // what was scheduled ahead plays out
+      const before = notes();
+
+      play(3);
+      expect(notes()).toBe(before);
+    });
+  });
+});
+
+describe('SONGS', () => {
+  it('have ids for links, from their titles, each its own', () => {
+    const ids = SONGS.map((song) => song.id);
+    expect(ids).toContain('night-drive');
+    expect(ids.every((id) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(id))).toBe(true);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
 });
