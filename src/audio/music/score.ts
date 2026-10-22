@@ -6,6 +6,7 @@ import {
   GlitchPatternName,
   StabPatternName,
 } from '@/audio/music/patterns';
+import { KitName } from '@/audio/music/kits';
 import { Chord, parseChord, parseNote } from '@/audio/music/theory';
 import { SceneId } from '@/shared/scenes';
 
@@ -65,6 +66,8 @@ export interface SongDef {
    * backdrop comes up. Songs without one play behind any backdrop.
    */
   scene?: SceneId;
+  /** The song's drums (audio/music/kits.ts); synthwave if left out. */
+  kit?: KitName;
   /**
    * dB the song is turned up or down by, so the songs sound equally loud: read off the listening
    * stand's meter (its average over the verse and chorus) against the others. 0 if left out.

@@ -19,6 +19,9 @@ const HIT_DUCK = {
 } as const;
 // About 0.37 s at 44.1 kHz: long enough for a level that doesn't flicker with every beat
 const METER_FFT_SIZE = 16384;
+// The meter hears roughly as the ear does (the K-weighting of LUFS): the deep lows count less,
+// the presence range a little more, so a song's 808 tail doesn't read as loudness
+const K_WEIGHTING = { LOW_CUT: 38, SHELF_FREQUENCY: 1681, SHELF_GAIN: 4 } as const;
 const SILENCE_DB = -96;
 
 /** How loud the master is: over the meter's last window, and its loudest sample there. */
@@ -35,7 +38,7 @@ export interface MasterLevels {
  * ```
  * music → hitDuck ─┐
  * sfx ─────────────┼─ sum → limiter → clipper → destination
- * menu ────────────┘                        └─ meter
+ * menu ────────────┘                        └─ K-weighting → meter
  * ```
  */
 export class Mixer {
@@ -74,7 +77,18 @@ export class Mixer {
     sum.connect(limiter);
     limiter.connect(clipper.input);
     clipper.output.connect(destination);
-    clipper.output.connect(this.meter);
+
+    const lowCut = ac.createBiquadFilter();
+    lowCut.type = 'highpass';
+    lowCut.frequency.value = K_WEIGHTING.LOW_CUT;
+    lowCut.Q.value = 0.5;
+    const presence = ac.createBiquadFilter();
+    presence.type = 'highshelf';
+    presence.frequency.value = K_WEIGHTING.SHELF_FREQUENCY;
+    presence.gain.value = K_WEIGHTING.SHELF_GAIN;
+    clipper.output.connect(lowCut);
+    lowCut.connect(presence);
+    presence.connect(this.meter);
   }
 
   /** A strong hit: the music dips for a moment under it, deeper the stronger, `strength` in [0, 1]. */
@@ -92,7 +106,7 @@ export class Mixer {
     }
   }
 
-  /** The master's level now, for the listening stand. */
+  /** The master's level now, K-weighted, for the listening stand. */
   public getLevels(): MasterLevels {
     this.meterData ??= new Float32Array(this.meter.fftSize);
     const data = this.meterData;

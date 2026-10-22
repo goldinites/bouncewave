@@ -12,6 +12,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Night Drive',
     bpm: 100,
     swing: 0,
+    level: 1,
     voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'sawtooth' },
     sections: [
       {
@@ -77,6 +78,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Chrome Heart',
     bpm: 112,
     swing: 0,
+    level: 1,
     voices: { lead: 'square', counter: 'bell', arp: 'sawtooth', bass: 'square' },
     sections: [
       {
@@ -210,7 +212,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Sunset Boulevard',
     bpm: 92,
     swing: 0.12,
-    level: 1.5,
+    level: 3.5,
     voices: { lead: 'bell', counter: 'pluck', arp: 'triangle', bass: 'sawtooth' },
     sections: [
       {
@@ -278,6 +280,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Laser Grid',
     bpm: 116,
     swing: 0,
+    level: 1.5,
     voices: { lead: 'pluck', counter: 'bell', arp: 'square', bass: 'sawtooth' },
     sections: [
       {
@@ -346,6 +349,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Midnight Arcade',
     bpm: 104,
     swing: 0,
+    level: 0.5,
     voices: { lead: 'square', counter: 'bell', arp: 'square', bass: 'square' },
     sections: [
       {
@@ -411,7 +415,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Crystal Skies',
     bpm: 120,
     swing: 0,
-    level: 0.5,
+    level: 2,
     voices: { lead: 'saw', counter: 'bell', arp: 'sawtooth', bass: 'sawtooth' },
     sections: [
       {
@@ -478,7 +482,8 @@ const SONG_DEFS: SongDef[] = [
     title: 'Ghost Signal',
     bpm: 88,
     swing: 0.08,
-    level: 2,
+    level: -1.5,
+    kit: 'night',
     voices: { lead: 'bell', counter: 'square', arp: 'triangle', bass: 'sawtooth' },
     sections: [
       {
@@ -547,6 +552,8 @@ const SONG_DEFS: SongDef[] = [
     title: 'Shinjuku Rain',
     bpm: 92,
     swing: 0.06,
+    level: -2,
+    kit: 'night',
     voices: { lead: 'koto', counter: 'flute', arp: 'triangle', bass: 'sawtooth' },
     scene: 'neonCity',
     sections: [
@@ -620,7 +627,6 @@ const SONG_DEFS: SongDef[] = [
     title: 'Torii Gates',
     bpm: 96,
     swing: 0,
-    level: -0.5,
     voices: { lead: 'flute', counter: 'koto', arp: 'triangle', bass: 'sawtooth' },
     scene: 'fuji',
     sections: [
@@ -696,7 +702,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Jade Temple',
     bpm: 108,
     swing: 0,
-    level: -1.5,
+    level: -0.5,
     voices: { lead: 'bell', counter: 'pluck', arp: 'triangle', bass: 'sawtooth' },
     scene: 'jungle',
     sections: [
@@ -768,6 +774,8 @@ const SONG_DEFS: SongDef[] = [
     title: 'Iron Floor',
     bpm: 112,
     swing: 0,
+    level: -2.5,
+    kit: 'dark',
     voices: { lead: 'square', counter: 'pluck', arp: 'sawtooth', bass: 'square' },
     scene: 'warehouse',
     sections: [
@@ -815,7 +823,7 @@ const SONG_DEFS: SongDef[] = [
         leadVoice: 'saw',
         bass: 'drive',
         arp: 'updown',
-        drums: 'drive',
+        drums: 'foundry',
         fill: 'toms',
         pad: 'hold',
         stabs: 'push',
@@ -838,7 +846,8 @@ const SONG_DEFS: SongDef[] = [
     title: 'Black Belt',
     bpm: 118,
     swing: 0,
-    level: -1.5,
+    level: -3.5,
+    kit: 'dark',
     voices: { lead: 'koto', counter: 'bell', arp: 'square', bass: 'sawtooth' },
     scene: 'dojo',
     sections: [
@@ -910,6 +919,8 @@ const SONG_DEFS: SongDef[] = [
     title: 'No Carrier',
     bpm: 104,
     swing: 0,
+    level: -2.5,
+    kit: 'dark',
     voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'sawtooth' },
     scene: 'brokenNet',
     sections: [

@@ -129,6 +129,12 @@ each on their bus, then the limiter. In the music, an instrument plays on its st
 (`drums`, `bass`, `pads`, `melody`), which gives it its saturation, sidechain and sends; an action
 sound plays on `sfx` (`menu` for menus), and a strong one dips the music (`Mixer.duckMusic`).
 
+**An instrument.** A recipe in `audio/samples/` (a graph built in an offline context, rendered once
+per variant into the `SampleBank` when the audio starts); its live synth in `Instruments` plays
+until it is rendered. A drum is a role in a kit (`audio/music/kits.ts`): a song picks its `kit`,
+the arrangement asks for roles. Hear each on the sound stand; `e2e/samples.spec.ts` renders them
+all in Chromium against the budgets.
+
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
 (`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), or in
 `QUICK_MATCH_SETUP` if it sets up the match rather than the game (a `toggle` for on/off, a
