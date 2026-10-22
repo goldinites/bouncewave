@@ -217,3 +217,96 @@ describe('Conductor.pass', () => {
     expect(passes).toEqual(['a0', 'b0', 'a1', 'b1', 'a2']);
   });
 });
+
+describe('sweepAt', () => {
+  it('moves a layer’s filter from its start to its end over the section, log-evenly', async () => {
+    const { sweepAt } = await import('@/audio/music/Arrangement');
+    const song = compileSong({
+      title: 'Sweep',
+      bpm: 120,
+      swing: 0,
+      voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'sawtooth' },
+      sections: [
+        {
+          name: 'hook',
+          tier: 'groove',
+          chords: 'Am | Am | Am | Am',
+          bass: 'long',
+          drums: 'four',
+          pad: 'hold',
+          sweep: { arp: [0.25, 4] },
+        },
+      ],
+    });
+    const section = song.sections[0];
+    expect(sweepAt(section, 'arp', 0)).toBe(0.25);
+    expect(sweepAt(section, 'arp', 32)).toBeCloseTo(1);
+    expect(sweepAt(section, 'pads', 32)).toBe(1);
+  });
+});
+
+describe('portamento', () => {
+  const songWith = (lead: string, glide?: number) =>
+    compileSong({
+      title: 'Glide',
+      bpm: 120,
+      swing: 0,
+      voices: { lead: 'square', counter: 'bell', arp: 'square', bass: 'sawtooth', glide },
+      sections: [
+        {
+          name: 'hook',
+          tier: 'groove',
+          chords: 'Am',
+          lead,
+          bass: 'long',
+          drums: 'none',
+          pad: 'none',
+        },
+      ],
+    });
+
+  const glides = (lead: string, glide?: number) => {
+    const song = songWith(lead, glide);
+    const { ctx } = fakeAudioContext();
+    const graph = new MusicGraph(ctx);
+    const play = new Instruments(graph, new SampleBank());
+    const spy = vi.spyOn(play, 'lead');
+    const arrangement = new Arrangement(play, graph);
+    for (let s = 0; s < STEPS_PER_BAR; s++) {
+      arrangement.playStep({
+        time: s * 0.125,
+        stepDuration: 0.125,
+        song,
+        section: song.sections[0],
+        bar: 0,
+        stepInBar: s,
+        isLastBar: false,
+        nextBarChord: song.sections[0].chords[0],
+        intensity: 1,
+        climaxLevel: 0,
+        difficulty: DifficultyLevel.NORMAL,
+      });
+    }
+    return spy.mock.calls.map((call) => call[7]);
+  };
+
+  it('slides a lead note in from a near one it follows without a gap, and quickly', () => {
+    expect(glides('A4 - C5 - . . E5 -', 0.07)).toEqual([
+      undefined,
+      { from: 69, time: 0.04 }, // capped: a long slide starts the note out of tune
+      undefined, // after a rest it starts afresh
+    ]);
+  });
+
+  it('jumps across a leap rather than sliding through it', () => {
+    expect(glides('A4 - A5 - G5 - . .', 0.04)).toEqual([
+      undefined,
+      undefined,
+      { from: 81, time: 0.04 },
+    ]);
+  });
+
+  it('plays every note straight without a glide set', () => {
+    expect(glides('A4 - C5 - E5 - A5 -')).toEqual([undefined, undefined, undefined, undefined]);
+  });
+});

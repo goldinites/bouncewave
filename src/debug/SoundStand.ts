@@ -1,10 +1,24 @@
 import { AudioEngine } from '@/audio/AudioEngine';
-import { MUSIC_LAYERS, MusicLayer } from '@/audio/music/score';
+import { LeadVoice, MUSIC_LAYERS, MusicLayer } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
+
+// The lead voices the stand can put a melody on, the auditioned ones last
+const LEAD_VOICES: LeadVoice[] = [
+  'saw',
+  'square',
+  'pluck',
+  'bell',
+  'koto',
+  'flute',
+  'soft',
+  'brass',
+  'sync',
+  'pwm',
+];
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
 
@@ -108,7 +122,10 @@ export class SoundStand {
 
     this.songSelect = this.select('song', [
       ['', '— the game’s —'],
-      ...SONGS.map((song): [string, string] => [song.id, song.title]),
+      ...SONGS.map((song): [string, string] => [
+        song.id,
+        song.sketch ? `✎ ${song.title}` : song.title,
+      ]),
     ]);
     this.partSelect = this.select('part', []);
     this.on(this.songSelect, 'change', () => {
@@ -116,6 +133,15 @@ export class SoundStand {
       this.audition();
     });
     this.on(this.partSelect, 'change', () => this.audition());
+
+    const leadSelect = this.select('leadVoice', [
+      ['', 'lead: the song’s'],
+      ...LEAD_VOICES.map((voice): [string, string] => [voice, `lead: ${voice}`]),
+    ]);
+    this.on(leadSelect, 'change', () => {
+      this.audio.unlock();
+      this.audio.music.setLeadVoice((leadSelect.value || null) as LeadVoice | null);
+    });
 
     const transport = this.row(
       this.button('↻ transition', () => this.audio.music.replayTransition()),
@@ -128,6 +154,7 @@ export class SoundStand {
     this.body.append(
       this.songSelect,
       this.partSelect,
+      leadSelect,
       transport,
       this.slider('intensity', (level) => this.audio.music.pinIntensity(level)),
       this.slider('climax', (level) => this.audio.music.pinClimax(level)),
@@ -265,8 +292,24 @@ export class SoundStand {
         return label;
       }),
     );
+    rows.append(this.glideSwitch());
     rows.style.flexWrap = 'wrap';
     return rows;
+  }
+
+  /** Portamento on the lead, on and off, to hear the melody with and without it. */
+  private glideSwitch(): HTMLLabelElement {
+    const label = document.createElement('label');
+    Object.assign(label.style, { display: 'flex', gap: '3px', alignItems: 'center' });
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = true;
+    box.dataset.glide = '';
+    this.on(box, 'change', () => this.audio.music.setGlide(box.checked));
+    const name = document.createElement('span');
+    name.textContent = 'glide';
+    label.append(box, name);
+    return label;
   }
 
   /** Every rendered instrument, each press its next variant, to hear them one by one. */

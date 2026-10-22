@@ -123,3 +123,26 @@ export function metalCluster(ctx: OfflineAudioContext, base: number, time = 0): 
   }
   return sum;
 }
+
+/** A frequency moved by `amount` cents. */
+export const cents = (hz: number, amount: number): number => hz * 2 ** (amount / 1200);
+
+/** An oscillator of `type` at `frequency`, started at once. */
+export function osc(
+  ctx: BaseAudioContext,
+  type: OscillatorType,
+  frequency: number,
+): OscillatorNode {
+  const node = ctx.createOscillator();
+  node.type = type;
+  node.frequency.value = frequency;
+  node.start();
+  return node;
+}
+
+/** A gain fixed at `value`. */
+export function level(ctx: BaseAudioContext, value: number): GainNode {
+  const gain = ctx.createGain();
+  gain.gain.value = value;
+  return gain;
+}

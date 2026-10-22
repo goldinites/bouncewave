@@ -36,7 +36,18 @@ export type Tier = 'calm' | 'groove' | 'rise' | 'high';
  * Synth voices a melody can be played on. Koto is a plucked string that snaps up into pitch;
  * flute is a breathy, shakuhachi-like sine that scoops into each note.
  */
-export type LeadVoice = 'saw' | 'square' | 'bell' | 'pluck' | 'koto' | 'flute';
+export type LeadVoice =
+  | 'saw'
+  | 'square'
+  | 'bell'
+  | 'pluck'
+  | 'koto'
+  | 'flute'
+  // Auditioned on the stand (audio/samples/leads.ts): soft, brass, hard-sync and PWM leads
+  | 'soft'
+  | 'brass'
+  | 'sync'
+  | 'pwm';
 
 /** The rendered basses (audio/samples/pitched.ts); a plain oscillator type plays live. */
 export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808';
@@ -61,8 +72,16 @@ export interface SectionDef {
   leadVoice?: LeadVoice;
   /** A second, quieter line on the song's counter voice. */
   counter?: string;
-  bass: BassPatternName;
+  /** The bass as a pattern relative to the chord; or written out note by note (`bassLine`). */
+  bass?: BassPatternName;
+  /**
+   * The bass written out, in the melody notation: a riff of its own, which is what carries a
+   * darksynth or outrun track. Takes the place of `bass`.
+   */
+  bassLine?: string;
   arp?: ArpPatternName;
+  /** The arpeggio written out, in the melody notation: an ostinato of its own. Takes the place of `arp`. */
+  arpLine?: string;
   drums: DrumPatternName;
   /** Played in the second half of the section's last bar. */
   fill?: DrumFillName;
@@ -81,6 +100,12 @@ export interface SectionDef {
    * squeezed into half of one, the hats kept in time. As written if left out.
    */
   feel?: Feel;
+  /**
+   * The section's sound opening (or closing) as it goes: the arpeggio's and the pads' filter
+   * moved from the first factor at its start to the second at its end — how a repeated
+   * ostinato keeps evolving. As set by the heat alone if left out.
+   */
+  sweep?: { arp?: [number, number]; pads?: [number, number] };
   /** Steps of silence that end the section: everything stops, then the next section hits. */
   silence?: number;
   /** The section opens with a drop: crash, kick, the kit's impact and a boom. */
@@ -99,6 +124,11 @@ export interface SongDef {
     counter: LeadVoice;
     arp: OscillatorType | ArpVoice;
     bass: OscillatorType | BassVoice;
+    /**
+     * Portamento on the lead, in seconds: a note that follows another without a gap slides in
+     * from it, so the line sings rather than steps. None if left out.
+     */
+    glide?: number;
   };
   /**
    * The backdrop this song belongs to: it plays only behind that one, and first whenever that
@@ -111,6 +141,11 @@ export interface SongDef {
    * sections in the order written if left out.
    */
   form?: string[];
+  /**
+   * A sketch for the listening stand: a few bars of a hook to choose between, never played by
+   * the game.
+   */
+  sketch?: boolean;
   /** The song's drums (audio/music/kits.ts); synthwave if left out. */
   kit?: KitName;
   /**
@@ -128,13 +163,18 @@ export interface MelodyNote {
   steps: number;
 }
 
-export interface Section extends Omit<SectionDef, 'chords' | 'lead' | 'counter'> {
+export interface Section extends Omit<
+  SectionDef,
+  'chords' | 'lead' | 'counter' | 'bassLine' | 'arpLine'
+> {
   bars: number;
   /** Chord of every half bar. */
   chords: Chord[];
   /** Per step of the section: the note starting there, if any. */
   lead: (MelodyNote | null)[] | null;
   counter: (MelodyNote | null)[] | null;
+  bassLine: (MelodyNote | null)[] | null;
+  arpLine: (MelodyNote | null)[] | null;
 }
 
 export interface Song extends Omit<SongDef, 'sections' | 'form'> {
@@ -202,17 +242,24 @@ function compileMelody(text: string, bars: number): (MelodyNote | null)[] {
 
 /** Turns a written song into the per-step form the arrangement plays from. */
 export function compileSong(def: SongDef): Song {
-  const sections = def.sections.map(({ chords, lead, counter, ...rest }): Section => {
-    const compiled = compileChords(chords);
-    const bars = compiled.length / 2;
-    return {
-      ...rest,
-      bars,
-      chords: compiled,
-      lead: lead ? compileMelody(lead, bars) : null,
-      counter: counter ? compileMelody(counter, bars) : null,
-    };
-  });
+  const sections = def.sections.map(
+    ({ chords, lead, counter, bassLine, arpLine, ...rest }): Section => {
+      if (!rest.bass && !bassLine) {
+        throw new Error(`"${def.title}" ${rest.name} has neither a bass pattern nor a bass line`);
+      }
+      const compiled = compileChords(chords);
+      const bars = compiled.length / 2;
+      return {
+        ...rest,
+        bars,
+        chords: compiled,
+        lead: lead ? compileMelody(lead, bars) : null,
+        counter: counter ? compileMelody(counter, bars) : null,
+        bassLine: bassLine ? compileMelody(bassLine, bars) : null,
+        arpLine: arpLine ? compileMelody(arpLine, bars) : null,
+      };
+    },
+  );
   const form = (def.form ?? def.sections.map((s) => s.name)).map((name) => {
     const index = def.sections.findIndex((s) => s.name === name);
     if (index < 0) throw new Error(`"${def.title}" has no section "${name}" for its form`);

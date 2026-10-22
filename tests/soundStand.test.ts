@@ -143,6 +143,27 @@ describe('SoundStand', () => {
     expect(transition.mock.calls.map(([id]) => id)).toEqual(Object.keys(TRANSITION_SAMPLES));
   });
 
+  it('puts the lead on another voice, or back on the song’s own', () => {
+    const { audio, get } = setup();
+    const voice = vi.spyOn(audio.music, 'setLeadVoice');
+    const select = get<HTMLSelectElement>('select[data-stand="leadVoice"]');
+
+    select.value = 'pwm';
+    select.dispatchEvent(new Event('change'));
+    expect(voice).toHaveBeenLastCalledWith('pwm');
+    select.value = '';
+    select.dispatchEvent(new Event('change'));
+    expect(voice).toHaveBeenLastCalledWith(null);
+  });
+
+  it('switches the glide off and on', () => {
+    const { audio, get } = setup();
+    const glide = vi.spyOn(audio.music, 'setGlide');
+
+    get<HTMLInputElement>('input[data-glide]').click();
+    expect(glide).toHaveBeenLastCalledWith(false);
+  });
+
   it('stops a series it was playing when disposed', () => {
     vi.useFakeTimers();
     const { audio, stand, get } = setup();

@@ -131,6 +131,8 @@ export class SampleBank {
     const Offline = offlineContextClass();
     if (!Offline) return;
     const pending = this.claim(recipes);
+    // Nothing new to render: the time it took stays as it was
+    if (pending.length === 0) return;
 
     await Promise.all(
       pending.map(async ([id, recipe]) => {
@@ -159,6 +161,8 @@ export class SampleBank {
     const Offline = offlineContextClass();
     if (!Offline) return;
     const pending = this.claim(recipes);
+    // Nothing new to render: the time it took stays as it was
+    if (pending.length === 0) return;
 
     await Promise.all(
       pending.map(async ([id, recipe]) => {

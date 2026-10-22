@@ -92,9 +92,19 @@ const LEAD_VOLUME: Record<LeadVoice, number> = {
   pluck: 0.09,
   koto: 0.1,
   flute: 0.085,
+  soft: 0.1,
+  brass: 0.07,
+  sync: 0.06,
+  pwm: 0.07,
 };
 const COUNTER_SHARE = 0.55;
 const ARP_VOLUME = 0.045;
+// Under a melody the arpeggio steps back, quieter and darker, so the ear doesn't knit its notes
+// into the tune's
+const ARP_UNDER_LEAD = { VOLUME: 0.6, BRIGHTNESS: 0.7 } as const;
+// Portamento slides only between near notes, and quickly: a long slide, or one across a leap,
+// starts every note out of tune
+const GLIDE = { MAX_INTERVAL: 5, MAX_TIME: 0.04 } as const; // semitones, s
 const PAD_VOLUME = 0.022;
 const STAB_VOLUME = 0.05;
 const BASS_VOLUME = 0.15;
@@ -133,6 +143,15 @@ function bassNote(token: string, chord: Chord, next: Chord): number | null {
   }
 }
 
+/** The factor a section's sweep sets a layer's filter to at `sectionStep`; 1 without a sweep. */
+export function sweepAt(section: Section, layer: 'arp' | 'pads', sectionStep: number): number {
+  const sweep = section.sweep?.[layer];
+  if (!sweep) return 1;
+  const [from, to] = sweep;
+  // Log-even, as a filter is heard
+  return from * (to / from) ** (sectionStep / (section.bars * STEPS_PER_BAR));
+}
+
 /** The arpeggio's `index`-th note: the chord's tones from the bottom up, octave after octave. */
 function arpNote(chord: Chord, index: number): number {
   const base = placeAbove(chord.root, ARP_LOW);
@@ -163,6 +182,12 @@ export class Arrangement {
   private voicing: number[] | null = null;
   /** The drums of the song playing; the drop, which comes between steps, plays on them too. */
   private kit: DrumKit = KITS.synthwave;
+  /** The lead's last note and when it ends, for a legato note to slide in from it. */
+  private lastLead: { note: number; end: number } | null = null;
+  /** The listening stand can switch portamento off, to hear the melody without it. */
+  public isGlideOn = true;
+  /** The listening stand can play the lead on another voice, to hear the tune in another sound. */
+  public leadOverride: LeadVoice | null = null;
   /** The layers the heat has brought in this bar (updateLayers). */
   private readonly layersIn = new Set<MusicLayer>();
   /** The section the layers were last decided for. */
@@ -237,11 +262,11 @@ export class Arrangement {
 
     if (this.plays('pads')) this.playHarmony(time, sectionStep, chord, context);
     if (this.plays('bass')) this.playBass(time, chord, context);
-    if (section.arp && this.plays('arp')) this.playArp(time, chord, context);
+    if ((section.arp || section.arpLine) && this.plays('arp')) this.playArp(time, chord, context);
 
-    const leadVoice = section.leadVoice ?? song.voices.lead;
+    const leadVoice = this.leadOverride ?? section.leadVoice ?? song.voices.lead;
     if (this.plays('lead')) {
-      this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context);
+      this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context, true);
     }
     if (this.plays('counter')) {
       this.playMelody(
@@ -345,7 +370,7 @@ export class Arrangement {
           time,
           length * stepDuration,
           PAD_VOLUME + 0.02 * I,
-          700 + I * 1800,
+          (700 + I * 1800) * sweepAt(section, 'pads', sectionStep),
           section.pad === 'swell',
         );
       }
@@ -373,7 +398,23 @@ export class Arrangement {
 
   private playBass(time: number, chord: Chord, context: StepContext): void {
     const { section, stepInBar: s, stepDuration, intensity: I, song } = context;
-    const pattern = BASS_PATTERNS[section.bass];
+    const line = section.bassLine;
+    if (line) {
+      // A written riff plays as written: it is the track's hook, not to be varied at random
+      const written = line[context.bar * STEPS_PER_BAR + s];
+      if (!written) return;
+      this.play.bass(
+        song.voices.bass,
+        written.note,
+        time,
+        stepDuration * (written.steps - 0.1),
+        BASS_VOLUME + 0.08 * I,
+        this.bass,
+        450 + I * 1500,
+      );
+      return;
+    }
+    const pattern = BASS_PATTERNS[section.bass ?? 'long'];
     // The approach note aims at the chord after this one: halfway through the bar, or the next bar
     const next = s < 8 ? chordAt(section, context.bar * STEPS_PER_BAR + 8) : context.nextBarChord;
     // On a repeat the root sometimes jumps up an octave
@@ -394,14 +435,28 @@ export class Arrangement {
 
   private playArp(time: number, chord: Chord, context: StepContext): void {
     const { section, stepInBar: s, stepDuration, intensity: I, song, difficulty } = context;
-    // On a repeat the pattern is read a little ahead on every second bar
-    const token = ARP_PATTERNS[section.arp!][(s + this.variation.arpShift) % STEPS_PER_BAR];
-    if (token === '.') return;
+    let note: number;
+    if (section.arpLine) {
+      // A written ostinato plays as written
+      const written = section.arpLine[context.bar * STEPS_PER_BAR + s];
+      if (!written) return;
+      note = written.note;
+    } else {
+      // On a repeat the pattern is read a little ahead on every second bar
+      const token = ARP_PATTERNS[section.arp!][(s + this.variation.arpShift) % STEPS_PER_BAR];
+      if (token === '.') return;
+      note = arpNote(chord, Number(token));
+    }
 
     const signature = DIFFICULTY_SIGNATURES[difficulty];
-    const note = arpNote(chord, Number(token));
-    const volume = ARP_VOLUME * (0.5 + 0.5 * I);
-    const cutoff = (1400 + I * 2600) * signature.leadBrightness;
+    const underLead = section.lead && this.plays('lead');
+    const volume = ARP_VOLUME * (0.5 + 0.5 * I) * (underLead ? ARP_UNDER_LEAD.VOLUME : 1);
+    const sectionStep = context.bar * STEPS_PER_BAR + s;
+    const cutoff =
+      (1400 + I * 2600) *
+      signature.leadBrightness *
+      sweepAt(section, 'arp', sectionStep) *
+      (underLead ? ARP_UNDER_LEAD.BRIGHTNESS : 1);
     this.play.arp(song.voices.arp, note, time, stepDuration * 1.6, volume, this.melody, cutoff);
 
     if (signature.stutter && s % 4 === 0) {
@@ -424,19 +479,32 @@ export class Arrangement {
     voice: LeadVoice,
     share: number,
     context: StepContext,
+    isLead = false,
   ): void {
     if (!melodyNote) return;
-    const { stepDuration, intensity: I, difficulty } = context;
+    const { stepDuration, intensity: I, difficulty, song } = context;
     const brightness = DIFFICULTY_SIGNATURES[difficulty].leadBrightness;
+    const duration = melodyNote.steps * stepDuration * 0.95;
+
+    // A lead note straight after the last one, with no rest between, slides in from it
+    const last = isLead ? this.lastLead : null;
+    const isLegato = last !== null && time - last.end < stepDuration * 0.5;
+    const interval = isLegato ? Math.abs(melodyNote.note - last.note) : 0;
+    const glide =
+      this.isGlideOn && song.voices.glide && interval > 0 && interval <= GLIDE.MAX_INTERVAL
+        ? { from: last!.note, time: Math.min(song.voices.glide, GLIDE.MAX_TIME) }
+        : undefined;
+    if (isLead) this.lastLead = { note: melodyNote.note, end: time + duration };
 
     this.play.lead(
       voice,
       melodyNote.note,
       time,
-      melodyNote.steps * stepDuration * 0.95,
+      duration,
       LEAD_VOLUME[voice] * share * (0.65 + 0.35 * I),
       this.melody,
       (1800 + I * 2200) * brightness,
+      glide,
     );
   }
 

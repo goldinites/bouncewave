@@ -1,4 +1,100 @@
+import { cycle, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef } from '@/audio/music/score';
+
+// ——— Lines written by processes (audio/music/compose.ts) ———
+
+/** B: a five-note cell cycling over Em, C, Am and B, two bars each, and its pulsing bass. */
+const HYPNOTIC = {
+  arp: cycle([
+    { cell: ['E4', 'G4', 'B4', 'E5', 'B4'], bars: 2 },
+    { cell: ['E4', 'G4', 'C5', 'E5', 'C5'], bars: 2 },
+    { cell: ['E4', 'A4', 'C5', 'E5', 'C5'], bars: 2 },
+    { cell: ['D#4', 'F#4', 'B4', 'D#5', 'B4'], bars: 2 },
+  ]),
+  bass: `E1 . E1 . E2 . E1 . E1 . E1 . E2 . D2 . | E1 . E1 . E2 . E1 . E1 . E1 . E2 . G1 .
+                 | C2 . C2 . C2 . G1 . C2 . C2 . G1 . B1 . | C2 . C2 . C2 . G1 . C2 . C2 . E2 . G1 .
+                 | A1 . A1 . A2 . A1 . A1 . A1 . A2 . G1 . | A1 . A1 . A2 . A1 . A1 . A1 . E2 . A1 .
+                 | B1 . B1 . B1 . F#1 . B1 . B1 . D#2 . F#2 . | B1 . B1 . B1 . F#1 . B1 . B1 . A1 . F#1 .`,
+};
+
+// ——— The Laser track's melodies, chosen on the stand (eighths: 8 a bar; sixteenths: 16) ———
+
+/** M1, over Em Em C C Am Am B B: an arch of long notes reached by pickups. */
+const M1 = `B4 - - - . G4 A4 B4 | E5 - - - D5 - B4 - | C5 - - - . A4 B4 C5 | G5 - - - E5 - - -
+          | A5 - - - G5 - E5 - | E5 - - D5 C5 - B4 - | D#5 - - - F#5 - - - | B4 - - - - - - -`;
+
+/** M2, over Em Em C C Am Am B B: a 3+3+2 figure of repeated notes, answered by climbing runs. */
+const M2 = `E5 - - G5 - - F#5 - E5 - - - B4 - - - | . . D5 - E5 - F#5 - G5 - - - . . . .
+          | E5 - - G5 - - D5 - C5 - - - G4 - - - | . . B4 - C5 - D5 - E5 - - - - - - -
+          | A5 - - G5 - - E5 - G5 - - - E5 - - - | . . C5 - D5 - E5 - C5 - - - B4 - A4 -
+          | D#5 - - F#5 - - B5 - A5 - - - F#5 - - - | D#5 - - - - - - - B4 - - - - - - -`;
+
+/** M3, over Cm Cm Ab Ab Eb Eb Bb Bb: long aching notes, leaning off the chord and resolving down. */
+const M3 = `G5 - - - - - Eb5 F5 | G5 - - - Bb5 - G5 - | C6 - - - - - Bb5 Ab5 | Bb5 - Ab5 - - - Eb5 -
+          | G5 - - - - - Bb5 C6 | C6 - Bb5 - - - G5 - | F5 - - - D5 - - - | F5 - - - - - Eb5 F5`;
+
+/** M4, over Cm Cm Ab Ab Eb Eb Bb Bb: a phrase, a rest for the arpeggios to answer, a climbing run. */
+const M4 = `C5 - - Eb5 - - G5 - - - - - . . . . | . . Bb4 - C5 - D5 - Eb5 - - - D5 - C5 -
+          | C5 - - Eb5 - - Ab5 - - - - - . . . . | . . G5 - Ab5 - Bb5 - C6 - - - Bb5 - Ab5 -
+          | G5 - - - - - Eb5 - Bb5 - - - G5 - - - | . . F5 - G5 - Ab5 - G5 - - - F5 - Eb5 -
+          | D5 - - F5 - - Bb5 - - - - - Ab5 - - - | G5 - - - F5 - - - D5 - - - - - - -`;
+
+/**
+ * The Laser track's material, in E minor (5.6a, chosen on the stand): B's five-note arpeggio
+ * under M1 and M2, and B5's two arpeggios with M3 and M4 moved over from C minor — their chords
+ * (Cm Ab Eb Bb) become Em C G D, the same key as B's.
+ */
+const CATHEDRAL = {
+  arps: cycle([
+    { cell: ['E4', 'G4', 'B4', 'E5', 'B4', 'G4'], bars: 2 },
+    { cell: ['E4', 'G4', 'C5', 'E5', 'C5', 'G4'], bars: 2 },
+    { cell: ['D4', 'G4', 'B4', 'D5', 'B4', 'G4'], bars: 2 },
+    { cell: ['D4', 'F#4', 'A4', 'D5', 'A4', 'F#4'], bars: 2 },
+  ]),
+  // M3, down into the warm middle of the range
+  ache: transpose(M3, -8),
+  // M4, up for the chorus, its peak bar rewritten to top out at D6
+  call: transpose(M4, 4)
+    .split('|')
+    .map((bar, i) => (i === 3 ? ' . . A5 - B5 - C6 - D6 - - - C6 - B5 - ' : bar))
+    .join('|'),
+};
+
+// ——— The Outrun track's base, chosen on the stand ———
+
+/** O3: a sunny seven-note up-and-down arpeggio in sixteenths, never landing the same (Bb F Gm Eb). */
+const SUNSET = cycle([
+  { cell: ['Bb3', 'D4', 'F4', 'Bb4', 'D5', 'Bb4', 'F4'], bars: 2 },
+  { cell: ['A3', 'C4', 'F4', 'A4', 'C5', 'A4', 'F4'], bars: 2 },
+  { cell: ['Bb3', 'D4', 'G4', 'Bb4', 'D5', 'Bb4', 'G4'], bars: 2 },
+  { cell: ['Bb3', 'Eb4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 2 },
+]);
+
+// ——— The Outrun track's melody, chosen on the stand, and what grows from it. It sits above the
+// arpeggio's top (E flat 5), so the ear keeps the two apart ———
+
+/** S3, soar, over Bb Bb F F Gm Gm Eb Eb: a singing line moving by step, leaning on the 7th and 9th. */
+const S3 = `D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 - - - - - - -
+          | Bb5 - - - A5 - G5 - | F5 - - - G5 - - - | Bb5 - - - G5 - Eb5 - | F5 - - - - - G5 A5`;
+
+/** S3's harmony a third below, for the chorus (the counter voice, under the melody). */
+const S3_THIRDS = `Bb5 - - - A5 - G5 - | F5 - - - G5 - - - | A5 - - - F5 - D5 - | Eb5 - - - - - - -
+                 | G5 - - - F5 - Eb5 - | D5 - - - Bb4 - - - | G5 - - - Eb5 - C5 - | D5 - - - - - Eb5 F5`;
+
+/**
+ * S3 turned upside down for the bridge, over Gm Gm Eb Eb Bb Bb F F: the motif climbs where it
+ * fell, peaks on the major 7th of E flat, and S3's own head comes back to close it.
+ */
+const S3_TURNED = `G5 - - - A5 - Bb5 - | C6 - - - Bb5 - - - | G5 - - - Bb5 - C6 - | D6 - - - - - - -
+                  | D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 - - - A5 - - -`;
+
+/** The sunset arpeggio over the bridge's turn of the chords (Gm Eb Bb F). */
+const SUNSET_TURN = cycle([
+  { cell: ['Bb3', 'D4', 'G4', 'Bb4', 'D5', 'Bb4', 'G4'], bars: 2 },
+  { cell: ['Bb3', 'Eb4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 2 },
+  { cell: ['Bb3', 'D4', 'F4', 'Bb4', 'D5', 'Bb4', 'F4'], bars: 2 },
+  { cell: ['A3', 'C4', 'F4', 'A4', 'C5', 'A4', 'F4'], bars: 2 },
+]);
 
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
@@ -985,6 +1081,375 @@ const SONG_DEFS: SongDef[] = [
         drums: 'halftime',
         pad: 'swell',
         glitch: 'rewind',
+      },
+    ],
+  },
+  // ——— The new soundtrack (5.6, docs/AUDIO.md). Each track belongs to its backdrop, walks a
+  // form of its own, and keeps its chorus for a hot rally ———
+  {
+    // E minor for the Laser backdrop, built from the sketches chosen on the stand: hypnotic
+    // arpeggios (a five-note cell over four beats, two interlocking ones) carrying melodies on
+    // a polysynth brass lead — M1's arch in the verse, M2's pulse in the second, M3's ache on a
+    // hard-sync lead in the bridge, M4's call at the chorus
+    title: 'Neon Cathedral',
+    bpm: 118,
+    swing: 0,
+    level: -1,
+    scene: 'lasers',
+    kit: 'dark',
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese', glide: 0.04 },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        // The two arpeggios alone, opening slowly: the menus' music too
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        arpLine: CATHEDRAL.arps,
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M1,
+        arpLine: HYPNOTIC.arp,
+        bassLine: HYPNOTIC.bass,
+        drums: 'drive',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3, drums: 0.3 },
+        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M2,
+        arpLine: HYPNOTIC.arp,
+        bassLine: HYPNOTIC.bass,
+        drums: 'darkdrive',
+        fill: 'roll',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.6] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        arpLine: CATHEDRAL.arps,
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Am | B',
+        arp: 'up',
+        bass: 'pulse16',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: CATHEDRAL.call,
+        arpLine: CATHEDRAL.arps,
+        bass: 'drive',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: CATHEDRAL.ache,
+        leadVoice: 'sync',
+        arpLine: CATHEDRAL.arps,
+        bass: 'long',
+        drums: 'four',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { drums: 0.35 },
+        sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
+      },
+    ],
+  },
+  {
+    // B flat major for the Outrun backdrop, built from what was chosen on the stand: the sunset
+    // arpeggio (a seven-note cell over the bar, after Lazerhawk) carrying S3, a line that sings
+    // by step — on a pluck in the verse, on the soft lead after, with its harmony a third below
+    // at the chorus — and turned upside down in the bridge, on the koto
+    title: 'Sunset Strip',
+    bpm: 112,
+    swing: 0,
+    scene: 'outrun',
+    voices: { lead: 'pluck', counter: 'square', arp: 'arpPulse', bass: 'bassFm', glide: 0.04 },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        // The arpeggio alone, opening slowly: the menus' music too
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        arpLine: SUNSET,
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S3,
+        arpLine: SUNSET,
+        bass: 'eighths',
+        drums: 'outrun',
+        fill: 'roll',
+        pad: 'hold',
+        layers: { lead: 0.3, drums: 0.3 },
+        sweep: { arp: [0.4, 1.4] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S3,
+        leadVoice: 'soft',
+        arpLine: SUNSET,
+        bass: 'sync',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.5] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        arpLine: SUNSET,
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Eb | F',
+        arp: 'up',
+        bass: 'drive',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S3,
+        leadVoice: 'soft',
+        counter: S3_THIRDS,
+        arpLine: SUNSET,
+        bass: 'drive',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Gm | Gm | Eb | Eb | Bb | Bb | F | F',
+        lead: S3_TURNED,
+        leadVoice: 'koto',
+        arpLine: SUNSET_TURN,
+        bass: 'walk',
+        drums: 'break',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.4, 1.4], pads: [0.7, 1.2] },
+      },
+    ],
+  },
+  {
+    // D major city pop for the Memphis backdrop, after Tatsuro Yamashita: the Japanese "royal
+    // road" (IVmaj7–V–iii7–vi7), a slapped FM bass, brass stabs, a swing in the hats
+    title: 'Pastel Avenue',
+    bpm: 104,
+    swing: 0.12,
+    level: 1.5,
+    scene: 'memphis',
+    voices: { lead: 'pluck', counter: 'bell', arp: 'triangle', bass: 'bassFm' },
+    form: [
+      'intro',
+      'verse',
+      'answer',
+      'breakdown',
+      'build',
+      'chorus',
+      'verse3',
+      'bridge',
+      'verse',
+      'answer',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse3',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Gmaj7 | F#m7 | Em7 | A7sus4',
+        counter: `D5 . F#5 . A5 . . . | C#5 . E5 . A5 . . . | B4 . D5 . G5 . . . | A4 . . . . . . .`,
+        bass: 'long',
+        arp: 'sparse',
+        drums: 'none',
+        pad: 'swell',
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: `B4 - D5 - F#5 - E5 D5 | C#5 - - - E5 - A4 - | A4 - C#5 - E5 - F#5 E5 | D5 - - - . . B4 C#5
+             | G5 - F#5 - E5 - D5 - | E5 - - - D5 - B4 - | A4 - - - F#4 - A4 - | D5 - - - - - - -`,
+        bass: 'funk',
+        arp: 'broken',
+        drums: 'citypop',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3, arp: 0.45, counter: 0.6 },
+      },
+      {
+        name: 'answer',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: `B4 - D5 - F#5 - - - | . . . . . . . . | A4 - C#5 - E5 - - - | . . . . . . . .
+             | G5 - E5 - D5 - B4 - | . . . . . . . . | A4 - D5 - F#5 - A5 - | F#5 - - - - - - -`,
+        bass: 'funk',
+        arp: 'pulse',
+        drums: 'citypop',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, arp: 0.4, pads: 0.35 },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Em7 | F#m7 | Gmaj7 | A7sus4',
+        counter: `G5 . . . B4 . . . | A4 . . . C#5 . . . | B4 . . . D5 . . . | E5 . . . . . . .`,
+        bass: 'long',
+        arp: 'sparse',
+        drums: 'none',
+        pad: 'swell',
+        silence: 4,
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Bm7 | A7sus4',
+        lead: `B4 - D5 - F#5 - A5 - | G5 - - - A5 - - -`,
+        bass: 'walk',
+        arp: 'up',
+        drums: 'four',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Gmaj7 | A | D | D',
+        lead: `D6 - - - B5 - A5 - | C#6 - - - A5 - E5 - | F#5 - A5 - C#6 - A5 - | B5 - - - F#5 - D5 -
+             | D6 - - - B5 - A5 - | C#6 - - - E5 - A5 - | A5 - - - F#5 - - - | D5 - - - - - - -`,
+        leadVoice: 'saw',
+        bass: 'funk',
+        arp: 'updown',
+        drums: 'citypop',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Em7 | A7sus4 | F#m7 | Bm7',
+        counter: `G5 . E5 . B4 . D5 . | E5 . . . A4 . . . | F#5 . C#5 . A4 . C#5 . | D5 . . . B4 . . .`,
+        bass: 'walk',
+        arp: 'pulse',
+        drums: 'break',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { counter: 0.25 },
+      },
+      {
+        name: 'verse3',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: `B4 - D5 - F#5 - E5 D5 | C#5 - - - E5 - A4 - | A4 - C#5 - E5 - F#5 E5 | D5 - - - . . B4 C#5
+             | G5 - F#5 - E5 - D5 - | E5 - - - D5 - B4 - | A4 - - - F#4 - A4 - | D5 - - - - - - -`,
+        leadVoice: 'square',
+        bass: 'funk',
+        arp: 'up',
+        drums: 'citypop',
+        fill: 'roll',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, arp: 0.45, pads: 0.35 },
       },
     ],
   },

@@ -68,8 +68,8 @@ describe('score', () => {
 });
 
 describe('the soundtrack', () => {
-  it('gives every song a section for each tier', () => {
-    for (const { sections } of SONGS) {
+  it('gives every song a section for each tier (sketches are only a hook)', () => {
+    for (const { sections } of SONGS.filter((song) => !song.sketch)) {
       for (const tier of ['calm', 'groove', 'rise', 'high']) {
         expect(sections.some((section) => section.tier === tier)).toBe(true);
       }
@@ -88,18 +88,18 @@ describe('the soundtrack', () => {
     }
   });
 
-  it('lands the melody on chord tones (or the 9th) on the strong beats', () => {
+  // A strong beat may hold a chord tone or a tension (a 9th, a suspended 4th, a 6th): what gives
+  // a hook its colour. What it may not hold is a note a semitone above a chord tone: the clash
+  // of a minor 9th, which sounds wrong rather than tense
+  it('never clashes a semitone above the chord on the strong beats', () => {
     for (const { title, sections } of SONGS) {
       for (const section of sections) {
         for (const line of [section.lead, section.counter]) {
           line?.forEach((note, step) => {
             if (!note || step % (STEPS_PER_BAR / 2) !== 0) return;
             const chord = chordAt(section, step);
-            const isNinth = (note.note - chord.root - 2) % 12 === 0;
-            expect(
-              isChordTone(chord, note.note) || isNinth,
-              `${title} ${section.name} @${step}`,
-            ).toBe(true);
+            const clashes = !isChordTone(chord, note.note) && isChordTone(chord, note.note - 1);
+            expect(clashes, `${title} ${section.name} @${step}`).toBe(false);
           });
         }
       }

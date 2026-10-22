@@ -57,6 +57,36 @@ export const DRUM_PATTERNS = {
     hat: '..x...x...x...x.',
     taiko: '......x.....x.xX',
   },
+  // Darksynth: a four-on-the-floor under restless sixteenth hats and a clap doubling the snare
+  darkdrive: {
+    kick: 'X...X...X...X...',
+    snare: '....X.......X...',
+    clap: '....x.......x...',
+    hat: 'x.xxx.xxx.xxx.xx',
+    open: '......x.......x.',
+  },
+  // Outrun: a straight kick, the hats accented on the eighths like a revving engine
+  outrun: {
+    kick: 'X...X...X...X...',
+    snare: '....X.......X...',
+    hat: 'xoxoxoxoxoxoxoxo',
+    open: '..............x.',
+  },
+  // City pop: a laid-back kick that skips a beat, a rim ticking between the snares
+  citypop: {
+    kick: 'X.....x.X.......',
+    snare: '....X.......X...',
+    hat: 'x.x.x.x.x.x.x.x.',
+    open: '......x.......x.',
+    perc: '...x......x..x..',
+  },
+  // Euclidean: five kicks spread over the bar, a rim and hats in even spreads of their own
+  euclid: {
+    kick: 'X..x..x..X..x...',
+    snare: '....X.......X...',
+    hat: 'x.xx.x.xx.x.xx.x',
+    perc: '..x....x..x....x',
+  },
   // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
   foundry: {
     kick: 'X...X...X...X.x.',
@@ -105,6 +135,10 @@ export const BASS_PATTERNS = {
   sync: 'R..R..O.R..R.5A.',
   walk: 'R-.R5-.5O-.O5-A.',
   gallop: 'R.RRR.RRR.RRR.OA',
+  // Darksynth: straight sixteenths, the octave on the last one leading on
+  pulse16: 'RRRRRRRRRRRRRROA',
+  // City pop: a slap line, root and octave dancing around the fifth and third
+  funk: 'R..O.R5.R..O3RA.',
 } satisfies Record<string, string>;
 
 export type BassPatternName = keyof typeof BASS_PATTERNS;
@@ -120,6 +154,8 @@ export const ARP_PATTERNS = {
   updown: '0123432101234321',
   broken: '0213243502132435',
   cascade: '7654321076543210',
+  // Three notes against four beats: the hypnotic cross-rhythm of darksynth arpeggios
+  triplet: '0240240240240240',
 } satisfies Record<string, string>;
 
 export type ArpPatternName = keyof typeof ARP_PATTERNS;

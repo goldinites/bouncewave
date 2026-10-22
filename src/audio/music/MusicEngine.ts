@@ -12,9 +12,10 @@ import {
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { PitchedSampleId } from '@/audio/samples/pitched';
+import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
-import { chordAt, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import { chordAt, LeadVoice, MusicLayer, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { StepScheduler } from '@/audio/music/StepScheduler';
 import { placeAbove } from '@/audio/music/theory';
@@ -34,7 +35,7 @@ const TONE_FILTER: Record<GameState, number> = { paused: 450, menu: 2800, play: 
 
 /** A song that plays behind any backdrop, at random: what the music opens with. */
 function pickSharedSong(): number {
-  const shared = SONGS.flatMap((song, i) => (song.scene === undefined ? [i] : []));
+  const shared = SONGS.flatMap((song, i) => (song.scene === undefined && !song.sketch ? [i] : []));
   return shared[Math.floor(Math.random() * shared.length)] ?? 0;
 }
 
@@ -61,6 +62,9 @@ export interface MusicPosition {
 export class MusicEngine {
   private graph: MusicGraph | null = null;
   private instruments: Instruments | null = null;
+  private arrangement: Arrangement | null = null;
+  private isGlideOn = true;
+  private leadOverride: LeadVoice | null = null;
   private samples = new SampleBank();
   private readonly harmony = new HarmonyTimeline(HARMONY_HISTORY);
 
@@ -97,7 +101,11 @@ export class MusicEngine {
     this.samples = samples;
     this.instruments = new Instruments(graph, samples);
     const arrangement = new Arrangement(this.instruments, graph, this.mutedLayers);
+    arrangement.isGlideOn = this.isGlideOn;
+    arrangement.leadOverride = this.leadOverride;
+    this.arrangement = arrangement;
     this.graph = graph;
+    this.prepare(this.conductor.song);
 
     this.scheduler = new StepScheduler(
       audioContext,
@@ -274,6 +282,44 @@ export class MusicEngine {
     }
   }
 
+  /**
+   * The listening stand plays every lead on another voice, null for the songs' own; a voice only
+   * auditioned (audio/samples/leads.ts) is rendered first, the live supersaw standing in meanwhile.
+   */
+  public setLeadVoice(voice: LeadVoice | null): void {
+    this.leadOverride = voice;
+    if (this.arrangement) this.arrangement.leadOverride = voice;
+    if (voice) this.renderLeads([voice]);
+  }
+
+  /**
+   * Renders the extra leads (audio/samples/leads.ts) a song plays, ahead of it: called while it
+   * waits its turn, so they are ready by its first bar. A lead already rendered is skipped.
+   */
+  private prepare(song: Song): void {
+    const voices = [
+      song.voices.lead,
+      song.voices.counter,
+      ...song.sections.map((s) => s.leadVoice),
+    ];
+    this.renderLeads(voices.filter((voice): voice is LeadVoice => voice !== undefined));
+  }
+
+  private renderLeads(voices: LeadVoice[]): void {
+    if (!this.graph) return;
+    for (const voice of voices) {
+      const id = EXTRA_LEAD_FOR[voice];
+      if (id)
+        void this.samples.renderPitched(this.graph.context.sampleRate, { [id]: EXTRA_LEADS[id] });
+    }
+  }
+
+  /** The listening stand switches the lead's portamento off and on, to compare. */
+  public setGlide(isOn: boolean): void {
+    this.isGlideOn = isOn;
+    if (this.arrangement) this.arrangement.isGlideOn = isOn;
+  }
+
   /** The listening stand silences a part of the arrangement, or brings it back. */
   public setLayerMuted(layer: MusicLayer, isMuted: boolean): void {
     if (isMuted) this.mutedLayers.add(layer);
@@ -362,6 +408,8 @@ export class MusicEngine {
     if (stepInBar === 0 && this.currentStep > 0) conductor.advance();
     if (stepInBar === PLAN_STEP) {
       conductor.plan(this.wantedTier());
+      // The song the next bar plays gets its extra leads rendered now, if it needs any
+      this.prepare(conductor.upcomingSong);
     }
 
     const { song, section, bar } = conductor;

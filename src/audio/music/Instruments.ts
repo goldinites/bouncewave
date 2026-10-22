@@ -1,6 +1,7 @@
 import { DrumKit, DrumRole } from '@/audio/music/kits';
 import { MusicGraph, PAD_SPREAD } from '@/audio/music/MusicGraph';
 import { ArpVoice, BassVoice, LeadVoice } from '@/audio/music/score';
+import { ExtraLeadId } from '@/audio/samples/leads';
 import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { TransitionSampleId } from '@/audio/samples/transitions';
@@ -52,10 +53,14 @@ const LIVE_BASS: Record<BassVoice, OscillatorType> = {
 const LIVE_ARP: Record<ArpVoice, OscillatorType> = { arpPulse: 'square', pluck: 'sawtooth' };
 const OSCILLATOR_TYPES: readonly string[] = ['sine', 'square', 'sawtooth', 'triangle'];
 // Lead voices that have a rendered instrument
-const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId>> = {
+const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId | ExtraLeadId>> = {
   saw: 'supersaw',
   square: 'squareLead',
   pluck: 'pluck',
+  soft: 'leadSoft',
+  brass: 'leadBrass',
+  sync: 'leadSync',
+  pwm: 'leadPwm',
 };
 // A rendered note is played a touch louder or softer each time, never out of tune
 const NOTE_HUMANIZE = 0.05; // ± share of the volume
@@ -71,6 +76,8 @@ interface NoteShape {
   cutoff?: { from: number; to: number; over: number };
   /** Vibrato fading in on held notes. */
   vibrato?: boolean;
+  /** Portamento: the note slides in from this MIDI note over `glide.time` seconds. */
+  glide?: { from: number; time: number };
 }
 
 export class Instruments {
@@ -139,7 +146,7 @@ export class Instruments {
    * @returns false if the instrument isn't rendered yet (play the live synth instead)
    */
   private playNote(
-    id: PitchedSampleId,
+    id: PitchedSampleId | ExtraLeadId,
     midiNote: number,
     time: number,
     duration: number,
@@ -156,7 +163,14 @@ export class Instruments {
 
     const source = this.ac.createBufferSource();
     source.buffer = note.buffer;
-    source.playbackRate.value = note.rate;
+    if (shape.glide) {
+      // Slide from the note before, as a synth lead held over legato does
+      const from = note.rate * 2 ** ((shape.glide.from - midiNote) / 12);
+      source.playbackRate.setValueAtTime(from, time);
+      source.playbackRate.exponentialRampToValueAtTime(note.rate, time + shape.glide.time);
+    } else {
+      source.playbackRate.value = note.rate;
+    }
     if (note.loop) {
       source.loop = true;
       source.loopStart = note.loop.start;
@@ -348,6 +362,7 @@ export class Instruments {
     volume: number,
     destination: AudioNode,
     filterCutoff: number,
+    glide?: { from: number; time: number },
   ): void {
     const sampled = SAMPLED_LEADS[voice];
     if (sampled) {
@@ -366,6 +381,7 @@ export class Instruments {
               release: 0.12,
               cutoff: { from: filterCutoff * 1.6, to: filterCutoff, over: 0.2 },
               vibrato: true,
+              glide,
             };
       if (this.playNote(sampled, midiNote, time, duration, volume, destination, shape)) return;
     }
@@ -385,6 +401,10 @@ export class Instruments {
       case 'saw':
       case 'square':
         this.sustainedLead(voice, midiNote, time, duration, volume, destination, filterCutoff);
+        return;
+      default:
+        // An auditioned voice not rendered yet: the live supersaw meanwhile
+        this.sustainedLead('saw', midiNote, time, duration, volume, destination, filterCutoff);
     }
   }
 

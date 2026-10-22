@@ -27,11 +27,13 @@ const def = (title: string): SongDef => ({
 
 const SONGS = [compileSong(def('One')), compileSong(def('Two'))];
 const THREE = [...SONGS, compileSong(def('Three'))];
-// Two shared songs, then one that belongs to the city and one to the lasers
+// Two shared songs, then the city's and the lasers' own (quick match), and the warehouse's
+// (a challenge)
 const WITH_SCENES = [
   ...SONGS,
   compileSong({ ...def('City'), scene: 'neonCity' }),
   compileSong({ ...def('Lasers'), scene: 'lasers' }),
+  compileSong({ ...def('Floor'), scene: 'warehouse' }),
 ];
 
 /** Plays `bars` bars wanting `tier`; returns the section name of every bar played. */
@@ -143,20 +145,22 @@ describe('Conductor', () => {
       expect(conductor.song.title).toBe('City');
     });
 
-    it('never picks another backdrop’s song, at random or on a skip', () => {
+    it('lets another quick-match backdrop’s song follow, at random or on a skip', () => {
+      const titles = new Set<string>();
       for (const roll of [0, 0.3, 0.6, 0.99]) {
         const conductor = new Conductor(WITH_SCENES, 2, 'groove', () => roll);
         conductor.enterScene('outrun');
         play(conductor, 'calm', 2);
-        expect(['One', 'Two']).toContain(conductor.song.title);
-
+        titles.add(conductor.song.title);
         conductor.skip('groove');
         conductor.advance();
-        expect(['One', 'Two']).toContain(conductor.song.title);
+        titles.add(conductor.song.title);
       }
+      // The shared songs and the other quick-match backdrops' own, never a challenge's
+      expect(titles).toEqual(new Set(['One', 'Two', 'City', 'Lasers']));
     });
 
-    it('moves on to the shared songs after the backdrop’s own one', () => {
+    it('moves on from the backdrop’s own song to the other quick-match songs', () => {
       const titles = new Set<string>();
       for (const roll of [0, 0.5, 0.99]) {
         const conductor = new Conductor(WITH_SCENES, 0, 'groove', () => roll);
@@ -167,7 +171,20 @@ describe('Conductor', () => {
         conductor.advance();
         titles.add(conductor.song.title);
       }
-      expect(titles).toEqual(new Set(['One', 'Two']));
+      expect(titles).toEqual(new Set(['One', 'Two', 'Lasers']));
+    });
+
+    it('keeps a challenge’s backdrop on its own song', () => {
+      for (const roll of [0, 0.5, 0.99]) {
+        const conductor = new Conductor(WITH_SCENES, 0, 'groove', () => roll);
+        conductor.enterScene('warehouse');
+        conductor.skip('groove'); // to the warehouse's own song
+        conductor.advance();
+        expect(conductor.song.title).toBe('Floor');
+        conductor.skip('groove');
+        conductor.advance();
+        expect(conductor.song.title).toBe('Floor');
+      }
     });
   });
 

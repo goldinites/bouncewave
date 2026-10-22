@@ -5,6 +5,7 @@ import {
   filter,
   hit,
   jitter,
+  level,
   metalCluster,
   noiseSource,
   room,
@@ -14,13 +15,6 @@ import {
 // Seconds a swell takes to stop once it peaks: short enough to land on the downbeat, long enough
 // not to click
 const SWELL_STOP = 0.012;
-
-/** A gain fixed at `value`. */
-function level(ctx: BaseAudioContext, value: number): GainNode {
-  const gain = ctx.createGain();
-  gain.gain.value = value;
-  return gain;
-}
 
 /** A gain that swells from nothing to `peak` by `end`, then stops in SWELL_STOP. */
 function swell(ctx: BaseAudioContext, peak: number, end: number): GainNode {
