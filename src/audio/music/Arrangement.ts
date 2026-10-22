@@ -237,7 +237,7 @@ export class Arrangement {
 
     if (this.plays('pads')) this.playHarmony(time, sectionStep, chord, context);
     if (this.plays('bass')) this.playBass(time, chord, context);
-    if (section.arp && this.plays('arp')) this.playArp(time, chord, context);
+    if ((section.arp || section.arpLine) && this.plays('arp')) this.playArp(time, chord, context);
 
     const leadVoice = section.leadVoice ?? song.voices.lead;
     if (this.plays('lead')) {
@@ -373,7 +373,23 @@ export class Arrangement {
 
   private playBass(time: number, chord: Chord, context: StepContext): void {
     const { section, stepInBar: s, stepDuration, intensity: I, song } = context;
-    const pattern = BASS_PATTERNS[section.bass];
+    const line = section.bassLine;
+    if (line) {
+      // A written riff plays as written: it is the track's hook, not to be varied at random
+      const written = line[context.bar * STEPS_PER_BAR + s];
+      if (!written) return;
+      this.play.bass(
+        song.voices.bass,
+        written.note,
+        time,
+        stepDuration * (written.steps - 0.1),
+        BASS_VOLUME + 0.08 * I,
+        this.bass,
+        450 + I * 1500,
+      );
+      return;
+    }
+    const pattern = BASS_PATTERNS[section.bass ?? 'long'];
     // The approach note aims at the chord after this one: halfway through the bar, or the next bar
     const next = s < 8 ? chordAt(section, context.bar * STEPS_PER_BAR + 8) : context.nextBarChord;
     // On a repeat the root sometimes jumps up an octave
@@ -394,12 +410,20 @@ export class Arrangement {
 
   private playArp(time: number, chord: Chord, context: StepContext): void {
     const { section, stepInBar: s, stepDuration, intensity: I, song, difficulty } = context;
-    // On a repeat the pattern is read a little ahead on every second bar
-    const token = ARP_PATTERNS[section.arp!][(s + this.variation.arpShift) % STEPS_PER_BAR];
-    if (token === '.') return;
+    let note: number;
+    if (section.arpLine) {
+      // A written ostinato plays as written
+      const written = section.arpLine[context.bar * STEPS_PER_BAR + s];
+      if (!written) return;
+      note = written.note;
+    } else {
+      // On a repeat the pattern is read a little ahead on every second bar
+      const token = ARP_PATTERNS[section.arp!][(s + this.variation.arpShift) % STEPS_PER_BAR];
+      if (token === '.') return;
+      note = arpNote(chord, Number(token));
+    }
 
     const signature = DIFFICULTY_SIGNATURES[difficulty];
-    const note = arpNote(chord, Number(token));
     const volume = ARP_VOLUME * (0.5 + 0.5 * I);
     const cutoff = (1400 + I * 2600) * signature.leadBrightness;
     this.play.arp(song.voices.arp, note, time, stepDuration * 1.6, volume, this.melody, cutoff);

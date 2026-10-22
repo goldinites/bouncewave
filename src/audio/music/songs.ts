@@ -1386,6 +1386,159 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  // ——— Sketches for the Laser backdrop's track: three hooks to choose between on the stand,
+  // each as it sounds in a rally (hook) and at the peak (hot). Never played by the game ———
+  {
+    // A: the riff carries it, after Carpenter Brut — a driven bass in F phrygian, its flat
+    // second (G flat) the menace; the lead only answers, in syncopated stabs
+    title: 'Lasers A Riff',
+    bpm: 118,
+    swing: 0,
+    level: -2,
+    sketch: true,
+    kit: 'dark',
+    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Fm | Fm | Gb | Fm | Fm | Fm | Db | C',
+        bassLine: `F1 F1 F2 F1 . F1 Eb2 F1 F1 F1 F2 F1 . Ab1 Gb1 F1
+                 | F1 F1 F2 F1 . F1 Eb2 F1 F1 F1 F2 F1 . C2 Db2 C2
+                 | Gb1 Gb1 Gb2 Gb1 . Gb1 F2 Gb1 Gb1 Gb1 Gb2 Gb1 . Ab1 Gb1 F1
+                 | F1 F1 F2 F1 . F1 Eb2 F1 F1 . F1 . F2 . Eb2 Db2
+                 | F1 F1 F2 F1 . F1 Eb2 F1 F1 F1 F2 F1 . Ab1 Gb1 F1
+                 | F1 F1 F2 F1 . F1 Eb2 F1 F1 F1 F2 F1 . C2 Db2 C2
+                 | Db2 Db2 Ab1 Db2 . Db2 Ab1 Db2 Db2 Db2 Ab1 Db2 . Eb2 Db2 C2
+                 | C2 C2 G1 C2 . C2 G1 C2 C2 . C2 . G1 . E2 G2`,
+        lead: `. . . . Ab5 - . C6 - . Db6 - C6 - - - | . . . . Ab5 - . C6 - . Bb5 - Ab5 - Gb5 -
+             | . . . . Bb5 - . Db6 - . C6 - Bb5 - - - | F5 - - - - - - - . . . . . . . .
+             | . . . . Ab5 - . C6 - . Db6 - C6 - - - | . . . . Ab5 - . C6 - . Bb5 - C6 - Db6 -
+             | . . . . F5 - . Ab5 - . C6 - Ab5 - - - | E5 - - - G5 - - - C6 - - - - - - -`,
+        drums: 'darkdrive',
+        fill: 'roll',
+        pad: 'hold',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Db | Eb | Fm | Fm | Db | Eb | C | C',
+        lead: `Ab5 - Ab5 - F5 - Ab5 - Db6 - - - C6 - Ab5 - | G5 - G5 - Eb5 - G5 - Bb5 - - - Ab5 - G5 -
+             | Ab5 - Ab5 - F5 - Ab5 - C6 - - - Db6 - C6 - | F5 - - - - - - - . . . . . . . .
+             | Ab5 - Ab5 - F5 - Ab5 - Db6 - - - C6 - Ab5 - | G5 - G5 - Eb5 - G5 - Bb5 - - - C6 - Db6 -
+             | C6 - - - G5 - - - E5 - - - G5 - - - | C6 - - - - - - - . . . . . . . .`,
+        bass: 'pulse16',
+        arp: 'triplet',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // B: hypnotic, after M|O|O|N's "Hydrogen" — a five-note arpeggio cycling over four beats,
+    // so its accent lands somewhere new every time; long sighing notes above, a pulsing bass
+    title: 'Lasers B Hypnotic',
+    bpm: 118,
+    swing: 0,
+    level: -1.5,
+    sketch: true,
+    kit: 'dark',
+    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        arpLine: `E4 G4 B4 E5 B4 E4 G4 B4 E5 B4 E4 G4 B4 E5 B4 E4
+                | G4 B4 E5 B4 E4 G4 B4 E5 B4 E4 G4 B4 E5 B4 E4 G4
+                | C5 E5 C5 E4 G4 C5 E5 C5 E4 G4 C5 E5 C5 E4 G4 C5
+                | E5 C5 E4 G4 C5 E5 C5 E4 G4 C5 E5 C5 E4 G4 C5 E5
+                | C5 E4 A4 C5 E5 C5 E4 A4 C5 E5 C5 E4 A4 C5 E5 C5
+                | E4 A4 C5 E5 C5 E4 A4 C5 E5 C5 E4 A4 C5 E5 C5 E4
+                | F#4 B4 D#5 B4 D#4 F#4 B4 D#5 B4 D#4 F#4 B4 D#5 B4 D#4 F#4
+                | B4 D#5 B4 D#4 F#4 B4 D#5 B4 D#4 F#4 B4 D#5 B4 D#4 F#4 B4`,
+        bassLine: `E1 . E1 . E2 . E1 . E1 . E1 . E2 . D2 . | E1 . E1 . E2 . E1 . E1 . E1 . E2 . G1 .
+                 | C2 . C2 . C2 . G1 . C2 . C2 . G1 . B1 . | C2 . C2 . C2 . G1 . C2 . C2 . E2 . G1 .
+                 | A1 . A1 . A2 . A1 . A1 . A1 . A2 . G1 . | A1 . A1 . A2 . A1 . A1 . A1 . E2 . A1 .
+                 | B1 . B1 . B1 . F#1 . B1 . B1 . D#2 . F#2 . | B1 . B1 . B1 . F#1 . B1 . B1 . A1 . F#1 .`,
+        counter: `B4 - - - - - - - | . . . . . . . . | C5 - - - - - - - | . . . . . . . .
+                | C5 - - - E5 - - - | . . . . . . . . | D#5 - - - F#5 - - - | B4 - - - - - - -`,
+        drums: 'drive',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { counter: 0.3 },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        arpLine: `E4 G4 B4 E5 B4 E4 G4 B4 E5 B4 E4 G4 B4 E5 B4 E4
+                | G4 B4 E5 B4 E4 G4 B4 E5 B4 E4 G4 B4 E5 B4 E4 G4
+                | C5 E5 C5 E4 G4 C5 E5 C5 E4 G4 C5 E5 C5 E4 G4 C5
+                | E5 C5 E4 G4 C5 E5 C5 E4 G4 C5 E5 C5 E4 G4 C5 E5
+                | C5 E4 A4 C5 E5 C5 E4 A4 C5 E5 C5 E4 A4 C5 E5 C5
+                | E4 A4 C5 E5 C5 E4 A4 C5 E5 C5 E4 A4 C5 E5 C5 E4
+                | F#4 B4 D#5 B4 D#4 F#4 B4 D#5 B4 D#4 F#4 B4 D#5 B4 D#4 F#4
+                | B4 D#5 B4 D#4 F#4 B4 D#5 B4 D#4 F#4 B4 D#5 B4 D#4 F#4 B4`,
+        lead: `B5 - - - - - - - | A5 - - - G5 - F#5 - | E5 - - - - - - - | G5 - - - E5 - C5 -
+             | A5 - - - - - - - | C6 - - - B5 - A5 - | B5 - - - - - - - | F#5 - - - D#5 - - -`,
+        bass: 'pulse16',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // C: the anthem, after Perturbator's "Future Club" — a lead in a 3+3+2 rhythm of repeated
+    // notes that leaps at the end of each phrase, two chords to the bar, D dorian's bright B flat
+    title: 'Lasers C Anthem',
+    bpm: 118,
+    swing: 0,
+    level: 2,
+    sketch: true,
+    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Dm Bb | C Am | Dm Bb | C A | Dm Bb | C Am | Dm Bb | C A',
+        lead: `A5 - - A5 - - A5 - G5 - - F5 - - D5 - | G5 - - G5 - - G5 - E5 - - E5 - - C5 -
+             | A5 - - A5 - - A5 - D6 - - C6 - - Bb5 - | C6 - - - - - - - C#6 - - - - - - -
+             | F5 - - F5 - - F5 - D5 - - F5 - - A5 - | G5 - - G5 - - G5 - A5 - - G5 - - E5 -
+             | A5 - - A5 - - D6 - D6 - - C6 - - Bb5 - | G5 - - - - - - - E5 - - - - - - -`,
+        bassLine: `D2 . D1 . D2 . D1 . Bb1 . Bb1 . F2 . Bb1 . | C2 . C2 . G1 . C2 . A1 . A1 . E2 . A1 .
+                 | D2 . D1 . D2 . D1 . Bb1 . Bb1 . F2 . Bb1 . | C2 . C2 . G1 . C2 . A1 . C#2 . E2 . A1 .`,
+        arp: 'broken',
+        drums: 'outrun',
+        fill: 'roll',
+        pad: 'hold',
+        layers: { arp: 0.45 },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Dm Bb | C Am | Dm Bb | C A | Dm Bb | C Am | Dm Bb | C A',
+        lead: `A5 - - A5 - - A5 - G5 - - F5 - - D5 - | G5 - - G5 - - G5 - E5 - - E5 - - C5 -
+             | A5 - - A5 - - A5 - D6 - - C6 - - Bb5 - | C6 - - - - - - - C#6 - - - - - - -
+             | F5 - - F5 - - F5 - D5 - - F5 - - A5 - | G5 - - G5 - - G5 - A5 - - G5 - - E5 -
+             | A5 - - A5 - - D6 - D6 - - C6 - - Bb5 - | G5 - - - - - - - E5 - - - - - - -`,
+        counter: `F5 - - - D5 - - - | E5 - - - C5 - - - | F5 - - - F5 - - - | E5 - - - E5 - - -`,
+        bassLine: `D2 . D1 . D2 . D1 . Bb1 . Bb1 . F2 . Bb1 . | C2 . C2 . G1 . C2 . A1 . A1 . E2 . A1 .
+                 | D2 . D1 . D2 . D1 . Bb1 . Bb1 . F2 . Bb1 . | C2 . C2 . G1 . C2 . A1 . C#2 . E2 . A1 .`,
+        arp: 'updown',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);

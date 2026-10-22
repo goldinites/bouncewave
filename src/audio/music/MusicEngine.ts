@@ -34,7 +34,7 @@ const TONE_FILTER: Record<GameState, number> = { paused: 450, menu: 2800, play: 
 
 /** A song that plays behind any backdrop, at random: what the music opens with. */
 function pickSharedSong(): number {
-  const shared = SONGS.flatMap((song, i) => (song.scene === undefined ? [i] : []));
+  const shared = SONGS.flatMap((song, i) => (song.scene === undefined && !song.sketch ? [i] : []));
   return shared[Math.floor(Math.random() * shared.length)] ?? 0;
 }
 

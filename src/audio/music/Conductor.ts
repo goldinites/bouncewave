@@ -417,10 +417,12 @@ export class Conductor {
     const scene = this.scene;
     const isQuickMatch = scene === null || isPickableScene(scene);
     const hasOwn = this.songs.some((song) => song.scene !== undefined && song.scene === scene);
-    const fits = (song: Song) =>
-      song.scene === undefined ||
-      song.scene === scene ||
-      (isQuickMatch && isPickableScene(song.scene));
+    // Sketches are for the stand only
+    const fits = (song: Song) => {
+      if (song.sketch) return false;
+      if (song.scene === undefined) return true;
+      return song.scene === scene || (isQuickMatch && isPickableScene(song.scene));
+    };
     const candidates = this.songs.flatMap((song, i) =>
       excluded.has(i) || !fits(song) || (!isQuickMatch && hasOwn && song.scene !== scene)
         ? []

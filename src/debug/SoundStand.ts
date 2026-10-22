@@ -108,7 +108,10 @@ export class SoundStand {
 
     this.songSelect = this.select('song', [
       ['', '— the game’s —'],
-      ...SONGS.map((song): [string, string] => [song.id, song.title]),
+      ...SONGS.map((song): [string, string] => [
+        song.id,
+        song.sketch ? `✎ ${song.title}` : song.title,
+      ]),
     ]);
     this.partSelect = this.select('part', []);
     this.on(this.songSelect, 'change', () => {

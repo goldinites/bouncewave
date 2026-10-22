@@ -38,17 +38,56 @@ describe('the soundtrack', () => {
     }
   });
 
+  it('keeps every written bass and arpeggio note where its rendered instrument sounds natural', () => {
+    for (const song of SONGS) {
+      for (const section of song.sections) {
+        const lines: [string, typeof section.bassLine][] = [
+          [song.voices.bass, section.bassLine],
+          [song.voices.arp, section.arpLine],
+        ];
+        for (const [voice, line] of lines) {
+          if (!line || !(voice in PITCHED_SAMPLES)) continue;
+          const { roots } = PITCHED_SAMPLES[voice as PitchedSampleId];
+          for (const note of line) {
+            if (!note) continue;
+            const where = `${song.title} ${section.name} ${voice}`;
+            expect(note.note, where).toBeGreaterThanOrEqual(roots[0] - STRETCH);
+            expect(note.note, where).toBeLessThanOrEqual(roots[roots.length - 1] + STRETCH);
+          }
+        }
+      }
+    }
+  });
+
   it('gives each backdrop one song of its own at most', () => {
     const scenes = SONGS.flatMap((song) => (song.scene ? [song.scene] : []));
     expect(new Set(scenes).size).toBe(scenes.length);
     expect(scenes.every(isSceneId)).toBe(true);
   });
 
-  it('gives every song with a form a calm part for the menus and a peak to earn', () => {
-    for (const song of SONGS) {
+  it('gives every song a calm part for the menus and a peak to earn (sketches: a hook)', () => {
+    for (const song of SONGS.filter((s) => !s.sketch)) {
       const tiers = new Set(song.form.map((i) => song.sections[i].tier));
       expect(tiers.has('calm'), song.title).toBe(true);
       expect(tiers.has('high'), song.title).toBe(true);
+    }
+  });
+});
+
+describe('sketches', () => {
+  it('are never played by the game: no backdrop, never picked as the next song', async () => {
+    const { Conductor } = await import('@/audio/music/Conductor');
+    const sketches = SONGS.filter((song) => song.sketch);
+    expect(sketches.length).toBeGreaterThan(0);
+    expect(sketches.every((song) => song.scene === undefined)).toBe(true);
+    for (const roll of [0, 0.25, 0.5, 0.75, 0.99]) {
+      const conductor = new Conductor(SONGS, 0, 'groove', () => roll);
+      conductor.enterScene('lasers');
+      for (let i = 0; i < 6; i++) {
+        conductor.skip('groove');
+        conductor.advance();
+        expect(conductor.song.sketch, conductor.song.title).toBeFalsy();
+      }
     }
   });
 });
