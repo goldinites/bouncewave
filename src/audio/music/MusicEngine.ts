@@ -12,9 +12,10 @@ import {
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { PitchedSampleId } from '@/audio/samples/pitched';
+import { AUDITION_LEADS, AuditionLeadId } from '@/audio/samples/leads';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
-import { chordAt, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import { chordAt, LeadVoice, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { StepScheduler } from '@/audio/music/StepScheduler';
 import { placeAbove } from '@/audio/music/theory';
@@ -63,6 +64,7 @@ export class MusicEngine {
   private instruments: Instruments | null = null;
   private arrangement: Arrangement | null = null;
   private isGlideOn = true;
+  private leadOverride: LeadVoice | null = null;
   private samples = new SampleBank();
   private readonly harmony = new HarmonyTimeline(HARMONY_HISTORY);
 
@@ -100,6 +102,7 @@ export class MusicEngine {
     this.instruments = new Instruments(graph, samples);
     const arrangement = new Arrangement(this.instruments, graph, this.mutedLayers);
     arrangement.isGlideOn = this.isGlideOn;
+    arrangement.leadOverride = this.leadOverride;
     this.arrangement = arrangement;
     this.graph = graph;
 
@@ -275,6 +278,25 @@ export class MusicEngine {
         return play.pad([57, 60, 64, 67], at(0), 2.5, 0.03, 2500, false);
       case 'brass':
         return line([0, 0, 1], 1.5, (_, time) => play.stab([57, 60, 64], time, 0.3, 0.06));
+    }
+  }
+
+  /**
+   * The listening stand plays every lead on another voice, null for the songs' own; a voice only
+   * auditioned (audio/samples/leads.ts) is rendered first, the live supersaw standing in meanwhile.
+   */
+  public setLeadVoice(voice: LeadVoice | null): void {
+    this.leadOverride = voice;
+    if (this.arrangement) this.arrangement.leadOverride = voice;
+    const audition: Partial<Record<LeadVoice, AuditionLeadId>> = {
+      soft: 'leadSoft',
+      brass: 'leadBrass',
+      sync: 'leadSync',
+      pwm: 'leadPwm',
+    };
+    const id = voice && audition[voice];
+    if (id && this.graph) {
+      void this.samples.renderPitched(this.graph.context.sampleRate, { [id]: AUDITION_LEADS[id] });
     }
   }
 

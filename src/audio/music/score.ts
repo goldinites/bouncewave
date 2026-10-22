@@ -36,7 +36,18 @@ export type Tier = 'calm' | 'groove' | 'rise' | 'high';
  * Synth voices a melody can be played on. Koto is a plucked string that snaps up into pitch;
  * flute is a breathy, shakuhachi-like sine that scoops into each note.
  */
-export type LeadVoice = 'saw' | 'square' | 'bell' | 'pluck' | 'koto' | 'flute';
+export type LeadVoice =
+  | 'saw'
+  | 'square'
+  | 'bell'
+  | 'pluck'
+  | 'koto'
+  | 'flute'
+  // Auditioned on the stand (audio/samples/leads.ts): soft, brass, hard-sync and PWM leads
+  | 'soft'
+  | 'brass'
+  | 'sync'
+  | 'pwm';
 
 /** The rendered basses (audio/samples/pitched.ts); a plain oscillator type plays live. */
 export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808';

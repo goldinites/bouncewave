@@ -92,6 +92,10 @@ const LEAD_VOLUME: Record<LeadVoice, number> = {
   pluck: 0.09,
   koto: 0.1,
   flute: 0.085,
+  soft: 0.1,
+  brass: 0.07,
+  sync: 0.06,
+  pwm: 0.07,
 };
 const COUNTER_SHARE = 0.55;
 const ARP_VOLUME = 0.045;
@@ -182,6 +186,8 @@ export class Arrangement {
   private lastLead: { note: number; end: number } | null = null;
   /** The listening stand can switch portamento off, to hear the melody without it. */
   public isGlideOn = true;
+  /** The listening stand can play the lead on another voice, to hear the tune in another sound. */
+  public leadOverride: LeadVoice | null = null;
   /** The layers the heat has brought in this bar (updateLayers). */
   private readonly layersIn = new Set<MusicLayer>();
   /** The section the layers were last decided for. */
@@ -258,7 +264,7 @@ export class Arrangement {
     if (this.plays('bass')) this.playBass(time, chord, context);
     if ((section.arp || section.arpLine) && this.plays('arp')) this.playArp(time, chord, context);
 
-    const leadVoice = section.leadVoice ?? song.voices.lead;
+    const leadVoice = this.leadOverride ?? section.leadVoice ?? song.voices.lead;
     if (this.plays('lead')) {
       this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context, true);
     }

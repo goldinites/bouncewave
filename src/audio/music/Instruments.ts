@@ -1,6 +1,7 @@
 import { DrumKit, DrumRole } from '@/audio/music/kits';
 import { MusicGraph, PAD_SPREAD } from '@/audio/music/MusicGraph';
 import { ArpVoice, BassVoice, LeadVoice } from '@/audio/music/score';
+import { AuditionLeadId } from '@/audio/samples/leads';
 import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { TransitionSampleId } from '@/audio/samples/transitions';
@@ -52,10 +53,14 @@ const LIVE_BASS: Record<BassVoice, OscillatorType> = {
 const LIVE_ARP: Record<ArpVoice, OscillatorType> = { arpPulse: 'square', pluck: 'sawtooth' };
 const OSCILLATOR_TYPES: readonly string[] = ['sine', 'square', 'sawtooth', 'triangle'];
 // Lead voices that have a rendered instrument
-const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId>> = {
+const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId | AuditionLeadId>> = {
   saw: 'supersaw',
   square: 'squareLead',
   pluck: 'pluck',
+  soft: 'leadSoft',
+  brass: 'leadBrass',
+  sync: 'leadSync',
+  pwm: 'leadPwm',
 };
 // A rendered note is played a touch louder or softer each time, never out of tune
 const NOTE_HUMANIZE = 0.05; // ± share of the volume
@@ -141,7 +146,7 @@ export class Instruments {
    * @returns false if the instrument isn't rendered yet (play the live synth instead)
    */
   private playNote(
-    id: PitchedSampleId,
+    id: PitchedSampleId | AuditionLeadId,
     midiNote: number,
     time: number,
     duration: number,
@@ -396,6 +401,10 @@ export class Instruments {
       case 'saw':
       case 'square':
         this.sustainedLead(voice, midiNote, time, duration, volume, destination, filterCutoff);
+        return;
+      default:
+        // An auditioned voice not rendered yet: the live supersaw meanwhile
+        this.sustainedLead('saw', midiNote, time, duration, volume, destination, filterCutoff);
     }
   }
 

@@ -1,10 +1,24 @@
 import { AudioEngine } from '@/audio/AudioEngine';
-import { MUSIC_LAYERS, MusicLayer } from '@/audio/music/score';
+import { LeadVoice, MUSIC_LAYERS, MusicLayer } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
+
+// The lead voices the stand can put a melody on, the auditioned ones last
+const LEAD_VOICES: LeadVoice[] = [
+  'saw',
+  'square',
+  'pluck',
+  'bell',
+  'koto',
+  'flute',
+  'soft',
+  'brass',
+  'sync',
+  'pwm',
+];
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
 
@@ -120,6 +134,15 @@ export class SoundStand {
     });
     this.on(this.partSelect, 'change', () => this.audition());
 
+    const leadSelect = this.select('leadVoice', [
+      ['', 'lead: the song’s'],
+      ...LEAD_VOICES.map((voice): [string, string] => [voice, `lead: ${voice}`]),
+    ]);
+    this.on(leadSelect, 'change', () => {
+      this.audio.unlock();
+      this.audio.music.setLeadVoice((leadSelect.value || null) as LeadVoice | null);
+    });
+
     const transport = this.row(
       this.button('↻ transition', () => this.audio.music.replayTransition()),
       this.button('drop', () => this.audio.music.triggerDrop()),
@@ -131,6 +154,7 @@ export class SoundStand {
     this.body.append(
       this.songSelect,
       this.partSelect,
+      leadSelect,
       transport,
       this.slider('intensity', (level) => this.audio.music.pinIntensity(level)),
       this.slider('climax', (level) => this.audio.music.pinClimax(level)),
