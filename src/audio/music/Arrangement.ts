@@ -16,6 +16,8 @@ import {
   chordAt,
   LeadVoice,
   MelodyNote,
+  MUSIC_LAYERS,
+  MusicLayer,
   Section,
   Song,
   STEPS_PER_BAR,
@@ -24,15 +26,6 @@ import {
 import { Chord, placeAbove, voiceChord } from '@/audio/music/theory';
 import { DifficultyLevel } from '@/match/difficulty';
 import { clamp } from '@/shared/math';
-
-/**
- * The parts the listening stand can silence one by one: drums (crashes included), bass, pads
- * (and stabs), arpeggio (and the climax sparkle), lead, counter-melody, and fx (risers and a
- * song's faults).
- */
-export const MUSIC_LAYERS = ['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as const;
-
-export type MusicLayer = (typeof MUSIC_LAYERS)[number];
 
 /** Everything that decides what one 16th-note step plays. */
 export interface StepContext {
@@ -78,10 +71,15 @@ const ARP_LOW = 57;
 const ARP_HIGH = 86; // higher arpeggio notes fold down an octave
 const SPARKLE_HIGH = 96;
 
-// In a groove section some layers wait for the rally to heat up
-const GROOVE_ARP_INTENSITY = 0.4;
+// Where a section doesn't say (`layers`), the intensity each layer comes in from: in a groove
+// the arpeggio and the counter-melody wait for the rally to heat up, everything else plays
+const DEFAULT_LAYER_FROM: Partial<Record<Tier, Partial<Record<MusicLayer, number>>>> = {
+  groove: { arp: 0.4, counter: 0.55 },
+};
+// A layer that came in leaves only once intensity has fallen this far below where it came in,
+// so one hovering at its threshold doesn't flicker in and out bar by bar
+const LAYER_HYSTERESIS = 0.06;
 const GROOVE_EXTRA_HATS_INTENSITY = 0.45;
-const GROOVE_COUNTER_INTENSITY = 0.55;
 
 // Peak levels; most scale with intensity on top
 const LEAD_VOLUME: Record<LeadVoice, number> = {
@@ -159,6 +157,10 @@ export class Arrangement {
   private voicing: number[] | null = null;
   /** The drums of the song playing; the drop, which comes between steps, plays on them too. */
   private kit: DrumKit = KITS.synthwave;
+  /** The layers the heat has brought in this bar (updateLayers). */
+  private readonly layersIn = new Set<MusicLayer>();
+  /** The section the layers were last decided for. */
+  private layersSection: Section | null = null;
   /** Layers the listening stand has silenced; read live on every step. */
   private readonly muted: ReadonlySet<MusicLayer>;
 
@@ -178,33 +180,52 @@ export class Arrangement {
     return !this.muted.has(layer);
   }
 
+  /** Whether a layer plays now: the heat has brought it in, and the stand hasn't silenced it. */
+  private plays(layer: MusicLayer): boolean {
+    return this.has(layer) && this.layersIn.has(layer);
+  }
+
+  /**
+   * Decides, on the bar line, which layers play this bar: each comes in once intensity reaches
+   * where the section has it come in, and leaves a little below. A new section starts afresh.
+   */
+  private updateLayers(section: Section, intensity: number, isFresh: boolean): void {
+    const from = section.layers ?? DEFAULT_LAYER_FROM[section.tier] ?? {};
+    for (const layer of MUSIC_LAYERS) {
+      const threshold = from[layer] ?? 0;
+      const isIn = !isFresh && this.layersIn.has(layer);
+      if (intensity >= (isIn ? threshold - LAYER_HYSTERESIS : threshold)) this.layersIn.add(layer);
+      else this.layersIn.delete(layer);
+    }
+  }
+
   public playStep(context: StepContext): void {
     const { stepInBar: s, section, bar, stepDuration, song, intensity: I } = context;
     const sectionStep = bar * STEPS_PER_BAR + s;
     const chord = chordAt(section, sectionStep);
     // Swing pushes the off-beat 16ths late
     const time = context.time + (s % 2 ? song.swing * stepDuration : 0);
-    const isGroove = section.tier === 'groove';
     this.kit = KITS[song.kit ?? 'synthwave'];
+    if (s === 0 || section !== this.layersSection) {
+      this.updateLayers(section, I, section !== this.layersSection || sectionStep === 0);
+      this.layersSection = section;
+    }
 
     if (sectionStep === 0) {
       // A crash marks every new section except the quiet ones
-      if (section.tier !== 'calm' && this.has('drums')) this.drum('crash', time, 0.12);
+      if (section.tier !== 'calm' && this.plays('drums')) this.drum('crash', time, 0.12);
       if (this.has('fx')) this.playTransitions(time, context);
     }
 
-    if (this.has('pads')) this.playHarmony(time, sectionStep, chord, context);
-    if (this.has('bass')) this.playBass(time, chord, context);
-
-    if (section.arp && (!isGroove || I > GROOVE_ARP_INTENSITY) && this.has('arp')) {
-      this.playArp(time, chord, context);
-    }
+    if (this.plays('pads')) this.playHarmony(time, sectionStep, chord, context);
+    if (this.plays('bass')) this.playBass(time, chord, context);
+    if (section.arp && this.plays('arp')) this.playArp(time, chord, context);
 
     const leadVoice = section.leadVoice ?? song.voices.lead;
-    if (this.has('lead')) {
+    if (this.plays('lead')) {
       this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context);
     }
-    if ((!isGroove || I > GROOVE_COUNTER_INTENSITY) && this.has('counter')) {
+    if (this.plays('counter')) {
       this.playMelody(
         time,
         section.counter?.[sectionStep],
@@ -214,7 +235,7 @@ export class Arrangement {
       );
     }
 
-    if (this.has('drums')) this.playDrums(time, context);
+    if (this.plays('drums')) this.playDrums(time, context);
 
     if (context.climaxLevel > 0.01) {
       this.playClimaxLayers(time, chord, context);

@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Arrangement, MUSIC_LAYERS, MusicLayer } from '@/audio/music/Arrangement';
+import { Arrangement } from '@/audio/music/Arrangement';
 import { Conductor } from '@/audio/music/Conductor';
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import { MUSIC_LAYERS, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { DifficultyLevel } from '@/match/difficulty';
 import { fakeAudioContext } from './helpers/fakeAudioContext';

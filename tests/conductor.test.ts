@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Conductor, SONG_BARS } from '@/audio/music/Conductor';
+import { Conductor, PEAK_COOLDOWN_BARS, SONG_BARS } from '@/audio/music/Conductor';
 import { compileSong, SongDef, Tier } from '@/audio/music/score';
 
 const section = (name: string, tier: Tier, bars: number) => ({
@@ -58,14 +58,14 @@ describe('Conductor', () => {
     expect(play(conductor, 'groove', 3)).toEqual(['intro', 'verse', 'verse']);
   });
 
-  it('builds up to the chorus and lets the build finish', () => {
+  it('builds up to the chorus on a hot rally and lets the build finish', () => {
     const conductor = new Conductor(SONGS, 0, 'groove');
-    expect(play(conductor, 'high', 5)).toEqual(['verse', 'verse', 'build', 'build', 'chorus']);
+    expect(play(conductor, 'high', 5)).toEqual(['intro', 'intro', 'build', 'build', 'chorus']);
   });
 
-  it('holds the chorus for a while even if the rally cools at once', () => {
+  it('holds the chorus for a while even if the rally cools at once, then goes on with the form', () => {
     const conductor = new Conductor(SONGS, 0, 'high');
-    expect(play(conductor, 'groove', 5)).toEqual([...Array(4).fill('chorus'), 'verse']);
+    expect(play(conductor, 'groove', 5)).toEqual([...Array(4).fill('chorus'), 'breakdown']);
   });
 
   it('flags the last bar before a new section, for the fill', () => {
@@ -76,7 +76,8 @@ describe('Conductor', () => {
       conductor.advance();
       return isLast;
     });
-    expect(fills).toEqual([false, false, false, false, false, false, false, true]);
+    // The song starts at its start: four bars of intro, then the verse
+    expect(fills).toEqual([false, false, false, true, false, false, false, false]);
   });
 
   it('moves on to the next song after a while, never mid-chorus', () => {
@@ -237,6 +238,83 @@ describe('Conductor', () => {
       conductor.pinTo(null);
       play(conductor, 'calm', 8);
       expect(conductor.song.title).toBe('City');
+    });
+  });
+
+  describe('walking the form', () => {
+    const formSong = (form: string[]) => compileSong({ ...def('Form'), form });
+
+    it('plays the form in order, passing its peaks by while the match is not hot', () => {
+      const conductor = new Conductor(SONGS, 0, 'groove');
+      expect(play(conductor, 'groove', 16)).toEqual([
+        ...Array(4).fill('intro'),
+        ...Array(8).fill('verse'),
+        ...Array(4).fill('breakdown'),
+      ]);
+    });
+
+    it('follows a written form, parts coming more than once', () => {
+      const song = formSong(['intro', 'verse', 'breakdown', 'verse']);
+      const conductor = new Conductor([song], 0, 'groove');
+      const parts = play(conductor, 'groove', 24).filter((name, i, all) => name !== all[i - 1]);
+      expect(parts).toEqual(['intro', 'verse', 'breakdown', 'verse']);
+    });
+
+    it('rejects a form naming a section the song doesn’t have', () => {
+      expect(() => formSong(['intro', 'bridge'])).toThrow(/bridge/);
+    });
+
+    it('comes back to the part it left after a peak it jumped to', () => {
+      const conductor = new Conductor(SONGS, 0, 'groove');
+      play(conductor, 'groove', 6); // into the verse
+      expect(conductor.section.name).toBe('verse');
+
+      const heard = [...play(conductor, 'high', 4), ...play(conductor, 'groove', 6)];
+      expect(heard).toEqual([
+        'verse',
+        'verse',
+        'build',
+        'build',
+        ...Array(4).fill('chorus'),
+        'verse',
+        'verse',
+      ]);
+    });
+
+    it('rests the peaks for a while after one, however hot the rallies', () => {
+      const conductor = new Conductor(SONGS, 0, 'groove');
+      play(conductor, 'high', 12); // intro, build, chorus and out
+      const after = play(conductor, 'high', PEAK_COOLDOWN_BARS - 2);
+      expect(after.some((name) => name === 'build' || name === 'chorus')).toBe(false);
+      expect(play(conductor, 'high', 10)).toContain('chorus');
+    });
+
+    it('plays only the calm parts in the menus', () => {
+      const conductor = new Conductor(SONGS, 0);
+      const parts = new Set(play(conductor, 'calm', 40));
+      expect(parts).toEqual(new Set(['intro', 'breakdown']));
+    });
+
+    it('leaves a menu’s calm part soon once play starts', () => {
+      const conductor = new Conductor(SONGS, 0);
+      play(conductor, 'calm', 4); // into the breakdown, for the menu
+      expect(play(conductor, 'groove', 3)).toEqual(['breakdown', 'breakdown', 'intro']);
+    });
+
+    it('moves on to another song only when its form comes round, after a while', () => {
+      const conductor = new Conductor(SONGS, 0, 'groove');
+      // One time round the form in play is 16 bars: it plays again until SONG_BARS
+      play(conductor, 'groove', SONG_BARS - 1);
+      expect(conductor.song.title).toBe('One');
+      play(conductor, 'groove', 17);
+      expect(conductor.song.title).toBe('Two');
+      expect(conductor.section.name).toBe('intro');
+    });
+
+    it('tells where in its form the song is', () => {
+      const conductor = new Conductor(SONGS, 0, 'groove');
+      play(conductor, 'groove', 5);
+      expect(conductor.formStep).toEqual({ step: 1, steps: 5 });
     });
   });
 });

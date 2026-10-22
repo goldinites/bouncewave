@@ -1,5 +1,5 @@
 import { AudioEngine } from '@/audio/AudioEngine';
-import { MUSIC_LAYERS, MusicLayer } from '@/audio/music/Arrangement';
+import { MUSIC_LAYERS, MusicLayer } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
@@ -198,11 +198,12 @@ export class SoundStand {
   }
 
   private showReadout(): void {
-    const { songId, part, bar } = this.audio.music.getPosition();
+    const { songId, part, bar, step, steps } = this.audio.music.getPosition();
+    const place = step >= 0 ? ` ${step + 1}/${steps}` : '';
     const latency = this.audio.getLatency();
     const ms = (seconds: number) => (seconds * 1000).toFixed(0);
     const delay = latency ? `\nlatency ${ms(latency.base)} + out ${ms(latency.output)} ms` : '';
-    this.readout.textContent = `${songId} · ${part} · bar ${bar + 1}${delay}${this.describeSamples()}${this.describeLevels()}`;
+    this.readout.textContent = `${songId} · ${part}${place} · bar ${bar + 1}${delay}${this.describeSamples()}${this.describeLevels()}`;
     this.readout.style.whiteSpace = 'pre-wrap';
   }
 
