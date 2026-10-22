@@ -69,6 +69,8 @@ export class SoundStand {
   private readoutTimer: ReturnType<typeof setInterval> | null = null;
   private isOpen = false;
   private isVisible = false;
+  /** The master's loudness summed since the music last changed place, for an average. */
+  private loudness = { power: 0, readings: 0 };
 
   constructor(audio: AudioEngine) {
     this.audio = audio;
@@ -194,7 +196,7 @@ export class SoundStand {
     const latency = this.audio.getLatency();
     const ms = (seconds: number) => (seconds * 1000).toFixed(0);
     const delay = latency ? `\nlatency ${ms(latency.base)} + out ${ms(latency.output)} ms` : '';
-    this.readout.textContent = `${songId} · ${part} · bar ${bar + 1}${delay}`;
+    this.readout.textContent = `${songId} · ${part} · bar ${bar + 1}${delay}${this.describeLevels()}`;
     this.readout.style.whiteSpace = 'pre-wrap';
   }
 
@@ -211,7 +213,23 @@ export class SoundStand {
     this.partSelect.disabled = !song;
   }
 
+  /**
+   * The master's loudness: now, on average since the music last changed place (what songs are
+   * evened out by, `level` in songs.ts), and its peak. Plain RMS, not LUFS: enough to compare.
+   */
+  private describeLevels(): string {
+    const levels = this.audio.getMasterLevels();
+    if (!levels) return '';
+    const { loudness } = this;
+    loudness.power += 10 ** (levels.rms / 10);
+    loudness.readings++;
+    const average = 10 * Math.log10(loudness.power / loudness.readings);
+    const db = (value: number) => value.toFixed(1);
+    return `\nrms ${db(levels.rms)} (avg ${db(average)}) · peak ${db(levels.peak)} dB`;
+  }
+
   private audition(): void {
+    this.loudness = { power: 0, readings: 0 };
     this.audio.unlock();
     const song = this.songSelect.value || null;
     const part = (song && this.partSelect.value) || null;

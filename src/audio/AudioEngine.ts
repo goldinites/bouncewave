@@ -1,12 +1,17 @@
+import { MasterLevels, Mixer } from '@/audio/Mixer';
 import { MusicState } from '@/audio/music/intensity';
 import { MusicEngine } from '@/audio/music/MusicEngine';
 import { Ps1MusicEngine } from '@/audio/music/Ps1MusicEngine';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { Look } from '@/shared/look';
 
-/** Owns the AudioContext (created on the first user gesture) and the music and SFX on it. */
+/**
+ * Owns the AudioContext (created on the first user gesture), the mixer every sound ends in, and
+ * the music and SFX on it.
+ */
 export class AudioEngine {
   private audioContext: AudioContext | null = null;
+  private mixer: Mixer | null = null;
   public readonly sfx: SoundEffects;
   public readonly music = new MusicEngine();
   /** The classic look's own loop, independent of the synthwave mix. */
@@ -30,6 +35,7 @@ export class AudioEngine {
       () => this.isAuditioning || isGameplayAudible(),
       // Hits are tuned to whatever chord the music is playing right now
       () => this.music.getHarmony(),
+      () => this.mixer,
     );
 
     // Silence the whole audio graph while the tab is hidden (the game pauses itself separately)
@@ -53,6 +59,7 @@ export class AudioEngine {
     this.classicMusic.dispose();
     void this.audioContext?.close();
     this.audioContext = null;
+    this.mixer = null;
   }
 
   /**
@@ -63,6 +70,11 @@ export class AudioEngine {
     const ac = this.audioContext;
     if (!ac) return null;
     return { base: ac.baseLatency ?? 0, output: ac.outputLatency ?? 0 };
+  }
+
+  /** How loud the master is now, for the listening stand; null before the audio starts. */
+  public getMasterLevels(): MasterLevels | null {
+    return this.mixer?.getLevels() ?? null;
   }
 
   public setLook(look: Look): void {
@@ -101,8 +113,9 @@ export class AudioEngine {
       this.playSilence(ac);
     }
 
-    this.music.init(ac);
-    this.classicMusic.init(ac);
+    this.mixer ??= new Mixer(ac);
+    this.music.init(ac, this.mixer.music);
+    this.classicMusic.init(ac, this.mixer.music);
   }
 
   private playSilence(ac: AudioContext): void {

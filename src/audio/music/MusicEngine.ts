@@ -69,11 +69,14 @@ export class MusicEngine {
   private pinnedIntensity: number | null = null;
   private pinnedClimax: number | null = null;
 
-  /** Builds the audio graph and starts the scheduler; safe to call more than once. */
-  public init(audioContext: AudioContext): void {
+  /**
+   * Builds the audio graph and starts the scheduler; safe to call more than once.
+   * @param output where the music goes: the mixer's music bus
+   */
+  public init(audioContext: AudioContext, output: AudioNode = audioContext.destination): void {
     if (this.graph) return;
 
-    const graph = new MusicGraph(audioContext);
+    const graph = new MusicGraph(audioContext, output);
     const arrangement = new Arrangement(new Instruments(graph), graph, this.mutedLayers);
     this.graph = graph;
 
@@ -284,6 +287,7 @@ export class MusicEngine {
     }
 
     graph.setToneFilter(TONE_FILTER[gameState], time);
+    graph.setSongLevel(song.level ?? 0, time);
     graph.setEchoTime(stepDuration * ECHO_STEPS, time);
 
     if (!isMuted) {

@@ -131,8 +131,8 @@ function heldSteps(pattern: string, step: number): number {
 export class Arrangement {
   private readonly play: Instruments;
   private readonly graph: MusicGraph;
-  private readonly bus: AudioNode;
-  private readonly aux: AudioNode;
+  private readonly bass: AudioNode;
+  private readonly melody: AudioNode;
   /** The pad's last voicing, so the next chord moves as little as possible from it. */
   private voicing: number[] | null = null;
   /** Layers the listening stand has silenced; read live on every step. */
@@ -145,8 +145,8 @@ export class Arrangement {
   ) {
     this.play = instruments;
     this.graph = graph;
-    this.bus = graph.bus;
-    this.aux = graph.aux;
+    this.bass = graph.bass;
+    this.melody = graph.melody;
     this.muted = muted;
   }
 
@@ -228,7 +228,7 @@ export class Arrangement {
     if (!this.has('bass')) return;
     // Bass root register (not an octave lower) so it stays audible on phone speakers
     const root = placeAbove(chord.root, BASS_LOW);
-    this.play.note('sawtooth', root, time, stepDuration * 8, 0.22, this.bus, 900);
+    this.play.note('sawtooth', root, time, stepDuration * 8, 0.22, this.bass, 900);
   }
 
   /** Pad on every chord change, and stabs on the section's stab pattern. */
@@ -279,7 +279,7 @@ export class Arrangement {
       time,
       stepDuration * (heldSteps(pattern, s) - 0.1),
       BASS_VOLUME + 0.08 * I,
-      this.bus,
+      this.bass,
       450 + I * 1500,
     );
   }
@@ -293,7 +293,7 @@ export class Arrangement {
     const note = arpNote(chord, Number(token));
     const volume = ARP_VOLUME * (0.5 + 0.5 * I);
     const cutoff = (1400 + I * 2600) * signature.leadBrightness;
-    this.play.note(song.voices.arp, note, time, stepDuration * 1.6, volume, this.aux, cutoff);
+    this.play.note(song.voices.arp, note, time, stepDuration * 1.6, volume, this.melody, cutoff);
 
     if (signature.stutter && s % 4 === 0) {
       const at = time + stepDuration * 0.5;
@@ -303,7 +303,7 @@ export class Arrangement {
         at,
         stepDuration * 0.5,
         volume * 0.6,
-        this.aux,
+        this.melody,
         cutoff,
       );
     }
@@ -326,7 +326,7 @@ export class Arrangement {
       time,
       melodyNote.steps * stepDuration * 0.95,
       LEAD_VOLUME[voice] * share * (0.65 + 0.35 * I),
-      this.aux,
+      this.melody,
       (1800 + I * 2200) * brightness,
     );
   }
@@ -402,7 +402,7 @@ export class Arrangement {
     if (token !== '.') {
       let note = arpNote(chord, Number(token)) + 12;
       while (note > SPARKLE_HIGH) note -= 12;
-      this.play.note('square', note, time, stepDuration * 0.9, 0.025 * mix, this.aux, 6000);
+      this.play.note('square', note, time, stepDuration * 0.9, 0.025 * mix, this.melody, 6000);
     }
   }
 }

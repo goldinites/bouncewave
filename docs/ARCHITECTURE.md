@@ -121,7 +121,13 @@ offers it, nor does random deal it. Whatever starts a match sets the scene it is
 **A song.** An entry in `SONG_DEFS` (`audio/music/songs.ts`); its `scene` ties it to a background,
 which then plays it first. Its id is its title in lower case with dashes; listen to it, part by
 part and layer by layer, on the debug overlay's sound stand (`debug/SoundStand.ts`,
-`?song=night-drive&part=chorus&mute=drums`).
+`?song=night-drive&part=chorus&mute=drums`). Its `level` evens out its loudness against the others,
+read off the stand's meter.
+
+**A sound.** Everything heard goes through `audio/Mixer.ts`: music, action sounds and menu sounds
+each on their bus, then the limiter. In the music, an instrument plays on its stem in `MusicGraph`
+(`drums`, `bass`, `pads`, `melody`), which gives it its saturation, sidechain and sends; an action
+sound plays on `sfx` (`menu` for menus), and a strong one dips the music (`Mixer.duckMusic`).
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
 (`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), or in

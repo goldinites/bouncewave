@@ -1,4 +1,4 @@
-import { MusicGraph } from '@/audio/music/MusicGraph';
+import { MusicGraph, PAD_SPREAD } from '@/audio/music/MusicGraph';
 import { LeadVoice } from '@/audio/music/score';
 import { midiToFrequency } from '@/shared/math';
 
@@ -305,8 +305,8 @@ export class Instruments {
   }
 
   /**
-   * Chord of detuned saws on the dry bus. A swell fades in over a quarter of its length; a
-   * held pad comes in quickly and sustains.
+   * Chord of detuned saws, the two detunings of each note spread left and right. A swell fades
+   * in over a quarter of its length; a held pad comes in quickly and sustains.
    */
   public pad(
     chordNotes: number[],
@@ -318,8 +318,16 @@ export class Instruments {
   ): void {
     const attack = swell ? duration * 0.25 : Math.min(0.08, duration * 0.1);
 
+    // One panner per side for the whole chord, not per voice: width costs two nodes
+    const sides = PAD_DETUNE_CENTS.map((_, i) => {
+      const panner = this.ac.createStereoPanner();
+      panner.pan.value = i === 0 ? -PAD_SPREAD : PAD_SPREAD;
+      panner.connect(this.graph.pads);
+      return panner;
+    });
+
     for (const note of chordNotes) {
-      for (const detune of PAD_DETUNE_CENTS) {
+      for (const [side, detune] of PAD_DETUNE_CENTS.entries()) {
         const osc = this.ac.createOscillator();
         const gain = this.ac.createGain();
         const filter = this.ac.createBiquadFilter();
@@ -337,7 +345,7 @@ export class Instruments {
 
         osc.connect(filter);
         filter.connect(gain);
-        gain.connect(this.graph.bus);
+        gain.connect(sides[side]);
 
         osc.start(time);
         osc.stop(time + duration + 0.05);
@@ -357,7 +365,7 @@ export class Instruments {
     gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
 
     filter.connect(gain);
-    gain.connect(this.graph.bus);
+    gain.connect(this.graph.pads);
 
     for (const note of chordNotes) {
       const osc = this.ac.createOscillator();
@@ -369,8 +377,9 @@ export class Instruments {
     }
   }
 
-  /** Pitch-dropping sine kick on the dry bus. */
+  /** Pitch-dropping sine kick; the bass and pads breathe under it. */
   public kick(time: number, volume: number): void {
+    this.graph.pump(time, volume);
     const osc = this.ac.createOscillator();
     const gain = this.ac.createGain();
 
@@ -381,7 +390,7 @@ export class Instruments {
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
 
     osc.connect(gain);
-    gain.connect(this.graph.bus);
+    gain.connect(this.graph.drums);
 
     osc.start(time);
     osc.stop(time + 0.3);
@@ -399,7 +408,7 @@ export class Instruments {
     gain.gain.setValueAtTime(volume * 0.8, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
     body.connect(gain);
-    gain.connect(this.graph.bus);
+    gain.connect(this.graph.drums);
     body.start(time);
     body.stop(time + 0.12);
   }
@@ -425,7 +434,7 @@ export class Instruments {
 
     source.connect(filter);
     filter.connect(gain);
-    gain.connect(this.graph.bus);
+    gain.connect(this.graph.drums);
     source.start(time);
     source.stop(time + 0.22);
   }
@@ -442,7 +451,7 @@ export class Instruments {
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.32);
 
     osc.connect(gain);
-    gain.connect(this.graph.bus);
+    gain.connect(this.graph.drums);
     osc.start(time);
     osc.stop(time + 0.35);
   }
@@ -459,7 +468,7 @@ export class Instruments {
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.65);
 
     osc.connect(gain);
-    gain.connect(this.graph.bus);
+    gain.connect(this.graph.drums);
     osc.start(time);
     osc.stop(time + 0.7);
 
@@ -506,7 +515,7 @@ export class Instruments {
 
     source.connect(filter);
     filter.connect(gain);
-    gain.connect(this.graph.bus);
+    gain.connect(this.graph.drums);
 
     source.start(time);
     source.stop(time + duration + 0.02);
