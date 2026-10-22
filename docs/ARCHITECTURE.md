@@ -134,9 +134,11 @@ per variant into the `SampleBank` when the audio starts); its live synth in `Ins
 until it is rendered. A drum is a role in a kit (`audio/music/kits.ts`): a song picks its `kit`,
 the arrangement asks for roles. A pitched instrument is rendered at a few roots and played from
 the nearest at the right speed, through a live envelope and filter; a sustained one loops, its
-oscillators tuned to whole cycles of the loop (`tune`) so the join is seamless. Hear each on the
-sound stand; `e2e/samples.spec.ts` renders them
-all in Chromium against the budgets.
+oscillators tuned to whole cycles of the loop (`tune`) so the join is seamless. A transition
+(`audio/samples/transitions.ts`) marks the song's form: a swell is placed to end on the downbeat it
+leads into (`Instruments.transition`), and the arrangement picks it from the section and the tier
+the music came from (`Conductor.cameFrom`). Hear each on the sound stand; `e2e/samples.spec.ts`
+renders them all in Chromium against the budgets.
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
 (`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), or in

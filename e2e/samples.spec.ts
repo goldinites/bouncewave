@@ -136,3 +136,66 @@ test('renders every pitched instrument at every root, its loops seamless', async
     description: `${(report.bytes / 1048576).toFixed(2)} MB, ${report.renderTime.toFixed(0)} ms`,
   });
 });
+
+const TRANSITIONS_MEMORY = 4 * 1024 * 1024; // bytes
+// A swell starts quiet and peaks late: its first tenth no louder than this share of its peak,
+// its peak in its last third, and its very last sample silent (it stops, not clicks)
+const SWELL_HEAD_SHARE = 0.1;
+const SWELL_END_SHARE = 0.01;
+
+test('renders every transition: swells build to their end, the rest die away', async ({ page }) => {
+  await page.goto('./');
+  const report = await page.evaluate(async () => {
+    const source = (path: string) => `/bouncewave/src/audio/samples/${path}`;
+    const { SampleBank } = (await import(
+      /* @vite-ignore */ source('SampleBank.ts')
+    )) as typeof import('../src/audio/samples/SampleBank');
+    const { TRANSITION_SAMPLES } = (await import(
+      /* @vite-ignore */ source('transitions.ts')
+    )) as typeof import('../src/audio/samples/transitions');
+    const bank = new SampleBank();
+    await bank.render(48000, TRANSITION_SAMPLES);
+    const sounds = Object.entries(TRANSITION_SAMPLES).flatMap(([id, recipe]) =>
+      Array.from({ length: recipe.variants }, () => {
+        const data = bank.pick(id)!.getChannelData(0);
+        let peak = 0;
+        let peakAt = 0;
+        let finite = true;
+        data.forEach((sample, i) => {
+          if (!Number.isFinite(sample)) finite = false;
+          if (Math.abs(sample) > peak) [peak, peakAt] = [Math.abs(sample), i / data.length];
+        });
+        const loudest = (from: number, to: number) =>
+          Math.max(
+            ...data
+              .subarray(Math.floor(from * data.length), Math.floor(to * data.length))
+              .map(Math.abs),
+          );
+        return {
+          id,
+          isSwell: 'shape' in recipe && recipe.shape === 'swell',
+          peak,
+          peakAt,
+          finite,
+          head: loudest(0, 0.1),
+          tail: loudest(0.98, 1),
+          last: Math.abs(data[data.length - 1]),
+        };
+      }),
+    );
+    return { sounds, bytes: bank.bytes };
+  });
+
+  for (const { id, isSwell, peak, peakAt, finite, head, tail, last } of report.sounds) {
+    expect(finite, id).toBe(true);
+    expect(peak, id).toBeGreaterThan(0.3);
+    if (isSwell) {
+      expect(head / peak, `${id} starts quiet`).toBeLessThan(SWELL_HEAD_SHARE);
+      expect(peakAt, `${id} peaks late`).toBeGreaterThan(2 / 3);
+      expect(last / peak, `${id} stops cleanly`).toBeLessThan(SWELL_END_SHARE);
+    } else {
+      expect(tail / peak, `${id} dies away`).toBeLessThan(TAIL_SHARE);
+    }
+  }
+  expect(report.bytes).toBeLessThan(TRANSITIONS_MEMORY);
+});

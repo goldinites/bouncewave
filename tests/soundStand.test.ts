@@ -3,6 +3,7 @@ import { AudioEngine } from '@/audio/AudioEngine';
 import { SONGS } from '@/audio/music/songs';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { PITCHED_SAMPLES } from '@/audio/samples/pitched';
+import { TRANSITION_SAMPLES } from '@/audio/samples/transitions';
 import { SoundStand, STAND_SOUNDS } from '@/debug/SoundStand';
 
 describe('SoundStand', () => {
@@ -130,6 +131,16 @@ describe('SoundStand', () => {
       get<HTMLButtonElement>(`button[data-phrase="${id}"]`).click();
     }
     expect(phrase.mock.calls.map(([id]) => id)).toEqual(Object.keys(PITCHED_SAMPLES));
+  });
+
+  it('plays every transition', () => {
+    const { audio, get } = setup();
+    const transition = vi.spyOn(audio.music, 'playTransition');
+
+    for (const id of Object.keys(TRANSITION_SAMPLES)) {
+      get<HTMLButtonElement>(`button[data-transition="${id}"]`).click();
+    }
+    expect(transition.mock.calls.map(([id]) => id)).toEqual(Object.keys(TRANSITION_SAMPLES));
   });
 
   it('stops a series it was playing when disposed', () => {

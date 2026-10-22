@@ -12,6 +12,13 @@ export interface SampleRecipe {
   variants: number;
   /** dB the rendered sound is set to after its peak is normalised to full scale. */
   level?: number;
+  /** Played backwards once rendered: a crash becomes a swell into the hit. */
+  reverse?: boolean;
+  /**
+   * How the sound moves: one that dies away (a hit), or one that swells toward its end and stops
+   * there (a riser), which is played so its end lands on a downbeat. Dying away by default.
+   */
+  shape?: 'decay' | 'swell';
   /** Builds the sound into `ctx.destination`; `random` is seeded per variant. */
   build: (ctx: OfflineAudioContext, random: () => number) => void;
 }
@@ -132,6 +139,9 @@ export class SampleBank {
             const ctx = new Offline(1, Math.ceil(recipe.duration * rate), rate);
             recipe.build(ctx, seededRandom(hash(`${id}:${variant}`)));
             const buffer = await renderOffline(ctx);
+            if (recipe.reverse) {
+              for (let c = 0; c < buffer.numberOfChannels; c++) buffer.getChannelData(c).reverse();
+            }
             normalise(buffer, recipe.level ?? 0);
             return buffer;
           }),
