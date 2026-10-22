@@ -1,4 +1,4 @@
-import { cycle, euclid, transpose } from '@/audio/music/compose';
+import { cycle, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef } from '@/audio/music/score';
 
 // ——— Lines written by processes (audio/music/compose.ts) ———
@@ -60,54 +60,7 @@ const CATHEDRAL = {
     .join('|'),
 };
 
-// ——— Bases for the Outrun backdrop's track, to choose between on the stand ———
-
-/** A gallop: an eighth and two sixteenths on every beat. */
-const GALLOP = [true, false, true, true];
-
-/** O1: a galloping bass riff, a five-note arpeggio in eighths across the beat (Am F C G). */
-const RIDE = {
-  bass: cycle(
-    [
-      { cell: ['A1', 'A1', 'A1', 'A2', 'A1', 'E2'], bars: 2 },
-      { cell: ['F1', 'F1', 'F1', 'F2', 'F1', 'C2'], bars: 2 },
-      { cell: ['C2', 'C2', 'C2', 'C3', 'C2', 'G1'], bars: 2 },
-      { cell: ['G1', 'G1', 'G1', 'G2', 'G1', 'D2'], bars: 2 },
-    ],
-    GALLOP,
-  ),
-  arp: cycle(
-    [
-      { cell: ['A4', 'C5', 'E5', 'A5', 'E5'], bars: 2 },
-      { cell: ['A4', 'C5', 'F5', 'A5', 'F5'], bars: 2 },
-      { cell: ['G4', 'C5', 'E5', 'G5', 'E5'], bars: 2 },
-      { cell: ['G4', 'B4', 'D5', 'G5', 'D5'], bars: 2 },
-    ],
-    euclid(8, 16),
-  ),
-};
-
-/** O2: the bass bouncing octaves in eighths, a slow three-note arpeggio in quarters (F#m D A E). */
-const NIGHT = {
-  bass: cycle(
-    [
-      { cell: ['F#1', 'F#2'], bars: 2 },
-      { cell: ['D2', 'D1'], bars: 2 },
-      { cell: ['A1', 'A2'], bars: 2 },
-      { cell: ['E1', 'E2'], bars: 2 },
-    ],
-    euclid(8, 16),
-  ),
-  arp: cycle(
-    [
-      { cell: ['F#4', 'A4', 'C#5'], bars: 2 },
-      { cell: ['F#4', 'A4', 'D5'], bars: 2 },
-      { cell: ['E4', 'A4', 'C#5'], bars: 2 },
-      { cell: ['E4', 'G#4', 'B4'], bars: 2 },
-    ],
-    euclid(4, 16),
-  ),
-};
+// ——— The Outrun track's base, chosen on the stand ———
 
 /** O3: a sunny seven-note up-and-down arpeggio in sixteenths, never landing the same (Bb F Gm Eb). */
 const SUNSET = cycle([
@@ -117,24 +70,28 @@ const SUNSET = cycle([
   { cell: ['Bb3', 'Eb4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 2 },
 ]);
 
-/** O4: two arpeggios weaving, six notes in sixteenths below, five in eighths above (D Bm G A). */
-const TWIN = {
-  low: cycle([
-    { cell: ['D4', 'F#4', 'A4', 'D5', 'A4', 'F#4'], bars: 2 },
-    { cell: ['D4', 'F#4', 'B4', 'D5', 'B4', 'F#4'], bars: 2 },
-    { cell: ['D4', 'G4', 'B4', 'D5', 'B4', 'G4'], bars: 2 },
-    { cell: ['C#4', 'E4', 'A4', 'C#5', 'A4', 'E4'], bars: 2 },
-  ]),
-  high: cycle(
-    [
-      { cell: ['D5', 'F#5', 'A5', 'D6', 'A5'], bars: 2 },
-      { cell: ['D5', 'F#5', 'B5', 'D6', 'B5'], bars: 2 },
-      { cell: ['D5', 'G5', 'B5', 'D6', 'B5'], bars: 2 },
-      { cell: ['C#5', 'E5', 'A5', 'C#6', 'A5'], bars: 2 },
-    ],
-    euclid(8, 16),
-  ),
-};
+// ——— Melodies over O3, the base chosen for the Outrun track (Bb Bb F F Gm Gm Eb Eb). They sit
+// above the arpeggio's top (E flat 5), so the ear keeps the two apart ———
+
+/** S1, anthem: long notes reached by pickups, an arch peaking in the sixth bar. */
+const S1 = `F5 - - - . D5 Eb5 F5 | Bb5 - - - A5 - F5 - | C6 - - - . A5 Bb5 C6 | F5 - - - - - - -
+          | G5 - - - . F5 G5 Bb5 | D6 - - - C6 - Bb5 - | G5 - - - Bb5 - G5 - | F5 - - - - - - -`;
+
+/** S2, drive: a 3+3+2 figure of repeated notes, answered by runs climbing in sixteenths. */
+const S2 = `F5 - - F5 - - F5 - Bb5 - - - A5 - F5 - | . . F5 - G5 - A5 - Bb5 - - - . . . .
+          | F5 - - F5 - - F5 - C6 - - - A5 - F5 - | . . G5 - A5 - Bb5 - A5 - - - . . . .
+          | G5 - - G5 - - G5 - D6 - - - Bb5 - G5 - | . . A5 - Bb5 - C6 - D6 - - - C6 - Bb5 -
+          | G5 - - G5 - - G5 - Bb5 - - - G5 - Eb5 - | F5 - - - - - - - . . . . . . . .`;
+
+/** S3, soar: a singing line moving by step, leaning on the major 7th and the 9th. */
+const S3 = `D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 - - - - - - -
+          | Bb5 - - - A5 - G5 - | F5 - - - G5 - - - | Bb5 - - - G5 - Eb5 - | F5 - - - - - G5 A5`;
+
+/** S4, call: a phrase, a bar of rest for the arpeggio to answer, a climb to the next. */
+const S4 = `Bb5 - - - D6 - - - C6 - Bb5 - . . . . | . . . . . . . . F5 - G5 - A5 - Bb5 -
+          | C6 - - - A5 - - - F5 - G5 - . . . . | . . . . . . . . A5 - Bb5 - C6 - D6 -
+          | D6 - - - Bb5 - - - C6 - Bb5 - . . . . | . . . . . . . . G5 - A5 - Bb5 - C6 -
+          | Bb5 - - - G5 - - - Eb5 - F5 - G5 - - - | F5 - - - - - - - . . . . . . . .`;
 
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
@@ -1506,78 +1463,7 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // ——— Sketches for the Outrun backdrop's track: process bases to choose between on the stand,
-  // each as it sounds in a rally (hook) and at the peak (hot); the melodies come next ———
-  {
-    // O1, ride: after Carpenter Brut's "Turbo Killer" — a galloping driven bass under a
-    // five-note arpeggio in eighths that lands somewhere new each bar
-    title: 'Outrun O1 Ride',
-    bpm: 126,
-    swing: 0,
-    level: -1.5,
-    sketch: true,
-    kit: 'dark',
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Am | Am | F | F | C | C | G | G',
-        bassLine: RIDE.bass,
-        arpLine: RIDE.arp,
-        drums: 'outrun',
-        fill: 'toms',
-        pad: 'hold',
-        sweep: { arp: [0.5, 1.5] },
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Am | Am | F | F | C | C | G | G',
-        bassLine: RIDE.bass,
-        arpLine: RIDE.arp,
-        drums: 'darkdrive',
-        fill: 'toms',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // O2, night pulse: after Kavinsky's "Nightcall" — a bass bouncing octaves in eighths, wide
-    // chords, a slow three-note arpeggio in quarters turning over four beats
-    title: 'Outrun O2 Night Pulse',
-    bpm: 104,
-    swing: 0,
-    level: 3,
-    sketch: true,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'F#m | F#m | D | D | A | A | E | E',
-        bassLine: NIGHT.bass,
-        arpLine: NIGHT.arp,
-        drums: 'four',
-        fill: 'stop',
-        pad: 'swell',
-        sweep: { pads: [0.6, 1.3] },
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'F#m | F#m | D | D | A | A | E | E',
-        bassLine: NIGHT.bass,
-        arpLine: NIGHT.arp,
-        drums: 'drive',
-        fill: 'toms',
-        pad: 'hold',
-        drop: true,
-      },
-    ],
-  },
+  // ——— Sketches for the Outrun backdrop's track: O3, the base chosen on the stand, alone ———
   {
     // O3, sunset: after Lazerhawk and Miami Nights 1984 — a bright major arpeggio in
     // sixteenths, its seven-note cell turning over the bar so the pattern keeps shifting
@@ -1612,38 +1498,143 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  // ——— Melodies over O3 for the Outrun track: choose one, then its lead sound ———
   {
-    // O4, twin cycles: the two weaving arpeggios of the Laser track's B5, bright in D major,
-    // over a galloping bass
-    title: 'Outrun O4 Twin Cycles',
-    bpm: 120,
+    // O3 with S1: long notes reached by pickups, an arch
+    title: 'Outrun O3 S1 Anthem',
+    bpm: 112,
     swing: 0,
     sketch: true,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassFm', glide: 0.04 },
     sections: [
       {
         name: 'hook',
         tier: 'groove',
-        chords: 'D | D | Bm | Bm | G | G | A | A',
-        arpLine: TWIN.low,
-        counter: TWIN.high,
-        bass: 'gallop',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S1,
+        arpLine: SUNSET,
+        bass: 'eighths',
         drums: 'outrun',
-        fill: 'toms',
+        fill: 'roll',
         pad: 'hold',
-        layers: { counter: 0.35 },
         sweep: { arp: [0.4, 1.4] },
       },
       {
         name: 'hot',
         tier: 'high',
-        chords: 'D | D | Bm | Bm | G | G | A | A',
-        arpLine: TWIN.low,
-        counter: TWIN.high,
-        bass: 'gallop',
-        drums: 'darkdrive',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S1,
+        arpLine: SUNSET,
+        bass: 'drive',
+        drums: 'outrun',
         fill: 'toms',
         pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // O3 with S2: a 3+3+2 figure and climbing runs
+    title: 'Outrun O3 S2 Drive',
+    bpm: 112,
+    swing: 0,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassFm', glide: 0.04 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S2,
+        arpLine: SUNSET,
+        bass: 'eighths',
+        drums: 'outrun',
+        fill: 'roll',
+        pad: 'hold',
+        sweep: { arp: [0.4, 1.4] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S2,
+        arpLine: SUNSET,
+        bass: 'drive',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // O3 with S3: a singing line by step, for the sync or PWM lead
+    title: 'Outrun O3 S3 Soar',
+    bpm: 112,
+    swing: 0,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassFm', glide: 0.04 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S3,
+        arpLine: SUNSET,
+        bass: 'eighths',
+        drums: 'outrun',
+        fill: 'roll',
+        pad: 'hold',
+        sweep: { arp: [0.4, 1.4] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S3,
+        arpLine: SUNSET,
+        bass: 'drive',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // O3 with S4: a phrase, a rest for the arpeggio, a climb
+    title: 'Outrun O3 S4 Call',
+    bpm: 112,
+    swing: 0,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassFm', glide: 0.04 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S4,
+        arpLine: SUNSET,
+        bass: 'eighths',
+        drums: 'outrun',
+        fill: 'roll',
+        pad: 'hold',
+        sweep: { arp: [0.4, 1.4] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S4,
+        arpLine: SUNSET,
+        bass: 'drive',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
         drop: true,
       },
     ],
