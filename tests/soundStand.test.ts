@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { SONGS } from '@/audio/music/songs';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
+import { PITCHED_SAMPLES } from '@/audio/samples/pitched';
 import { SoundStand, STAND_SOUNDS } from '@/debug/SoundStand';
 
 describe('SoundStand', () => {
@@ -119,6 +120,16 @@ describe('SoundStand', () => {
       get<HTMLButtonElement>(`button[data-sample="${id}"]`).click();
     }
     expect(play.mock.calls.map(([id]) => id)).toEqual(Object.keys(DRUM_SAMPLES));
+  });
+
+  it('plays a phrase on every pitched instrument', () => {
+    const { audio, get } = setup();
+    const phrase = vi.spyOn(audio.music, 'playPhrase');
+
+    for (const id of Object.keys(PITCHED_SAMPLES)) {
+      get<HTMLButtonElement>(`button[data-phrase="${id}"]`).click();
+    }
+    expect(phrase.mock.calls.map(([id]) => id)).toEqual(Object.keys(PITCHED_SAMPLES));
   });
 
   it('stops a series it was playing when disposed', () => {

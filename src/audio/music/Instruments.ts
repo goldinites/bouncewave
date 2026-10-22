@@ -1,7 +1,8 @@
 import { DrumKit, DrumRole } from '@/audio/music/kits';
 import { MusicGraph, PAD_SPREAD } from '@/audio/music/MusicGraph';
+import { ArpVoice, BassVoice, LeadVoice } from '@/audio/music/score';
+import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
-import { LeadVoice } from '@/audio/music/score';
 import { midiToFrequency } from '@/shared/math';
 
 const PAD_DETUNE_CENTS = [-9, 9];
@@ -40,6 +41,37 @@ const SAMPLE_GAIN: Partial<Record<DrumRole, number>> = {
 };
 
 /** One-shot synth voices, each scheduled at an exact audio-clock time. */
+// What a rendered voice falls back to until it is rendered
+const LIVE_BASS: Record<BassVoice, OscillatorType> = {
+  bassSaw: 'sawtooth',
+  bassReese: 'sawtooth',
+  bassFm: 'square',
+  bass808: 'sine',
+};
+const LIVE_ARP: Record<ArpVoice, OscillatorType> = { arpPulse: 'square', pluck: 'sawtooth' };
+const OSCILLATOR_TYPES: readonly string[] = ['sine', 'square', 'sawtooth', 'triangle'];
+// Lead voices that have a rendered instrument
+const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId>> = {
+  saw: 'supersaw',
+  square: 'squareLead',
+  pluck: 'pluck',
+};
+// A rendered note is played a touch louder or softer each time, never out of tune
+const NOTE_HUMANIZE = 0.05; // ± share of the volume
+
+/** How a rendered note is played: its envelope and the live filter over it. */
+interface NoteShape {
+  attack: number; // s
+  /** Share of the volume the note settles to, `decay` seconds after the attack. */
+  sustain?: number;
+  decay?: number; // s
+  release: number; // s, before the note's end
+  /** The low-pass: from `from` at the attack to `to` by `over` seconds; none if left out. */
+  cutoff?: { from: number; to: number; over: number };
+  /** Vibrato fading in on held notes. */
+  vibrato?: boolean;
+}
+
 export class Instruments {
   private readonly graph: MusicGraph;
   private readonly samples: SampleBank;
@@ -76,6 +108,131 @@ export class Instruments {
   public impact(kit: DrumKit, time: number, volume: number): void {
     const buffer = kit.impact ? this.samples.pick(kit.impact) : null;
     if (buffer) this.sample(buffer, time, volume, 1, this.graph.drums);
+  }
+
+  /**
+   * A note on a rendered instrument, through a live envelope and filter: the sample gives the
+   * timbre, the envelope and filter its length and brightness in the song.
+   * @returns false if the instrument isn't rendered yet (play the live synth instead)
+   */
+  private playNote(
+    id: PitchedSampleId,
+    midiNote: number,
+    time: number,
+    duration: number,
+    volume: number,
+    destination: AudioNode,
+    shape: NoteShape,
+  ): boolean {
+    const note = this.samples.pickNote(id, midiNote);
+    if (!note) return false;
+    const end = time + duration;
+    const peak = volume * (1 + (Math.random() * 2 - 1) * NOTE_HUMANIZE);
+    const release = Math.min(shape.release, duration * 0.3);
+    const attack = Math.min(shape.attack, duration * 0.5);
+
+    const source = this.ac.createBufferSource();
+    source.buffer = note.buffer;
+    source.playbackRate.value = note.rate;
+    if (note.loop) {
+      source.loop = true;
+      source.loopStart = note.loop.start;
+      source.loopEnd = note.loop.end;
+    }
+
+    const gain = this.ac.createGain();
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(peak, time + attack);
+    if (shape.sustain !== undefined && shape.decay) {
+      const decay = Math.min(shape.decay, duration * 0.5);
+      gain.gain.linearRampToValueAtTime(peak * shape.sustain, time + attack + decay);
+      gain.gain.setValueAtTime(peak * shape.sustain, end - release);
+    } else {
+      gain.gain.setValueAtTime(peak, end - release);
+    }
+    gain.gain.linearRampToValueAtTime(0, end);
+
+    let input: AudioNode = gain;
+    if (shape.cutoff) {
+      const { from, to, over } = shape.cutoff;
+      const filter = this.ac.createBiquadFilter();
+      filter.frequency.setValueAtTime(from, time);
+      filter.frequency.exponentialRampToValueAtTime(
+        Math.max(150, to),
+        time + Math.min(over, duration),
+      );
+      filter.connect(gain);
+      input = filter;
+    }
+    source.connect(input);
+    gain.connect(destination);
+
+    if (shape.vibrato && duration >= VIBRATO.MIN_DURATION) {
+      const lfo = this.ac.createOscillator();
+      const depth = this.ac.createGain();
+      lfo.frequency.value = VIBRATO.RATE;
+      depth.gain.setValueAtTime(0, time);
+      depth.gain.setValueAtTime(0, time + VIBRATO.DELAY);
+      depth.gain.linearRampToValueAtTime(VIBRATO.DEPTH_CENTS, end);
+      lfo.connect(depth);
+      depth.connect(source.detune);
+      lfo.start(time);
+      lfo.stop(end + 0.05);
+    }
+
+    source.start(time);
+    source.stop(end + 0.05);
+    return true;
+  }
+
+  /** A bass note: a rendered bass held for its length, or a live oscillator. */
+  public bass(
+    voice: OscillatorType | BassVoice,
+    midiNote: number,
+    time: number,
+    duration: number,
+    volume: number,
+    destination: AudioNode,
+    filterCutoff: number,
+  ): void {
+    if (!OSCILLATOR_TYPES.includes(voice)) {
+      const bass = voice as BassVoice;
+      // The 808 rings out on its own; the others hold, their filter snapping open on the attack
+      const shape: NoteShape =
+        bass === 'bass808'
+          ? { attack: 0.003, release: 0.04 }
+          : {
+              attack: 0.004,
+              release: 0.03,
+              cutoff: { from: filterCutoff * 2.2, to: filterCutoff, over: 0.12 },
+            };
+      if (this.playNote(bass, midiNote, time, duration, volume, destination, shape)) return;
+      voice = LIVE_BASS[bass];
+    }
+    this.note(voice as OscillatorType, midiNote, time, duration, volume, destination, filterCutoff);
+  }
+
+  /** An arpeggio note: a rendered blip whose filter closes over its length, or a live one. */
+  public arp(
+    voice: OscillatorType | ArpVoice,
+    midiNote: number,
+    time: number,
+    duration: number,
+    volume: number,
+    destination: AudioNode,
+    filterCutoff: number,
+  ): void {
+    if (!OSCILLATOR_TYPES.includes(voice)) {
+      const arp = voice as ArpVoice;
+      const shape: NoteShape = {
+        attack: 0.002,
+        release: 0.02,
+        cutoff: { from: filterCutoff, to: filterCutoff * 0.2, over: duration },
+      };
+      if (this.playNote(arp, midiNote, time, duration, volume, destination, shape)) return;
+      voice = LIVE_ARP[arp];
+    }
+    this.note(voice as OscillatorType, midiNote, time, duration, volume, destination, filterCutoff);
   }
 
   /** A rendered sound at `time`, as loud as `volume`, sped up or slowed by `rate`. */
@@ -169,6 +326,26 @@ export class Instruments {
     destination: AudioNode,
     filterCutoff: number,
   ): void {
+    const sampled = SAMPLED_LEADS[voice];
+    if (sampled) {
+      // A pluck dies away with its filter closing; the sustained leads settle and sing
+      const shape: NoteShape =
+        voice === 'pluck'
+          ? {
+              attack: 0.002,
+              release: 0.03,
+              cutoff: { from: filterCutoff * 1.4, to: filterCutoff * 0.28, over: duration },
+            }
+          : {
+              attack: 0.015,
+              sustain: 0.75,
+              decay: 0.2,
+              release: 0.12,
+              cutoff: { from: filterCutoff * 1.6, to: filterCutoff, over: 0.2 },
+              vibrato: true,
+            };
+      if (this.playNote(sampled, midiNote, time, duration, volume, destination, shape)) return;
+    }
     switch (voice) {
       case 'bell':
         this.bell(midiNote, time, duration, volume, destination);
@@ -407,6 +584,17 @@ export class Instruments {
     swell: boolean,
   ): void {
     const attack = swell ? duration * 0.25 : Math.min(0.08, duration * 0.1);
+    // The rendered pad is already wide and detuned: one voice per note
+    const shape: NoteShape = {
+      attack,
+      release: swell ? duration * 0.15 : Math.min(0.3, duration * 0.15),
+      cutoff: { from: filterCutoff, to: filterCutoff, over: duration },
+    };
+    // A pad sample is about twice as loud as one of the live pad's six detuned saws
+    const played = chordNotes.map((note) =>
+      this.playNote('pad', note, time, duration, volume * 2, this.graph.pads, shape),
+    );
+    if (played.every(Boolean)) return;
 
     // One panner per side for the whole chord, not per voice: width costs two nodes
     const sides = PAD_DETUNE_CENTS.map((_, i) => {
@@ -445,6 +633,12 @@ export class Instruments {
 
   /** Short brassy chord hit: saws through one filter snapping shut. */
   public stab(chordNotes: number[], time: number, duration: number, volume: number): void {
+    const shape: NoteShape = { attack: 0.005, release: Math.min(0.06, duration * 0.3) };
+    const played = chordNotes.map((note) =>
+      this.playNote('brass', note + 12, time, duration, volume, this.graph.pads, shape),
+    );
+    if (played.every(Boolean)) return;
+
     const gain = this.ac.createGain();
     const filter = this.ac.createBiquadFilter();
 

@@ -132,7 +132,10 @@ sound plays on `sfx` (`menu` for menus), and a strong one dips the music (`Mixer
 **An instrument.** A recipe in `audio/samples/` (a graph built in an offline context, rendered once
 per variant into the `SampleBank` when the audio starts); its live synth in `Instruments` plays
 until it is rendered. A drum is a role in a kit (`audio/music/kits.ts`): a song picks its `kit`,
-the arrangement asks for roles. Hear each on the sound stand; `e2e/samples.spec.ts` renders them
+the arrangement asks for roles. A pitched instrument is rendered at a few roots and played from
+the nearest at the right speed, through a live envelope and filter; a sustained one loops, its
+oscillators tuned to whole cycles of the loop (`tune`) so the join is seamless. Hear each on the
+sound stand; `e2e/samples.spec.ts` renders them
 all in Chromium against the budgets.
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`

@@ -3,6 +3,7 @@ import { MusicState } from '@/audio/music/intensity';
 import { MusicEngine } from '@/audio/music/MusicEngine';
 import { Ps1MusicEngine } from '@/audio/music/Ps1MusicEngine';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
+import { PITCHED_SAMPLES } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { Look } from '@/shared/look';
@@ -119,8 +120,12 @@ export class AudioEngine {
 
     if (!this.mixer) {
       this.mixer = new Mixer(ac);
-      // Rendered off the frame, in the background; the live synths play until they are ready
-      void this.samples.render(ac.sampleRate, DRUM_SAMPLES);
+      // Rendered off the frame, in the background; the live synths play until they are ready.
+      // The drums first: they are small, and every song needs them from its first bar
+      const rate = ac.sampleRate;
+      void this.samples
+        .render(rate, DRUM_SAMPLES)
+        .then(() => this.samples.renderPitched(rate, PITCHED_SAMPLES));
     }
     this.music.init(ac, this.mixer.music, this.samples);
     this.classicMusic.init(ac, this.mixer.music);

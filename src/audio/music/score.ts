@@ -25,6 +25,12 @@ export type Tier = 'calm' | 'groove' | 'rise' | 'high';
  */
 export type LeadVoice = 'saw' | 'square' | 'bell' | 'pluck' | 'koto' | 'flute';
 
+/** The rendered basses (audio/samples/pitched.ts); a plain oscillator type plays live. */
+export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808';
+
+/** The rendered arpeggio voices; a plain oscillator type plays live. */
+export type ArpVoice = 'arpPulse' | 'pluck';
+
 /**
  * One part of a song, as written.
  *
@@ -60,7 +66,12 @@ export interface SongDef {
   bpm: number;
   /** Share of a step the off-beat 16ths are pushed late by, for a laid-back groove. */
   swing: number;
-  voices: { lead: LeadVoice; counter: LeadVoice; arp: OscillatorType; bass: OscillatorType };
+  voices: {
+    lead: LeadVoice;
+    counter: LeadVoice;
+    arp: OscillatorType | ArpVoice;
+    bass: OscillatorType | BassVoice;
+  };
   /**
    * The backdrop this song belongs to: it plays only behind that one, and first whenever that
    * backdrop comes up. Songs without one play behind any backdrop.

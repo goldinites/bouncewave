@@ -278,7 +278,7 @@ export class Arrangement {
     const note = bassNote(pattern[s], chord, next);
     if (note === null) return;
 
-    this.play.note(
+    this.play.bass(
       song.voices.bass,
       note,
       time,
@@ -298,11 +298,11 @@ export class Arrangement {
     const note = arpNote(chord, Number(token));
     const volume = ARP_VOLUME * (0.5 + 0.5 * I);
     const cutoff = (1400 + I * 2600) * signature.leadBrightness;
-    this.play.note(song.voices.arp, note, time, stepDuration * 1.6, volume, this.melody, cutoff);
+    this.play.arp(song.voices.arp, note, time, stepDuration * 1.6, volume, this.melody, cutoff);
 
     if (signature.stutter && s % 4 === 0) {
       const at = time + stepDuration * 0.5;
-      this.play.note(
+      this.play.arp(
         song.voices.arp,
         note + 12,
         at,
