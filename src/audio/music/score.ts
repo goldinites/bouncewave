@@ -85,8 +85,17 @@ export interface Section extends Omit<SectionDef, 'chords' | 'lead' | 'counter'>
 }
 
 export interface Song extends Omit<SongDef, 'sections'> {
+  /** The title in lower case with dashes, for links to it (`?song=night-drive`). */
+  id: string;
   sections: Section[];
 }
+
+/** A song's id from its title: "Night Drive" → "night-drive". */
+export const songId = (title: string): string =>
+  title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 
 const splitBars = (text: string) => text.split('|').map((bar) => bar.trim().split(/\s+/));
 
@@ -149,7 +158,7 @@ export function compileSong(def: SongDef): Song {
       counter: counter ? compileMelody(counter, bars) : null,
     };
   });
-  return { ...def, sections };
+  return { ...def, id: songId(def.title), sections };
 }
 
 /** The chord sounding on `step` of a section. */

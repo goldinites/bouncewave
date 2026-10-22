@@ -26,20 +26,20 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 
 ## Layers and their dependencies
 
-| Directory              | Owns                                                                  | May import                                          |
-| ---------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
-| `shared/`              | palette, math, fonts, scene ids, `EventBus`                           | nothing in the project                              |
-| `match/`               | rules, simulation, AI, paddles, balls, sides                          | `match/`, `shared/`                                 |
-| `settings/`            | the player's settings and quick-match setup                           | `match/`, `i18n/` (language), `shared/`             |
-| `profile/`             | everything saved between visits: versions, migrations, statistics     | `settings/`, `match/` (events), `shared/`           |
-| `i18n/`                | texts in every language                                               | `match/` (difficulty, modes)                        |
-| `input/`               | keyboard, pointer, touch, portrait rotation                           | `match/`, `shared/`                                 |
-| `audio/`               | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                 |
-| `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `shared/`                                 |
-| `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax | `match/`, `render/`, `audio/`, `shared/`            |
-| `ui/`                  | menus as Preact screens on a stack, challenge condition, boot screen  | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
-| `debug/`, `easterEgg/` | FPS overlay and background menu; the classic look's switch            | `shared/`                                           |
-| `app/`                 | `Game` (composition root, frame loop), `FixedStep`                    | anything                                            |
+| Directory              | Owns                                                                     | May import                                          |
+| ---------------------- | ------------------------------------------------------------------------ | --------------------------------------------------- |
+| `shared/`              | palette, math, fonts, scene ids, `EventBus`                              | nothing in the project                              |
+| `match/`               | rules, simulation, AI, paddles, balls, sides                             | `match/`, `shared/`                                 |
+| `settings/`            | the player's settings and quick-match setup                              | `match/`, `i18n/` (language), `shared/`             |
+| `profile/`             | everything saved between visits: versions, migrations, statistics        | `settings/`, `match/` (events), `shared/`           |
+| `i18n/`                | texts in every language                                                  | `match/` (difficulty, modes)                        |
+| `input/`               | keyboard, pointer, touch, portrait rotation                              | `match/`, `shared/`                                 |
+| `audio/`               | the AudioContext, procedural music, sound effects                        | `match/`, `shared/`                                 |
+| `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays    | `match/`, `shared/`                                 |
+| `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax    | `match/`, `render/`, `audio/`, `shared/`            |
+| `ui/`                  | menus as Preact screens on a stack, challenge condition, boot screen     | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
+| `debug/`, `easterEgg/` | FPS overlay, developer menus, the sound stand; the classic look's switch | `audio/`, `shared/`                                 |
+| `app/`                 | `Game` (composition root, frame loop), `FixedStep`                       | anything                                            |
 
 The rules that matter most are checked by `tests/architecture.test.ts`: `match/` imports only
 `match/` and `shared/`, and `shared/` imports nothing from the project.
@@ -119,7 +119,9 @@ offers it, nor does random deal it. Whatever starts a match sets the scene it is
 `switchChannel` for it on `matchStart`.
 
 **A song.** An entry in `SONG_DEFS` (`audio/music/songs.ts`); its `scene` ties it to a background,
-which then plays it first.
+which then plays it first. Its id is its title in lower case with dashes; listen to it, part by
+part and layer by layer, on the debug overlay's sound stand (`debug/SoundStand.ts`,
+`?song=night-drive&part=chorus&mute=drums`).
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
 (`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), or in

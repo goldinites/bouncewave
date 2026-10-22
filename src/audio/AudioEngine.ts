@@ -14,6 +14,8 @@ export class AudioEngine {
   /** The look the music follows: the classic one plays its loop in place of the synthwave mix. */
   private look: Look = 'neon';
   private readonly listeners = new AbortController();
+  /** Set by the listening stand while it plays a sound, so it is heard behind the menus too. */
+  public isAuditioning = false;
 
   /**
    * Both getters are read live, at the moment a sound plays, so a settings toggle or a
@@ -25,7 +27,7 @@ export class AudioEngine {
     this.sfx = new SoundEffects(
       () => this.audioContext,
       isSoundMuted,
-      isGameplayAudible,
+      () => this.isAuditioning || isGameplayAudible(),
       // Hits are tuned to whatever chord the music is playing right now
       () => this.music.getHarmony(),
     );
@@ -51,6 +53,16 @@ export class AudioEngine {
     this.classicMusic.dispose();
     void this.audioContext?.close();
     this.audioContext = null;
+  }
+
+  /**
+   * How late the output is on this device, in seconds: the browser's own processing and the
+   * device's output (Bluetooth adds a lot); null before the context exists.
+   */
+  public getLatency(): { base: number; output: number } | null {
+    const ac = this.audioContext;
+    if (!ac) return null;
+    return { base: ac.baseLatency ?? 0, output: ac.outputLatency ?? 0 };
   }
 
   public setLook(look: Look): void {

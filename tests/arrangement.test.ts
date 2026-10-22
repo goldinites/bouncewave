@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Arrangement } from '@/audio/music/Arrangement';
+import { Arrangement, MUSIC_LAYERS, MusicLayer } from '@/audio/music/Arrangement';
 import { Conductor } from '@/audio/music/Conductor';
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
@@ -87,5 +87,41 @@ describe('Arrangement', () => {
     cutOut.mockClear();
     playLastBar('intro', false);
     expect(cutOut).not.toHaveBeenCalled();
+  });
+
+  it('plays nothing of the layers the listening stand silences', () => {
+    const notesWith = (muted: MusicLayer[]) => {
+      const { ctx, calls } = fakeAudioContext();
+      const graph = new MusicGraph(ctx);
+      const arrangement = new Arrangement(new Instruments(graph), graph, new Set(muted));
+      const song = SONGS[0];
+      const step = 60 / song.bpm / 4;
+      for (const section of song.sections) {
+        for (let s = 0; s < section.bars * STEPS_PER_BAR; s++) {
+          arrangement.playStep({
+            time: s * step,
+            stepDuration: step,
+            song,
+            section,
+            bar: Math.floor(s / STEPS_PER_BAR),
+            stepInBar: s % STEPS_PER_BAR,
+            isLastBar: true,
+            nextBarChord: section.chords[0],
+            intensity: 1,
+            climaxLevel: 1,
+            difficulty: DifficultyLevel.NORMAL,
+          });
+        }
+        arrangement.playDrop(0, section.chords[0], step);
+      }
+      return calls.filter((c) => /^create(Oscillator|BufferSource)$/.test(c.method)).length;
+    };
+
+    const all = notesWith([]);
+    expect(notesWith([...MUSIC_LAYERS])).toBe(0);
+    for (const layer of MUSIC_LAYERS) {
+      const without = notesWith([layer]);
+      expect(without, layer).toBeLessThan(all);
+    }
   });
 });

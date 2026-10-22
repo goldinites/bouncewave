@@ -9,11 +9,20 @@ export const SONG_BARS = 64;
 const MIN_BARS: Record<Tier, number> = { calm: 2, groove: 2, rise: Infinity, high: 4 };
 // Early exits land on a phrase boundary, so a melody is never cut off mid-phrase
 const PHRASE_BARS = 2;
+// A replayed transition starts this many bars before the part it leads into, or at the start
+// of the section before it if that is shorter, so a build's riser is heard from its start
+const REPLAY_BARS = 4;
 
 interface Position {
   songIndex: number;
   sectionIndex: number;
   bar: number;
+}
+
+/** What the listening stand holds the music to: a song, and one of its sections or any. */
+interface Pin {
+  songIndex: number;
+  sectionIndex: number | null;
 }
 
 /** Where to head next from `current` when the game wants `wanted`: a chorus is built up to. */
@@ -47,6 +56,8 @@ export class Conductor {
   private readonly random: () => number;
   /** How many times each tier was entered, to take turns between a song's sections of it. */
   private readonly turns = new Map<Tier, number>();
+  /** The listening stand's hold on the music; null while the game leads it. */
+  private pin: Pin | null = null;
 
   constructor(
     songs: readonly Song[],
@@ -90,6 +101,54 @@ export class Conductor {
     return chordAt(section, next.bar * STEPS_PER_BAR);
   }
 
+  /** Whether the listening stand holds the music to a song. */
+  public get isPinned(): boolean {
+    return this.pin !== null;
+  }
+
+  /**
+   * The listening stand: from the next bar line, play this song and nothing else — only this
+   * section, looping, if one is given, or otherwise its sections as the game calls for them.
+   * Null lets the game lead the music again.
+   */
+  public pinTo(
+    songIndex: number | null,
+    sectionIndex: number | null = null,
+    wanted: Tier = 'groove',
+  ): void {
+    if (songIndex === null) {
+      this.pin = null;
+      // Back to the backdrop's music, at the next phrase boundary
+      if (this.scene) this.enterScene(this.scene);
+      return;
+    }
+    this.pin = { songIndex, sectionIndex };
+    this.skipTarget = {
+      songIndex,
+      sectionIndex: sectionIndex ?? this.pickSection(songIndex, wanted),
+      bar: 0,
+    };
+    this.planned = this.skipTarget;
+  }
+
+  /**
+   * Plays the way into the pinned section again from the next bar line: the last bars of the
+   * section before it in the song, its fill included, then the pinned section.
+   */
+  public replayTransition(): void {
+    if (this.pin?.sectionIndex == null) return;
+    const { songIndex, sectionIndex } = this.pin;
+    const sections = this.songs[songIndex].sections;
+    const before = (sectionIndex - 1 + sections.length) % sections.length;
+    const bars = sections[before].bars;
+    this.skipTarget = {
+      songIndex,
+      sectionIndex: before,
+      bar: bars <= REPLAY_BARS ? 0 : bars - REPLAY_BARS,
+    };
+    this.planned = this.skipTarget;
+  }
+
   /** Move on to another song at the next phrase boundary. */
   public requestNewSong(): void {
     this.isSongChangeRequested = true;
@@ -131,6 +190,16 @@ export class Conductor {
     }
 
     const { section, bar, position } = this;
+    // The stand's section loops; the way into it (a replayed transition) runs on into it
+    const pinned = this.pin?.sectionIndex;
+    if (pinned != null) {
+      const isIn = position.sectionIndex === pinned;
+      const isEnd = bar >= section.bars - 1;
+      this.planned =
+        isIn || !isEnd ? this.continuation() : { ...position, sectionIndex: pinned, bar: 0 };
+      return;
+    }
+
     const isEnd = bar >= section.bars - 1;
     const tier = route(section.tier, wanted);
     const canLeave =
@@ -139,6 +208,7 @@ export class Conductor {
 
     if (
       isQuiet &&
+      !this.pin &&
       ((this.isSongChangeRequested && canLeave) || (isEnd && this.barsInSong + 1 >= SONG_BARS))
     ) {
       const songIndex = this.pickOtherSong();
