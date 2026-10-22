@@ -290,11 +290,19 @@ describe('portamento', () => {
     return spy.mock.calls.map((call) => call[7]);
   };
 
-  it('slides a lead note in from the one it follows without a gap', () => {
+  it('slides a lead note in from a near one it follows without a gap, and quickly', () => {
     expect(glides('A4 - C5 - . . E5 -', 0.07)).toEqual([
       undefined,
-      { from: 69, time: 0.07 },
+      { from: 69, time: 0.04 }, // capped: a long slide starts the note out of tune
       undefined, // after a rest it starts afresh
+    ]);
+  });
+
+  it('jumps across a leap rather than sliding through it', () => {
+    expect(glides('A4 - A5 - G5 - . .', 0.04)).toEqual([
+      undefined,
+      undefined,
+      { from: 81, time: 0.04 },
     ]);
   });
 

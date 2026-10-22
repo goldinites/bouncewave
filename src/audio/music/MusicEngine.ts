@@ -61,6 +61,8 @@ export interface MusicPosition {
 export class MusicEngine {
   private graph: MusicGraph | null = null;
   private instruments: Instruments | null = null;
+  private arrangement: Arrangement | null = null;
+  private isGlideOn = true;
   private samples = new SampleBank();
   private readonly harmony = new HarmonyTimeline(HARMONY_HISTORY);
 
@@ -97,6 +99,8 @@ export class MusicEngine {
     this.samples = samples;
     this.instruments = new Instruments(graph, samples);
     const arrangement = new Arrangement(this.instruments, graph, this.mutedLayers);
+    arrangement.isGlideOn = this.isGlideOn;
+    this.arrangement = arrangement;
     this.graph = graph;
 
     this.scheduler = new StepScheduler(
@@ -272,6 +276,12 @@ export class MusicEngine {
       case 'brass':
         return line([0, 0, 1], 1.5, (_, time) => play.stab([57, 60, 64], time, 0.3, 0.06));
     }
+  }
+
+  /** The listening stand switches the lead's portamento off and on, to compare. */
+  public setGlide(isOn: boolean): void {
+    this.isGlideOn = isOn;
+    if (this.arrangement) this.arrangement.isGlideOn = isOn;
   }
 
   /** The listening stand silences a part of the arrangement, or brings it back. */

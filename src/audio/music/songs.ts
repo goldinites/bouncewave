@@ -90,14 +90,14 @@ const M1 = `B4 - - - . G4 A4 B4 | E5 - - - D5 - B4 - | C5 - - - . A4 B4 C5 | G5 
           | A5 - - - G5 - E5 - | E5 - - D5 C5 - B4 - | D#5 - - - F#5 - - - | B4 - - - - - - -`;
 
 /** M2, over Em Em C C Am Am B B: a 3+3+2 figure of repeated notes, answered by climbing runs. */
-const M2 = `E5 - - G5 - - F#5 - E5 - - - B4 - - - | . . D5 - E5 - G5 - F#5 - - - . . . .
-          | E5 - - G5 - - F#5 - E5 - - - C5 - - - | . . B4 - C5 - D5 - E5 - - - - - - -
-          | A5 - - G5 - - E5 - G5 - - - E5 - - - | . . C5 - D5 - E5 - D5 - - - C5 - B4 -
+const M2 = `E5 - - G5 - - F#5 - E5 - - - B4 - - - | . . D5 - E5 - F#5 - G5 - - - . . . .
+          | E5 - - G5 - - D5 - C5 - - - G4 - - - | . . B4 - C5 - D5 - E5 - - - - - - -
+          | A5 - - G5 - - E5 - G5 - - - E5 - - - | . . C5 - D5 - E5 - C5 - - - B4 - A4 -
           | D#5 - - F#5 - - B5 - A5 - - - F#5 - - - | D#5 - - - - - - - B4 - - - - - - -`;
 
-/** M3, over Cm Cm Ab Ab Eb Eb Bb Bb: long aching notes leaning off the chord on the strong beats. */
-const M3 = `G5 - - - - - Eb5 F5 | G5 - - - Bb5 - G5 - | C6 - - - - - Bb5 Ab5 | Bb5 - - - G5 - - -
-          | G5 - - - - - Bb5 C6 | D6 - - - C6 - Bb5 - | F5 - - - D5 - - - | F5 - - - - - Eb5 F5`;
+/** M3, over Cm Cm Ab Ab Eb Eb Bb Bb: long aching notes, leaning off the chord and resolving down. */
+const M3 = `G5 - - - - - Eb5 F5 | G5 - - - Bb5 - G5 - | C6 - - - - - Bb5 Ab5 | Bb5 - Ab5 - - - Eb5 -
+          | G5 - - - - - Bb5 C6 | C6 - Bb5 - - - G5 - | F5 - - - D5 - - - | F5 - - - - - Eb5 F5`;
 
 /** M4, over Cm Cm Ab Ab Eb Eb Bb Bb: a phrase, a rest for the arpeggios to answer, a climbing run. */
 const M4 = `C5 - - Eb5 - - G5 - - - - - . . . . | . . Bb4 - C5 - D5 - Eb5 - - - D5 - C5 -
@@ -1889,12 +1889,11 @@ const SONG_DEFS: SongDef[] = [
         chords: 'Cm | Cm | Ab | Ab | Eb | Eb | Bb | Bb',
         lead: M3,
         arpLine: TWO_ARPS.low,
-        counter: TWO_ARPS.high,
         bass: 'long',
         drums: 'four',
         fill: 'stop',
         pad: 'hold',
-        layers: { drums: 0.35, counter: 0.45 },
+        layers: { drums: 0.35 },
         sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
       },
       {
@@ -1904,7 +1903,6 @@ const SONG_DEFS: SongDef[] = [
         lead: M3,
         leadVoice: 'saw',
         arpLine: TWO_ARPS.low,
-        counter: TWO_ARPS.high,
         bass: 'drive',
         drums: 'drive',
         fill: 'toms',
@@ -1942,7 +1940,6 @@ const SONG_DEFS: SongDef[] = [
         chords: 'Cm | Cm | Ab | Ab | Eb | Eb | Bb | Bb',
         lead: M4,
         arpLine: TWO_ARPS.low,
-        counter: TWO_ARPS.high,
         bass: 'drive',
         drums: 'drive',
         fill: 'toms',

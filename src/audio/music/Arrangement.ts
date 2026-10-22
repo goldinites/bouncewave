@@ -95,6 +95,12 @@ const LEAD_VOLUME: Record<LeadVoice, number> = {
 };
 const COUNTER_SHARE = 0.55;
 const ARP_VOLUME = 0.045;
+// Under a melody the arpeggio steps back, quieter and darker, so the ear doesn't knit its notes
+// into the tune's
+const ARP_UNDER_LEAD = { VOLUME: 0.6, BRIGHTNESS: 0.7 } as const;
+// Portamento slides only between near notes, and quickly: a long slide, or one across a leap,
+// starts every note out of tune
+const GLIDE = { MAX_INTERVAL: 5, MAX_TIME: 0.04 } as const; // semitones, s
 const PAD_VOLUME = 0.022;
 const STAB_VOLUME = 0.05;
 const BASS_VOLUME = 0.15;
@@ -174,6 +180,8 @@ export class Arrangement {
   private kit: DrumKit = KITS.synthwave;
   /** The lead's last note and when it ends, for a legato note to slide in from it. */
   private lastLead: { note: number; end: number } | null = null;
+  /** The listening stand can switch portamento off, to hear the melody without it. */
+  public isGlideOn = true;
   /** The layers the heat has brought in this bar (updateLayers). */
   private readonly layersIn = new Set<MusicLayer>();
   /** The section the layers were last decided for. */
@@ -435,10 +443,14 @@ export class Arrangement {
     }
 
     const signature = DIFFICULTY_SIGNATURES[difficulty];
-    const volume = ARP_VOLUME * (0.5 + 0.5 * I);
+    const underLead = section.lead && this.plays('lead');
+    const volume = ARP_VOLUME * (0.5 + 0.5 * I) * (underLead ? ARP_UNDER_LEAD.VOLUME : 1);
     const sectionStep = context.bar * STEPS_PER_BAR + s;
     const cutoff =
-      (1400 + I * 2600) * signature.leadBrightness * sweepAt(section, 'arp', sectionStep);
+      (1400 + I * 2600) *
+      signature.leadBrightness *
+      sweepAt(section, 'arp', sectionStep) *
+      (underLead ? ARP_UNDER_LEAD.BRIGHTNESS : 1);
     this.play.arp(song.voices.arp, note, time, stepDuration * 1.6, volume, this.melody, cutoff);
 
     if (signature.stutter && s % 4 === 0) {
@@ -471,9 +483,10 @@ export class Arrangement {
     // A lead note straight after the last one, with no rest between, slides in from it
     const last = isLead ? this.lastLead : null;
     const isLegato = last !== null && time - last.end < stepDuration * 0.5;
+    const interval = isLegato ? Math.abs(melodyNote.note - last.note) : 0;
     const glide =
-      song.voices.glide && isLegato && last.note !== melodyNote.note
-        ? { from: last.note, time: song.voices.glide }
+      this.isGlideOn && song.voices.glide && interval > 0 && interval <= GLIDE.MAX_INTERVAL
+        ? { from: last!.note, time: Math.min(song.voices.glide, GLIDE.MAX_TIME) }
         : undefined;
     if (isLead) this.lastLead = { note: melodyNote.note, end: time + duration };
 

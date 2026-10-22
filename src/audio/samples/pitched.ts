@@ -120,7 +120,9 @@ export const PITCHED_SAMPLES = {
     build: (ctx, _random, f, tune) => {
       const sum = level(ctx, 0.4);
       osc(ctx, 'square', f).connect(sum);
-      chain(osc(ctx, 'square', tune(cents(f, 9))), level(ctx, 0.6), sum);
+      // Detuned both ways, so the chorus doesn't pull the pitch sharp
+      chain(osc(ctx, 'square', tune(cents(f, 9))), level(ctx, 0.3), sum);
+      chain(osc(ctx, 'square', tune(cents(f, -9))), level(ctx, 0.3), sum);
       chain(osc(ctx, 'triangle', f * 2), level(ctx, 0.3), sum);
       chain(sum, filter(ctx, 'lowpass', 7000), ctx.destination);
     },

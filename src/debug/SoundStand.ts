@@ -268,8 +268,24 @@ export class SoundStand {
         return label;
       }),
     );
+    rows.append(this.glideSwitch());
     rows.style.flexWrap = 'wrap';
     return rows;
+  }
+
+  /** Portamento on the lead, on and off, to hear the melody with and without it. */
+  private glideSwitch(): HTMLLabelElement {
+    const label = document.createElement('label');
+    Object.assign(label.style, { display: 'flex', gap: '3px', alignItems: 'center' });
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = true;
+    box.dataset.glide = '';
+    this.on(box, 'change', () => this.audio.music.setGlide(box.checked));
+    const name = document.createElement('span');
+    name.textContent = 'glide';
+    label.append(box, name);
+    return label;
   }
 
   /** Every rendered instrument, each press its next variant, to hear them one by one. */
