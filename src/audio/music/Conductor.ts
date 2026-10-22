@@ -1,6 +1,6 @@
 import { chordAt, Section, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { Chord } from '@/audio/music/theory';
-import { SceneId } from '@/shared/scenes';
+import { isPickableScene, SceneId } from '@/shared/scenes';
 
 // A song plays at least this many bars before the conductor moves on, when its form comes round
 // again, and never in the middle of a climax
@@ -402,7 +402,9 @@ export class Conductor {
   /**
    * The backdrop's own song if it is waiting; otherwise any song but the one playing, at random
    * — and, when a skip is already on its way, not that one either, so every press of skip
-   * brings a new title. Songs that belong to another backdrop are left out.
+   * brings a new title. Behind a quick match's backdrop the other quick-match backdrops' songs
+   * may follow its own, so a long session there doesn't loop one song; a mode's own backdrop (a
+   * challenge's) keeps its song. Songs for no backdrop play behind any.
    */
   private pickOtherSong(): number {
     if (this.queuedSong !== null) {
@@ -412,8 +414,17 @@ export class Conductor {
     }
 
     const excluded = new Set([this.position.songIndex, this.skipTarget?.songIndex]);
+    const scene = this.scene;
+    const isQuickMatch = scene === null || isPickableScene(scene);
+    const hasOwn = this.songs.some((song) => song.scene !== undefined && song.scene === scene);
+    const fits = (song: Song) =>
+      song.scene === undefined ||
+      song.scene === scene ||
+      (isQuickMatch && isPickableScene(song.scene));
     const candidates = this.songs.flatMap((song, i) =>
-      excluded.has(i) || (song.scene !== undefined && song.scene !== this.scene) ? [] : [i],
+      excluded.has(i) || !fits(song) || (!isQuickMatch && hasOwn && song.scene !== scene)
+        ? []
+        : [i],
     );
     if (candidates.length === 0) return this.position.songIndex;
     return candidates[Math.floor(this.random() * candidates.length)];

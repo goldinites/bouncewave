@@ -9,7 +9,7 @@ const LOOPED = LOOP.start + LOOP.length + 0.05; // s rendered
 
 // Roots, MIDI: the notes each register is rendered at, a few semitones apart
 const BASS_ROOTS = [29, 35, 41, 47]; // F1–B2: the bass plays E1 to about D#3
-const LEAD_ROOTS = [58, 64, 70, 76, 82]; // A#3–A#5: melodies and counter-melodies
+const LEAD_ROOTS = [58, 64, 70, 76, 82, 88]; // A#3–E6: melodies and counter-melodies
 const ARP_ROOTS = [58, 64, 70, 76, 82, 88]; // arpeggios reach a little higher
 const PAD_ROOTS = [52, 58, 64, 70]; // pad voicings sit in E3–C5
 const STAB_ROOTS = [64, 70, 76, 82]; // stabs play the voicing an octave up
