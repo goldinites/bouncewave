@@ -10,7 +10,8 @@ screens, an installable offline PWA. Played at https://goldinites.github.io/boun
   designer and point out objectively bad decisions before building them (how: `/roadmap-step`,
   step 1a).
 - Skills for recurring jobs: `/roadmap-step` (carry out the next step of the plan), `/release`
-  (ship a version to GitHub Pages).
+  (ship a version to GitHub Pages), `/compose-track` (write a soundtrack track by ear with the
+  user, as `docs/AUDIO.md` "Как делаем трек" describes).
 
 ## Commands
 
@@ -24,6 +25,7 @@ npm run test:e2e      # Playwright smoke: desktop, phone portrait and landscape 
 npm run test:perf     # every background's frame time vs e2e/frameBudget.ts (CI runs it too)
 npm run test:visual   # every background vs its saved picture in e2e/__screenshots__ (local only)
 npm run sim           # balance report, AI against AI: levels, rallies, skills, challenges (local only)
+npm run loudness -- <song-id> ...  # each part's loudness and the `level` change to -25 dB (local only)
 ```
 
 All four checks (tests, types, lint, format), the smoke and the frame budget must pass before a
