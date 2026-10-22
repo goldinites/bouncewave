@@ -42,14 +42,17 @@ export class Ps1MusicEngine {
   private currentStep = 0;
   private scheduler: StepScheduler | null = null;
 
-  /** Builds the audio graph and starts the scheduler; safe to call more than once. */
-  public init(context: AudioContext): void {
+  /**
+   * Builds the audio graph and starts the scheduler; safe to call more than once.
+   * @param output where the music goes: the mixer's music bus, the master shared with the rest
+   */
+  public init(context: AudioContext, output: AudioNode = context.destination): void {
     if (this.context) return;
     this.context = context;
 
     this.master = context.createGain();
     this.master.gain.value = 0;
-    this.master.connect(context.destination);
+    this.master.connect(output);
 
     this.dryBus = context.createGain();
     this.dryBus.connect(this.master);

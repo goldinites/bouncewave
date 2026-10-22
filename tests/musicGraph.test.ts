@@ -17,12 +17,13 @@ describe('MusicGraph', () => {
       graph.setToneFilter(16000, i);
       graph.setEchoTime(0.4 + (i % 2) * 0.0005, i); // tempo drifting by a hair
     }
-    expect(targets() - before).toBe(3);
+    // Mute, tone, and the echo's two ping-pong delays
+    expect(targets() - before).toBe(4);
 
     graph.setMuted(true);
     graph.setToneFilter(450, 300);
     graph.setEchoTime(0.5, 300);
-    expect(targets() - before).toBe(6);
+    expect(targets() - before).toBe(8);
   });
 
   it('lets a running tape stop finish before recovering, instead of overlapping it', () => {

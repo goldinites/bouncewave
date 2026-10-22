@@ -65,6 +65,11 @@ export interface SongDef {
    * backdrop comes up. Songs without one play behind any backdrop.
    */
   scene?: SceneId;
+  /**
+   * dB the song is turned up or down by, so the songs sound equally loud: read off the listening
+   * stand's meter (its average over the verse and chorus) against the others. 0 if left out.
+   */
+  level?: number;
   sections: SectionDef[];
 }
 

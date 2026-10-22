@@ -1,3 +1,4 @@
+import { Mixer } from '@/audio/Mixer';
 import { Harmony } from '@/audio/music/HarmonyTimeline';
 import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
@@ -25,28 +26,44 @@ const TUNE_IN_FLAT = 0.94;
 // Shared echo used by the victory sting
 const ECHO = { TIME: 0.28, FEEDBACK: 0.35, WET: 0.5 } as const;
 
+// How far the music dips under a strong hit (Mixer.duckMusic), so the hit punches through;
+// ordinary hits leave it alone, or a long rally would pump the music on every beat
+const HIT_DUCK = { PERFECT: 0.6, POWER_SHOT: 1 } as const;
+
+/** Which of the mixer's buses a sound plays on. */
+type Bus = 'sfx' | 'menu';
+
 export class SoundEffects {
   private audioContextGetter: () => AudioContext | null;
   private isMutedGetter: () => boolean;
   private isGameplayAudibleGetter: () => boolean;
   private harmonyGetter: () => Harmony | null;
+  private mixerGetter: () => Mixer | null;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
   /**
    * @param getIsGameplayAudible whether gameplay sounds should play right now (false behind
    *   menus and in the attract-mode demo); `force` beeps ignore it
+   * @param getMixer the master the sounds play into; without one they go straight out
    */
   constructor(
     getAudioContext: () => AudioContext | null,
     getIsMuted: () => boolean,
     getIsGameplayAudible: () => boolean,
     getHarmony: () => Harmony | null = () => null,
+    getMixer: () => Mixer | null = () => null,
   ) {
     this.audioContextGetter = getAudioContext;
     this.isMutedGetter = getIsMuted;
     this.isGameplayAudibleGetter = getIsGameplayAudible;
     this.harmonyGetter = getHarmony;
+    this.mixerGetter = getMixer;
+  }
+
+  /** Where a sound on `bus` goes: its bus on the mixer, or the speakers if there is none. */
+  private output(ac: AudioContext, bus: Bus = 'sfx'): AudioNode {
+    return this.mixerGetter()?.[bus] ?? ac.destination;
   }
 
   private beep(
@@ -56,6 +73,7 @@ export class SoundEffects {
     volume = 0.06,
     slide = 0,
     force = false,
+    bus: Bus = 'sfx',
   ): void {
     const ac = this.audioContextGetter();
     if (!ac || this.isMutedGetter() || (!this.isGameplayAudibleGetter() && !force)) {
@@ -77,7 +95,7 @@ export class SoundEffects {
       gain.gain.setValueAtTime(volume * 2, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-      osc.connect(gain).connect(ac.destination);
+      osc.connect(gain).connect(this.output(ac, bus));
       osc.start();
       osc.stop(now + duration);
     } catch {
@@ -98,6 +116,7 @@ export class SoundEffects {
     const freq = midiToFrequency(getRallyNote(this.harmonyGetter(), rally));
 
     if (isPerfect) {
+      this.duckMusic(HIT_DUCK.PERFECT);
       // Clean sine tone with a soft octave overtone instead of the square blip
       this.beep(freq, 0.22, 'sine', 0.09);
       this.beep(freq * 2, 0.16, 'sine', 0.03);
@@ -114,6 +133,7 @@ export class SoundEffects {
   /** Overdrive power shot: the rally's note as a rising saw roar with a fifth and an octave. */
   public playPowerShot(rally: number): void {
     const freq = midiToFrequency(getRallyNote(this.harmonyGetter(), rally));
+    this.duckMusic(HIT_DUCK.POWER_SHOT);
     this.beep(freq, 0.32, 'sawtooth', 0.06, 2);
     this.beep(freq * 1.5, 0.26, 'square', 0.035);
     this.beep(freq * 2, 0.4, 'sine', 0.05);
@@ -238,6 +258,12 @@ export class SoundEffects {
     }
   }
 
+  /** The music dips for a moment under a strong hit, if the hit is heard at all. */
+  private duckMusic(strength: number): void {
+    if (this.isMutedGetter() || !this.isGameplayAudibleGetter()) return;
+    this.mixerGetter()?.duckMusic(strength);
+  }
+
   private getUnmutedContext(): AudioContext | null {
     const ac = this.audioContextGetter();
     return ac && !this.isMutedGetter() ? ac : null;
@@ -269,7 +295,7 @@ export class SoundEffects {
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
     osc.connect(gain);
-    gain.connect(ac.destination);
+    gain.connect(this.output(ac));
     if (echo) gain.connect(echo);
 
     osc.start(start);
@@ -296,7 +322,7 @@ export class SoundEffects {
     tone.connect(feedback);
     feedback.connect(delay);
     tone.connect(wet);
-    wet.connect(ac.destination);
+    wet.connect(this.output(ac));
 
     this.echoInput = input;
     this.echoContext = ac;
@@ -358,6 +384,6 @@ export class SoundEffects {
 
   /** UI feedback: settings are only reachable from menus, so it must bypass the gameplay gate. */
   public playSettingsClick(): void {
-    this.beep(SFX_FREQUENCIES.SETTINGS_CLICK, 0.08, 'square', 0.06, 0, true);
+    this.beep(SFX_FREQUENCIES.SETTINGS_CLICK, 0.08, 'square', 0.06, 0, true, 'menu');
   }
 }

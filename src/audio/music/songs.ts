@@ -143,6 +143,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Overdrive',
     bpm: 124,
     swing: 0,
+    level: -0.5,
     voices: { lead: 'saw', counter: 'bell', arp: 'sawtooth', bass: 'sawtooth' },
     sections: [
       {
@@ -209,6 +210,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Sunset Boulevard',
     bpm: 92,
     swing: 0.12,
+    level: 1.5,
     voices: { lead: 'bell', counter: 'pluck', arp: 'triangle', bass: 'sawtooth' },
     sections: [
       {
@@ -409,6 +411,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Crystal Skies',
     bpm: 120,
     swing: 0,
+    level: 0.5,
     voices: { lead: 'saw', counter: 'bell', arp: 'sawtooth', bass: 'sawtooth' },
     sections: [
       {
@@ -475,6 +478,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Ghost Signal',
     bpm: 88,
     swing: 0.08,
+    level: 2,
     voices: { lead: 'bell', counter: 'square', arp: 'triangle', bass: 'sawtooth' },
     sections: [
       {
@@ -616,6 +620,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Torii Gates',
     bpm: 96,
     swing: 0,
+    level: -0.5,
     voices: { lead: 'flute', counter: 'koto', arp: 'triangle', bass: 'sawtooth' },
     scene: 'fuji',
     sections: [
@@ -691,6 +696,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Jade Temple',
     bpm: 108,
     swing: 0,
+    level: -1.5,
     voices: { lead: 'bell', counter: 'pluck', arp: 'triangle', bass: 'sawtooth' },
     scene: 'jungle',
     sections: [
@@ -832,6 +838,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Black Belt',
     bpm: 118,
     swing: 0,
+    level: -1.5,
     voices: { lead: 'koto', counter: 'bell', arp: 'square', bass: 'sawtooth' },
     scene: 'dojo',
     sections: [
