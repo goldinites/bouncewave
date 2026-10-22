@@ -54,6 +54,8 @@ export class Conductor {
   /** The tier of the section before this one, null before the first change. */
   private previousTier: Tier | null = null;
   private barsInSong = 0;
+  /** How many times each section has started in this song, to vary it every time it comes back. */
+  private readonly passes = new Map<number, number>();
   /** Bars since the music last left a peak. */
   private barsSincePeak = Infinity;
   /** Where the form goes on after a peak it jumped to. */
@@ -82,6 +84,8 @@ export class Conductor {
     this.songs = songs;
     this.random = random;
     this.position = this.entry(songIndex % songs.length, tier);
+    // The section it starts on is its first pass
+    this.passes.set(this.position.sectionIndex, 1);
     this.isForMenu = tier === 'calm';
   }
 
@@ -101,6 +105,11 @@ export class Conductor {
   /** Bar of the current section, from 0. */
   public get bar(): number {
     return this.position.bar;
+  }
+
+  /** How many times the section has played before in this song: 0 the first time. */
+  public get pass(): number {
+    return (this.passes.get(this.position.sectionIndex) ?? 1) - 1;
   }
 
   /** Where in its form the song is: the step (from 0, -1 off the form) and how many there are. */
@@ -282,6 +291,7 @@ export class Conductor {
     const isNewSong = next.songIndex !== this.position.songIndex;
 
     if (isNewSong) {
+      this.passes.clear();
       this.barsInSong = 0;
       this.isSongChangeRequested = false;
       this.returnStep = null;
@@ -300,6 +310,9 @@ export class Conductor {
     }
 
     this.position = next;
+    // A section starting — anew, or again after looping — is one more pass of it
+    if (next.bar === 0)
+      this.passes.set(next.sectionIndex, (this.passes.get(next.sectionIndex) ?? 0) + 1);
     this.planned = null;
     this.plannedFor = null;
     this.skipTarget = null;

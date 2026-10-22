@@ -198,8 +198,8 @@ export class SoundStand {
   }
 
   private showReadout(): void {
-    const { songId, part, bar, step, steps } = this.audio.music.getPosition();
-    const place = step >= 0 ? ` ${step + 1}/${steps}` : '';
+    const { songId, part, bar, step, steps, pass } = this.audio.music.getPosition();
+    const place = (step >= 0 ? ` ${step + 1}/${steps}` : '') + (pass > 0 ? ` ×${pass + 1}` : '');
     const latency = this.audio.getLatency();
     const ms = (seconds: number) => (seconds * 1000).toFixed(0);
     const delay = latency ? `\nlatency ${ms(latency.base)} + out ${ms(latency.output)} ms` : '';

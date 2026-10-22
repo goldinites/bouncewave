@@ -21,6 +21,9 @@ export const STEPS_PER_BAR = 16;
 export const MUSIC_LAYERS = ['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as const;
 
 export type MusicLayer = (typeof MUSIC_LAYERS)[number];
+
+/** A section's feel: as written, half-time (the beat stretched over two bars) or double-time. */
+export type Feel = 'half' | 'double';
 const STEPS_PER_CHORD_SLOT = 8; // chords may change on the bar or halfway through it
 
 /**
@@ -73,6 +76,15 @@ export interface SectionDef {
    * its arpeggio in from 0.4 and its counter-melody from 0.55.
    */
   layers?: Partial<Record<MusicLayer, number>>;
+  /**
+   * Half-time or double-time: the kick, snare, clap, taiko and metal stretched over two bars or
+   * squeezed into half of one, the hats kept in time. As written if left out.
+   */
+  feel?: Feel;
+  /** Steps of silence that end the section: everything stops, then the next section hits. */
+  silence?: number;
+  /** The section opens with a drop: crash, kick, the kit's impact and a boom. */
+  drop?: boolean;
   /** Faults on the whole mix over the section's last bar, for a song that breaks down. */
   glitch?: GlitchPatternName;
 }

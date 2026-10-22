@@ -24,6 +24,7 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { Chord, placeAbove, voiceChord } from '@/audio/music/theory';
+import { BarVariation, barVariation, feelStep } from '@/audio/music/variation';
 import { DifficultyLevel } from '@/match/difficulty';
 import { clamp } from '@/shared/math';
 
@@ -43,6 +44,8 @@ export interface StepContext {
   nextBarChord: Chord;
   /** The tier of the section before this one, for the transition into it; null at the start. */
   previousTier?: Tier | null;
+  /** How many times this section has played before in the song: 0 the first time. */
+  pass?: number;
   /** 0..1: how hot the game is right now; the mix fills out and brightens as it rises. */
   intensity: number;
   /** 0..1: rally climax build-up; fades the climax-only layers in. */
@@ -105,6 +108,9 @@ const TRANSITION_VOLUME = {
   NOISE_WAVE: 0.05,
   BOOM: 0.5,
 } as const;
+// A ghost note and a phrase fill, as shares of the snare's written level
+const GHOST_SNARE = 0.3;
+const PHRASE_FILL = { FROM_STEP: 14, VELOCITIES: [0.35, 0.75] } as const;
 // How hot each tier is, to tell the music going up from coming down
 const TIER_HEAT: Record<Tier, number> = { calm: 0, groove: 1, rise: 2, high: 3 };
 
@@ -161,6 +167,8 @@ export class Arrangement {
   private readonly layersIn = new Set<MusicLayer>();
   /** The section the layers were last decided for. */
   private layersSection: Section | null = null;
+  /** How this bar plays differently from the written one (variation.ts), decided on its first step. */
+  private variation: BarVariation = barVariation('', '', 0, 0);
   /** Layers the listening stand has silenced; read live on every step. */
   private readonly muted: ReadonlySet<MusicLayer>;
 
@@ -209,12 +217,22 @@ export class Arrangement {
     if (s === 0 || section !== this.layersSection) {
       this.updateLayers(section, I, section !== this.layersSection || sectionStep === 0);
       this.layersSection = section;
+      this.variation = barVariation(song.id, section.name, context.pass ?? 0, bar);
     }
 
     if (sectionStep === 0) {
       // A crash marks every new section except the quiet ones
       if (section.tier !== 'calm' && this.plays('drums')) this.drum('crash', time, 0.12);
       if (this.has('fx')) this.playTransitions(time, context);
+      if (section.drop) this.playDrop(time, chord, stepDuration);
+    }
+
+    // A break: the music stops dead for the section's last steps, then the next one hits
+    if (section.silence) {
+      const silenceFrom = section.bars * STEPS_PER_BAR - section.silence;
+      if (sectionStep === silenceFrom)
+        this.graph.cutOut(context.time, section.silence * stepDuration);
+      if (sectionStep >= silenceFrom) return;
     }
 
     if (this.plays('pads')) this.playHarmony(time, sectionStep, chord, context);
@@ -228,7 +246,7 @@ export class Arrangement {
     if (this.plays('counter')) {
       this.playMelody(
         time,
-        section.counter?.[sectionStep],
+        section.counter?.[sectionStep] ?? this.response(context),
         song.voices.counter,
         COUNTER_SHARE,
         context,
@@ -338,12 +356,29 @@ export class Arrangement {
     }
   }
 
+  /**
+   * Call and response: when the part comes back and the lead rests for a bar, the counter voice
+   * answers with the lead's bar before, an octave up. Null where there is nothing to answer.
+   */
+  private response(context: StepContext): MelodyNote | null {
+    const { section, bar, stepInBar: s } = context;
+    const lead = section.lead;
+    if (!lead || (context.pass ?? 0) < 1 || bar < 1) return null;
+    const barStart = bar * STEPS_PER_BAR;
+    const restsHere = lead.slice(barStart, barStart + STEPS_PER_BAR).every((note) => !note);
+    if (!restsHere) return null;
+    const call = lead[barStart - STEPS_PER_BAR + s];
+    return call ? { note: call.note + 12, steps: call.steps } : null;
+  }
+
   private playBass(time: number, chord: Chord, context: StepContext): void {
     const { section, stepInBar: s, stepDuration, intensity: I, song } = context;
     const pattern = BASS_PATTERNS[section.bass];
     // The approach note aims at the chord after this one: halfway through the bar, or the next bar
     const next = s < 8 ? chordAt(section, context.bar * STEPS_PER_BAR + 8) : context.nextBarChord;
-    const note = bassNote(pattern[s], chord, next);
+    // On a repeat the root sometimes jumps up an octave
+    const token = pattern[s] === 'R' && this.variation.bassOctaves.has(s) ? 'O' : pattern[s];
+    const note = bassNote(token, chord, next);
     if (note === null) return;
 
     this.play.bass(
@@ -359,7 +394,8 @@ export class Arrangement {
 
   private playArp(time: number, chord: Chord, context: StepContext): void {
     const { section, stepInBar: s, stepDuration, intensity: I, song, difficulty } = context;
-    const token = ARP_PATTERNS[section.arp!][s];
+    // On a repeat the pattern is read a little ahead on every second bar
+    const token = ARP_PATTERNS[section.arp!][(s + this.variation.arpShift) % STEPS_PER_BAR];
     if (token === '.') return;
 
     const signature = DIFFICULTY_SIGNATURES[difficulty];
@@ -426,12 +462,20 @@ export class Arrangement {
     }
 
     const beat: DrumPattern = DRUM_PATTERNS[section.drums];
-    this.playKick(time, hit(beat.kick, s), I);
-    this.playTaiko(time, hit(beat.taiko, s), I);
+    // The feel stretches or squeezes the heavy drums; the hats keep the written time
+    const step = feelStep(section.feel, s, context.bar);
+    const felt = (line: string | undefined) => (step === null ? 0 : hit(line, step));
+    this.playKick(time, felt(beat.kick), I);
+    this.playTaiko(time, felt(beat.taiko), I);
 
-    const snare = hit(beat.snare, s);
-    if (snare) this.drum('snare', time, snare * (0.18 + 0.12 * I));
-    const clap = hit(beat.clap, s);
+    const snareLevel = 0.18 + 0.12 * I;
+    const { variation } = this;
+    const isPhraseFill = variation.phraseFill && !isLastBar && s >= PHRASE_FILL.FROM_STEP;
+    const snare = isPhraseFill
+      ? PHRASE_FILL.VELOCITIES[s - PHRASE_FILL.FROM_STEP]
+      : felt(beat.snare) || (beat.snare && variation.ghostSnares.has(s) ? GHOST_SNARE : 0);
+    if (snare) this.drum('snare', time, snare * snareLevel);
+    const clap = felt(beat.clap);
     if (clap) this.drum('clap', time, clap * (0.22 + 0.1 * I));
 
     const hat = hit(beat.hat, s);
@@ -442,7 +486,7 @@ export class Arrangement {
     }
     const open = hit(beat.open, s);
     if (open) this.drum('open', time, open * (0.05 + 0.04 * I));
-    const metal = hit(beat.metal, s);
+    const metal = felt(beat.metal);
     if (metal) this.drum('metal', time, metal * (0.08 + 0.06 * I));
     const perc = hit(beat.perc, s);
     if (perc) this.drum('perc', time, perc * (0.06 + 0.05 * I));

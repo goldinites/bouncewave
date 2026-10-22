@@ -48,6 +48,8 @@ export interface MusicPosition {
   bar: number;
   step: number;
   steps: number;
+  /** How many times the section has played before in the song: 0 the first time. */
+  pass: number;
 }
 
 /**
@@ -296,6 +298,7 @@ export class MusicEngine {
       part: conductor.section.name,
       bar: conductor.bar,
       ...conductor.formStep,
+      pass: conductor.pass,
     };
   }
 
@@ -392,6 +395,7 @@ export class MusicEngine {
         isLastBar: conductor.isLastBar,
         nextBarChord: conductor.nextBarChord,
         previousTier: conductor.cameFrom,
+        pass: conductor.pass,
         intensity: this.intensity,
         climaxLevel: this.climaxLevel,
         difficulty: this.state.difficulty,
