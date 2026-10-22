@@ -3,6 +3,7 @@ import { MusicGraph, PAD_SPREAD } from '@/audio/music/MusicGraph';
 import { ArpVoice, BassVoice, LeadVoice } from '@/audio/music/score';
 import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
+import { TransitionSampleId } from '@/audio/samples/transitions';
 import { midiToFrequency } from '@/shared/math';
 
 const PAD_DETUNE_CENTS = [-9, 9];
@@ -102,6 +103,28 @@ export class Instruments {
       rate * 2 ** (((Math.random() * 2 - 1) * cents) / 1200),
       this.graph.drums,
     );
+  }
+
+  /**
+   * A transition, from `time`: a swell is placed so that it ends at `end` (the downbeat it leads
+   * into), starting part-way through when there isn't time for all of it. The boom plays with
+   * the drums (their saturation and room), the rest straight into the mix.
+   * @returns false if it isn't rendered yet
+   */
+  public transition(id: TransitionSampleId, time: number, volume: number, end?: number): boolean {
+    const buffer = this.samples.pick(id);
+    if (!buffer) return false;
+    const destination = id === 'boom' ? this.graph.drums : this.graph.bus;
+    const source = this.ac.createBufferSource();
+    const gain = this.ac.createGain();
+    source.buffer = buffer;
+    gain.gain.value = volume;
+    source.connect(gain);
+    gain.connect(destination);
+    const start = end === undefined ? time : end - buffer.duration;
+    if (start >= time) source.start(start);
+    else source.start(time, time - start);
+    return true;
   }
 
   /** A drum's extra hit under the drop, if its kit has one. */

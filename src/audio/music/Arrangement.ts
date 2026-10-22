@@ -12,7 +12,15 @@ import {
   HIT_VELOCITY,
   STAB_PATTERNS,
 } from '@/audio/music/patterns';
-import { chordAt, LeadVoice, MelodyNote, Section, Song, STEPS_PER_BAR } from '@/audio/music/score';
+import {
+  chordAt,
+  LeadVoice,
+  MelodyNote,
+  Section,
+  Song,
+  STEPS_PER_BAR,
+  Tier,
+} from '@/audio/music/score';
 import { Chord, placeAbove, voiceChord } from '@/audio/music/theory';
 import { DifficultyLevel } from '@/match/difficulty';
 import { clamp } from '@/shared/math';
@@ -40,6 +48,8 @@ export interface StepContext {
   isLastBar: boolean;
   /** The chord the next bar opens with. */
   nextBarChord: Chord;
+  /** The tier of the section before this one, for the transition into it; null at the start. */
+  previousTier?: Tier | null;
   /** 0..1: how hot the game is right now; the mix fills out and brightens as it rises. */
   intensity: number;
   /** 0..1: rally climax build-up; fades the climax-only layers in. */
@@ -88,6 +98,17 @@ const PAD_VOLUME = 0.022;
 const STAB_VOLUME = 0.05;
 const BASS_VOLUME = 0.15;
 const RISER_VOLUME = 0.07;
+// Transitions, peak levels; the tonal riser joins the noise one only once the match is hot
+const TRANSITION_VOLUME = {
+  REVERSE_CRASH: 0.09,
+  RISER_TONE: 0.05,
+  RISER_TONE_INTENSITY: 0.5,
+  DOWNLIFTER: 0.08,
+  NOISE_WAVE: 0.05,
+  BOOM: 0.5,
+} as const;
+// How hot each tier is, to tell the music going up from coming down
+const TIER_HEAT: Record<Tier, number> = { calm: 0, groove: 1, rise: 2, high: 3 };
 
 /** The bass note a pattern token stands for over `chord`; null for holds and rests. */
 function bassNote(token: string, chord: Chord, next: Chord): number | null {
@@ -169,10 +190,7 @@ export class Arrangement {
     if (sectionStep === 0) {
       // A crash marks every new section except the quiet ones
       if (section.tier !== 'calm' && this.has('drums')) this.drum('crash', time, 0.12);
-      if (section.riser && this.has('fx')) {
-        const duration = section.bars * STEPS_PER_BAR * stepDuration;
-        this.play.riser(time, duration, RISER_VOLUME * (0.6 + 0.4 * I));
-      }
+      if (this.has('fx')) this.playTransitions(time, context);
     }
 
     if (this.has('pads')) this.playHarmony(time, sectionStep, chord, context);
@@ -223,6 +241,34 @@ export class Arrangement {
     }
   }
 
+  /**
+   * What marks the start of a section: a build rises into what follows, ending on its downbeat
+   * (noise riser, a tonal one when the match is hot, a reverse crash); the music coming down from
+   * the heat falls away; coming up out of the calm, it draws breath with a whoosh.
+   */
+  private playTransitions(time: number, context: StepContext): void {
+    const { section, stepDuration, intensity: I, previousTier } = context;
+    if (section.riser) {
+      const end = time + section.bars * STEPS_PER_BAR * stepDuration;
+      const volume = RISER_VOLUME * (0.6 + 0.4 * I);
+      if (!this.play.transition('riser', time, volume, end)) {
+        this.play.riser(time, end - time, volume);
+      }
+      if (I > TRANSITION_VOLUME.RISER_TONE_INTENSITY) {
+        this.play.transition('riserTone', time, TRANSITION_VOLUME.RISER_TONE * I, end);
+      }
+      this.play.transition('reverseCrash', time, TRANSITION_VOLUME.REVERSE_CRASH, end);
+      return;
+    }
+    if (!previousTier) return;
+    const change = TIER_HEAT[section.tier] - TIER_HEAT[previousTier];
+    if (change < 0 && TIER_HEAT[previousTier] >= TIER_HEAT.rise) {
+      this.play.transition('downlifter', time, TRANSITION_VOLUME.DOWNLIFTER);
+    } else if (previousTier === 'calm' && section.tier === 'groove') {
+      this.play.transition('noiseWave', time, TRANSITION_VOLUME.NOISE_WAVE);
+    }
+  }
+
   /** One-shot impact when the build-up peaks: crash, heavy kick and a long held bass note. */
   public playDrop(time: number, chord: Chord, stepDuration: number): void {
     if (this.has('drums')) {
@@ -230,6 +276,7 @@ export class Arrangement {
       this.drum('kick', time, 1.0);
       this.play.impact(this.kit, time, 0.8);
     }
+    if (this.has('fx')) this.play.transition('boom', time, TRANSITION_VOLUME.BOOM);
     if (!this.has('bass')) return;
     // Bass root register (not an octave lower) so it stays audible on phone speakers
     const root = placeAbove(chord.root, BASS_LOW);

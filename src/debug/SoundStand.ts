@@ -3,6 +3,7 @@ import { MUSIC_LAYERS, MusicLayer } from '@/audio/music/Arrangement';
 import { SONGS } from '@/audio/music/songs';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
+import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -133,6 +134,7 @@ export class SoundStand {
       this.layerRows(),
       this.sampleButtons(),
       this.phraseButtons(),
+      this.transitionButtons(),
       this.soundButtons(),
       this.readout,
     );
@@ -293,6 +295,23 @@ export class SoundStand {
         });
         button.dataset.phrase = id;
         button.style.color = '#ffd84d';
+        return button;
+      }),
+    );
+    buttons.style.flexWrap = 'wrap';
+    return buttons;
+  }
+
+  /** Every transition: risers, the reverse crash, the downlifter, the boom, the whoosh. */
+  private transitionButtons(): HTMLElement {
+    const buttons = this.row(
+      ...(Object.keys(TRANSITION_SAMPLES) as TransitionSampleId[]).map((id) => {
+        const button = this.button(id, () => {
+          this.audio.unlock();
+          this.audio.music.playTransition(id);
+        });
+        button.dataset.transition = id;
+        button.style.color = '#7cfc8a';
         return button;
       }),
     );

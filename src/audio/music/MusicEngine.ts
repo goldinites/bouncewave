@@ -13,6 +13,7 @@ import {
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
+import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
 import { chordAt, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { StepScheduler } from '@/audio/music/StepScheduler';
@@ -201,6 +202,19 @@ export class MusicEngine {
    * The listening stand plays one rendered sound on the drums stem, its next variant each time.
    * @returns false if it isn't rendered (or the audio hasn't started)
    */
+  /**
+   * The listening stand plays a transition as the songs do: a swell ends on a downbeat (here,
+   * its full length from now).
+   * @returns false if it isn't rendered (or the audio hasn't started)
+   */
+  public playTransition(id: TransitionSampleId, volume = 0.3): boolean {
+    if (!this.graph || !this.instruments) return false;
+    const now = this.graph.context.currentTime + 0.01;
+    const recipe = TRANSITION_SAMPLES[id];
+    const end = 'shape' in recipe && recipe.shape === 'swell' ? now + recipe.duration : undefined;
+    return this.instruments.transition(id, now, volume, end);
+  }
+
   public playSample(id: string, volume = 0.8): boolean {
     const buffer = this.samples.pick(id);
     if (!buffer || !this.graph || !this.instruments) return false;
@@ -367,6 +381,7 @@ export class MusicEngine {
         stepInBar,
         isLastBar: conductor.isLastBar,
         nextBarChord: conductor.nextBarChord,
+        previousTier: conductor.cameFrom,
         intensity: this.intensity,
         climaxLevel: this.climaxLevel,
         difficulty: this.state.difficulty,

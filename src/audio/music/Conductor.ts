@@ -45,6 +45,8 @@ export class Conductor {
   private planned: Position | null = null;
   /** Bars played in the current section before the current one, restarts included. */
   private barsInSection = 0;
+  /** The tier of the section before this one, null before the first change. */
+  private previousTier: Tier | null = null;
   private barsInSong = 0;
   private isSongChangeRequested = false;
   /** Where a skip goes; it overrides every plan until the bar line takes the music there. */
@@ -99,6 +101,11 @@ export class Conductor {
     const next = this.planned ?? this.continuation();
     const section = this.songs[next.songIndex].sections[next.sectionIndex];
     return chordAt(section, next.bar * STEPS_PER_BAR);
+  }
+
+  /** The tier the music came from into this section, for the transition that marks it. */
+  public get cameFrom(): Tier | null {
+    return this.previousTier;
   }
 
   /** Whether the listening stand holds the music to a song. */
@@ -243,6 +250,7 @@ export class Conductor {
     }
     const isNewSection = isNewSong || next.sectionIndex !== this.position.sectionIndex;
     this.barsInSection = isNewSection ? 0 : this.barsInSection + 1;
+    if (isNewSection) this.previousTier = this.section.tier;
 
     this.position = next;
     this.planned = null;
