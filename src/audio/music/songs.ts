@@ -1,4 +1,73 @@
+import { additive, cycle, euclid } from '@/audio/music/compose';
 import { compileSong, Song, SongDef } from '@/audio/music/score';
+
+// ——— Lines written by processes (audio/music/compose.ts), for the Laser backdrop's sketches ———
+
+/** B2: three ostinatos of five, seven and twelve steps over Dm, Bb, Gm and A, two bars each. */
+const PHASES = {
+  arp: cycle([
+    { cell: ['D4', 'F4', 'A4', 'D5', 'A4'], bars: 2 },
+    { cell: ['D4', 'F4', 'Bb4', 'D5', 'Bb4'], bars: 2 },
+    { cell: ['D4', 'G4', 'Bb4', 'D5', 'Bb4'], bars: 2 },
+    { cell: ['C#4', 'E4', 'A4', 'C#5', 'A4'], bars: 2 },
+  ]),
+  bass: cycle([
+    { cell: ['D2', '.', 'D2', 'D3', '.', 'A1', '.'], bars: 2 },
+    { cell: ['Bb1', '.', 'Bb1', 'Bb2', '.', 'F2', '.'], bars: 2 },
+    { cell: ['G1', '.', 'G1', 'G2', '.', 'D2', '.'], bars: 2 },
+    { cell: ['A1', '.', 'A1', 'A2', '.', 'E2', '.'], bars: 2 },
+  ]),
+  counter: cycle([
+    { cell: ['F5', '-', '-', '.', 'A4', '-', '-', '.', 'D5', '-', '.', '.'], bars: 2 },
+    { cell: ['F5', '-', '-', '.', 'Bb4', '-', '-', '.', 'D5', '-', '.', '.'], bars: 2 },
+    { cell: ['D5', '-', '-', '.', 'Bb4', '-', '-', '.', 'G4', '-', '.', '.'], bars: 2 },
+    { cell: ['E5', '-', '-', '.', 'C#5', '-', '-', '.', 'A4', '-', '.', '.'], bars: 2 },
+  ]),
+};
+
+/** B3: the cell growing from three notes to six and shrinking back, over C#m, A, E and B. */
+const ADDITIVE = [
+  additive(['C#4', 'E4', 'G#4', 'C#5', 'E5', 'G#5'], [3, 4]),
+  additive(['A3', 'C#4', 'E4', 'A4', 'C#5', 'E5'], [5, 6]),
+  additive(['E4', 'G#4', 'B4', 'E5', 'G#5', 'B5'], [6, 5]),
+  additive(['B3', 'D#4', 'F#4', 'B4', 'D#5', 'F#5'], [4, 3]),
+].join(' | ');
+
+/** B4: the bass in five Euclidean pulses a bar, the arpeggio in seven, over F#m, D and E. */
+const EUCLID_CHORDS = [
+  { bass: ['F#1', 'F#2', 'F#1', 'C#2'], arp: ['F#4', 'A4', 'C#5', 'E5'], bars: 2 },
+  { bass: ['D2', 'D1', 'A1', 'D2'], arp: ['F#4', 'A4', 'D5', 'F#5'], bars: 1 },
+  { bass: ['E1', 'E2', 'B1', 'E1'], arp: ['G#4', 'B4', 'E5', 'G#5'], bars: 1 },
+];
+const EUCLID = {
+  bass: cycle(
+    [...EUCLID_CHORDS, ...EUCLID_CHORDS].map(({ bass, bars }) => ({ cell: bass, bars })),
+    euclid(5, 16),
+  ),
+  arp: cycle(
+    [...EUCLID_CHORDS, ...EUCLID_CHORDS].map(({ arp, bars }) => ({ cell: arp, bars })),
+    euclid(7, 16, 2),
+  ),
+};
+
+/** B5: a six-note arpeggio in sixteenths below, a five-note one in eighths above. */
+const TWO_ARPS = {
+  low: cycle([
+    { cell: ['C4', 'Eb4', 'G4', 'C5', 'G4', 'Eb4'], bars: 2 },
+    { cell: ['C4', 'Eb4', 'Ab4', 'C5', 'Ab4', 'Eb4'], bars: 2 },
+    { cell: ['Bb3', 'Eb4', 'G4', 'Bb4', 'G4', 'Eb4'], bars: 2 },
+    { cell: ['Bb3', 'D4', 'F4', 'Bb4', 'F4', 'D4'], bars: 2 },
+  ]),
+  high: cycle(
+    [
+      { cell: ['C5', 'Eb5', 'G5', 'C6', 'G5'], bars: 2 },
+      { cell: ['C5', 'Eb5', 'Ab5', 'C6', 'Ab5'], bars: 2 },
+      { cell: ['Bb4', 'Eb5', 'G5', 'Bb5', 'G5'], bars: 2 },
+      { cell: ['Bb4', 'D5', 'F5', 'Bb5', 'F5'], bars: 2 },
+    ],
+    euclid(8, 16),
+  ),
+};
 
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
@@ -1443,7 +1512,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Lasers B Hypnotic',
     bpm: 118,
     swing: 0,
-    level: -1.5,
+    level: -1,
     sketch: true,
     kit: 'dark',
     voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
@@ -1470,6 +1539,7 @@ const SONG_DEFS: SongDef[] = [
         fill: 'stop',
         pad: 'hold',
         layers: { counter: 0.3 },
+        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
       },
       {
         name: 'hot',
@@ -1535,6 +1605,158 @@ const SONG_DEFS: SongDef[] = [
         fill: 'toms',
         pad: 'hold',
         stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // B2, phases, after Steve Reich: three ostinatos of different lengths — a five-step
+    // arpeggio, a seven-step bass, a twelve-step counter-line — so their pattern together comes
+    // round only after hundreds of steps; the filter opening slowly over it all
+    title: 'Lasers B2 Phases',
+    bpm: 112,
+    swing: 0,
+    level: -1,
+    sketch: true,
+    kit: 'dark',
+    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Dm | Dm | Bb | Bb | Gm | Gm | A | A',
+        arpLine: PHASES.arp,
+        bassLine: PHASES.bass,
+        counter: PHASES.counter,
+        drums: 'drive',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { counter: 0.3 },
+        sweep: { arp: [0.35, 1.8], pads: [0.6, 1.3] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Dm | Dm | Bb | Bb | Gm | Gm | A | A',
+        arpLine: PHASES.arp,
+        bassLine: PHASES.bass,
+        counter: PHASES.counter,
+        lead: `D5 - - - - - - - | F5 - - - E5 - D5 - | D5 - - - - - - - | F5 - - - D5 - Bb4 -
+             | G5 - - - - - - - | Bb5 - - - A5 - G5 - | A5 - - - - - - - | C#6 - - - E5 - - -`,
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // B3, additive, after Philip Glass: the arpeggio's cell grows a note a bar and shrinks
+    // again — three, four, five, six notes, and back — so the phrase keeps reshaping itself
+    title: 'Lasers B3 Additive',
+    bpm: 120,
+    swing: 0,
+    level: -1,
+    sketch: true,
+    kit: 'dark',
+    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'C#m | C#m | A | A | E | E | B | B',
+        arpLine: ADDITIVE,
+        bass: 'eighths',
+        drums: 'four',
+        fill: 'roll',
+        pad: 'hold',
+        sweep: { arp: [0.5, 1.6] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'C#m | C#m | A | A | E | E | B | B',
+        arpLine: ADDITIVE,
+        lead: `G#5 - - - - - - - | E5 - - - C#5 - - - | E5 - - - - - - - | C#5 - - - A4 - - -
+             | B5 - - - - - - - | G#5 - - - E5 - - - | F#5 - - - - - - - | D#5 - - - B4 - - -`,
+        bass: 'pulse16',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // B4, Euclidean: the bass's five notes and the arpeggio's seven spread as evenly as they
+    // go over the bar, against a kick spread the same way — a groove that rolls rather than marches
+    title: 'Lasers B4 Euclid',
+    bpm: 122,
+    swing: 0,
+    sketch: true,
+    kit: 'dark',
+    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'F#m | F#m | D | E | F#m | F#m | D | E',
+        bassLine: EUCLID.bass,
+        arpLine: EUCLID.arp,
+        drums: 'euclid',
+        fill: 'stop',
+        pad: 'hold',
+        sweep: { arp: [0.4, 1.5] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'F#m | F#m | D | E | F#m | F#m | D | E',
+        bassLine: EUCLID.bass,
+        arpLine: EUCLID.arp,
+        lead: `. . . . A5 - - - | C#6 - - - B5 - A5 - | . . . . F#5 - - - | G#5 - - - - - - -`,
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // B5, two arpeggios, after Tangerine Dream: a six-note one in sixteenths and a five-note
+    // one in eighths above it, weaving a third pattern that neither plays alone
+    title: 'Lasers B5 Two Arps',
+    bpm: 100,
+    swing: 0,
+    level: -2,
+    sketch: true,
+    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassFm' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Cm | Cm | Ab | Ab | Eb | Eb | Bb | Bb',
+        arpLine: TWO_ARPS.low,
+        counter: TWO_ARPS.high,
+        bass: 'long',
+        drums: 'four',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { drums: 0.35, counter: 0.3 },
+        sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Cm | Cm | Ab | Ab | Eb | Eb | Bb | Bb',
+        arpLine: TWO_ARPS.low,
+        counter: TWO_ARPS.high,
+        lead: `C5 - - - - - - - | Eb5 - - - D5 - - - | C5 - - - - - - - | Eb5 - - - F5 - - -
+             | G5 - - - - - - - | Bb5 - - - G5 - - - | F5 - - - - - - - | D5 - - - Bb4 - - -`,
+        bass: 'drive',
+        drums: 'drive',
+        fill: 'toms',
+        pad: 'hold',
         drop: true,
       },
     ],

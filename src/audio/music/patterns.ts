@@ -80,6 +80,13 @@ export const DRUM_PATTERNS = {
     open: '......x.......x.',
     perc: '...x......x..x..',
   },
+  // Euclidean: five kicks spread over the bar, a rim and hats in even spreads of their own
+  euclid: {
+    kick: 'X..x..x..X..x...',
+    snare: '....X.......X...',
+    hat: 'x.xx.x.xx.x.xx.x',
+    perc: '..x....x..x....x',
+  },
   // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
   foundry: {
     kick: 'X...X...X...X.x.',

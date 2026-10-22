@@ -217,3 +217,30 @@ describe('Conductor.pass', () => {
     expect(passes).toEqual(['a0', 'b0', 'a1', 'b1', 'a2']);
   });
 });
+
+describe('sweepAt', () => {
+  it('moves a layer’s filter from its start to its end over the section, log-evenly', async () => {
+    const { sweepAt } = await import('@/audio/music/Arrangement');
+    const song = compileSong({
+      title: 'Sweep',
+      bpm: 120,
+      swing: 0,
+      voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'sawtooth' },
+      sections: [
+        {
+          name: 'hook',
+          tier: 'groove',
+          chords: 'Am | Am | Am | Am',
+          bass: 'long',
+          drums: 'four',
+          pad: 'hold',
+          sweep: { arp: [0.25, 4] },
+        },
+      ],
+    });
+    const section = song.sections[0];
+    expect(sweepAt(section, 'arp', 0)).toBe(0.25);
+    expect(sweepAt(section, 'arp', 32)).toBeCloseTo(1);
+    expect(sweepAt(section, 'pads', 32)).toBe(1);
+  });
+});

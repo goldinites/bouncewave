@@ -133,6 +133,15 @@ function bassNote(token: string, chord: Chord, next: Chord): number | null {
   }
 }
 
+/** The factor a section's sweep sets a layer's filter to at `sectionStep`; 1 without a sweep. */
+export function sweepAt(section: Section, layer: 'arp' | 'pads', sectionStep: number): number {
+  const sweep = section.sweep?.[layer];
+  if (!sweep) return 1;
+  const [from, to] = sweep;
+  // Log-even, as a filter is heard
+  return from * (to / from) ** (sectionStep / (section.bars * STEPS_PER_BAR));
+}
+
 /** The arpeggio's `index`-th note: the chord's tones from the bottom up, octave after octave. */
 function arpNote(chord: Chord, index: number): number {
   const base = placeAbove(chord.root, ARP_LOW);
@@ -345,7 +354,7 @@ export class Arrangement {
           time,
           length * stepDuration,
           PAD_VOLUME + 0.02 * I,
-          700 + I * 1800,
+          (700 + I * 1800) * sweepAt(section, 'pads', sectionStep),
           section.pad === 'swell',
         );
       }
@@ -425,7 +434,9 @@ export class Arrangement {
 
     const signature = DIFFICULTY_SIGNATURES[difficulty];
     const volume = ARP_VOLUME * (0.5 + 0.5 * I);
-    const cutoff = (1400 + I * 2600) * signature.leadBrightness;
+    const sectionStep = context.bar * STEPS_PER_BAR + s;
+    const cutoff =
+      (1400 + I * 2600) * signature.leadBrightness * sweepAt(section, 'arp', sectionStep);
     this.play.arp(song.voices.arp, note, time, stepDuration * 1.6, volume, this.melody, cutoff);
 
     if (signature.stutter && s % 4 === 0) {

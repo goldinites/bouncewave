@@ -89,6 +89,12 @@ export interface SectionDef {
    * squeezed into half of one, the hats kept in time. As written if left out.
    */
   feel?: Feel;
+  /**
+   * The section's sound opening (or closing) as it goes: the arpeggio's and the pads' filter
+   * moved from the first factor at its start to the second at its end — how a repeated
+   * ostinato keeps evolving. As set by the heat alone if left out.
+   */
+  sweep?: { arp?: [number, number]; pads?: [number, number] };
   /** Steps of silence that end the section: everything stops, then the next section hits. */
   silence?: number;
   /** The section opens with a drop: crash, kick, the kit's impact and a boom. */
