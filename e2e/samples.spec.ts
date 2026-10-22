@@ -63,3 +63,76 @@ test('renders every drum sound, sounding, dying away, within budget', async ({ p
     description: `${(report.bytes / 1048576).toFixed(2)} MB, ${report.renderTime.toFixed(0)} ms`,
   });
 });
+
+// Budgets for the pitched instruments: what the 24 MB leaves after the drums and the voices to come
+const PITCHED_MEMORY = 14 * 1024 * 1024; // bytes
+const PITCHED_RENDER_MS = 4000; // on a CI runner, in the background while the menu plays
+// Where a loop joins, the sound after its end may differ from the sound after its start by no
+// more than this share of its peak: any more is a click on every held note
+const SEAM_SHARE = 0.01;
+const SEAM_CHECKED = 0.04; // s compared after the join
+
+test('renders every pitched instrument at every root, its loops seamless', async ({ page }) => {
+  await page.goto('./');
+  const rate = 48000;
+  const report = await page.evaluate(
+    async ({ rate, checked }) => {
+      const source = (path: string) => `/bouncewave/src/audio/samples/${path}`;
+      const { SampleBank } = (await import(
+        /* @vite-ignore */ source('SampleBank.ts')
+      )) as typeof import('../src/audio/samples/SampleBank');
+      const { PITCHED_SAMPLES } = (await import(
+        /* @vite-ignore */ source('pitched.ts')
+      )) as typeof import('../src/audio/samples/pitched');
+      const bank = new SampleBank();
+      await bank.renderPitched(rate, PITCHED_SAMPLES);
+      const notes = Object.entries(PITCHED_SAMPLES).flatMap(([id, recipe]) =>
+        recipe.roots.map((root) => {
+          const note = bank.pickNote(id, root)!;
+          const channels = Array.from({ length: note.buffer.numberOfChannels }, (_, c) =>
+            note.buffer.getChannelData(c),
+          );
+          let peak = 0;
+          let finite = true;
+          let seam = 0;
+          let tail = 0;
+          for (const data of channels) {
+            for (const sample of data) {
+              if (!Number.isFinite(sample)) finite = false;
+              peak = Math.max(peak, Math.abs(sample));
+            }
+            if (note.loop) {
+              const start = Math.round(note.loop.start * rate);
+              const end = Math.round(note.loop.end * rate);
+              for (let j = 0; j < checked * rate; j++) {
+                seam = Math.max(seam, Math.abs(data[start + j] - data[end + j]));
+              }
+            } else {
+              for (const sample of data.subarray(Math.floor(data.length * 0.98))) {
+                tail = Math.max(tail, Math.abs(sample));
+              }
+            }
+          }
+          return { id: `${id} @${root}`, peak, finite, seam, tail, rate: note.rate };
+        }),
+      );
+      return { notes, bytes: bank.bytes, renderTime: bank.renderTime };
+    },
+    { rate, checked: SEAM_CHECKED },
+  );
+
+  for (const { id, peak, finite, seam, tail, rate: speed } of report.notes) {
+    expect(finite, id).toBe(true);
+    expect(peak, id).toBeGreaterThan(0.3);
+    expect(seam / peak, `${id} loops seamlessly`).toBeLessThan(SEAM_SHARE);
+    expect(tail / peak, `${id} dies away`).toBeLessThan(TAIL_SHARE);
+    // A root plays itself within the few cents its loop's tuning moved it
+    expect(Math.abs(1200 * Math.log2(speed)), id).toBeLessThan(50);
+  }
+  expect(report.bytes).toBeLessThan(PITCHED_MEMORY);
+  expect(report.renderTime).toBeLessThan(PITCHED_RENDER_MS);
+  test.info().annotations.push({
+    type: 'pitched',
+    description: `${(report.bytes / 1048576).toFixed(2)} MB, ${report.renderTime.toFixed(0)} ms`,
+  });
+});

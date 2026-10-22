@@ -2,6 +2,7 @@ import { AudioEngine } from '@/audio/AudioEngine';
 import { MUSIC_LAYERS, MusicLayer } from '@/audio/music/Arrangement';
 import { SONGS } from '@/audio/music/songs';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
+import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -131,6 +132,7 @@ export class SoundStand {
       this.slider('climax', (level) => this.audio.music.pinClimax(level)),
       this.layerRows(),
       this.sampleButtons(),
+      this.phraseButtons(),
       this.soundButtons(),
       this.readout,
     );
@@ -274,6 +276,23 @@ export class SoundStand {
         });
         button.dataset.sample = id;
         button.style.color = '#ff6ad5';
+        return button;
+      }),
+    );
+    buttons.style.flexWrap = 'wrap';
+    return buttons;
+  }
+
+  /** Every rendered pitched instrument, each press a short phrase in its register. */
+  private phraseButtons(): HTMLElement {
+    const buttons = this.row(
+      ...(Object.keys(PITCHED_SAMPLES) as PitchedSampleId[]).map((id) => {
+        const button = this.button(id, () => {
+          this.audio.unlock();
+          this.audio.music.playPhrase(id);
+        });
+        button.dataset.phrase = id;
+        button.style.color = '#ffd84d';
         return button;
       }),
     );

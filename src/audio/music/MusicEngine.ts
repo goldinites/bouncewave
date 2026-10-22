@@ -11,6 +11,7 @@ import {
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
+import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { chordAt, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
@@ -211,6 +212,45 @@ export class MusicEngine {
       this.graph.drums,
     );
     return true;
+  }
+
+  /**
+   * The listening stand plays a short phrase on a pitched instrument, in its own register and
+   * stem, through the same envelope and filter the songs use.
+   */
+  public playPhrase(id: PitchedSampleId): void {
+    const { graph, instruments: play } = this;
+    if (!graph || !play) return;
+    const at = (beat: number) => graph.context.currentTime + 0.02 + beat * 0.25;
+    const line = (notes: number[], length: number, each: (note: number, time: number) => void) =>
+      notes.forEach((note, i) => each(note, at(i * length)));
+    switch (id) {
+      case 'bassSaw':
+      case 'bassReese':
+      case 'bassFm':
+      case 'bass808':
+        return line([28, 28, 40, 35, 31, 33], 1, (note, time) =>
+          play.bass(id, note, time, 0.22, 0.2, graph.bass, 1400),
+        );
+      case 'arpPulse':
+        return line([57, 60, 64, 69, 72, 76, 81, 76], 0.5, (note, time) =>
+          play.arp(id, note, time, 0.2, 0.06, graph.melody, 3500),
+        );
+      case 'supersaw':
+      case 'squareLead':
+      case 'pluck': {
+        const voice = id === 'supersaw' ? 'saw' : id === 'squareLead' ? 'square' : 'pluck';
+        line([69, 72, 76], 1, (note, time) =>
+          play.lead(voice, note, time, 0.24, 0.08, graph.melody, 3000),
+        );
+        play.lead(voice, 79, at(3), 1.4, 0.08, graph.melody, 3000);
+        return;
+      }
+      case 'pad':
+        return play.pad([57, 60, 64, 67], at(0), 2.5, 0.03, 2500, false);
+      case 'brass':
+        return line([0, 0, 1], 1.5, (_, time) => play.stab([57, 60, 64], time, 0.3, 0.06));
+    }
   }
 
   /** The listening stand silences a part of the arrangement, or brings it back. */

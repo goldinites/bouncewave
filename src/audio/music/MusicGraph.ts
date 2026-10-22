@@ -1,7 +1,9 @@
 import { createReverbImpulse, createSoftClipper, dbToGain } from '@/audio/curves';
 import { clamp } from '@/shared/math';
 
-const MUSIC_MASTER_LEVEL = 0.3; // overall music volume when not muted
+// Overall music volume when not muted: the rendered instruments are fuller than the live
+// synths were, so it sits lower to leave the action sounds on top (docs/AUDIO.md, "Микс")
+const MUSIC_MASTER_LEVEL = 0.21;
 const MUSIC_DUCK_LEVEL = 0.25; // music level under the victory sting
 // Low-pass cutoff of the music bus at full match-point drama (fully open at level 0)
 const DRAMA_FILTER_MIN_FREQ = 550;
