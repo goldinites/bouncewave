@@ -1,16 +1,19 @@
-import { cycle, euclid, transpose } from '@/audio/music/compose';
+import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef } from '@/audio/music/score';
 
 // ——— Lines written by processes (audio/music/compose.ts) ———
 
+/** B's five-note cells over Em, C, Am and B, two bars each. */
+const HYPNOTIC_CELLS: Stretch[] = [
+  { cell: ['E4', 'G4', 'B4', 'E5', 'B4'], bars: 2 },
+  { cell: ['E4', 'G4', 'C5', 'E5', 'C5'], bars: 2 },
+  { cell: ['E4', 'A4', 'C5', 'E5', 'C5'], bars: 2 },
+  { cell: ['D#4', 'F#4', 'B4', 'D#5', 'B4'], bars: 2 },
+];
+
 /** B: a five-note cell cycling over Em, C, Am and B, two bars each, and its pulsing bass. */
 const HYPNOTIC = {
-  arp: cycle([
-    { cell: ['E4', 'G4', 'B4', 'E5', 'B4'], bars: 2 },
-    { cell: ['E4', 'G4', 'C5', 'E5', 'C5'], bars: 2 },
-    { cell: ['E4', 'A4', 'C5', 'E5', 'C5'], bars: 2 },
-    { cell: ['D#4', 'F#4', 'B4', 'D#5', 'B4'], bars: 2 },
-  ]),
+  arp: cycle(HYPNOTIC_CELLS),
   bass: `E1 . E1 . E2 . E1 . E1 . E1 . E2 . D2 . | E1 . E1 . E2 . E1 . E1 . E1 . E2 . G1 .
                  | C2 . C2 . C2 . G1 . C2 . C2 . G1 . B1 . | C2 . C2 . C2 . G1 . C2 . C2 . E2 . G1 .
                  | A1 . A1 . A2 . A1 . A1 . A1 . A2 . G1 . | A1 . A1 . A2 . A1 . A1 . A1 . E2 . A1 .
@@ -39,18 +42,21 @@ const M4 = `C5 - - Eb5 - - G5 - - - - - . . . . | . . Bb4 - C5 - D5 - Eb5 - - - 
           | G5 - - - - - Eb5 - Bb5 - - - G5 - - - | . . F5 - G5 - Ab5 - G5 - - - F5 - Eb5 -
           | D5 - - F5 - - Bb5 - - - - - Ab5 - - - | G5 - - - F5 - - - D5 - - - - - - -`;
 
+/** B5's six-note cells, moved into E minor: Em, C, G and D, two bars each. */
+const CATHEDRAL_CELLS: Stretch[] = [
+  { cell: ['E4', 'G4', 'B4', 'E5', 'B4', 'G4'], bars: 2 },
+  { cell: ['E4', 'G4', 'C5', 'E5', 'C5', 'G4'], bars: 2 },
+  { cell: ['D4', 'G4', 'B4', 'D5', 'B4', 'G4'], bars: 2 },
+  { cell: ['D4', 'F#4', 'A4', 'D5', 'A4', 'F#4'], bars: 2 },
+];
+
 /**
  * The Laser track's material, in E minor (5.6a, chosen on the stand): B's five-note arpeggio
  * under M1 and M2, and B5's two arpeggios with M3 and M4 moved over from C minor — their chords
  * (Cm Ab Eb Bb) become Em C G D, the same key as B's.
  */
 const CATHEDRAL = {
-  arps: cycle([
-    { cell: ['E4', 'G4', 'B4', 'E5', 'B4', 'G4'], bars: 2 },
-    { cell: ['E4', 'G4', 'C5', 'E5', 'C5', 'G4'], bars: 2 },
-    { cell: ['D4', 'G4', 'B4', 'D5', 'B4', 'G4'], bars: 2 },
-    { cell: ['D4', 'F#4', 'A4', 'D5', 'A4', 'F#4'], bars: 2 },
-  ]),
+  arps: cycle(CATHEDRAL_CELLS),
   // M3, down into the warm middle of the range
   ache: transpose(M3, -8),
   // M4, up for the chorus, its peak bar rewritten to top out at D6
@@ -62,13 +68,16 @@ const CATHEDRAL = {
 
 // ——— The Outrun track's base, chosen on the stand ———
 
-/** O3: a sunny seven-note up-and-down arpeggio in sixteenths, never landing the same (Bb F Gm Eb). */
-const SUNSET = cycle([
+/** O3's seven-note cells over Bb, F, Gm and Eb, two bars each. */
+const SUNSET_CELLS: Stretch[] = [
   { cell: ['Bb3', 'D4', 'F4', 'Bb4', 'D5', 'Bb4', 'F4'], bars: 2 },
   { cell: ['A3', 'C4', 'F4', 'A4', 'C5', 'A4', 'F4'], bars: 2 },
   { cell: ['Bb3', 'D4', 'G4', 'Bb4', 'D5', 'Bb4', 'G4'], bars: 2 },
   { cell: ['Bb3', 'Eb4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 2 },
-]);
+];
+
+/** O3: a sunny seven-note up-and-down arpeggio in sixteenths, never landing the same (Bb F Gm Eb). */
+const SUNSET = cycle(SUNSET_CELLS);
 
 // ——— The Outrun track's melody, chosen on the stand, and what grows from it. It sits above the
 // arpeggio's top (E flat 5), so the ear keeps the two apart ———
@@ -88,13 +97,16 @@ const S3_THIRDS = `Bb5 - - - A5 - G5 - | F5 - - - G5 - - - | A5 - - - F5 - D5 - 
 const S3_TURNED = `G5 - - - A5 - Bb5 - | C6 - - - Bb5 - - - | G5 - - - Bb5 - C6 - | D6 - - - - - - -
                   | D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 - - - A5 - - -`;
 
-/** The sunset arpeggio over the bridge's turn of the chords (Gm Eb Bb F). */
-const SUNSET_TURN = cycle([
+/** The sunset cells over the bridge's turn of the chords (Gm Eb Bb F). */
+const SUNSET_TURN_CELLS: Stretch[] = [
   { cell: ['Bb3', 'D4', 'G4', 'Bb4', 'D5', 'Bb4', 'G4'], bars: 2 },
   { cell: ['Bb3', 'Eb4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 2 },
   { cell: ['Bb3', 'D4', 'F4', 'Bb4', 'D5', 'Bb4', 'F4'], bars: 2 },
   { cell: ['A3', 'C4', 'F4', 'A4', 'C5', 'A4', 'F4'], bars: 2 },
-]);
+];
+
+/** The sunset arpeggio over the bridge's turn of the chords (Gm Eb Bb F). */
+const SUNSET_TURN = cycle(SUNSET_TURN_CELLS);
 
 // ——— The Memphis track's bases, chosen on the stand ———
 
@@ -223,6 +235,91 @@ const PLAZA = {
        | . . D6 - B5 - G5 - E5 - G5 - B5 - D6 - | D6 - - - - - B5 A5 G5 - E5 - D5 - E5 -
        | F#5 - - - A5 - - - C#6 - - - - - - - | D6 - - - - - - - . . . . . . . .`,
 };
+
+// ——— Third takes (5.6a): the same hooks, but a phrase no longer loops one rhythm. Eight bars go
+// a, a', b, c — the opening two bars come back once, then the line answers in a rhythm of its
+// own — and the arpeggio thickens with the heat: eighths in the intro, a Euclidean rhythm with
+// gaps in the verses, quarters in the breakdown, unbroken sixteenths only at the chorus ———
+
+/** Arpeggio rhythms by heat: quarters, eighths, and sparse Euclidean spreads for the verses. */
+const ARP_RHYTHM = {
+  quarters: euclid(4, 16),
+  eighths: euclid(8, 16),
+  seven: euclid(7, 16),
+  nine: euclid(9, 16),
+  eleven: euclid(11, 16),
+};
+
+/** M1 v3: its arch kept, then driving repeated eighths in bars 5–6 and a held line tied over. */
+const M1_V3 = `B4 - - - . G4 A4 B4 | E5 - - - D5 - B4 - | C5 - - - . A4 B4 C5 | G5 - - - E5 - - -
+             | A5 - A5 - G5 A5 - E5 | - - C5 D5 E5 - D5 C5 | B4 - - - - - - D#5 | - - - - F#5 - - -`;
+
+/** M2 v3: the 3+3+2 call twice, then a run of repeated notes, a gap, and a fall tied over. */
+const M2_V3 = `E5 - - G5 - - F#5 - E5 - - - B4 - - - | . . D5 - E5 - F#5 - G5 - - - . . . .
+             | E5 - - G5 - - D5 - C5 - - - G4 - - - | . . B4 - C5 - D5 - E5 - - - - - - -
+             | A5 - A5 - A5 - G5 - A5 - - - C6 - - - | B5 - A5 - G5 - E5 - . . . . . . . .
+             | . . . . F#5 - - - D#5 - - - F#5 - B5 - | - - - - A5 - - - F#5 - - - - - - -`;
+
+/** The chorus call v3: its hook kept, then a long D6, a climb in eighths, a syncopated fall. */
+const CALL_V3 = [
+  ...CATHEDRAL.call.split('|').slice(0, 4),
+  ' D6 - - - - - - - B5 - - - - - - - ',
+  ' . . . . . . . . G5 - A5 - B5 - C6 - ',
+  ' D6 - - - - - C6 - - - B5 - - - A5 - ',
+  ' - - - - F#5 - - - - - - - . . . . ',
+].join('|');
+
+/** S3 v3: its opening kept, then tied across the bar and climbing, a 3+3+2, the pickup home. */
+const S3_V3 = `D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 - - - - - - -
+             | - - Bb5 - - - D6 - | - - - - C6 - Bb5 - | G5 - - Bb5 - - C6 - | Bb5 - - - - - G5 A5`;
+
+/** S3 v3's harmony below it, for the chorus. */
+const S3_V3_THIRDS = `Bb5 - - - A5 - G5 - | F5 - - - G5 - - - | A5 - - - F5 - D5 - | Eb5 - - - - - - -
+                    | D5 - G5 - - - Bb5 - | - - - - A5 - G5 - | Eb5 - - G5 - - G5 - | G5 - - - - - Eb5 F5`;
+
+/** V1 v3, the Sunset Strip verse: its call twice, driving repeated notes, a held answer. */
+const V1_V3 = `. F5 - F5 G5 - Bb5 - | - - - - A5 - F5 - | . F5 - F5 G5 - A5 - | - - - - C6 - A5 -
+             | Bb5 - Bb5 - A5 Bb5 - D6 | - - - - . . . . | G5 - - - F5 - - - | G5 - - - - - . .`;
+
+/** C1 v3: its rising call twice, then pushed sixteenths and a long fall. */
+const C1_V3 = `. . D5 E5 F#5 - A5 - | - - - - E5 - - - | . . E5 F#5 A5 - C#6 - | - - B5 - A5 - F#5 -
+             | B5 - . B5 - . G5 - . B5 - D6 - - - - | - - - - - - B5 - A5 - - - . . . .
+             | . . . . F#5 - . A5 - . C#6 - - - - - | - - - - - - - - A5 - - - F#5 - - -`;
+
+/** C2 v3: the call and its run twice, then long notes, an even walk down, a held close. */
+const C2_V3 = `B5 - - B5 - - A5 - F#5 - - - . . . . | . . . . . . . . E5 - F#5 - A5 - - -
+             | C#6 - - C#6 - - B5 - A5 - - - . . . . | . . . . . . . . F#5 - A5 - B5 - D6 -
+             | G5 - - - - - - - B5 - - - - - - - | D6 - - - - - - - . . . . A5 - B5 -
+             | C#6 - - - A5 - - - F#5 - - - A5 - - - | F#5 - - - - - - - . . . . . . . .`;
+
+/** F1 v3 (E major, as written): its run twice, then a long C sharp, a 3+3 push, home. */
+const F1_V3 = `. . E5 F#5 G#5 - - - B5 - - - A5 - G#5 - | - - - - F#5 - - - D#5 - - - . . . .
+             | . . E5 F#5 G#5 - - - A5 - - - G#5 - F#5 - | - - - - D#5 - - - E5 - - - . . . .
+             | C#6 - - - - - - - - - - - B5 - C#6 - | - - - - B5 - - - G#5 - - - F#5 - - -
+             | A5 - - A5 - - A5 - - - B5 - C#6 - - - | B5 - - - - - - - . . . . . . . .`;
+
+/** F1 v3's harmony below it. */
+const F1_V3_THIRDS = `. . C#5 D#5 E5 - - - G#5 - - - F#5 - E5 - | - - - - D#5 - - - B4 - - - . . . .
+                    | . . C#5 D#5 E5 - - - F#5 - - - E5 - D#5 - | - - - - B4 - - - G#4 - - - . . . .
+                    | A5 - - - - - - - - - - - G#5 - A5 - | - - - - G#5 - - - D#5 - - - - - - -
+                    | F#5 - - F#5 - - F#5 - - - G#5 - A5 - - - | F#5 - - - - - - - . . . . . . . .`;
+
+/** F2 v3 (E major): its staccato call twice, then even eighths, a climb, legato quarters. */
+const F2_V3 = `C#6 . A5 . . E5 . A5 . . C#6 . B5 - - - | . . . . . . . . D#5 - F#5 - G#5 - B5 -
+             | A5 . F#5 . . E5 . F#5 . . A5 . G#5 - - - | . . . . . . . . E5 - G#5 - B5 - C#6 -
+             | E5 . E5 . G#5 . E5 . A5 . . . . . . . | . . . . . . D#5 . F#5 . . . G#5 . B5 .
+             | C#6 - - - A5 - - - F#5 - - - E5 - - - | F#5 - - - - - - - . . . . . . . .`;
+
+/** M3 v3 (C minor, as written): its ache twice, then a 3+3+2 climb, a tie, and a held close. */
+const M3_V3 = `G5 - - - - - Eb5 F5 | G5 - - - Bb5 - G5 - | C6 - - - - - Bb5 Ab5 | Bb5 - Ab5 - - - Eb5 -
+             | G5 - - Bb5 - - C6 - | - - Bb5 - - - G5 - | F5 - - - D5 - - - | F5 - - - - - - -`;
+
+/**
+ * S3 turned v3, for the bridge (Gm Gm Eb Eb Bb Bb F F): the climb kept, then S3's head coming
+ * back in long notes, augmented, instead of at its own pace a fourth time.
+ */
+const S3_TURNED_V3 = `G5 - - - A5 - Bb5 - | C6 - - - Bb5 - - - | G5 - - - Bb5 - C6 - | D6 - - - - - - -
+                    | D6 - - - - - - - | C6 - - - Bb5 - - - | A5 - - - - - - - | C6 - - - - - A5 -`;
 
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
@@ -1942,6 +2039,394 @@ const SONG_DEFS: SongDef[] = [
         tier: 'groove',
         chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
         lead: PLAZA.riff,
+        leadVoice: 'guitar',
+        arpLine: PLAZA.arp,
+        bassLine: PLAZA.bass,
+        drums: 'euclid',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.5, 1.5] },
+      },
+      {
+        name: 'solo',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: PLAZA.solo,
+        leadVoice: 'sax',
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'roll',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        sweep: { arp: [0.5, 1.4] },
+      },
+    ],
+  },
+  {
+    // Neon Cathedral, third take: v2's sounds, and a line that no longer loops one rhythm — M1 and
+    // M2 answer their opening in a rhythm of their own, the chorus call ends on a long D6 and a
+    // syncopated fall; the arpeggios run in eighths in the intro and bridge, with gaps under the
+    // verses, in quarters in the breakdown, and unbroken only at the chorus
+    title: 'Neon Cathedral v3',
+    bpm: 118,
+    swing: 0,
+    level: -1,
+    sketch: true,
+    kit: 'dark',
+    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassReese' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        arpLine: cycle(CATHEDRAL_CELLS, ARP_RHYTHM.eighths),
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M1_V3,
+        leadVoice: 'pwm',
+        arpLine: cycle(HYPNOTIC_CELLS, ARP_RHYTHM.seven),
+        bassLine: HYPNOTIC.bass,
+        drums: 'drive',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3, drums: 0.3 },
+        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M2_V3,
+        leadVoice: 'pluck',
+        arpLine: cycle(HYPNOTIC_CELLS, ARP_RHYTHM.eleven),
+        bassLine: HYPNOTIC.bass,
+        drums: 'darkdrive',
+        fill: 'roll',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.6] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: tease(CALL_V3),
+        leadVoice: 'bell',
+        arpLine: cycle(CATHEDRAL_CELLS, ARP_RHYTHM.quarters),
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Am | B',
+        arp: 'up',
+        bass: 'pulse16',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: CALL_V3,
+        counter: transpose(CALL_V3, -12),
+        arpLine: CATHEDRAL.arps,
+        bass: 'drive',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: transpose(M3_V3, -8),
+        leadVoice: 'sync',
+        arpLine: cycle(CATHEDRAL_CELLS, ARP_RHYTHM.eighths),
+        bass: 'long',
+        drums: 'four',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { drums: 0.35 },
+        sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
+      },
+    ],
+  },
+  {
+    // Sunset Strip, third take: v2's sounds; V1 and S3 answer their opening with a phrase of their
+    // own (S3 ties over the bar and climbs instead of falling again); the arpeggio in eighths in
+    // the intro and bridge, with gaps under the verses, quarters in the breakdown, sixteenths at
+    // the chorus
+    title: 'Sunset Strip v3',
+    bpm: 112,
+    swing: 0,
+    sketch: true,
+    voices: { lead: 'epiano', counter: 'soft', arp: 'arpPulse', bass: 'bassFm' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.eighths),
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: V1_V3,
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.nine),
+        bass: 'eighths',
+        drums: 'outrun',
+        fill: 'roll',
+        pad: 'hold',
+        layers: { lead: 0.3, drums: 0.3 },
+        sweep: { arp: [0.4, 1.4] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: V1_V3,
+        leadVoice: 'vibes',
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.eleven),
+        bass: 'sync',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.5] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: tease(S3_V3),
+        leadVoice: 'koto',
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.quarters),
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Eb | F',
+        arp: 'up',
+        bass: 'drive',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S3_V3,
+        leadVoice: 'sax',
+        counter: S3_V3_THIRDS,
+        arpLine: SUNSET,
+        bass: 'drive',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Gm | Gm | Eb | Eb | Bb | Bb | F | F',
+        lead: S3_TURNED_V3,
+        leadVoice: 'koto',
+        arpLine: cycle(SUNSET_TURN_CELLS, ARP_RHYTHM.eighths),
+        bass: 'walk',
+        drums: 'break',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.4, 1.4], pads: [0.7, 1.2] },
+      },
+    ],
+  },
+  {
+    // Summer Plaza, second take: the same band and form; C1, C2, F1 and F2 answer their opening
+    // in a rhythm of their own, and the breakdown's arpeggio falls to quarters
+    title: 'Summer Plaza v2',
+    bpm: 108,
+    swing: 0.1,
+    level: 1.5,
+    sketch: true,
+    voices: { lead: 'epiano', counter: 'guitar', arp: 'pluck', bass: 'bassFm' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'solo',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: C1_V3,
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'stop',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        sweep: { arp: [0.4, 1.3] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: C2_V3,
+        leadVoice: 'vibes',
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'toms',
+        pad: 'hold',
+        layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        sweep: { arp: [0.5, 1.4] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: tease(transpose(F1_V3, -2)),
+        leadVoice: 'vibes',
+        arpLine: transpose(
+          cycle(
+            FUSION_CHORDS.map(({ arp }) => ({ cell: arp, bars: 1 })),
+            ARP_RHYTHM.quarters,
+          ),
+          -2,
+        ),
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Em7 | A7sus4',
+        arp: 'up',
+        bass: 'octave',
+        drums: 'four',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: transpose(F1_V3, -2),
+        leadVoice: 'sax',
+        counter: transpose(F1_V3_THIRDS, -2),
+        counterVoice: 'brass',
+        arpLine: PLAZA.arp,
+        bassLine: PLAZA.bass,
+        drums: 'disco',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: transpose(F2_V3, -2),
         leadVoice: 'guitar',
         arpLine: PLAZA.arp,
         bassLine: PLAZA.bass,

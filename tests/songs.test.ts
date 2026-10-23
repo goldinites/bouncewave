@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LeadVoice, SongDef } from '@/audio/music/score';
+import { LeadVoice, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
@@ -19,6 +19,31 @@ const rootsOf = (voice: LeadVoice): number[] | null => {
   return extra ? EXTRA_LEADS[extra].roots : null;
 };
 const STRETCH = 3; // semitones: further, a note played from its root starts to sound stretched
+// Songs written before the rhythm rule below (5.6a, third take), being replaced; every song
+// written since keeps it
+const LOOPING_SONGS = new Set<string>([
+  'Night Drive',
+  'Chrome Heart',
+  'Overdrive',
+  'Sunset Boulevard',
+  'Laser Grid',
+  'Midnight Arcade',
+  'Crystal Skies',
+  'Ghost Signal',
+  'Shinjuku Rain',
+  'Torii Gates',
+  'Jade Temple',
+  'Iron Floor',
+  'Black Belt',
+  'Neon Cathedral',
+  'Sunset Strip',
+  'Pastel Avenue',
+  'Neon Cathedral v2',
+  'Sunset Strip v2',
+  'Summer Plaza',
+  'Memphis P4 F1 Sunrise',
+  'Memphis P4 F2 Staccato',
+]);
 
 describe('the soundtrack', () => {
   it('keeps every melody note where its rendered instrument sounds natural', () => {
@@ -61,6 +86,34 @@ describe('the soundtrack', () => {
             expect(note.note, where).toBeGreaterThanOrEqual(roots[0] - STRETCH);
             expect(note.note, where).toBeLessThanOrEqual(roots[roots.length - 1] + STRETCH);
           }
+        }
+      }
+    }
+  });
+
+  // What the ear hears as a melody's rhythm: where its notes start. Over eight bars one bar's
+  // rhythm may come back (a, a'), but not in most bars, and a two-bar phrase at most twice: a
+  // line that repeats one rhythm is a loop, the "ту ту туру" heard in every part of a song
+  it('never loops one rhythm through a melody', () => {
+    const onsets = (line: readonly (unknown | null)[], from: number, bars: number) =>
+      line
+        .slice(from, from + bars * STEPS_PER_BAR)
+        .map((note) => (note ? 'x' : '.'))
+        .join('');
+    const most = (rhythms: string[]) =>
+      Math.max(...rhythms.map((r) => rhythms.filter((other) => other === r).length));
+    for (const song of SONGS.filter((s) => !LOOPING_SONGS.has(s.title))) {
+      for (const { name, lead } of song.sections) {
+        if (!lead) continue;
+        for (let from = 0; from + 8 * STEPS_PER_BAR <= lead.length; from += 8 * STEPS_PER_BAR) {
+          const bars = [0, 1, 2, 3, 4, 5, 6, 7]
+            .map((bar) => onsets(lead, from + bar * STEPS_PER_BAR, 1))
+            .filter((rhythm) => rhythm.includes('x'));
+          const phrases = [0, 2, 4, 6].map((bar) => onsets(lead, from + bar * STEPS_PER_BAR, 2));
+          expect(most(bars), `${song.title} ${name}: one bar's rhythm`).toBeLessThanOrEqual(3);
+          expect(most(phrases), `${song.title} ${name}: one phrase's rhythm`).toBeLessThanOrEqual(
+            2,
+          );
         }
       }
     }
