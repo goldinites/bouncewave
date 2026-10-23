@@ -153,9 +153,9 @@ const SUNSET_DUSK_CELLS: Stretch[] = [
  * leaps down from the top, held.
  */
 const W1 = `D6 - - - - - F5 - - - Bb5 - - - - - | A5 - - - - - - - F5 - - - - - - -
-          | C6 - - - - - F5 - - - A5 - - - - - | G5 - - - - - - - C6 - - - - - - -
+          | C6 - - - - - F5 - - - A5 - - - - - | G5 - - - - - - - C6 Bb5 A5 G5 A5 - - -
           | Bb5 - - Bb5 - - G5 - - - D6 - - - - - | - - - - C6 - - - Bb5 - - - G5 - - -
-          | G5 - - - - - Bb5 - - - G5 - - - F5 - | F5 - - - - - - - . . . . . . . .`;
+          | G5 - - - - - Bb5 - - - G5 - - - F5 - | F5 - - - - - - - . . D6 C6 Bb5 . F5 .`;
 
 /**
  * The passenger's line under W1, from the verse's ninth bar: one or two long notes a bar, low,
@@ -168,7 +168,7 @@ const W1_UNDER = `F4 - - - D5 - - - | C5 - - - - - - - | A4 - - - C5 - - - | G4 
  * S3, the chorus hook (soar) over a chord a bar (Bb Gm7 F Cm7 Ebmaj7 Gm7 Cm7 Fsus4): by step from
  * D6, then tied over the bar and climbing, a 3+3+2.
  */
-const S3 = `D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 - - - - - - -
+const S3 = `D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 - - - - - - - G5 F5 G5 Bb5 G5 - - -
              | - - Bb5 - - - D6 - | - - - - C6 - Bb5 - | G5 - - Bb5 - - C6 - | Bb5 - - - - - G5 A5`;
 
 /** S3's harmony below it. */
@@ -310,9 +310,9 @@ const NEON_808 = `F1 - - - - - - - - - F1 - F2 - - - | Gb1 - - - - - - - - - - -
  * semitone, cold and level.
  */
 const N1_MARCH = `F4 - - - Gb4 - - - F4 - - - C5 - - - | Ab4 - - - - - - - G4 - - - Ab4 - - -
-                | F4 - - - Gb4 - - - F4 - - - Db5 - - - | C5 - - - - - - - Ab4 - - - - - - -
+                | F4 - - - Gb4 - - - F4 - - - Db5 - - - | C5 - - - - - - - Ab4 Ab4 Ab4 Ab4 C5 - Ab4 -
                 | Db5 - - - C5 - - - Bb4 - - - F5 - - - | F5 - - - - - - - Eb5 - - - Db5 - - -
-                | E5 - - - - - - - . . . . G4 - - - | C5 - - - - - - - . . . . . . . .`;
+                | E5 - - - - - - - . . . . G4 - - - | C5 - - - - - - - C5 C5 Db5 C5 Bb4 - G4 -`;
 
 /**
  * R2, the shamisen's riff (Fm Gbmaj7 Db Bbm7 Bbm Gbmaj7 C C), the Japanese quarter's voice in
@@ -320,18 +320,18 @@ const N1_MARCH = `F4 - - - Gb4 - - - F4 - - - C5 - - - | Ab4 - - - - - - - G4 - 
  * other bar by a line gliding down by step on held notes.
  */
 const R2_LEAP = `F4 - - F5 - - C5 - Ab4 - - Ab4 - - F4 - | Db5 - - - - - - - Bb4 - - - Ab4 - Gb4 -
-               | Db5 - - Db5 - - Ab4 - F4 - - F5 - - Eb5 - | Db5 - - - - - C5 - - - Bb4 - - - - -
+               | Db5 - - Db5 - - Ab4 - F4 - - F5 Eb5 Db5 Eb5 - | Db5 - - - - - C5 - - - Bb4 - - - - -
                | Bb4 - - F5 - - Db5 - Bb4 - - F5 - - Db5 - | Gb5 - - - - - F5 - - - Db5 - - - - -
-               | C5 - - C5 - - G4 - E4 - - - G4 - - - | G4 - - - - - - - C5 - - - - - - -`;
+               | C5 - - C5 - - G4 - E4 G4 F4 E4 G4 - - - | G4 - - - - - - - C5 - - - - - - -`;
 
 /**
  * The riff's calls alone, every other bar, under the second verse's march (Fm Fm Db Db Bbm Bbm C
  * C): the glides kept for the chorus.
  */
 const R2_CALLS = `F4 - - F5 - - C5 - Ab4 - - Ab4 - - F4 - | . . . . . . . . . . . . . . . .
-                | Db5 - - Db5 - - Ab4 - F4 - - F5 - - Eb5 - | . . . . . . . . . . . . . . . .
+                | Db5 - - Db5 - - Ab4 - F4 - - F5 Eb5 Db5 Eb5 - | . . . . . . . . . . . . . . . .
                 | Bb4 - - F5 - - Db5 - Bb4 - - F5 - - Db5 - | . . . . . . . . . . . . . . . .
-                | C5 - - C5 - - G4 - E4 - - - G4 - - - | . . . . . . . . . . . . . . . .`;
+                | C5 - - C5 - - G4 - E4 G4 F4 E4 G4 - - - | . . . . . . . . . . . . . . . .`;
 
 /**
  * The pulse under the chorus (Fm Gbmaj7 Db Bbm7 Bbm Gbmaj7 C C), after "The Rebel Path": the
@@ -395,7 +395,7 @@ const V1_DAWN = `A5 - - - - - - - - - - - E5 D5 E5 - | F#5 - - - - - - - - - - -
  */
 const C1_DAWN = `D5 - - - - - A5 - - - - - F#5 - - - | E5 - - - - - D5 - - - - - . . . .
                | B4 - - - - - F#5 - - - - - D5 - - - | E5 - - - - - D5 - - - - - B4 - A4 -
-               | G5 - - - - - D6 - - - - - B5 - - - | A5 - - - - - G5 - - - E5 - D5 - - -
+               | G5 - - - - - D6 - - - - - B5 - - - | A5 - - - - - G5 A5 G5 E5 D5 - - - - -
                | E5 - - - D5 - - - E5 - - - A5 - - - | A5 - - - - - - - . . . . . . . .`;
 
 /**
@@ -449,8 +449,8 @@ const GONG_PULSE = pulse(
  * of the Khmer and their neighbours (A C D E G): a three-note call in 3+3+2, the jungle
  * answering it from further off — sung on a reedy pulse wave, as the pinpeat's oboe sings.
  */
-const F1_CALL = `E4 - - G4 - - A4 - . . . . . . . . | . . . . A4 - - E4 - - D4 - - - - -
-               | E4 - - G4 - - C5 - . . . . . . . . | . . . . C5 - - A4 - - E4 - - A4 - -
+const F1_CALL = `E4 - - G4 - - A4 - . . A4 A4 G4 . E4 . | . . . . A4 - - E4 - - D4 - - - - -
+               | E4 - - G4 - - C5 - . . C5 A4 G4 A4 . . | . . . . C5 - - A4 - - E4 - - A4 - -
                | G4 - - D5 - - E5 - - - - - D5 - A4 - | D5 - - - - - A4 - - G4 - - E4 - - -
                | . . . . E4 - - G4 - - A4 - - - - - | C5 - - - D5 - - - A4 - - - - - - -`;
 
@@ -459,7 +459,7 @@ const F1_CALL = `E4 - - G4 - - A4 - . . . . . . . . | . . . . A4 - - E4 - - D4 -
  * 3+3+2, up to D6 and home.
  */
 const G1_BELLS = `E5 - - - E5 - A5 - | F#5 - - E5 - - D5 - | E5 - - - E5 - C6 - | A5 - - - - - - -
-                | G5 - B5 - D6 - - - | D6 - - B5 - - G5 - | A5 - - - - - E5 G5 | A5 - - - - - - -`;
+                | G5 - B5 - D6 - - - | D6 - - - - - B5 - - - - - G5 A5 G5 E5 | A5 - - - - - E5 G5 | A5 - - - - - - -`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for

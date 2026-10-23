@@ -99,6 +99,25 @@ describe('the soundtrack', () => {
   const notesOf = (line: readonly (MelodyNote | null)[]) =>
     line.filter((note): note is MelodyNote => note !== null);
 
+  // A melody all held notes drags, one all quick notes tires (the user, 23.10.2026): the verse's
+  // and the chorus's melodies each have a quick, restless moment — three notes of an eighth or
+  // shorter in a row — and a long, held one, half a bar or more
+  it('gives the verse and chorus melodies quick moments and held ones', () => {
+    // Summer Plaza is being written anew, to this rule (5.6)
+    const rewriting = ['Summer Plaza'];
+    for (const song of SONGS.filter((s) => !s.sketch && !rewriting.includes(s.title))) {
+      for (const tier of ['groove', 'high'] as const) {
+        const { name, lead } = song.sections.find((s) => s.tier === tier && s.lead)!;
+        const notes = notesOf(lead!);
+        const quick = notes.some(
+          (_, i) => notes.slice(i, i + 3).filter((n) => n.steps <= 2).length === 3,
+        );
+        const held = notes.some((note) => note.steps >= STEPS_PER_BAR / 2);
+        expect({ quick, held }, `${song.title} ${name}`).toEqual({ quick: true, held: true });
+      }
+    }
+  });
+
   // Every 5.6a melody climbed into a long note by a pickup run, and the tracks sounded like one
   // tune on different sounds: a song may climb that way once in eight bars, no more
   it('climbs into a long note by a pickup run at most once in eight bars', () => {
