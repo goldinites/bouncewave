@@ -120,14 +120,6 @@ export const DRUM_PATTERNS = {
     hat: 'xoxoxoxoxoxoxoxo',
     open: '..............x.',
   },
-  // City pop: a laid-back kick that skips a beat, a rim ticking between the snares
-  citypop: {
-    kick: 'X.....x.X.......',
-    snare: '....X.......X...',
-    hat: 'x.x.x.x.x.x.x.x.',
-    open: '......x.......x.',
-    perc: '...x......x..x..',
-  },
   // Outrun idling at the lights: a kick on one and three, the hats on the off-beats, no snare yet
   cruise: {
     kick: 'X.......X.......',
@@ -140,21 +132,6 @@ export const DRUM_PATTERNS = {
     snare: '....X.......X...',
     hat: 'x.x.x.x.x.x.x.x.',
     open: '..............x.',
-  },
-  // A band counting in: hats and the shaker only, the kick a light touch on the one
-  bandIntro: {
-    kick: 'x...............',
-    hat: 'x.x.x.x.x.x.x.x.',
-    perc: '..o...o...o...o.',
-  },
-  // A live funk groove for a chorus: a syncopated kick, ghost notes around the backbeat, the
-  // shaker in sixteenths — not four on the floor
-  band: {
-    kick: 'X..x..x...X..x..',
-    snare: '....X..o.o..X..o',
-    hat: 'x.x.x.x.x.x.x.x.',
-    open: '......x.......x.',
-    perc: 'oxoxoxoxoxoxoxox',
   },
   // Witch house in half-time: the snare on the third beat, so 140 feels like 70, under trap hats
   // rolling into the bar's end, and a pipe somewhere in the street ringing when struck

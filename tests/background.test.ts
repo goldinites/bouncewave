@@ -56,7 +56,7 @@ describe('BackgroundRenderer', () => {
   });
 
   it('deals every background once before any comes round again, never one twice running', () => {
-    const scenes: SceneId[] = ['lasers', 'memphis', 'outrun', 'neonCity', 'fuji', 'jungle'];
+    const scenes: SceneId[] = ['lasers', 'outrun', 'neonCity', 'fuji', 'jungle'];
     const renderer = new BackgroundRenderer(
       scenes.map((scene) => fakeBackground(0.1, false, scene)),
     );
@@ -75,7 +75,7 @@ describe('BackgroundRenderer', () => {
   });
 
   it('flicks through other channels in static before settling on the match’s own', () => {
-    const backgrounds = (['lasers', 'memphis', 'outrun', 'neonCity'] as SceneId[]).map((scene) =>
+    const backgrounds = (['lasers', 'fuji', 'outrun', 'neonCity'] as SceneId[]).map((scene) =>
       fakeBackground(0.1, false, scene),
     );
     const renderer = new BackgroundRenderer(backgrounds);
@@ -96,19 +96,19 @@ describe('BackgroundRenderer', () => {
   });
 
   it('keeps a pinned background through every match', () => {
-    const scenes: SceneId[] = ['lasers', 'memphis', 'outrun'];
+    const scenes: SceneId[] = ['lasers', 'fuji', 'outrun'];
     const renderer = new BackgroundRenderer(
       scenes.map((scene) => fakeBackground(0.1, false, scene)),
     );
 
-    expect(renderer.pin('memphis')).toBe(true);
+    expect(renderer.pin('fuji')).toBe(true);
     expect(renderer.isPinned).toBe(true);
-    expect(renderer.switchChannel(true)).toBe('memphis');
-    expect(renderer.switchChannel(false)).toBe('memphis');
+    expect(renderer.switchChannel(true)).toBe('fuji');
+    expect(renderer.switchChannel(false)).toBe('fuji');
   });
 
   it('switches to the background the player chose, every match, until they choose random', () => {
-    const scenes: SceneId[] = ['lasers', 'memphis', 'outrun'];
+    const scenes: SceneId[] = ['lasers', 'fuji', 'outrun'];
     const renderer = new BackgroundRenderer(
       scenes.map((scene) => fakeBackground(0.1, false, scene)),
     );
@@ -126,12 +126,12 @@ describe('BackgroundRenderer', () => {
   it('gives way to a developer’s pin over the player’s choice', () => {
     const renderer = new BackgroundRenderer([
       fakeBackground(0.1, false, 'lasers'),
-      fakeBackground(0.1, false, 'memphis'),
+      fakeBackground(0.1, false, 'fuji'),
     ]);
 
-    renderer.pin('memphis');
+    renderer.pin('fuji');
     renderer.choose('lasers');
-    expect(renderer.switchChannel(false)).toBe('memphis');
+    expect(renderer.switchChannel(false)).toBe('fuji');
   });
 
   it('refuses to pin a background it does not have', () => {
@@ -211,7 +211,7 @@ describe('BackgroundRenderer', () => {
 
 describe('the unknown channel (random picked)', () => {
   const setup = () => {
-    const backgrounds = (['lasers', 'memphis', 'outrun'] as SceneId[]).map((scene) =>
+    const backgrounds = (['lasers', 'fuji', 'outrun'] as SceneId[]).map((scene) =>
       fakeBackground(0.1, false, scene),
     );
     const renderer = new BackgroundRenderer(backgrounds);
@@ -252,7 +252,7 @@ describe('the unknown channel (random picked)', () => {
 
   it('does not cover a developer’s pinned background', () => {
     const { renderer } = setup();
-    renderer.pin('memphis');
+    renderer.pin('fuji');
     renderer.showMystery();
     expect(renderer.isShowingMystery).toBe(false);
   });

@@ -103,9 +103,7 @@ describe('the soundtrack', () => {
   // and the chorus's melodies each have a quick, restless moment — three notes of an eighth or
   // shorter in a row — and a long, held one, half a bar or more
   it('gives the verse and chorus melodies quick moments and held ones', () => {
-    // Summer Plaza is being written anew, to this rule (5.6)
-    const rewriting = ['Summer Plaza'];
-    for (const song of SONGS.filter((s) => !s.sketch && !rewriting.includes(s.title))) {
+    for (const song of SONGS.filter((s) => !s.sketch)) {
       for (const tier of ['groove', 'high'] as const) {
         const { name, lead } = song.sections.find((s) => s.tier === tier && s.lead)!;
         const notes = notesOf(lead!);

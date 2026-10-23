@@ -3,7 +3,7 @@ import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
 import { clamp, mixHexColors, TWO_PI } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
-// Sky, cool at rest and hot at full climax or celebration — same heat language as Memphis
+// Sky, cool at rest and hot at full climax or celebration
 const SKY_COOL = ['#0a0330', '#3c1465', '#7a2a6e'];
 const SKY_HOT = ['#2b0a45', '#9a1460', '#ff6a2f'];
 // The floor under the grid: the sky's horizon color at rest, but it heats only to a deep

@@ -53,7 +53,7 @@ export type LeadVoice =
   | 'brass'
   | 'sync'
   | 'pwm'
-  // City pop's band, for the Memphis track: an FM electric piano, a sax, a muted funk guitar
+  // A band's sounds, first for city pop: an FM electric piano, a sax, a muted funk guitar
   // and a vibraphone
   | 'epiano'
   | 'sax'

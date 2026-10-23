@@ -321,7 +321,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     backgrounds: {
       random: 'RANDOM',
       lasers: 'LASERS',
-      memphis: 'MEMPHIS',
       outrun: 'OUTRUN',
       neonCity: 'NEON CITY',
       fuji: 'FUJI',
@@ -532,7 +531,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     backgrounds: {
       random: 'СЛУЧАЙНЫЙ',
       lasers: 'ЛАЗЕРНЫЙ',
-      memphis: 'МЕМФИС',
       outrun: 'АУТРАН',
       neonCity: 'ГОРОД',
       fuji: 'ФУДЗИ',
