@@ -19,11 +19,58 @@ import {
  * boom and a ringing tail — the layers a hit is felt through, as a parry in Sekiro is.
  */
 
+/** The rendered bodies and clicks a hit is mixed from (`body.<material>`, `click.<material>`). */
+type Material = 'steel' | 'neon' | 'glass';
+
+/**
+ * A hit's character: the bodies and clicks it mixes, each at its gain; a body with `cut` is only
+ * its attack, faded out after that many seconds — the edge of one material on the ring of
+ * another. The perfect hit's octave is the first body's.
+ */
+export interface HitStyleMix {
+  bodies: { material: Material; gain: number; cut?: number }[];
+  clicks: { material: Material; gain: number }[];
+}
+
 /** The characters a paddle hit can have, auditioned on the stand (`?sfx=`). */
-export const HIT_STYLES = ['steel', 'neon', 'glass'] as const;
-export type HitStyle = (typeof HIT_STYLES)[number];
-export const isHitStyle = (value: string): value is HitStyle =>
-  (HIT_STYLES as readonly string[]).includes(value);
+export const HIT_STYLES = {
+  steel: { bodies: [{ material: 'steel', gain: 1 }], clicks: [{ material: 'steel', gain: 1 }] },
+  neon: { bodies: [{ material: 'neon', gain: 1 }], clicks: [{ material: 'neon', gain: 1 }] },
+  glass: { bodies: [{ material: 'glass', gain: 1 }], clicks: [{ material: 'glass', gain: 1 }] },
+  // The neon ring with a blade's edge on its attack: the parry's bite, then the paddle's light
+  neonSteel: {
+    bodies: [
+      { material: 'neon', gain: 0.9 },
+      { material: 'steel', gain: 0.6, cut: 0.12 },
+    ],
+    clicks: [{ material: 'steel', gain: 1 }],
+  },
+  // The neon ring with glass shimmering over it: clear and bright
+  neonGlass: {
+    bodies: [
+      { material: 'neon', gain: 0.9 },
+      { material: 'glass', gain: 0.5 },
+    ],
+    clicks: [
+      { material: 'neon', gain: 0.7 },
+      { material: 'glass', gain: 0.5 },
+    ],
+  },
+  // All three: the neon ring, the blade's edge on its attack, the glass's shimmer above
+  fusion: {
+    bodies: [
+      { material: 'neon', gain: 0.85 },
+      { material: 'steel', gain: 0.45, cut: 0.1 },
+      { material: 'glass', gain: 0.35 },
+    ],
+    clicks: [
+      { material: 'steel', gain: 0.8 },
+      { material: 'glass', gain: 0.4 },
+    ],
+  },
+} satisfies Record<string, HitStyleMix>;
+export type HitStyle = keyof typeof HIT_STYLES;
+export const isHitStyle = (value: string): value is HitStyle => value in HIT_STYLES;
 
 // The rally's notes run from about E3 to C6 (sfx/harmony.ts): roots three semitones either side
 const BODY_ROOTS = [55, 61, 67, 73, 79];

@@ -1,6 +1,6 @@
 import { Mixer } from '@/audio/Mixer';
 import { Harmony } from '@/audio/music/HarmonyTimeline';
-import { HitStyle } from '@/audio/samples/actions';
+import { HIT_STYLES, HitStyle, HitStyleMix } from '@/audio/samples/actions';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
@@ -45,6 +45,8 @@ const HIT_MIX = {
   CPU_CLICK_RATE: 0.85,
   // Takes in a row differ: the unpitched layers' pitch and every layer's level, as shares
   JITTER: { RATE: 0.04, GAIN: 0.1 },
+  // How fast a layer heard only as an attack fades once cut, time constant in s
+  CUT_FADE: 0.03,
   // How far across the stereo field a hit at the court's edge sits
   PAN: 0.6,
 } as const;
@@ -66,7 +68,7 @@ export class SoundEffects {
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
   /** The paddle hits' character (`?sfx=` on the stand). */
-  public hitStyle: HitStyle = 'steel';
+  public hitStyle: HitStyle = 'neonSteel';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -180,8 +182,13 @@ export class SoundEffects {
   ): boolean {
     const samples = this.samplesGetter();
     const isCpu = paddleIndex !== 0;
-    const body = samples?.pickNote(`body.${this.hitStyle}${isCpu ? '.cpu' : ''}`, note);
-    if (!samples || !body) return false;
+    const mix: HitStyleMix = HIT_STYLES[this.hitStyle];
+    const bodies = mix.bodies.map(({ material, gain, cut }) => ({
+      note: samples?.pickNote(`body.${material}${isCpu ? '.cpu' : ''}`, note),
+      gain,
+      cut,
+    }));
+    if (!samples || bodies.some((body) => !body.note)) return false;
 
     const ac = this.audioContextGetter();
     if (!ac || this.isMutedGetter() || !this.isGameplayAudibleGetter()) return true;
@@ -195,15 +202,23 @@ export class SoundEffects {
         this.layer({ ...at, buffer, gain, rate: rate * this.jitter(HIT_MIX.JITTER.RATE) });
     };
 
-    unpitched(
-      `click.${this.hitStyle}`,
-      HIT_MIX.CLICK * strength,
-      isCpu ? HIT_MIX.CPU_CLICK_RATE : 1,
-    );
+    for (const click of mix.clicks) {
+      unpitched(
+        `click.${click.material}`,
+        HIT_MIX.CLICK * strength * click.gain,
+        isCpu ? HIT_MIX.CPU_CLICK_RATE : 1,
+      );
+    }
+    const playBodies = (level: number) => {
+      for (const body of bodies) {
+        const { buffer, rate } = body.note!;
+        this.layer({ ...at, buffer, rate, gain: level * body.gain, cut: body.cut });
+      }
+    };
     if (isPerfect) {
       const { PERFECT } = HIT_MIX;
-      this.layer({ ...at, buffer: body.buffer, rate: body.rate, gain: PERFECT.BODY });
-      const octave = samples.pickNote(`body.${this.hitStyle}`, note + 12);
+      playBodies(PERFECT.BODY);
+      const octave = samples.pickNote(`body.${mix.bodies[0].material}`, note + 12);
       if (octave)
         this.layer({ ...at, buffer: octave.buffer, rate: octave.rate, gain: PERFECT.OCTAVE });
       unpitched('thump', PERFECT.THUMP);
@@ -212,7 +227,7 @@ export class SoundEffects {
       unpitched('tail', PERFECT.TAIL);
       this.duckMusic(HIT_DUCK.PERFECT);
     } else {
-      this.layer({ ...at, buffer: body.buffer, rate: body.rate, gain: HIT_MIX.BODY });
+      playBodies(HIT_MIX.BODY);
       unpitched('thump', HIT_MIX.THUMP * (0.4 + 0.6 * hard));
       if (hard > 0.5) unpitched('spark', HIT_MIX.SPARK * (hard - 0.5) * 2);
     }
@@ -225,19 +240,24 @@ export class SoundEffects {
     return 1 + (Math.random() * 2 - 1) * share;
   }
 
-  /** One rendered layer, now, at `gain` (jittered), panned, played at `rate`. */
+  /**
+   * One rendered layer, now, at `gain` (jittered), panned, played at `rate`; faded out after
+   * `cut` seconds, if given, for a layer heard only as an attack.
+   */
   private layer({
     ac,
     buffer,
     gain,
     rate,
     pan,
+    cut,
   }: {
     ac: AudioContext;
     buffer: AudioBuffer;
     gain: number;
     rate: number;
     pan: number;
+    cut?: number;
   }): void {
     try {
       const source = ac.createBufferSource();
@@ -245,6 +265,7 @@ export class SoundEffects {
       source.playbackRate.value = rate;
       const level = ac.createGain();
       level.gain.value = gain * this.jitter(HIT_MIX.JITTER.GAIN);
+      if (cut !== undefined) level.gain.setTargetAtTime(0, ac.currentTime + cut, HIT_MIX.CUT_FADE);
       const panner = ac.createStereoPanner();
       panner.pan.value = pan;
       source.connect(level).connect(panner).connect(this.output(ac));
