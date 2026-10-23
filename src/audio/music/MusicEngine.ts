@@ -11,7 +11,7 @@ import {
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
+import { soundsFor, VoiceOverrides } from '@/audio/music/palette';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { chordAt, LeadVoice, MusicLayer, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
@@ -62,7 +62,7 @@ export class MusicEngine {
   private instruments: Instruments | null = null;
   private arrangement: Arrangement | null = null;
   private isGlideOn = true;
-  private leadOverride: LeadVoice | null = null;
+  private overrides: VoiceOverrides = {};
   private samples = new SampleBank();
   private readonly harmony = new HarmonyTimeline(HARMONY_HISTORY);
 
@@ -100,7 +100,7 @@ export class MusicEngine {
     this.instruments = new Instruments(graph, samples);
     const arrangement = new Arrangement(this.instruments, graph, this.mutedLayers);
     arrangement.isGlideOn = this.isGlideOn;
-    arrangement.leadOverride = this.leadOverride;
+    arrangement.overrides = this.overrides;
     this.arrangement = arrangement;
     this.graph = graph;
     this.prepare(this.conductor.song);
@@ -209,36 +209,32 @@ export class MusicEngine {
     return true;
   }
 
-  /**
-   * The listening stand plays every lead on another voice, null for the songs' own; a voice only
-   * auditioned (audio/samples/leads.ts) is rendered first, the live supersaw standing in meanwhile.
-   */
+  /** The listening stand plays every lead on another voice, null for the songs' own. */
   public setLeadVoice(voice: LeadVoice | null): void {
-    this.leadOverride = voice;
-    if (this.arrangement) this.arrangement.leadOverride = voice;
-    if (voice) this.renderLeads([voice]);
+    this.setOverrides({ ...this.overrides, lead: voice ?? undefined });
   }
 
   /**
-   * Renders the extra leads (audio/samples/leads.ts) a song plays, ahead of it: called while it
-   * waits its turn, so they are ready by its first bar. A lead already rendered is skipped.
+   * The listening stand's swaps — another lead, bass, pad or kit on every song — rendered first
+   * if they aren't, the live synths standing in meanwhile.
+   */
+  public setOverrides(overrides: VoiceOverrides): void {
+    this.overrides = overrides;
+    if (this.arrangement) this.arrangement.overrides = overrides;
+    this.prepare(this.conductor.song);
+  }
+
+  /**
+   * Renders the sounds beyond the core palette a song plays (audio/music/palette.ts), ahead of
+   * it: called while it waits its turn, so they are ready by its first bar. A sound already
+   * rendered is skipped.
    */
   private prepare(song: Song): void {
-    const voices = [
-      song.voices.lead,
-      song.voices.counter,
-      ...song.sections.flatMap((s) => [s.leadVoice, s.counterVoice]),
-    ];
-    this.renderLeads(voices.filter((voice): voice is LeadVoice => voice !== undefined));
-  }
-
-  private renderLeads(voices: LeadVoice[]): void {
     if (!this.graph) return;
-    for (const voice of voices) {
-      const id = EXTRA_LEAD_FOR[voice];
-      if (id)
-        void this.samples.renderPitched(this.graph.context.sampleRate, { [id]: EXTRA_LEADS[id] });
-    }
+    const { pitched, oneShots } = soundsFor(song, this.overrides);
+    const rate = this.graph.context.sampleRate;
+    void this.samples.renderPitched(rate, pitched);
+    void this.samples.render(rate, oneShots);
   }
 
   /** The listening stand switches the lead's portamento off and on, to compare. */

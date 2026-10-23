@@ -1,5 +1,5 @@
 import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
-import { compileSong, Song, SongDef } from '@/audio/music/score';
+import { compileSong, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 
 /*
  * The quick match's three tracks (5.6a, docs/AUDIO.md "Как делаем трек"), each built on a process
@@ -254,7 +254,8 @@ const SONG_DEFS: SongDef[] = [
     scene: 'lasers',
     kit: 'dark',
     transitions: 'synth',
-    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassReese' },
+    // A wordless choir holds the chords in place of the synth pad: the cathedral the name promises
+    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassReese', pad: 'choir' },
     form: [
       'intro',
       'verse',
@@ -381,7 +382,9 @@ const SONG_DEFS: SongDef[] = [
     swing: 0,
     scene: 'outrun',
     transitions: 'drums',
-    voices: { lead: 'epiano', counter: 'soft', arp: 'arpPulse', bass: 'bassFm' },
+    // A string section holds the chords, and the crash is the era's electronic one
+    kit: 'outrun',
+    voices: { lead: 'epiano', counter: 'soft', arp: 'arpPulse', bass: 'bassFm', pad: 'strings' },
     form: ['intro', 'verse', 'build', 'chorus', 'bridge', 'verse2', 'build', 'chorus', 'outro'],
     sections: [
       {
@@ -492,11 +495,13 @@ const SONG_DEFS: SongDef[] = [
     title: 'Summer Plaza',
     bpm: 112,
     swing: 0.1,
-    level: 1.5,
+    level: 4.5,
     scene: 'memphis',
     kit: 'band',
     transitions: 'band',
-    voices: { lead: 'epiano', counter: 'guitar', arp: 'pluck', bass: 'bassFm' },
+    // A slapped bass in place of the FM one; strings for the chords where there are any (the
+    // pre-choruses, the choruses, the interlude), as a disco section plays them
+    voices: { lead: 'epiano', counter: 'guitar', arp: 'pluck', bass: 'bassSlap', pad: 'strings' },
     form: [
       'intro',
       'verse',
@@ -606,6 +611,8 @@ const SONG_DEFS: SongDef[] = [
         bass: 'long',
         drums: 'none',
         pad: 'swell',
+        // A harp's glissando opens it, once
+        hits: { harpGliss: 'X' + '.'.repeat(8 * STEPS_PER_BAR - 1) },
       },
       {
         name: 'solo',

@@ -192,9 +192,16 @@ export type ArpPatternName = keyof typeof ARP_PATTERNS;
 export const STAB_PATTERNS = {
   push: 'X..x..x...x..x..',
   offbeat: '..x...x...x...x.',
+  // City pop's electric-piano comp: chords pushed ahead of the beat, never on the one
+  comp: '...x..x....x..x.',
+  // A string section pulsing in eighths under a melody
+  eighths: 'x.x.x.x.x.x.x.x.',
 } satisfies Record<string, string>;
 
 export type StabPatternName = keyof typeof STAB_PATTERNS;
+
+/** The chopped pad's gate (`pad: 'chop'`): the chord sounding only on these sixteenths. */
+export const PAD_CHOP = 'x.x.xx.x.x.xx.x.';
 
 /**
  * Signal faults on the whole mix, over a section's last bar (16 steps), for a song that

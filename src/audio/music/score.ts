@@ -8,6 +8,7 @@ import {
 } from '@/audio/music/patterns';
 import { KitName } from '@/audio/music/kits';
 import { Chord, parseChord, parseNote } from '@/audio/music/theory';
+import { FxHitId } from '@/audio/samples/percussion';
 import { SceneId } from '@/shared/scenes';
 
 export const STEPS_PER_BAR = 16;
@@ -56,10 +57,31 @@ export type LeadVoice =
   | 'epiano'
   | 'sax'
   | 'guitar'
-  | 'vibes';
+  | 'vibes'
+  // The wider palette for the backdrops' tracks to come (5.6): Japan's flute and lute, plucked
+  // and struck sounds, a choir and strings, the 8-bit and broken digital leads
+  | 'shakuhachi'
+  | 'shamisen'
+  | 'harp'
+  | 'marimba'
+  | 'kalimba'
+  | 'gamelan'
+  | 'celesta'
+  | 'musicBox'
+  | 'rhodes'
+  | 'choir'
+  | 'strings'
+  | 'chip'
+  | 'crush';
 
 /** The rendered basses (audio/samples/pitched.ts); a plain oscillator type plays live. */
-export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808';
+export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808' | 'bassSlap' | 'bassGrowl';
+
+/** The pad's sound: the synth's own, a string section, a wordless choir, or swelling backwards. */
+export type PadVoice = 'synth' | 'strings' | 'choir' | 'reverse';
+
+/** What plays the chord stabs: a brass section, an electric piano, a guitar, staccato strings. */
+export type StabVoice = 'brass' | 'rhodes' | 'guitar' | 'strings';
 
 /** The rendered arpeggio voices; a plain oscillator type plays live. */
 export type ArpVoice = 'arpPulse' | 'pluck';
@@ -96,8 +118,17 @@ export interface SectionDef {
   drums: DrumPatternName;
   /** Played in the second half of the section's last bar. */
   fill?: DrumFillName;
-  pad: 'swell' | 'hold' | 'none';
+  /** The pad held, swelling in, gated into a rhythm (`chop`, witch house's chopped chords) or none. */
+  pad: 'swell' | 'hold' | 'chop' | 'none';
   stabs?: StabPatternName;
+  /** What plays the stabs in this section; brass if left out. */
+  stabsVoice?: StabVoice;
+  /**
+   * One-shot sounds struck on a pattern, on the fx layer (audio/samples/percussion.ts, FX_HITS):
+   * a character a sixteenth, the pattern repeating through the section — `X` accented, `x`
+   * normal, `o` soft, `.` silent.
+   */
+  hits?: Partial<Record<FxHitId, string>>;
   /** A noise sweep rising over the whole section, into what follows. */
   riser?: boolean;
   /**
@@ -141,6 +172,13 @@ export interface SongDef {
     counter: LeadVoice;
     arp: OscillatorType | ArpVoice;
     bass: OscillatorType | BassVoice;
+    /** The pad's sound; the synth's if left out. */
+    pad?: PadVoice;
+    /**
+     * Portamento on the bass, in seconds: a note following another slides in from it, the 808's
+     * glide in witch house and trap. None if left out.
+     */
+    bassGlide?: number;
     /**
      * Portamento on the lead, in seconds: a note that follows another without a gap slides in
      * from it, so the line sings rather than steps. None if left out.

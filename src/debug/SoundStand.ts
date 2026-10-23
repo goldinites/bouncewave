@@ -1,7 +1,17 @@
 import { AudioEngine } from '@/audio/AudioEngine';
 import { WHOLE_FORM } from '@/audio/music/Conductor';
 import { MusicPosition } from '@/audio/music/MusicEngine';
-import { LeadVoice, MUSIC_LAYERS, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import { KITS, KitName } from '@/audio/music/kits';
+import { VoiceOverrides } from '@/audio/music/palette';
+import {
+  BassVoice,
+  LeadVoice,
+  MUSIC_LAYERS,
+  MusicLayer,
+  PadVoice,
+  STEPS_PER_BAR,
+  Tier,
+} from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 
@@ -190,9 +200,19 @@ export class SoundStand {
       this.audio.music.setLayerMuted(layer, !box.checked);
     });
 
-    // Every melody on another lead, by link only: `npm run loudness -- --lead=` levels the voices
+    // Another lead, bass, pad or kit on every song, by link only (`&lead=marimba&kit=japan`):
+    // how a sound of the wider palette is heard before a track plays it, and how
+    // `npm run loudness -- --lead=` levels the leads
+    const overrides: VoiceOverrides = {};
     const lead = params.get('lead');
-    if (lead) this.audio.music.setLeadVoice(lead as LeadVoice);
+    const bass = params.get('bass');
+    const pad = params.get('pad');
+    const kit = params.get('kit');
+    if (lead) overrides.lead = lead as LeadVoice;
+    if (bass) overrides.bass = bass as BassVoice;
+    if (pad) overrides.pad = pad as PadVoice;
+    if (kit && kit in KITS) overrides.kit = kit as KitName;
+    if (Object.keys(overrides).length > 0) this.audio.music.setOverrides(overrides);
 
     const song = params.get('song');
     if (!song || !SONGS.some((s) => s.id === song)) return;

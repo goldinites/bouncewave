@@ -153,14 +153,20 @@ describe('SoundStand', () => {
     expect(audio.isPaused).toBe(false);
   });
 
-  it('puts every melody on the lead a link names, and on the songs’ own without one', () => {
-    const setLead = vi.spyOn(MusicEngine.prototype, 'setLeadVoice');
-    setup('/?debug&lead=sax');
-    expect(setLead).toHaveBeenLastCalledWith('sax');
-    setLead.mockClear();
+  it('swaps the lead, bass, pad and kit a link names, and nothing without one', () => {
+    const swap = vi.spyOn(MusicEngine.prototype, 'setOverrides');
+    setup('/?debug&lead=marimba&bass=bassSlap&pad=choir&kit=japan');
+    expect(swap).toHaveBeenLastCalledWith({
+      lead: 'marimba',
+      bass: 'bassSlap',
+      pad: 'choir',
+      kit: 'japan',
+    });
+    swap.mockClear();
+    setup('/?debug&kit=no-such-kit');
     setup('/?debug');
-    expect(setLead).not.toHaveBeenCalled();
-    setLead.mockRestore();
+    expect(swap).not.toHaveBeenCalled();
+    swap.mockRestore();
   });
 
   it('switches the glide off and on', () => {

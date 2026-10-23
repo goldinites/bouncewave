@@ -1,4 +1,5 @@
 import { Instruments, TOM_RATES } from '@/audio/music/Instruments';
+import { VoiceOverrides } from '@/audio/music/palette';
 import { DrumKit, DrumRole, KITS } from '@/audio/music/kits';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import {
@@ -10,6 +11,7 @@ import {
   DrumPattern,
   GLITCH_PATTERNS,
   HIT_VELOCITY,
+  PAD_CHOP,
   STAB_PATTERNS,
 } from '@/audio/music/patterns';
 import {
@@ -101,6 +103,19 @@ const LEAD_VOLUME: Record<LeadVoice, number> = {
   sax: 0.06,
   guitar: 0.1,
   vibes: 0.095,
+  shakuhachi: 0.047,
+  shamisen: 0.22,
+  harp: 0.12,
+  marimba: 0.11,
+  kalimba: 0.09,
+  gamelan: 0.085,
+  celesta: 0.068,
+  musicBox: 0.094,
+  rhodes: 0.063,
+  choir: 0.126,
+  strings: 0.145,
+  chip: 0.069,
+  crush: 0.058,
 };
 const COUNTER_SHARE = 0.55;
 const ARP_VOLUME = 0.045;
@@ -111,18 +126,25 @@ const ARP_UNDER_LEAD = { VOLUME: 0.6, BRIGHTNESS: 0.7 } as const;
 // starts every note out of tune
 const GLIDE = { MAX_INTERVAL: 5, MAX_TIME: 0.04 } as const; // semitones, s
 const PAD_VOLUME = 0.022;
+// A chopped pad's notes are short: a little louder, so it sits as high as a held one
+const CHOP_BOOST = 1.4;
 const STAB_VOLUME = 0.05;
 const BASS_VOLUME = 0.15;
+// The 808 slides up to an octave: further, it sounds like a siren, not a bass
+const BASS_GLIDE_MAX_INTERVAL = 12; // semitones
 const RISER_VOLUME = 0.07;
 // Transitions, peak levels; the tonal riser joins the noise one only once the match is hot
 const TRANSITION_VOLUME = {
   REVERSE_CRASH: 0.09,
+  REVERSE_SNARE: 0.07,
   RISER_TONE: 0.05,
   RISER_TONE_INTENSITY: 0.5,
   DOWNLIFTER: 0.08,
   NOISE_WAVE: 0.05,
   BOOM: 0.5,
 } as const;
+// A section's one-shot hits (siren, modem, fanfare…), at their accent
+const FX_HIT_VOLUME = 0.12;
 // A ghost note and a phrase fill, as shares of the snare's written level
 const GHOST_SNARE = 0.3;
 const PHRASE_FILL = { FROM_STEP: 14, VELOCITIES: [0.35, 0.75] } as const;
@@ -189,10 +211,12 @@ export class Arrangement {
   private kit: DrumKit = KITS.synthwave;
   /** The lead's last note and when it ends, for a legato note to slide in from it. */
   private lastLead: { note: number; end: number } | null = null;
+  private lastBass: { note: number; end: number } | null = null;
   /** The listening stand can switch portamento off, to hear the melody without it. */
   public isGlideOn = true;
   /** The listening stand can play the lead on another voice, to hear the tune in another sound. */
-  public leadOverride: LeadVoice | null = null;
+  /** The listening stand's swaps: another lead, bass, pad or kit on any song. */
+  public overrides: VoiceOverrides = {};
   /** The layers the heat has brought in this bar (updateLayers). */
   private readonly layersIn = new Set<MusicLayer>();
   /** The section the layers were last decided for. */
@@ -248,7 +272,7 @@ export class Arrangement {
     const chord = chordAt(section, sectionStep);
     // Swing pushes the off-beat 16ths late
     const time = context.time + (s % 2 ? song.swing * stepDuration : 0);
-    this.kit = KITS[song.kit ?? 'synthwave'];
+    this.kit = KITS[this.overrides.kit ?? song.kit ?? 'synthwave'];
     if (s === 0 || section !== this.layersSection) {
       this.updateLayers(section, bar, I, section !== this.layersSection || sectionStep === 0);
       this.layersSection = section;
@@ -274,7 +298,7 @@ export class Arrangement {
     if (this.plays('bass')) this.playBass(time, chord, context);
     if ((section.arp || section.arpLine) && this.plays('arp')) this.playArp(time, chord, context);
 
-    const leadVoice = this.leadOverride ?? section.leadVoice ?? song.voices.lead;
+    const leadVoice = this.overrides.lead ?? section.leadVoice ?? song.voices.lead;
     if (this.plays('lead')) {
       this.playMelody(time, section.lead?.[sectionStep], leadVoice, 1, context, true);
     }
@@ -289,6 +313,7 @@ export class Arrangement {
     }
 
     if (this.plays('drums')) this.playDrums(time, context);
+    if (section.hits && this.plays('fx')) this.playHits(time, sectionStep, section.hits);
 
     if (context.climaxLevel > 0.01) {
       this.playClimaxLayers(time, chord, context);
@@ -326,8 +351,10 @@ export class Arrangement {
     // A band marks its turns with what it plays: no swells, no sweeps
     if (style === 'band') return;
     if (section.riser && style === 'drums') {
+      // A reverse crash and a reverse snare sucking in to the downbeat, no noise
       const end = time + section.bars * STEPS_PER_BAR * stepDuration;
       this.play.transition('reverseCrash', time, TRANSITION_VOLUME.REVERSE_CRASH, end);
+      this.play.transition('reverseSnare', time, TRANSITION_VOLUME.REVERSE_SNARE, end);
       return;
     }
     if (section.riser) {
@@ -348,6 +375,15 @@ export class Arrangement {
       this.play.transition('downlifter', time, TRANSITION_VOLUME.DOWNLIFTER);
     } else if (previousTier === 'calm' && section.tier === 'groove') {
       this.play.transition('noiseWave', time, TRANSITION_VOLUME.NOISE_WAVE);
+    }
+  }
+
+  /** The one-shot sounds the section strikes on this step, each on its own pattern. */
+  private playHits(time: number, sectionStep: number, hits: Partial<Record<string, string>>): void {
+    for (const [id, pattern] of Object.entries(hits)) {
+      if (!pattern) continue;
+      const velocity = HIT_VELOCITY[pattern[sectionStep % pattern.length]] ?? 0;
+      if (velocity > 0) this.play.fxHit(id, time, FX_HIT_VOLUME * velocity);
     }
   }
 
@@ -383,7 +419,7 @@ export class Arrangement {
     if (isChordStart) {
       this.voicing = voiceChord(chord, this.voicing);
 
-      if (section.pad !== 'none') {
+      if (section.pad !== 'none' && section.pad !== 'chop') {
         // Hold until the chord changes, within the section
         let length = 8;
         while (
@@ -399,12 +435,32 @@ export class Arrangement {
           PAD_VOLUME + 0.02 * I,
           (700 + I * 1800) * sweepAt(section, 'pads', sectionStep),
           section.pad === 'swell',
+          this.overrides.pad ?? context.song.voices.pad,
         );
       }
     }
 
+    // A chopped pad: the chord cut into a rhythm, a short note on every gate step
+    if (section.pad === 'chop' && this.voicing && PAD_CHOP[s] !== '.') {
+      this.play.pad(
+        this.voicing,
+        time,
+        stepDuration * 0.9,
+        (PAD_VOLUME + 0.02 * I) * CHOP_BOOST,
+        (700 + I * 1800) * sweepAt(section, 'pads', sectionStep),
+        false,
+        this.overrides.pad ?? context.song.voices.pad,
+      );
+    }
+
     if (section.stabs && this.voicing && STAB_PATTERNS[section.stabs][s] !== '.') {
-      this.play.stab(this.voicing, time, stepDuration * 1.5, STAB_VOLUME * (0.7 + 0.3 * I));
+      this.play.stab(
+        this.voicing,
+        time,
+        stepDuration * 1.5,
+        STAB_VOLUME * (0.7 + 0.3 * I),
+        section.stabsVoice,
+      );
     }
   }
 
@@ -424,21 +480,13 @@ export class Arrangement {
   }
 
   private playBass(time: number, chord: Chord, context: StepContext): void {
-    const { section, stepInBar: s, stepDuration, intensity: I, song } = context;
+    const { section, stepInBar: s, stepDuration } = context;
     const line = section.bassLine;
     if (line) {
       // A written riff plays as written: it is the track's hook, not to be varied at random
       const written = line[context.bar * STEPS_PER_BAR + s];
       if (!written) return;
-      this.play.bass(
-        song.voices.bass,
-        written.note,
-        time,
-        stepDuration * (written.steps - 0.1),
-        BASS_VOLUME + 0.08 * I,
-        this.bass,
-        450 + I * 1500,
-      );
+      this.playBassNote(written.note, time, stepDuration * (written.steps - 0.1), context);
       return;
     }
     const pattern = BASS_PATTERNS[section.bass ?? 'long'];
@@ -449,14 +497,29 @@ export class Arrangement {
     const note = bassNote(token, chord, next);
     if (note === null) return;
 
+    this.playBassNote(note, time, stepDuration * (heldSteps(pattern, s) - 0.1), context);
+  }
+
+  /** A bass note, sliding in from the one before when the song glides its bass and they join. */
+  private playBassNote(note: number, time: number, duration: number, context: StepContext): void {
+    const { stepDuration, intensity: I, song } = context;
+    const last = this.lastBass;
+    const isLegato = last !== null && time - last.end < stepDuration * 0.5;
+    const interval = isLegato ? Math.abs(note - last.note) : 0;
+    const glide =
+      song.voices.bassGlide && interval > 0 && interval <= BASS_GLIDE_MAX_INTERVAL
+        ? { from: last!.note, time: song.voices.bassGlide }
+        : undefined;
+    this.lastBass = { note, end: time + duration };
     this.play.bass(
-      song.voices.bass,
+      this.overrides.bass ?? song.voices.bass,
       note,
       time,
-      stepDuration * (heldSteps(pattern, s) - 0.1),
+      duration,
       BASS_VOLUME + 0.08 * I,
       this.bass,
       450 + I * 1500,
+      glide,
     );
   }
 

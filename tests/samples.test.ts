@@ -3,6 +3,7 @@ import { Instruments } from '@/audio/music/Instruments';
 import { KITS } from '@/audio/music/kits';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
+import { EXTRA_DRUMS } from '@/audio/samples/percussion';
 import { PITCHED_SAMPLES } from '@/audio/samples/pitched';
 import { PitchedRecipe, SampleBank, SampleRecipe } from '@/audio/samples/SampleBank';
 import { midiToFrequency } from '@/shared/math';
@@ -118,7 +119,9 @@ describe('the drum recipes', () => {
 
   it('give every kit a sound for every role', () => {
     for (const kit of Object.values(KITS)) {
-      for (const id of Object.values(kit)) expect(DRUM_SAMPLES).toHaveProperty(id);
+      for (const id of Object.values(kit)) {
+        expect({ ...DRUM_SAMPLES, ...EXTRA_DRUMS }).toHaveProperty(id);
+      }
     }
   });
 });
