@@ -4,12 +4,9 @@ import { Background, BackgroundMood } from '@/render/backgrounds/Background';
 import { BrokenNetBackground } from '@/render/backgrounds/BrokenNetBackground';
 import { DojoBackground } from '@/render/backgrounds/DojoBackground';
 import { FujiBackground } from '@/render/backgrounds/FujiBackground';
-import { JungleBackground } from '@/render/backgrounds/JungleBackground';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
-import { MemphisBackground } from '@/render/backgrounds/MemphisBackground';
 import { MysteryBackground } from '@/render/backgrounds/MysteryBackground';
 import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
-import { OutrunBackground } from '@/render/backgrounds/OutrunBackground';
 import { WarehouseBackground } from '@/render/backgrounds/WarehouseBackground';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp } from '@/shared/math';
@@ -36,11 +33,8 @@ interface Surf {
  */
 const createBackgrounds = (): Background[] => [
   new LaserBackground(),
-  new MemphisBackground(),
-  new OutrunBackground(),
   new NeonCityBackground(),
   new FujiBackground(),
-  new JungleBackground(),
   new WarehouseBackground(),
   new DojoBackground(),
   new BrokenNetBackground(),

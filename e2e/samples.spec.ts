@@ -149,9 +149,11 @@ test('renders every pitched instrument at every root, its loops seamless', async
               peak = Math.max(peak, Math.abs(sample));
             }
             if (note.loop) {
-              const start = Math.round(note.loop.start * rate);
-              const end = Math.round(note.loop.end * rate);
-              for (let j = 0; j < checked * rate; j++) {
+              // A sound may be rendered below the device's rate (RENDER_RATE): its own counts
+              const own = note.buffer.sampleRate;
+              const start = Math.round(note.loop.start * own);
+              const end = Math.round(note.loop.end * own);
+              for (let j = 0; j < checked * own; j++) {
                 seam = Math.max(seam, Math.abs(data[start + j] - data[end + j]));
               }
             } else {
@@ -245,4 +247,59 @@ test('renders every transition: swells build to their end, the rest die away', a
     }
   }
   expect(report.bytes).toBeLessThan(TRANSITIONS_MEMORY);
+});
+
+// The whole palette's memory (docs/AUDIO.md, "Бюджеты"): the core rendered at the first touch,
+// plus what the songs in play add, walking every song in turn as a long session does
+const PALETTE_MEMORY = 24 * 1024 * 1024; // bytes
+
+test('keeps every rendered sound within budget through a session of every song', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const report = await page.evaluate(async () => {
+    const load = async <T>(path: string) =>
+      (await import(/* @vite-ignore */ `/bouncewave/src/audio/${path}`)) as T;
+    const { SampleBank } =
+      await load<typeof import('../src/audio/samples/SampleBank')>('samples/SampleBank.ts');
+    const { DRUM_SAMPLES } =
+      await load<typeof import('../src/audio/samples/drums')>('samples/drums.ts');
+    const { PITCHED_SAMPLES } =
+      await load<typeof import('../src/audio/samples/pitched')>('samples/pitched.ts');
+    const { TRANSITION_SAMPLES } =
+      await load<typeof import('../src/audio/samples/transitions')>('samples/transitions.ts');
+    const { SONGS } = await load<typeof import('../src/audio/music/songs')>('music/songs.ts');
+    const { soundsFor, unneeded } =
+      await load<typeof import('../src/audio/music/palette')>('music/palette.ts');
+    const rate = 48000;
+    const bank = new SampleBank();
+    await bank.render(rate, DRUM_SAMPLES);
+    await bank.renderPitched(rate, PITCHED_SAMPLES);
+    await bank.render(rate, TRANSITION_SAMPLES);
+    const core = bank.bytes;
+    let peak = core;
+    let peakAt = '';
+    // Twice round, so the first songs come back after the last
+    const order = [...SONGS, ...SONGS];
+    for (let i = 1; i < order.length; i++) {
+      const [playing, next] = [order[i - 1], order[i]];
+      bank.release(unneeded([playing, next]));
+      for (const song of [playing, next]) {
+        const { pitched, oneShots } = soundsFor(song);
+        await bank.renderPitched(rate, pitched);
+        await bank.render(rate, oneShots);
+      }
+      if (bank.bytes > peak) {
+        peak = bank.bytes;
+        peakAt = `${playing.title} → ${next.title}`;
+      }
+    }
+    return { core, peak, peakAt };
+  });
+  test.info().annotations.push({
+    type: 'palette',
+    description: `core ${(report.core / 1048576).toFixed(1)} MB, peak ${(report.peak / 1048576).toFixed(1)} MB at ${report.peakAt}`,
+  });
+  console.log(report);
+  expect(report.peak).toBeLessThan(PALETTE_MEMORY);
 });

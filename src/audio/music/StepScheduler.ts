@@ -12,6 +12,11 @@ export interface StepSchedulerOptions {
   playStep: (time: number) => number;
   /** Whether to schedule anything on this tick; the clock waits (and later resyncs) if not. */
   canRun?: () => boolean;
+  /**
+   * False for an offline render (`npm run render`): no timer, the renderer calls `tick` as its
+   * own clock advances, faster than real time.
+   */
+  hasTimer?: boolean;
 }
 
 /**
@@ -31,7 +36,8 @@ export class StepScheduler {
     this.playStep = options.playStep;
     this.canRun = options.canRun ?? (() => true);
     this.nextStepTime = context.currentTime + startDelay;
-    this.intervalId = window.setInterval(() => this.tick(), INTERVAL_MS);
+    this.intervalId =
+      options.hasTimer === false ? null : window.setInterval(() => this.tick(), INTERVAL_MS);
   }
 
   /** Schedules every step that is due; the timer calls it, tests may call it directly. */

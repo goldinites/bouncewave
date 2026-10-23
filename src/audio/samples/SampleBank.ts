@@ -9,6 +9,8 @@ import { seededRandom } from '@/shared/random';
 export interface SampleRecipe {
   /** Seconds rendered; the sound must have died away by then. */
   duration: number;
+  /** The highest rate it is rendered at (`RENDER_RATE`); the device's if left out. */
+  maxRate?: number;
   variants: number;
   /** dB the rendered sound is set to after its peak is normalised to full scale. */
   level?: number;
@@ -36,6 +38,8 @@ export interface PitchedRecipe {
   roots: number[];
   /** Seconds rendered: a sustained sound renders a little past its loop's end. */
   duration: number;
+  /** The highest rate it is rendered at (`RENDER_RATE`); the device's if left out. */
+  maxRate?: number;
   channels?: 1 | 2;
   /** Where a sustained sound loops, in seconds; none for one that dies away. */
   loop?: { start: number; length: number };
@@ -51,6 +55,14 @@ export interface PitchedRecipe {
     tune: (hz: number) => number,
   ) => void;
 }
+
+/**
+ * Rates a sound may be rendered at below the device's, in Hz: a sound holds nothing above half
+ * its rate, so one with no highs — a bass, a pad, a warm lead, a low drum — renders at a third or
+ * half of 48 kHz and takes as much less memory, sounding the same. Bright sounds (cymbals, hats,
+ * the snare, the DX7's tine) keep the device's rate.
+ */
+export const RENDER_RATE = { LOW: 16000, MID: 24000, HIGH: 32000 } as const;
 
 /** One rendered root of a pitched instrument. */
 interface RenderedRoot {
@@ -138,7 +150,8 @@ export class SampleBank {
       pending.map(async ([id, recipe]) => {
         const variants = await Promise.all(
           Array.from({ length: recipe.variants }, async (_, variant) => {
-            const ctx = new Offline(1, Math.ceil(recipe.duration * rate), rate);
+            const at = Math.min(rate, recipe.maxRate ?? rate);
+            const ctx = new Offline(1, Math.ceil(recipe.duration * at), at);
             recipe.build(ctx, seededRandom(hash(`${id}:${variant}`)));
             const buffer = await renderOffline(ctx);
             if (recipe.reverse) {
@@ -173,7 +186,8 @@ export class SampleBank {
               ? (hz: number) => Math.max(1, Math.round(hz * loop.length)) / loop.length
               : (hz: number) => hz;
             const frequency = tune(midiToFrequency(root));
-            const ctx = new Offline(recipe.channels ?? 1, Math.ceil(recipe.duration * rate), rate);
+            const at = Math.min(rate, recipe.maxRate ?? rate);
+            const ctx = new Offline(recipe.channels ?? 1, Math.ceil(recipe.duration * at), at);
             recipe.build(ctx, seededRandom(hash(`${id}:${root}`)), frequency, tune);
             const buffer = await renderOffline(ctx);
             normalise(buffer, recipe.level ?? 0);
@@ -230,6 +244,24 @@ export class SampleBank {
     const turn = this.turns.get(id) ?? 0;
     this.turns.set(id, turn + 1);
     return variants[turn % variants.length];
+  }
+
+  /** Every sound starts again from its first variant: renders that must match play the same takes. */
+  public rewind(): void {
+    this.turns.clear();
+  }
+
+  /**
+   * Frees rendered sounds, so a sound no song in play needs takes no memory; asked for again, it
+   * is rendered again. A note already playing keeps its buffer until it ends.
+   */
+  public release(ids: Iterable<string>): void {
+    for (const id of ids) {
+      this.buffers.delete(id);
+      this.roots.delete(id);
+      this.turns.delete(id);
+      this.requested.delete(id);
+    }
   }
 
   /** The ids rendered so far. */

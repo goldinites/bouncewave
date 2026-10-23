@@ -5,7 +5,7 @@ import { MusicGraph } from '@/audio/music/MusicGraph';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { EXTRA_DRUMS } from '@/audio/samples/percussion';
 import { PITCHED_SAMPLES } from '@/audio/samples/pitched';
-import { PitchedRecipe, SampleBank, SampleRecipe } from '@/audio/samples/SampleBank';
+import { PitchedRecipe, RENDER_RATE, SampleBank, SampleRecipe } from '@/audio/samples/SampleBank';
 import { midiToFrequency } from '@/shared/math';
 import { seededRandom } from '@/shared/random';
 import { fakeAudioContext } from './helpers/fakeAudioContext';
@@ -74,6 +74,38 @@ describe('SampleBank', () => {
     const variants = [0, 1, 2].map(() => Array.from(first.pick('thump')!.getChannelData(0)));
     expect(new Set(variants.map(String)).size).toBe(3);
     expect(Array.from(second.pick('thump')!.getChannelData(0))).toEqual(variants[0]);
+  });
+
+  it('renders a sound no higher than its rate, the device’s otherwise', async () => {
+    const rates: number[] = [];
+    vi.stubGlobal(
+      'OfflineAudioContext',
+      class {
+        public drawn: number[] = [];
+        constructor(_channels: number, _length: number, rate: number) {
+          rates.push(rate);
+        }
+        public startRendering() {
+          return Promise.resolve(buffer(this.drawn));
+        }
+      },
+    );
+    const bank = new SampleBank();
+    await bank.render(48000, { low: { ...recipe(1), maxRate: RENDER_RATE.LOW }, full: recipe(1) });
+    expect(rates.sort()).toEqual([RENDER_RATE.LOW, 48000].sort());
+  });
+
+  it('frees a sound, rendering it again when asked for again', async () => {
+    stubOfflineContext();
+    const bank = new SampleBank();
+    await bank.render(48000, { thump: recipe(2) });
+    expect(bank.bytes).toBeGreaterThan(0);
+
+    bank.release(['thump']);
+    expect(bank.pick('thump')).toBeNull();
+    expect(bank.bytes).toBe(0);
+    await bank.render(48000, { thump: recipe(2) });
+    expect(bank.pick('thump')).not.toBeNull();
   });
 
   it('hands the variants out in turn', async () => {

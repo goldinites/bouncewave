@@ -11,7 +11,8 @@ import {
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { soundsFor, VoiceOverrides } from '@/audio/music/palette';
+import { soundsFor, unneeded, VoiceOverrides } from '@/audio/music/palette';
+import { DEFAULT_ROOM } from '@/audio/music/rooms';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { chordAt, LeadVoice, MusicLayer, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
@@ -87,11 +88,13 @@ export class MusicEngine {
    * Builds the audio graph and starts the scheduler; safe to call more than once.
    * @param output where the music goes: the mixer's music bus
    * @param samples the rendered instruments; until one is ready its live synth plays
+   * @param clock 'manual' for an offline render: the renderer calls `tick` as its clock advances
    */
   public init(
     audioContext: AudioContext,
     output: AudioNode = audioContext.destination,
     samples: SampleBank = this.samples,
+    clock: 'timer' | 'manual' = 'timer',
   ): void {
     if (this.graph) return;
 
@@ -109,11 +112,19 @@ export class MusicEngine {
       audioContext,
       {
         playStep: (time) => this.playStep(time, graph, arrangement),
-        // During a tape stop no new notes are scheduled; the clock resyncs on recover
-        canRun: () => audioContext.state === 'running' && !this.isTapeStopped,
+        // During a tape stop no new notes are scheduled; the clock resyncs on recover. An
+        // offline render is suspended whenever it ticks, so its state says nothing
+        canRun: () =>
+          (clock === 'manual' || audioContext.state === 'running') && !this.isTapeStopped,
+        hasTimer: clock === 'timer',
       },
       START_DELAY,
     );
+  }
+
+  /** Schedules the steps due now: an offline render's clock, in place of the timer. */
+  public tick(): void {
+    this.scheduler?.tick();
   }
 
   /** Latest game state; read by the scheduler on its next tick. */
@@ -225,16 +236,19 @@ export class MusicEngine {
   }
 
   /**
-   * Renders the sounds beyond the core palette a song plays (audio/music/palette.ts), ahead of
-   * it: called while it waits its turn, so they are ready by its first bar. A sound already
+   * Renders the sounds beyond the core palette a song plays (audio/music/palette.ts), and its
+   * room, ahead of it: called while it waits its turn, so they are ready by its first bar. A sound already
    * rendered is skipped.
    */
   private prepare(song: Song): void {
     if (!this.graph) return;
+    // What neither the song playing nor this one plays is freed first
+    this.samples.release(unneeded([this.conductor.song, song], this.overrides));
     const { pitched, oneShots } = soundsFor(song, this.overrides);
     const rate = this.graph.context.sampleRate;
     void this.samples.renderPitched(rate, pitched);
     void this.samples.render(rate, oneShots);
+    this.graph.prepareRoom(song.room ?? DEFAULT_ROOM);
   }
 
   /** The listening stand switches the lead's portamento off and on, to compare. */
@@ -298,6 +312,7 @@ export class MusicEngine {
   public dispose(): void {
     this.scheduler?.dispose();
     this.scheduler = null;
+    this.graph?.dispose();
   }
 
   /** The kind of section the game calls for now. */
@@ -353,6 +368,8 @@ export class MusicEngine {
 
     graph.setToneFilter(TONE_FILTER[gameState], time);
     graph.setSongLevel(song.level ?? 0, time);
+    graph.setSongSpace(song.room ?? DEFAULT_ROOM, song.pump ?? 1, time);
+    graph.setBassGrit(song.grit ?? 0, time);
     graph.setEchoTime(stepDuration * ECHO_STEPS, time);
 
     if (!isMuted) {

@@ -2,9 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { Arrangement } from '@/audio/music/Arrangement';
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { soundsFor } from '@/audio/music/palette';
+import { LAZY_SOUND_IDS, soundsFor, unneeded } from '@/audio/music/palette';
 import { PAD_CHOP } from '@/audio/music/patterns';
 import { compileSong, SectionDef, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
+import { SONGS } from '@/audio/music/songs';
 import { DifficultyLevel } from '@/match/difficulty';
 import { fakeAudioContext } from './helpers/fakeAudioContext';
 
@@ -13,7 +14,7 @@ const song = (def: Partial<SongDef>, section: Partial<SectionDef> = {}) =>
     title: 'Palette',
     bpm: 120,
     swing: 0,
-    voices: { lead: 'marimba', counter: 'bell', arp: 'square', bass: 'bassSlap', pad: 'choir' },
+    voices: { lead: 'marimba', counter: 'bell', arp: 'square', bass: 'bassSlap', pad: 'reverse' },
     kit: 'japan',
     ...def,
     sections: [
@@ -36,7 +37,7 @@ describe('the palette a song needs rendered', () => {
   it('is the extra sounds it plays, and none of the core ones', () => {
     const { pitched, oneShots } = soundsFor(song({}));
     expect(Object.keys(pitched).sort()).toEqual(
-      ['bassSlap', 'leadMarimba', 'padChoir', 'stabRhodes'].sort(),
+      ['bassSlap', 'leadMarimba', 'padReverse', 'stabRhodes'].sort(),
     );
     expect(Object.keys(oneShots).sort()).toEqual(
       ['gong', 'hyoshigi', 'odaiko', 'siren', 'woodblock'].sort(),
@@ -57,6 +58,21 @@ describe('the palette a song needs rendered', () => {
     });
     expect(Object.keys(swapped.pitched).sort()).toEqual(['bassGrowl', 'leadHarp', 'padReverse']);
     expect(Object.keys(swapped.oneShots).sort()).toEqual(['chain', 'steam', 'synthCymbal']);
+  });
+});
+
+describe('the wider palette’s sounds freed', () => {
+  it('are those neither the song playing nor the next one plays', () => {
+    const rain = SONGS.find((s) => s.title === 'Kabukicho Rain')!;
+    const fuji = SONGS.find((s) => s.title === 'Above the Clouds')!;
+    const free = unneeded([rain, fuji]);
+    for (const kept of ['leadMusicBox', 'leadShamisen', 'rainstick', 'leadShakuhachi', 'odaiko']) {
+      expect(free).not.toContain(kept);
+    }
+    for (const freed of ['leadGamelan', 'chhing', 'conga', 'bassSlap', 'padStrings']) {
+      expect(free).toContain(freed);
+    }
+    expect(free.every((id) => LAZY_SOUND_IDS.includes(id))).toBe(true);
   });
 });
 
@@ -96,7 +112,7 @@ describe('the arrangement with the wider palette', () => {
     const { pad } = play(song({}, { pad: 'chop', stabs: undefined }), 1);
     const gates = [...PAD_CHOP].filter((c) => c !== '.').length;
     expect(pad).toHaveBeenCalledTimes(gates);
-    expect(pad.mock.calls.every((call) => call[6] === 'choir')).toBe(true);
+    expect(pad.mock.calls.every((call) => call[6] === 'reverse')).toBe(true);
   });
 
   it('plays the stabs on the section’s stab voice', () => {

@@ -21,7 +21,7 @@ const HIT_DUCK = {
 const METER_FFT_SIZE = 16384;
 // The meter hears roughly as the ear does (the K-weighting of LUFS): the deep lows count less,
 // the presence range a little more, so a song's 808 tail doesn't read as loudness
-const K_WEIGHTING = { LOW_CUT: 38, SHELF_FREQUENCY: 1681, SHELF_GAIN: 4 } as const;
+export const K_WEIGHTING = { LOW_CUT: 38, SHELF_FREQUENCY: 1681, SHELF_GAIN: 4 } as const;
 const SILENCE_DB = -96;
 
 /** How loud the master is: over the meter's last window, and its loudest sample there. */

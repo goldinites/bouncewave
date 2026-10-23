@@ -7,6 +7,7 @@ import {
   StabPatternName,
 } from '@/audio/music/patterns';
 import { KitName } from '@/audio/music/kits';
+import { RoomName } from '@/audio/music/rooms';
 import { Chord, parseChord, parseNote } from '@/audio/music/theory';
 import { FxHitId } from '@/audio/samples/percussion';
 import { SceneId } from '@/shared/scenes';
@@ -52,14 +53,15 @@ export type LeadVoice =
   | 'brass'
   | 'sync'
   | 'pwm'
-  // City pop's band, for the Memphis track: an FM electric piano, a sax, a muted funk guitar
+  // A band's sounds, first for city pop: an FM electric piano, a sax, a muted funk guitar
   // and a vibraphone
   | 'epiano'
   | 'sax'
   | 'guitar'
   | 'vibes'
   // The wider palette for the backdrops' tracks to come (5.6): Japan's flute and lute, plucked
-  // and struck sounds, a choir and strings, the 8-bit and broken digital leads
+  // and struck sounds, strings, the 8-bit and broken digital leads (no choir: the game has no
+  // voices, docs/AUDIO.md)
   | 'shakuhachi'
   | 'shamisen'
   | 'harp'
@@ -69,7 +71,6 @@ export type LeadVoice =
   | 'celesta'
   | 'musicBox'
   | 'rhodes'
-  | 'choir'
   | 'strings'
   | 'chip'
   | 'crush';
@@ -77,8 +78,8 @@ export type LeadVoice =
 /** The rendered basses (audio/samples/pitched.ts); a plain oscillator type plays live. */
 export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808' | 'bassSlap' | 'bassGrowl';
 
-/** The pad's sound: the synth's own, a string section, a wordless choir, or swelling backwards. */
-export type PadVoice = 'synth' | 'strings' | 'choir' | 'reverse';
+/** The pad's sound: the synth's own, a string section, or swelling backwards. */
+export type PadVoice = 'synth' | 'strings' | 'reverse';
 
 /** What plays the chord stabs: a brass section, an electric piano, a guitar, staccato strings. */
 export type StabVoice = 'brass' | 'rhodes' | 'guitar' | 'strings';
@@ -215,6 +216,18 @@ export interface SongDef {
    * left out.
    */
   transitions?: TransitionStyle;
+  /** The space the song plays in (audio/music/rooms.ts); the plate if left out. */
+  room?: RoomName;
+  /**
+   * How deep the bass and pads dip under the kick, as a share of the full sidechain: 1 for the
+   * pumping of darksynth, 0 for a band that breathes by its own playing. 1 if left out.
+   */
+  pump?: number;
+  /**
+   * dB the bass is driven by into its saturation: 10 or more for one that tears, as an
+   * industrial track's does; below 0 for a cleaner one than the mix's own bend. 0 if left out.
+   */
+  grit?: number;
   sections: SectionDef[];
 }
 

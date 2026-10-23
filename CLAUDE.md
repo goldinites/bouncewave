@@ -6,9 +6,13 @@ screens, an installable offline PWA. Played at https://goldinites.github.io/boun
 - The user writes in Russian: answer in Russian. Code, comments, commits and PRs are in English.
 - **The development plan is [docs/ROADMAP.md](docs/ROADMAP.md).** Read it before any roadmap
   work; it holds the stages, each step's scope, its status and the agreed decisions.
-- Review every new requirement of the user's, and every step of the plan, as a professional game
-  designer and point out objectively bad decisions before building them (how: `/roadmap-step`,
-  step 1a).
+- **Discuss every new decision before building it**: as a professional game designer, say what it
+  gives and what it costs, how it fits the game's direction, and recommend one option; then wait
+  for the user's answer (how: `/roadmap-step`, step 1a). Point out objectively bad decisions
+  plainly. Mechanical follow-ups of an agreed decision need no discussion.
+- The docs hold only what is in force — decisions, steps, the current state — not history (that
+  is in git and the PRs). Keep them so: when a decision changes, rewrite the place it lives
+  instead of appending, and keep the docs free of contradictions.
 - Skills for recurring jobs: `/roadmap-step` (carry out the next step of the plan), `/release`
   (ship a version to GitHub Pages), `/compose-track` (write a soundtrack track by ear with the
   user, as `docs/AUDIO.md` "Как делаем трек" describes).
@@ -25,7 +29,7 @@ npm run test:e2e      # Playwright smoke: desktop, phone portrait and landscape 
 npm run test:perf     # every background's frame time vs e2e/frameBudget.ts (CI runs it too)
 npm run test:visual   # every background vs its saved picture in e2e/__screenshots__ (local only)
 npm run sim           # balance report, AI against AI: levels, rallies, skills, challenges (local only)
-npm run loudness -- <song-id> ...  # each part's loudness and the `level` change to -25 dB (local only)
+npm run render -- <song-id> ...    # a song rendered silently into renders/<id>/: pictures and a report (local only)
 ```
 
 All four checks (tests, types, lint, format), the smoke and the frame budget must pass before a
@@ -44,7 +48,7 @@ overlay has switches for both and counts their uses; `?mods=wind,darkness` plays
 those modifiers (ids in `src/match/modifiers/Modifier.ts`), also switched in the debug overlay;
 `?song=neon-cathedral&part=chorus&mute=drums` holds the music to a song, its part and layers
 (`part=whole-form` plays the whole form in order, peaks included; `&lead=sax`, `&bass=bassSlap`,
-`&pad=choir`, `&kit=japan` swap the lead, bass, pad and kit on any song (the wider palette,
+`&pad=strings`, `&kit=japan` swap the lead, bass, pad and kit on any song (the wider palette,
 `src/audio/music/palette.ts`); the debug overlay's sound stand, which also plays every action sound; song ids are titles in kebab case);
 `?tutorial=perfect` starts the tutorial at that step (ids in `src/match/tutorial.ts`).
 
@@ -101,5 +105,8 @@ Rules that keep it clean (the first two are enforced by `tests/architecture.test
 - Commit messages: an imperative subject line describing the change for a player or developer, a
   blank line, then a wrapped body on what was wrong and what changed. End with the
   `Co-Authored-By` line from the session's attribution.
-- `gh` is not installed: push the branch and give the user the
+- Claude's shell has no GitHub credentials and `gh` is not installed: ask the user to push
+  (`! git push -u origin <branch>`), then give the
   `https://github.com/goldinites/bouncewave/pull/new/<branch>` link with a PR description.
+- A step that needs the work of an unmerged branch is stacked on it and goes into the same PR
+  (5.2b rides on 5.6b), rather than waiting for the merge.

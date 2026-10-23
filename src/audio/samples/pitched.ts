@@ -1,4 +1,4 @@
-import { PitchedRecipe } from '@/audio/samples/SampleBank';
+import { PitchedRecipe, RENDER_RATE } from '@/audio/samples/SampleBank';
 import { cents, chain, drive, filter, hit, level, osc } from '@/audio/samples/synth';
 
 // A sustained sound loops over one second after a quarter-second settling: long enough that the
@@ -36,6 +36,7 @@ export function spread(
 export const PITCHED_SAMPLES = {
   /** Synthwave's bass: two saws a cycle apart and a square, warmly driven. */
   bassSaw: {
+    maxRate: RENDER_RATE.LOW,
     roots: BASS_ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -49,6 +50,7 @@ export const PITCHED_SAMPLES = {
   },
   /** Reese: two saws beating against each other over a sine, the darksynth growl. */
   bassReese: {
+    maxRate: RENDER_RATE.LOW,
     roots: BASS_ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -62,6 +64,7 @@ export const PITCHED_SAMPLES = {
   },
   /** FM bass: a bright, rubbery attack settling into a round tone. */
   bassFm: {
+    maxRate: RENDER_RATE.LOW,
     roots: BASS_ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -78,6 +81,7 @@ export const PITCHED_SAMPLES = {
   },
   /** 808 sub: a long sine, driven so its overtones carry it on a phone speaker. */
   bass808: {
+    maxRate: RENDER_RATE.LOW,
     roots: BASS_ROOTS,
     duration: 1.8,
     build: (ctx, _random, f) => {
@@ -86,6 +90,7 @@ export const PITCHED_SAMPLES = {
   },
   /** Supersaw: seven detuned saws spread wide, the anthem lead. */
   supersaw: {
+    maxRate: RENDER_RATE.MID,
     roots: LEAD_ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -101,6 +106,7 @@ export const PITCHED_SAMPLES = {
   },
   /** A hollow square lead with a slow chorus, for chiptune and arcade melodies. */
   squareLead: {
+    maxRate: RENDER_RATE.MID,
     roots: LEAD_ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -142,6 +148,7 @@ export const PITCHED_SAMPLES = {
   },
   /** Brass stab: detuned saws whose filter blares open and closes again. */
   brass: {
+    maxRate: RENDER_RATE.MID,
     roots: STAB_ROOTS,
     duration: 0.8,
     build: (ctx, _random, f) => {
@@ -156,6 +163,7 @@ export const PITCHED_SAMPLES = {
   },
   /** Warm pad: six detuned saws spread across the stereo field, slowly beating. */
   pad: {
+    maxRate: RENDER_RATE.MID,
     roots: PAD_ROOTS,
     duration: LOOPED,
     loop: LOOP,

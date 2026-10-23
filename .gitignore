@@ -18,3 +18,5 @@ coverage/
 # Playwright: results and reports of the last run
 test-results/
 playwright-report/
+# Track renders (npm run render)
+renders/

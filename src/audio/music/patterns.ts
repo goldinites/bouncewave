@@ -43,19 +43,22 @@ export const DRUM_PATTERNS = {
     snare: '....X..o.o..X..o',
     hat: 'x.x.x.x.x.x.x.x.',
   },
-  // A rolling jungle groove: an off-kilter kick, a busy shaker and a deep drum answering it
-  tribal: {
-    kick: 'X.....x...X..x..',
-    snare: '....x.......x...',
-    hat: 'x.xx.xx.x.xx.xx.',
-    taiko: '..x.....x.x.....',
-  },
-  // A straight beat with a taiko answering the kick, like a festival drum line
+  // A straight beat with a taiko answering the kick, like a festival drum line: the drum's
+  // "don" and, on the rim, its "ka"
   matsuri: {
     kick: 'X.......X.......',
     snare: '....X.......X...',
     hat: '..x...x...x...x.',
     taiko: '......x.....x.xX',
+    perc: '..x.x.....x.x.x.',
+  },
+  // The kabuki's clappers (hyoshigi) striking ever faster, as they do before the curtain, over
+  // the odaiko
+  kabuki: {
+    kick: 'X.......X.......',
+    clap: 'x.......x...x.xx',
+    taiko: 'x.....x...x.x.xX',
+    hat: '..x...x...x...x.',
   },
   // Darksynth: a four-on-the-floor under restless sixteenth hats and a clap doubling the snare
   darkdrive: {
@@ -72,14 +75,6 @@ export const DRUM_PATTERNS = {
     hat: 'xoxoxoxoxoxoxoxo',
     open: '..............x.',
   },
-  // City pop: a laid-back kick that skips a beat, a rim ticking between the snares
-  citypop: {
-    kick: 'X.....x.X.......',
-    snare: '....X.......X...',
-    hat: 'x.x.x.x.x.x.x.x.',
-    open: '......x.......x.',
-    perc: '...x......x..x..',
-  },
   // Outrun idling at the lights: a kick on one and three, the hats on the off-beats, no snare yet
   cruise: {
     kick: 'X.......X.......',
@@ -93,20 +88,31 @@ export const DRUM_PATTERNS = {
     hat: 'x.x.x.x.x.x.x.x.',
     open: '..............x.',
   },
-  // A band counting in: hats and the shaker only, the kick a light touch on the one
-  bandIntro: {
-    kick: 'x...............',
-    hat: 'x.x.x.x.x.x.x.x.',
-    perc: '..o...o...o...o.',
+  // Witch house in half-time: the snare on the third beat, so 140 feels like 70, under trap hats
+  // rolling into the bar's end, and a pipe somewhere in the street ringing when struck
+  witch: {
+    kick: 'X......x..X.....',
+    snare: '........X.......',
+    clap: '........x.......',
+    hat: 'x.x.x.x.x.x.xxxx',
+    open: '......x.........',
+    metal: '...........o....',
   },
-  // A live funk groove for a chorus: a syncopated kick, ghost notes around the backbeat, the
-  // shaker in sixteenths — not four on the floor
-  band: {
-    kick: 'X..x..x...X..x..',
-    snare: '....X..o.o..X..o',
-    hat: 'x.x.x.x.x.x.x.x.',
+  // The city's iron at the peak (Kabukicho Rain's chorus), after Cyberpunk 2077: the half-time
+  // beat with steel struck across it, a taiko under the off-beats, the hats in triplet rolls
+  neonIron: {
+    kick: 'X..x...x..X..x..',
+    snare: '........X.......',
+    clap: '........x.......',
+    hat: 'x.x.x.x.x.x.x.xx',
     open: '......x.......x.',
-    perc: 'oxoxoxoxoxoxoxox',
+    metal: '...x..o....x.x..',
+    taiko: '..x.......x...xX',
+  },
+  // Rain on the window: hats and the shaker ticking, no kick, no snare
+  witchIntro: {
+    hat: 'x...x...x...x...',
+    perc: '..o...o...o...o.',
   },
   // Euclidean: five kicks spread over the bar, a rim and hats in even spreads of their own
   euclid: {

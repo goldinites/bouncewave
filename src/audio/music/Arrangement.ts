@@ -112,7 +112,6 @@ const LEAD_VOLUME: Record<LeadVoice, number> = {
   celesta: 0.068,
   musicBox: 0.094,
   rhodes: 0.063,
-  choir: 0.126,
   strings: 0.145,
   chip: 0.069,
   crush: 0.058,

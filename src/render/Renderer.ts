@@ -204,9 +204,8 @@ export class Renderer {
   }
 
   /**
-   * Soft accent when the climax peaks: a gentle laser swell and flash, no screen shake.
-   * Memphis shapes are not thrown outward here: the uniform push reads as a zoom of the
-   * whole background mid-rally. That burst is kept for the victory celebration only.
+   * Soft accent when the climax peaks: a gentle laser swell and flash, no screen shake. The
+   * backgrounds' bursts are kept for the victory celebration only.
    */
   public triggerClimaxSurge(): void {
     if (!this.showsEffects) return;
@@ -214,7 +213,7 @@ export class Renderer {
     this.addFlash(CLIMAX_FLASH);
   }
 
-  /** Victory: lasers flare and sweep through hues, Memphis shapes burst outward and heat up. */
+  /** Victory: lasers flare and sweep through hues, every background bursts in its own way. */
   public celebrate(): void {
     if (!this.showsEffects) return;
     this.mood.celebrate();

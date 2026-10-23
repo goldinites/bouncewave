@@ -1,6 +1,6 @@
 import { LeadVoice } from '@/audio/music/score';
 import { LOOP, LOOPED } from '@/audio/samples/pitched';
-import { PitchedRecipe } from '@/audio/samples/SampleBank';
+import { PitchedRecipe, RENDER_RATE } from '@/audio/samples/SampleBank';
 import {
   cents,
   chain,
@@ -54,6 +54,7 @@ function syncWave(ctx: BaseAudioContext): PeriodicWave {
 export const EXTRA_LEADS = {
   /** Soft: a triangle and sines with a slow chorus, warm and round, after "Nightcall" and M83. */
   leadSoft: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -67,6 +68,7 @@ export const EXTRA_LEADS = {
   },
   /** Brass: a polysynth's warm saws, detuned both ways, a little growl, after the Jupiter-8. */
   leadBrass: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -80,6 +82,7 @@ export const EXTRA_LEADS = {
   },
   /** Sync: a hard-synced saw, bright and nasal, the cutting lead of the 80s. */
   leadSync: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -103,6 +106,7 @@ export const EXTRA_LEADS = {
    * delay swinging moves the pulse's width — living and shimmering, after the Prophet-5.
    */
   leadPwm: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -126,6 +130,7 @@ export const EXTRA_LEADS = {
    * bark of the strike settling into a round tone, and a high tine ringing briefly on top.
    */
   leadEpiano: {
+    maxRate: RENDER_RATE.HIGH,
     roots: ROOTS,
     duration: 2.2,
     build: (ctx, _random, f) => {
@@ -149,6 +154,7 @@ export const EXTRA_LEADS = {
    * drive, held as long as the note is; it breathes in on the envelope's slow attack.
    */
   leadSax: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -167,6 +173,7 @@ export const EXTRA_LEADS = {
    * pick's click on the attack.
    */
   leadGuitar: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 0.7,
     build: (ctx, random, f) => {
@@ -186,6 +193,7 @@ export const EXTRA_LEADS = {
    * motor's tremolo swelling it as it rings.
    */
   leadVibes: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 2.6,
     build: (ctx, _random, f) => {
@@ -208,6 +216,7 @@ export const EXTRA_LEADS = {
    * the loop, so the held note joins seamlessly; the vibrato comes from how it is played.
    */
   leadShakuhachi: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -223,6 +232,7 @@ export const EXTRA_LEADS = {
   },
   /** Shamisen: a hard-plucked string with its buzzing bridge, bright and quickly gone. */
   leadShamisen: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 1.2,
     build: (ctx, random, f) => {
@@ -238,6 +248,7 @@ export const EXTRA_LEADS = {
   },
   /** Harp: a softly plucked gut string, warm, ringing long. */
   leadHarp: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 2.6,
     build: (ctx, random, f) => {
@@ -247,6 +258,7 @@ export const EXTRA_LEADS = {
   },
   /** Marimba: a wooden bar's round tone, its fourth partial and a knock gone in a moment. */
   leadMarimba: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 1,
     build: (ctx, random, f) => {
@@ -264,6 +276,7 @@ export const EXTRA_LEADS = {
   },
   /** Kalimba: a plucked metal tine, an inharmonic ping on top fading fast. */
   leadKalimba: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 1.4,
     build: (ctx, _random, f) => {
@@ -279,6 +292,7 @@ export const EXTRA_LEADS = {
    * (the ombak) with inharmonic partials, ringing long.
    */
   leadGamelan: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 3,
     build: (ctx, _random, f) => {
@@ -292,6 +306,7 @@ export const EXTRA_LEADS = {
   },
   /** Celesta: hammered steel plates in a box, sweet and bright, a toy's twinkle. */
   leadCelesta: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 1.6,
     build: (ctx, _random, f) => {
@@ -304,6 +319,7 @@ export const EXTRA_LEADS = {
   },
   /** Music box: a comb's tooth plucked, thin and glassy, with its high clink. */
   leadMusicBox: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 1.3,
     build: (ctx, _random, f) => {
@@ -316,6 +332,7 @@ export const EXTRA_LEADS = {
   },
   /** Rhodes: a softer electric piano than the DX7, its tine's bark small, the tremolo swaying. */
   leadRhodes: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: 2.4,
     build: (ctx, _random, f) => {
@@ -330,24 +347,9 @@ export const EXTRA_LEADS = {
       chain(carrier, tremolo, hit(ctx, 1, 2.3, 0, 0.003), ctx.destination);
     },
   },
-  /** Choir: an "ooh" with no words — saws through two vowel formants, held. */
-  leadChoir: {
-    roots: ROOTS,
-    duration: LOOPED,
-    loop: LOOP,
-    build: (ctx, _random, f, tune) => {
-      const sum = level(ctx, 0.4);
-      for (const detune of [-8, 0, 8]) {
-        osc(ctx, 'sawtooth', detune ? tune(cents(f, detune)) : f).connect(sum);
-      }
-      const out = level(ctx, 1);
-      out.connect(ctx.destination);
-      chain(sum, filter(ctx, 'bandpass', 320, 4), level(ctx, 1.4), out);
-      chain(sum, filter(ctx, 'bandpass', 800, 5), level(ctx, 0.6), out);
-    },
-  },
   /** Strings: an ensemble's detuned saws, softened, swelling in as a bowed section does. */
   leadStrings: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -361,6 +363,7 @@ export const EXTRA_LEADS = {
   },
   /** Chip: an 8-bit console's thin pulse, an eighth of the cycle wide. */
   leadChip: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -374,6 +377,7 @@ export const EXTRA_LEADS = {
   },
   /** Crush: a saw ground down to a few levels, the broken digital edge of a failing machine. */
   leadCrush: {
+    maxRate: RENDER_RATE.MID,
     roots: ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -407,7 +411,6 @@ export const EXTRA_LEAD_FOR: Partial<Record<LeadVoice, ExtraLeadId>> = {
   celesta: 'leadCelesta',
   musicBox: 'leadMusicBox',
   rhodes: 'leadRhodes',
-  choir: 'leadChoir',
   strings: 'leadStrings',
   chip: 'leadChip',
   crush: 'leadCrush',

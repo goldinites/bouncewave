@@ -81,6 +81,21 @@ export const KITS = {
     metal: 'clang',
     perc: 'rim',
   },
+  // Rain (neonCity): the long 808, a dry snare, steel for the metal, an industrial impact under
+  // the drop, and a rain stick where a crash would be
+  rain: {
+    kick: 'kick808',
+    snare: 'snare',
+    clap: 'clap',
+    hat: 'hat',
+    open: 'open',
+    crash: 'rainstick',
+    tom: 'tom',
+    taiko: 'taiko',
+    metal: 'clang',
+    perc: 'shaker',
+    impact: 'impact',
+  },
   // Japan (fuji, dojo): the great odaiko for the taiko, a gong for the crash, wood for the rest
   japan: {
     kick: 'kickPunch',
@@ -107,6 +122,21 @@ export const KITS = {
     taiko: 'udu',
     metal: 'clang',
     perc: 'bongo',
+  },
+  // A Khmer temple (for the story's jungle temple to come), after the pinpeat ensemble of Angkor's courts: the chhing's
+  // cups for the hats (struck and pressed, or let ring), the skor's barrel drum for the big one,
+  // the sampho's hand drum for the toms and the small percussion, a temple gong for the crash
+  khmer: {
+    kick: 'kickPunch',
+    snare: 'snare',
+    clap: 'clap',
+    hat: 'chhap',
+    open: 'chhing',
+    crash: 'gong',
+    tom: 'sampho',
+    taiko: 'skor',
+    metal: 'gong',
+    perc: 'sampho',
   },
   // The factory (warehouse, the boss): a distorted kick, chains for the metal, steam for the clap
   factory: {

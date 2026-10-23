@@ -18,7 +18,6 @@ export interface VoiceOverrides {
 export const PAD_SOUND: Record<PadVoice, PitchedSampleId | ExtraPitchedId> = {
   synth: 'pad',
   strings: 'padStrings',
-  choir: 'padChoir',
   reverse: 'padReverse',
 };
 
@@ -31,6 +30,29 @@ export const STAB_SOUND: Record<StabVoice, PitchedSampleId | ExtraPitchedId> = {
 };
 
 const isExtraPitched = (id: string): id is ExtraPitchedId => id in EXTRA_PITCHED;
+
+/** Every sound of the wider palette: the ones rendered on demand, and so the ones freed. */
+export const LAZY_SOUND_IDS: readonly string[] = [
+  ...Object.keys(EXTRA_LEADS),
+  ...Object.keys(EXTRA_PITCHED),
+  ...Object.keys(EXTRA_DRUMS),
+  ...Object.keys(FX_HITS),
+];
+
+/**
+ * The wider palette's sounds none of `songs` plays — the song playing and the one coming up —
+ * free to release: without it, every song of a long session would leave its sounds behind and
+ * the rendered sounds would outgrow their memory budget (docs/AUDIO.md, "Бюджеты").
+ */
+export function unneeded(songs: readonly Song[], overrides: VoiceOverrides = {}): string[] {
+  const keep = new Set(
+    songs.flatMap((song) => {
+      const { pitched, oneShots } = soundsFor(song, overrides);
+      return [...Object.keys(pitched), ...Object.keys(oneShots)];
+    }),
+  );
+  return LAZY_SOUND_IDS.filter((id) => !keep.has(id));
+}
 
 /**
  * The sounds beyond the core palette a song plays, with the stand's swaps (docs/AUDIO.md): its

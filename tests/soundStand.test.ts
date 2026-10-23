@@ -37,10 +37,11 @@ describe('SoundStand', () => {
     expect([...song.options].slice(1).map((o) => o.value)).toEqual(SONGS.map((s) => s.id));
     song.value = 'neon-cathedral';
     song.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', null, 0);
+    // A song picked plays its whole form first
+    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', 'whole-form', 0);
     expect([...part.options].map((o) => o.value)).toEqual([
-      '',
       'whole-form',
+      '',
       ...SONGS[0].sections.map((s) => s.name),
     ]);
 
@@ -155,11 +156,11 @@ describe('SoundStand', () => {
 
   it('swaps the lead, bass, pad and kit a link names, and nothing without one', () => {
     const swap = vi.spyOn(MusicEngine.prototype, 'setOverrides');
-    setup('/?debug&lead=marimba&bass=bassSlap&pad=choir&kit=japan');
+    setup('/?debug&lead=marimba&bass=bassSlap&pad=reverse&kit=japan');
     expect(swap).toHaveBeenLastCalledWith({
       lead: 'marimba',
       bass: 'bassSlap',
-      pad: 'choir',
+      pad: 'reverse',
       kit: 'japan',
     });
     swap.mockClear();

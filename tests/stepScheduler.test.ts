@@ -64,6 +64,26 @@ describe('StepScheduler', () => {
     vi.advanceTimersByTime(100);
     expect(steps).toHaveLength(afterFirstTick);
   });
+
+  // An offline render (npm run render) moves its own clock and ticks the scheduler itself
+  it('has no timer when told so, and schedules only when ticked', () => {
+    vi.useFakeTimers();
+    const { ctx } = fakeAudioContext(0);
+    const steps: number[] = [];
+    const scheduler = new StepScheduler(ctx, {
+      playStep: (time) => {
+        steps.push(time);
+        return STEP;
+      },
+      hasTimer: false,
+    });
+
+    vi.advanceTimersByTime(1000);
+    expect(steps).toEqual([]);
+    scheduler.tick();
+    expect(steps.map((t) => +t.toFixed(2))).toEqual([0, 0.1]);
+    scheduler.dispose();
+  });
 });
 
 describe('Ps1MusicEngine', () => {

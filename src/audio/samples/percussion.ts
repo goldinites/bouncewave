@@ -1,4 +1,4 @@
-import { SampleRecipe } from '@/audio/samples/SampleBank';
+import { RENDER_RATE, SampleRecipe } from '@/audio/samples/SampleBank';
 import {
   chain,
   drive,
@@ -18,12 +18,13 @@ import {
 
 /**
  * The wider palette's percussion (5.6), for the backdrops' kits to come — Japan's drums and
- * wood, the jungle's hand drums, the factory's metal and steam — rendered only once a song's kit
+ * wood, the hand drums, the Khmer temple's cymbals and drums, the factory's metal and steam — rendered only once a song's kit
  * uses them or the stand asks, so they take no memory before.
  */
 export const EXTRA_DRUMS = {
   /** A temple gong: inharmonic partials blooming slowly and ringing for seconds. */
   gong: {
+    maxRate: RENDER_RATE.MID,
     duration: 4.5,
     variants: 2,
     level: -2,
@@ -74,6 +75,7 @@ export const EXTRA_DRUMS = {
   },
   /** Odaiko: the great festival drum, deeper and longer than the taiko, felt as much as heard. */
   odaiko: {
+    maxRate: RENDER_RATE.LOW,
     duration: 1.8,
     variants: 2,
     build: (ctx, random) => {
@@ -87,6 +89,7 @@ export const EXTRA_DRUMS = {
   },
   /** Bongo: the small hand drum's high, quick pop. */
   bongo: {
+    maxRate: RENDER_RATE.MID,
     duration: 0.3,
     variants: 3,
     level: -2,
@@ -98,6 +101,7 @@ export const EXTRA_DRUMS = {
   },
   /** Conga: the tall hand drum, a rounder tone and the slap of the palm. */
   conga: {
+    maxRate: RENDER_RATE.MID,
     duration: 0.5,
     variants: 3,
     level: -2,
@@ -109,6 +113,7 @@ export const EXTRA_DRUMS = {
   },
   /** Udu: a clay pot drum struck over its hole — a deep "oong" bending up, like water. */
   udu: {
+    maxRate: RENDER_RATE.LOW,
     duration: 0.8,
     variants: 2,
     build: (ctx, random) => {
@@ -128,8 +133,84 @@ export const EXTRA_DRUMS = {
       );
     },
   },
+  /**
+   * Chhing: the pair of small bronze cups that keeps time in a Khmer pinpeat ensemble, struck
+   * and let ring — a high, glassy "chhing" of inharmonic partials.
+   */
+  chhing: {
+    duration: 1.1,
+    variants: 3,
+    level: -4,
+    build: (ctx, random) => {
+      const out = filter(ctx, 'highpass', 1800);
+      out.connect(ctx.destination);
+      const base = jitter(random, 2650, 0.02);
+      for (const [ratio, peak, decay] of [
+        [1, 0.6, 0.9],
+        [1.53, 0.45, 0.7],
+        [2.37, 0.3, 0.5],
+        [3.11, 0.2, 0.35],
+      ]) {
+        chain(osc(ctx, 'sine', base * ratio), hit(ctx, peak, decay), out);
+      }
+      // The second cup a hair behind, a little sharp: the pair beats against itself
+      chain(osc(ctx, 'sine', base * 1.012), hit(ctx, 0.35, 0.8, 0.004), out);
+      chain(noiseSource(ctx, random), filter(ctx, 'bandpass', 7000, 2), hit(ctx, 0.4, 0.01), out);
+    },
+  },
+  /** Chhap: the same cups struck and pressed together, the ring stopped short. */
+  chhap: {
+    duration: 0.15,
+    variants: 3,
+    level: -4,
+    build: (ctx, random) => {
+      const out = filter(ctx, 'highpass', 1800);
+      out.connect(ctx.destination);
+      const base = jitter(random, 2650, 0.02);
+      chain(osc(ctx, 'sine', base), hit(ctx, 0.5, 0.05), out);
+      chain(osc(ctx, 'sine', base * 1.53), hit(ctx, 0.3, 0.04), out);
+      chain(noiseSource(ctx, random), filter(ctx, 'bandpass', 5000, 1.5), hit(ctx, 0.6, 0.03), out);
+    },
+  },
+  /** Skor thom: the pinpeat's great barrel drum, struck with a stick — a deep, round thud. */
+  skor: {
+    maxRate: RENDER_RATE.LOW,
+    duration: 0.9,
+    variants: 2,
+    build: (ctx, random) => {
+      const out = ctx.destination;
+      const tune = jitter(random, 1, 0.03);
+      chain(
+        sweep(ctx, 'sine', 120 * tune, 78 * tune, 0.12),
+        hit(ctx, 1, 0.7),
+        drive(ctx, 1.6),
+        out,
+      );
+      // The skin's overtone and the stick's knock, for a phone speaker
+      chain(sweep(ctx, 'triangle', 240 * tune, 200 * tune, 0.1), hit(ctx, 0.35, 0.2), out);
+      chain(noiseSource(ctx, random), filter(ctx, 'bandpass', 1200, 2), hit(ctx, 0.45, 0.02), out);
+    },
+  },
+  /**
+   * Sampho: the pinpeat's small two-headed drum, played with the hands — a tuned, ringing tone
+   * on the small head, a dry slap of the palm on top.
+   */
+  sampho: {
+    maxRate: RENDER_RATE.MID,
+    duration: 0.4,
+    variants: 3,
+    level: -2,
+    build: (ctx, random) => {
+      const out = ctx.destination;
+      const tune = jitter(random, 1, 0.05);
+      chain(sweep(ctx, 'sine', 330 * tune, 290 * tune, 0.04), hit(ctx, 1, 0.25), out);
+      chain(osc(ctx, 'sine', 660 * tune), hit(ctx, 0.2, 0.08), out);
+      chain(noiseSource(ctx, random), filter(ctx, 'bandpass', 1800, 2), hit(ctx, 0.5, 0.012), out);
+    },
+  },
   /** Rain stick: seeds trickling down a hollow cactus, a long rustle of tiny clicks. */
   rainstick: {
+    maxRate: RENDER_RATE.MID,
     duration: 2.4,
     variants: 2,
     level: -3,
@@ -167,6 +248,7 @@ export const EXTRA_DRUMS = {
   },
   /** Steam: a pneumatic valve's hiss, sharp on the attack and blowing out. */
   steam: {
+    maxRate: RENDER_RATE.MID,
     duration: 0.9,
     variants: 2,
     level: -3,
@@ -200,6 +282,7 @@ export type ExtraDrumId = keyof typeof EXTRA_DRUMS;
 export const FX_HITS = {
   /** A siren rising and falling twice. */
   siren: {
+    maxRate: RENDER_RATE.MID,
     duration: 2.4,
     variants: 1,
     level: -4,
@@ -221,6 +304,7 @@ export const FX_HITS = {
   },
   /** A dial-up modem's handshake: an answer tone, warbling tones, then a screech of noise. */
   modem: {
+    maxRate: RENDER_RATE.MID,
     duration: 1.6,
     variants: 1,
     level: -5,
@@ -246,6 +330,7 @@ export const FX_HITS = {
   },
   /** A radio between stations: crackling static and a tuning whistle sliding past. */
   radioStatic: {
+    maxRate: RENDER_RATE.MID,
     duration: 1.4,
     variants: 2,
     level: -5,
@@ -277,6 +362,7 @@ export const FX_HITS = {
   },
   /** A harp's glissando: strings plucked up a pentatonic scale in a rush. */
   harpGliss: {
+    maxRate: RENDER_RATE.MID,
     duration: 2.6,
     variants: 1,
     level: -3,
@@ -294,6 +380,7 @@ export const FX_HITS = {
   },
   /** A brass fanfare: two short blasts and a long one on a major chord. */
   fanfare: {
+    maxRate: RENDER_RATE.MID,
     duration: 1.8,
     variants: 1,
     level: -3,

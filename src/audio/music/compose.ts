@@ -77,3 +77,26 @@ export function transpose(line: string, semitones: number): string {
     return `${SHARP_NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
   });
 }
+
+/**
+ * A cell on a pulse that ignores the bar: a note every `every` sixteenths, counted from the
+ * start of the line (plus `offset`), so a pulse of three crosses the four beats — three against
+ * four, a hocket's pulse — and lands somewhere new each bar. The cell changes with the
+ * stretches, its notes running on through them.
+ */
+export function pulse(stretches: readonly Stretch[], every: number, offset = 0): string {
+  let turn = 0;
+  let step = 0;
+  const bars: string[] = [];
+  for (const { cell, bars: count } of stretches) {
+    for (let bar = 0; bar < count; bar++) {
+      const tokens: string[] = [];
+      for (let s = 0; s < STEPS_PER_BAR; s++, step++) {
+        const isOn = step >= offset && (step - offset) % every === 0;
+        tokens.push(isOn ? cell[turn++ % cell.length] : '.');
+      }
+      bars.push(tokens.join(' '));
+    }
+  }
+  return bars.join(' | ');
+}

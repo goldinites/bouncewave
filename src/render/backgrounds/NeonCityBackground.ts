@@ -3,7 +3,7 @@ import { Background, BackgroundFrame } from '@/render/backgrounds/Background';
 import { mixHexColors, randomRange } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
-// Night sky, cool at rest and hot at full climax or celebration — same heat language as Outrun
+// Night sky, cool at rest and hot at full climax or celebration
 const SKY_COOL = ['#050118', '#1c0a45', '#5a1668'];
 const SKY_HOT = ['#1a0628', '#6a0f4f', '#d0352f'];
 // The sky gradient is rebuilt only when the heat moves by a step this size
@@ -292,8 +292,7 @@ export class NeonCityBackground implements Background {
   }
 
   /**
-   * Same trick as the Outrun sunset: on a portrait phone the stage is swept ‑90° in CSS, so the
-   * canvas is pre-rotated the other way and its width and height swapped, keeping the sky up.
+   * On a portrait phone the stage is swept ‑90° in CSS, so the canvas is pre-rotated the other way and its width and height swapped, keeping the sky up.
    */
   private applyOrientation(ctx: CanvasRenderingContext2D, isRotated: boolean): Layout {
     const width = isRotated ? COURT.HEIGHT : COURT.WIDTH;

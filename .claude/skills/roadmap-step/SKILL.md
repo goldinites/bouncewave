@@ -27,11 +27,13 @@ the way, as a professional game designer would. Look at what the player will fee
   the game's rules and words, and on a phone in either orientation.
 - **Cost**: scope and risk against what the player gains.
 
-Say plainly when a requirement is objectively bad (it hurts the player experience by a
-recognised principle, not by taste): what goes wrong for the player, why, and a better option.
-Keep taste apart from problems, and keep it short; no remarks for the sake of remarks. Flag it
-before writing code; if the user keeps the requirement, build it as asked and record the decision
-in the roadmap.
+**Every new decision is discussed before it is built**: give its pros and cons, how it fits the
+game's direction, and a recommendation, then wait for the user's answer. Say plainly when a
+requirement is objectively bad (it hurts the player experience by a recognised principle, not by
+taste): what goes wrong for the player, why, and a better option. Keep taste apart from problems,
+and keep it short; no remarks for the sake of remarks. If the user keeps the requirement, build it
+as asked and record the decision where it lives (the roadmap's decisions or the topic's doc),
+rewriting that place rather than appending history.
 
 ## 2. Branch
 
@@ -66,14 +68,19 @@ a yes.
 
 ## 5. Roadmap and commit
 
-- In `docs/ROADMAP.md` set the step to ✅ with its PR number once known (🔄 while the PR is open),
-  and note any decision taken during the step in its paragraph.
+- In `docs/ROADMAP.md` set the step to ✅ with its PR number once known (🔄 while the PR is open).
+  Decisions taken during the step go where they live (the roadmap's decisions, `AUDIO.md`,
+  `CHALLENGES.md`…), rewritten into the current state; no "done" logs — git and the PR keep them.
+- **Before committing, reread every doc section the step changed** and take out what the new
+  decision replaces: an old number, a rule it overturns, a plan it finished, a line that now
+  contradicts another doc. A section should read as if it had always said what it says now.
 - Commit in the repository's style (see `CLAUDE.md` → Git): one or a few commits that each make
   sense on their own.
 
 ## 6. Pull request
 
-- `git push -u origin <branch>`. `gh` is not installed: give the user
+- The shell has no GitHub credentials: ask the user to push (`! git push -u origin <branch>`).
+  `gh` is not installed: give the user
   `https://github.com/goldinites/bouncewave/pull/new/<branch>` and a ready PR description —
   what changed and why, how it was verified, what is left for later.
 - Say which roadmap step comes next and wait for the user's go-ahead before starting it.

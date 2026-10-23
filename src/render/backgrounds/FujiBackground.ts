@@ -305,8 +305,7 @@ export class FujiBackground implements Background {
   }
 
   /**
-   * Same trick as the Outrun sunset: on a portrait phone the stage is swept ‑90° in CSS, so the
-   * canvas is pre-rotated the other way and its width and height swapped, keeping the sky up.
+   * On a portrait phone the stage is swept ‑90° in CSS, so the canvas is pre-rotated the other way and its width and height swapped, keeping the sky up.
    */
   private applyOrientation(ctx: CanvasRenderingContext2D, isRotated: boolean): Layout {
     const width = isRotated ? COURT.HEIGHT : COURT.WIDTH;

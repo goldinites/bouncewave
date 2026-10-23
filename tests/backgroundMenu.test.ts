@@ -29,9 +29,9 @@ describe('BackgroundMenu', () => {
   it('switches on a plain click without leaving the page, and remembers it in the address', () => {
     const { onPick, links } = setup();
 
-    links()[SCENES.indexOf('jungle')].click();
-    expect(onPick).toHaveBeenCalledExactlyOnceWith('jungle');
-    expect(new URLSearchParams(window.location.search).get('bg')).toBe('jungle');
+    links()[SCENES.indexOf('fuji')].click();
+    expect(onPick).toHaveBeenCalledExactlyOnceWith('fuji');
+    expect(new URLSearchParams(window.location.search).get('bg')).toBe('fuji');
   });
 
   it('lists the backgrounds it is given, the challenges’ own among them', () => {
@@ -45,10 +45,10 @@ describe('BackgroundMenu', () => {
 
   it('marks the background on screen', () => {
     const { menu, links } = setup();
-    menu.setCurrent('outrun');
+    menu.setCurrent('neonCity');
 
     const current = links().filter((link) => link.getAttribute('aria-current') === 'true');
-    expect(current.map((link) => link.textContent)).toEqual(['outrun']);
+    expect(current.map((link) => link.textContent)).toEqual(['neonCity']);
   });
 
   it('shows and hides with the debug overlay', () => {

@@ -22,8 +22,9 @@ git switch -c release/vX.Y.Z
 npm version X.Y.Z --no-git-tag-version   # package.json and package-lock.json
 npm test
 git commit -am "Release X.Y.Z"           # body: a short player-facing summary since the last release
-git push -u origin release/vX.Y.Z
 ```
+
+The shell has no GitHub credentials: ask the user to push (`! git push -u origin release/vX.Y.Z`).
 
 Give the user the PR link (`https://github.com/goldinites/bouncewave/pull/new/release/vX.Y.Z`)
 and a description listing the changes. Wait until they say it is merged.
@@ -34,8 +35,9 @@ and a description listing the changes. Wait until they say it is merged.
 git fetch origin --tags && git switch main && git merge --ff-only origin/main
 node -p "require('./package.json').version"   # must print X.Y.Z
 git tag -a vX.Y.Z <merge-commit> -m "BounceWave X.Y.Z"
-git push origin vX.Y.Z
 ```
+
+Ask the user to push the tag (`! git push origin vX.Y.Z`): it publishes to every player.
 
 ## 4. Watch the deploy
 

@@ -1,5 +1,5 @@
 import { BASS_ROOTS, LOOP, LOOPED, PAD_ROOTS, spread, STAB_ROOTS } from '@/audio/samples/pitched';
-import { PitchedRecipe } from '@/audio/samples/SampleBank';
+import { PitchedRecipe, RENDER_RATE } from '@/audio/samples/SampleBank';
 import {
   cents,
   chain,
@@ -20,6 +20,7 @@ import {
 export const EXTRA_PITCHED = {
   /** Slap bass: the thumb's pop on a string, a bright FM bite settling into a round thump. */
   bassSlap: {
+    maxRate: RENDER_RATE.MID,
     roots: BASS_ROOTS,
     duration: 0.9,
     build: (ctx, random, f) => {
@@ -38,6 +39,7 @@ export const EXTRA_PITCHED = {
   },
   /** Growl: two saws through a filter that wobbles four times a second, driven hard. */
   bassGrowl: {
+    maxRate: RENDER_RATE.LOW,
     roots: BASS_ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -53,6 +55,7 @@ export const EXTRA_PITCHED = {
   },
   /** String pad: an ensemble's saws spread wide and softened, the Juno's strings. */
   padStrings: {
+    maxRate: RENDER_RATE.MID,
     roots: PAD_ROOTS,
     duration: LOOPED,
     loop: LOOP,
@@ -66,46 +69,29 @@ export const EXTRA_PITCHED = {
       spread(ctx, voices, 0.8, sum);
     },
   },
-  /** Choir pad: a wordless "ooh" held wide, two vowel formants over detuned saws. */
-  padChoir: {
-    roots: PAD_ROOTS,
-    duration: LOOPED,
-    loop: LOOP,
-    channels: 2,
-    build: (ctx, _random, f, tune) => {
-      const out = level(ctx, 1);
-      out.connect(ctx.destination);
-      const voices = [-10, -4, 4, 10].map((detune) => {
-        const voice = level(ctx, 0.3);
-        osc(ctx, 'sawtooth', tune(cents(f, detune))).connect(voice);
-        const vowel = level(ctx, 1);
-        chain(voice, filter(ctx, 'bandpass', 320, 4), level(ctx, 1.4), vowel);
-        chain(voice, filter(ctx, 'bandpass', 800, 5), level(ctx, 0.6), vowel);
-        return vowel;
-      });
-      spread(ctx, voices, 0.7, out);
-    },
-  },
-  /** Reverse pad: a chord that swells from nothing to full, like a tape run back, then falls away. */
+  /**
+   * Reverse pad: a chord that swells from nothing to full, like a tape run back, then falls
+   * away. Mono and three seconds — it is a swell, not a bed — so it costs a fraction of a pad.
+   */
   padReverse: {
+    maxRate: RENDER_RATE.MID,
     roots: PAD_ROOTS,
-    duration: 4,
-    channels: 2,
+    duration: 3,
     build: (ctx, _random, f) => {
-      const swell = ctx.createGain();
       // Swelling for most of it, then falling away fast: a chord change cuts it sooner anyway
+      const swell = ctx.createGain();
       swell.gain.setValueAtTime(0.001, 0);
-      swell.gain.exponentialRampToValueAtTime(1, 3.2);
-      swell.gain.exponentialRampToValueAtTime(0.001, 3.9);
+      swell.gain.exponentialRampToValueAtTime(1, 2.4);
+      swell.gain.exponentialRampToValueAtTime(0.001, 2.95);
       chain(swell, filter(ctx, 'lowpass', 4000), ctx.destination);
-      const voices = [-8, 0, 8].map((detune) =>
-        chain(osc(ctx, 'sawtooth', cents(f, detune)), level(ctx, 0.3)),
-      );
-      spread(ctx, voices, 0.6, swell);
+      for (const detune of [-8, 0, 8]) {
+        chain(osc(ctx, 'sawtooth', cents(f, detune)), level(ctx, 0.3), swell);
+      }
     },
   },
   /** Rhodes comp: a short electric-piano chord tone, for comping the chords in rhythm. */
   stabRhodes: {
+    maxRate: RENDER_RATE.MID,
     roots: STAB_ROOTS,
     duration: 0.9,
     build: (ctx, _random, f) => {
@@ -120,6 +106,7 @@ export const EXTRA_PITCHED = {
   },
   /** Guitar comp: a chord's string plucked short and muted, the cutting guitar's chop. */
   stabGuitar: {
+    maxRate: RENDER_RATE.MID,
     roots: STAB_ROOTS,
     duration: 0.5,
     build: (ctx, random, f) => {
@@ -129,6 +116,7 @@ export const EXTRA_PITCHED = {
   },
   /** String stabs: the ensemble bowed short and hard, staccato. */
   stabStrings: {
+    maxRate: RENDER_RATE.MID,
     roots: STAB_ROOTS,
     duration: 0.6,
     build: (ctx, _random, f) => {

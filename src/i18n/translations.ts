@@ -321,11 +321,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     backgrounds: {
       random: 'RANDOM',
       lasers: 'LASERS',
-      memphis: 'MEMPHIS',
-      outrun: 'OUTRUN',
       neonCity: 'NEON CITY',
       fuji: 'FUJI',
-      jungle: 'JUNGLE',
     },
     d: {
       [DifficultyLevel.EASY]: ['EASY', 'Opponent: calm, to warm up on'],
@@ -532,11 +529,8 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     backgrounds: {
       random: 'СЛУЧАЙНЫЙ',
       lasers: 'ЛАЗЕРНЫЙ',
-      memphis: 'МЕМФИС',
-      outrun: 'АУТРАН',
       neonCity: 'ГОРОД',
       fuji: 'ФУДЗИ',
-      jungle: 'ДЖУНГЛИ',
     },
     d: {
       [DifficultyLevel.EASY]: ['ЛЁГКАЯ', 'Противник: спокойный, чтобы освоиться'],

@@ -149,7 +149,7 @@ describe('Conductor', () => {
       const titles = new Set<string>();
       for (const roll of [0, 0.3, 0.6, 0.99]) {
         const conductor = new Conductor(WITH_SCENES, 2, 'groove', () => roll);
-        conductor.enterScene('outrun');
+        conductor.enterScene('fuji');
         play(conductor, 'calm', 2);
         titles.add(conductor.song.title);
         conductor.skip('groove');
@@ -163,7 +163,7 @@ describe('Conductor', () => {
     it('lets a challenge’s backdrop with no song of its own borrow any other', () => {
       const owned = [
         compileSong({ ...def('Lasers'), scene: 'lasers' }),
-        compileSong({ ...def('Outrun'), scene: 'outrun' }),
+        compileSong({ ...def('Fuji'), scene: 'fuji' }),
       ];
       const titles = new Set<string>();
       for (const roll of [0, 0.99]) {
@@ -175,7 +175,7 @@ describe('Conductor', () => {
           titles.add(conductor.song.title);
         }
       }
-      expect(titles).toEqual(new Set(['Lasers', 'Outrun']));
+      expect(titles).toEqual(new Set(['Lasers', 'Fuji']));
     });
 
     it('moves on from the backdrop’s own song to the other quick-match songs', () => {

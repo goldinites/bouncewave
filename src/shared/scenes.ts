@@ -2,7 +2,7 @@
  * The backdrops the player can pick for a quick match (and the deck "random" deals from), in the
  * order the developer's B key steps through them.
  */
-export const SCENES = ['lasers', 'memphis', 'outrun', 'neonCity', 'fuji', 'jungle'] as const;
+export const SCENES = ['lasers', 'neonCity', 'fuji'] as const;
 
 /** A backdrop the player can pick. */
 export type PickableSceneId = (typeof SCENES)[number];

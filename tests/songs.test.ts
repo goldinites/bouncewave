@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LeadVoice, MelodyNote, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
+import { PAD_SOUND } from '@/audio/music/palette';
 import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { isSceneId } from '@/shared/scenes';
@@ -98,6 +99,23 @@ describe('the soundtrack', () => {
   const notesOf = (line: readonly (MelodyNote | null)[]) =>
     line.filter((note): note is MelodyNote => note !== null);
 
+  // A melody all held notes drags, one all quick notes tires (the user, 23.10.2026): the verse's
+  // and the chorus's melodies each have a quick, restless moment — three notes of an eighth or
+  // shorter in a row — and a long, held one, half a bar or more
+  it('gives the verse and chorus melodies quick moments and held ones', () => {
+    for (const song of SONGS.filter((s) => !s.sketch)) {
+      for (const tier of ['groove', 'high'] as const) {
+        const { name, lead } = song.sections.find((s) => s.tier === tier && s.lead)!;
+        const notes = notesOf(lead!);
+        const quick = notes.some(
+          (_, i) => notes.slice(i, i + 3).filter((n) => n.steps <= 2).length === 3,
+        );
+        const held = notes.some((note) => note.steps >= STEPS_PER_BAR / 2);
+        expect({ quick, held }, `${song.title} ${name}`).toEqual({ quick: true, held: true });
+      }
+    }
+  });
+
   // Every 5.6a melody climbed into a long note by a pickup run, and the tracks sounded like one
   // tune on different sounds: a song may climb that way once in eight bars, no more
   it('climbs into a long note by a pickup run at most once in eight bars', () => {
@@ -144,9 +162,25 @@ describe('the soundtrack', () => {
     }
   });
 
+  // A track on one four-chord loop, its bridge the same chords from another one, never goes
+  // anywhere (docs/AUDIO.md, "Чего не делать"): some part played over the verse's chords leads
+  // the harmony to chords the verse never plays
+  it('takes the harmony somewhere the verse doesn’t go', () => {
+    const chordsOf = (section: (typeof SONGS)[number]['sections'][number]) =>
+      new Set(section.chords.map((chord) => chord.symbol));
+    for (const song of SONGS.filter((song) => !song.sketch)) {
+      const verse = chordsOf(song.sections.find((section) => section.tier === 'groove')!);
+      const elsewhere = song.sections
+        .filter((section) => section.tier !== 'rise')
+        .some((section) => [...chordsOf(section)].filter((c) => !verse.has(c)).length >= 2);
+      expect(elsewhere, song.title).toBe(true);
+    }
+  });
+
   // Three tracks built on one template sounded like one song (5.6a): each builds its own frame
   it('gives no two songs the same form, intro, beat at the peak or way up to it', () => {
-    const frames = SONGS.map((song) => {
+    // A sketch has no frame yet, only a hook and its peak
+    const frames = SONGS.filter((song) => !song.sketch).map((song) => {
       const sections = song.form.map((index) => song.sections[index]);
       const intro = sections[0];
       const peak = sections.find((s) => s.tier === 'high')!;
@@ -162,6 +196,23 @@ describe('the soundtrack', () => {
       const values = frames.map((frame) => frame[key]);
       expect(new Set(values).size, key).toBe(values.length);
     }
+  });
+
+  // The game has no voices (docs/AUDIO.md, decided 22.10.2026): no vocals, no choirs, no human
+  // sounds, by synthesis or by recording
+  it('sings with no voice: no choir or vocal in the palette', () => {
+    const sounds = [
+      ...Object.keys(EXTRA_LEADS),
+      ...Object.values(EXTRA_LEAD_FOR),
+      ...Object.keys(PAD_SOUND),
+    ];
+    expect(sounds.filter((id) => /choir|vocal|voice|vox|ooh/i.test(id))).toEqual([]);
+  });
+
+  it('plays every song in a room of its own', () => {
+    const rooms = SONGS.filter((song) => !song.sketch).map((song) => song.room);
+    expect(rooms.every(Boolean)).toBe(true);
+    expect(new Set(rooms).size).toBe(rooms.length);
   });
 
   it('gives each backdrop one song of its own at most', () => {

@@ -1,4 +1,4 @@
-import { SampleRecipe } from '@/audio/samples/SampleBank';
+import { RENDER_RATE, SampleRecipe } from '@/audio/samples/SampleBank';
 import {
   chain,
   drive,
@@ -34,6 +34,7 @@ function swell(ctx: BaseAudioContext, peak: number, end: number): GainNode {
 export const TRANSITION_SAMPLES = {
   /** Noise riser: a band of noise sweeping up, fluttering faster as it climbs. */
   riser: {
+    maxRate: RENDER_RATE.MID,
     duration: 4,
     variants: 1,
     shape: 'swell',
@@ -52,6 +53,7 @@ export const TRANSITION_SAMPLES = {
   },
   /** Tonal riser: detuned saws climbing three octaves as their filter opens. */
   riserTone: {
+    maxRate: RENDER_RATE.MID,
     duration: 4,
     variants: 1,
     shape: 'swell',
@@ -102,6 +104,7 @@ export const TRANSITION_SAMPLES = {
   },
   /** Downlifter: noise and a tone falling away, the music coming down after the heat. */
   downlifter: {
+    maxRate: RENDER_RATE.MID,
     duration: 2.5,
     variants: 1,
     level: -2,
@@ -118,6 +121,7 @@ export const TRANSITION_SAMPLES = {
   },
   /** Boom under the drop: a sub falling away, a burst of noise, and the room it fills. */
   boom: {
+    maxRate: RENDER_RATE.LOW,
     duration: 2.6,
     variants: 1,
     build: (ctx, random) => {
@@ -138,6 +142,7 @@ export const TRANSITION_SAMPLES = {
   },
   /** Noise wave: a whoosh rising and falling back, the music drawing breath into the groove. */
   noiseWave: {
+    maxRate: RENDER_RATE.MID,
     duration: 3,
     variants: 1,
     level: -3,

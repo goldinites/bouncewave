@@ -15,7 +15,7 @@ const makeRenderer = () => ({
   celebrate: vi.fn(),
   triggerVictoryEffect: vi.fn(),
   triggerCrtGlitch: vi.fn(),
-  switchChannel: vi.fn(() => 'outrun'),
+  switchChannel: vi.fn(() => 'fuji'),
   hideFinalScore: vi.fn(),
   showFinalScore: vi.fn(),
   showsEffects: true,
@@ -123,7 +123,7 @@ describe('EffectsDirector.handle', () => {
     handle(effects, { type: 'matchStart' });
 
     expect(renderer.switchChannel).toHaveBeenCalledOnce();
-    expect(audio.music.enterScene).toHaveBeenCalledExactlyOnceWith('outrun');
+    expect(audio.music.enterScene).toHaveBeenCalledExactlyOnceWith('fuji');
     expect(audio.sfx.playChannelSurf).toHaveBeenCalledOnce();
   });
 
