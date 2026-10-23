@@ -48,10 +48,20 @@ const HIT_MIX = {
   LEVEL: -11,
   CPU_LEVEL: -1,
   PERFECT_LEVEL: 5,
-  // The Overdrive's power shot: everything a perfect hit has with the blade ringing out whole, and
-  // this much louder than a perfect hit; each style adds its own (see `PowerShotStyle`)
-  POWER: { LEVEL: 2, ZAP: 0.35, BLAST: 0.25, HAMMER_BOOM: 0.7, HAMMER_BLAST: 0.35 },
-  HAMMER_DELAY: 0.09, // s, the hammer's second blow after the first
+  // The Overdrive's power shot, this much louder than a perfect hit: the hit with the blade
+  // ringing out whole, the boom and a flash, and each style's own on top (see `PowerShotStyle`)
+  POWER: {
+    LEVEL: 2,
+    FLASH: 0.3,
+    PLASMA: 0.5,
+    BLASTER: 0.4,
+    CRACK: 0.6,
+    WHOOSH: 0.45,
+    HIGH_PLASMA: 0.3,
+    RAIL_CRACK: 0.5,
+    ZAP: 0.4,
+    RAIL_PLASMA: 0.35,
+  },
   // The meter filling: three quick pings climbing the chord over a rising breath, below a hit
   READY: { LEVEL: -2, PING: 0.45, CHARGE: 0.3, STEP: 0.05 },
   // A wall: a muted knock, well under a paddle's hit
@@ -93,10 +103,12 @@ export interface HitFeel {
 }
 
 /**
- * The Overdrive's character, sketches auditioned on the stand: `charge` a discharge tearing
- * upward through crackling arcs, `hammer` a blow struck twice into a heavier blast.
+ * The Overdrive's character, sketches auditioned on the stand — power as a flash, a weapon past
+ * the speed of sound, bright, neon, plasma: `plasma` a cannon's shot diving through a chord of
+ * neon gas; `sonic` the sound barrier cracking, something passing too fast to see; `railgun` a
+ * crack and a discharge tearing upward, the plasma humming on.
  */
-export type PowerShotStyle = 'charge' | 'hammer';
+export type PowerShotStyle = 'plasma' | 'sonic' | 'railgun';
 
 /** One rendered layer to play: a tuned body at a note, or a one-shot. */
 type Layer =
@@ -115,7 +127,7 @@ export class SoundEffects {
   private samplesGetter: () => SampleBank | null;
   private heatGetter: () => number;
   /** The power shot's character (sketches, on the stand). */
-  public powerShotStyle: PowerShotStyle = 'charge';
+  public powerShotStyle: PowerShotStyle = 'plasma';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -367,18 +379,8 @@ export class SoundEffects {
       { shot: 'thump', gain: PERFECT.THUMP },
       { shot: 'spark', gain: PERFECT.SPARK },
       { shot: 'boom', gain: PERFECT.BOOM },
-      { shot: 'tail', gain: PERFECT.TAIL },
-      ...(this.powerShotStyle === 'charge'
-        ? [
-            { shot: 'zap', gain: POWER.ZAP },
-            { shot: 'spark', gain: PERFECT.SPARK, delay: 0.05 },
-            { shot: 'blast', gain: POWER.BLAST },
-          ]
-        : [
-            { shot: 'boom', gain: PERFECT.BOOM * POWER.HAMMER_BOOM, delay: HIT_MIX.HAMMER_DELAY },
-            { shot: HIT_CLICK, gain: HIT_MIX.CLICK, delay: HIT_MIX.HAMMER_DELAY },
-            { shot: 'blast', gain: POWER.HAMMER_BLAST },
-          ]),
+      { shot: 'flash', gain: POWER.FLASH },
+      ...this.powerShotLayers(note),
     ];
     const level = HIT_MIX.LEVEL + HIT_MIX.PERFECT_LEVEL + POWER.LEVEL;
     const played = this.playLayers(layers, level, pan);
@@ -391,6 +393,32 @@ export class SoundEffects {
     this.beep(freq, 0.32, 'sawtooth', 0.06, 2);
     this.beep(freq * 1.5, 0.26, 'square', 0.035);
     this.beep(freq * 2, 0.4, 'sine', 0.05);
+  }
+
+  /** What the power shot's style adds to it, at the rally's `note`. */
+  private powerShotLayers(note: number): Layer[] {
+    const { POWER, PERFECT } = HIT_MIX;
+    switch (this.powerShotStyle) {
+      case 'plasma':
+        return [
+          { tuned: 'plasma', note, gain: POWER.PLASMA },
+          { shot: 'blaster', gain: POWER.BLASTER },
+          { shot: 'tail', gain: PERFECT.TAIL },
+        ];
+      case 'sonic':
+        return [
+          { shot: 'crack', gain: POWER.CRACK },
+          { shot: 'whoosh', gain: POWER.WHOOSH },
+          { tuned: 'plasma', note: note + 12, gain: POWER.HIGH_PLASMA },
+        ];
+      case 'railgun':
+        return [
+          { shot: 'crack', gain: POWER.RAIL_CRACK },
+          { shot: 'zap', gain: POWER.ZAP },
+          { tuned: 'plasma', note, gain: POWER.RAIL_PLASMA },
+          { shot: 'tail', gain: PERFECT.TAIL },
+        ];
+    }
   }
 
   /** A ball sent off spinning (Arc): a whistle, higher the harder it curves, `strength` in [0, 1]. */

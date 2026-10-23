@@ -57,20 +57,13 @@ export const STAND_SOUNDS: readonly StandSound[] = [
     every: 0.32,
   },
   // The power shot's styles, sketches to choose from; the last one played stays for the match
-  {
-    name: 'overdrive charge',
-    play: (sfx) => {
-      sfx.powerShotStyle = 'charge';
+  ...(['plasma', 'sonic', 'railgun'] as const).map((style) => ({
+    name: `overdrive ${style}`,
+    play: (sfx: SoundEffects) => {
+      sfx.powerShotStyle = style;
       sfx.playPowerShot(4, -0.9);
     },
-  },
-  {
-    name: 'overdrive hammer',
-    play: (sfx) => {
-      sfx.powerShotStyle = 'hammer';
-      sfx.playPowerShot(4, -0.9);
-    },
-  },
+  })),
   { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
   { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
   {

@@ -1,5 +1,6 @@
 import { PitchedRecipe, RENDER_RATE, SampleRecipe } from '@/audio/samples/SampleBank';
 import {
+  cents,
   chain,
   drive,
   filter,
@@ -33,9 +34,10 @@ export const HIT_BODIES: readonly { id: string; gain: number; cut?: number }[] =
 /** The click of contact, the blade's. */
 export const HIT_CLICK = 'click.steel';
 
-// The rally's notes keep to E4-D#5 (sfx/harmony.ts), a perfect hit's octave an octave above:
-// roots three semitones either side
-const BODY_ROOTS = [64, 70, 76, 82, 88];
+// The rally's notes keep to E4-D#5 (sfx/harmony.ts), roots three semitones either side; what also
+// plays an octave up (the neon's perfect hit, the meter's chime, the plasma) reaches C6 and past
+const BODY_ROOTS = [64, 70, 76];
+const OCTAVE_ROOTS = [64, 70, 76, 82, 88];
 // The partials reach about 9 kHz: a rate above twice that keeps them, at two thirds the memory
 const BODY_RATE = RENDER_RATE.HIGH;
 
@@ -81,7 +83,7 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
   },
   // FM: a bright bite that settles into a sine, an octave ringing over it
   'body.neon': {
-    roots: BODY_ROOTS,
+    roots: OCTAVE_ROOTS,
     maxRate: BODY_RATE,
     duration: 0.75,
     build: (ctx, _random, f) => {
@@ -108,6 +110,25 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
       chain(osc(ctx, 'sine', f * 3.5), index);
       index.connect(carrier.frequency);
       chain(carrier, hit(ctx, 1, 0.5), drive(ctx, 1.6), ctx.destination);
+    },
+  },
+  // The Overdrive's plasma: a wall of detuned saws on the note, its fifth and octave, driven hot,
+  // a resonant filter slamming shut over it — neon gas lit and let go
+  plasma: {
+    roots: OCTAVE_ROOTS,
+    maxRate: BODY_RATE,
+    duration: 0.7,
+    build: (ctx, _random, f) => {
+      const shut = filter(ctx, 'lowpass', 9000, 7);
+      shut.frequency.setValueAtTime(9000, 0);
+      shut.frequency.exponentialRampToValueAtTime(700, 0.5);
+      const sum = level(ctx, 0.12);
+      for (const detune of [-25, -12, 0, 12, 25]) {
+        chain(osc(ctx, 'sawtooth', cents(f, detune)), sum);
+      }
+      chain(osc(ctx, 'sawtooth', f * 1.5), level(ctx, 0.6), sum);
+      chain(osc(ctx, 'sawtooth', f * 2), level(ctx, 0.5), sum);
+      chain(sum, shut, drive(ctx, 3), hit(ctx, 1, 0.6, 0, 0.002), ctx.destination);
     },
   },
   // A wall: a muted knock on the chord's fifth, low and short, under the paddles' ring
@@ -194,33 +215,92 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
       );
     },
   },
-  // An Overdrive's blast: a wall of noise falling from bright to dark, in a long room
-  blast: {
-    duration: 1.6,
-    maxRate: RENDER_RATE.MID,
-    variants: 2,
+  // The plasma cannon's shot: a driven FM tone diving from 2.5 kHz to the floor
+  blaster: {
+    duration: 0.6,
+    maxRate: RENDER_RATE.HIGH,
+    variants: 3,
     build: (ctx, random) => {
-      const fall = filter(ctx, 'lowpass', 4000);
-      fall.frequency.setValueAtTime(4000, 0);
-      fall.frequency.exponentialRampToValueAtTime(250, 0.6);
+      const from = jitter(random, 2500, 0.06);
+      const carrier = sweep(ctx, 'sawtooth', from, 60, 0.35);
+      const index = ctx.createGain();
+      index.gain.setValueAtTime(from * 0.8, 0);
+      index.gain.exponentialRampToValueAtTime(40, 0.35);
+      chain(sweep(ctx, 'sine', from * 1.5, 90, 0.35), index);
+      index.connect(carrier.frequency);
       chain(
-        noiseSource(ctx, random),
-        fall,
-        hit(ctx, 1, 0.5, 0, 0.004),
-        drive(ctx, 2),
-        ctx.destination,
-      );
-      chain(
-        burst(ctx, random, 1500, 0.5, 0.05),
-        room(ctx, 1, random),
-        level(ctx, 0.6),
+        carrier,
+        hit(ctx, 1, 0.45, 0, 0.002),
+        drive(ctx, 3),
+        filter(ctx, 'lowpass', 10000),
         ctx.destination,
       );
     },
   },
-  // The charge let go: an FM sweep tearing upward through crackling arcs
+  // The sound barrier broken: an N-wave's double crack and a tearing hiss
+  crack: {
+    duration: 0.2,
+    maxRate: RENDER_RATE.HIGH,
+    variants: 3,
+    build: (ctx, random) => {
+      const length = Math.round(jitter(random, 0.004, 0.15) * ctx.sampleRate);
+      const wave = ctx.createBuffer(1, length + 1, ctx.sampleRate);
+      const data = wave.getChannelData(0);
+      for (let i = 0; i < length; i++) data[i] = 1 - (2 * i) / length;
+      const source = ctx.createBufferSource();
+      source.buffer = wave;
+      source.start();
+      chain(source, ctx.destination);
+      chain(
+        noiseSource(ctx, random),
+        filter(ctx, 'highpass', 2000),
+        hit(ctx, 0.7, 0.05),
+        drive(ctx, 2),
+        ctx.destination,
+      );
+    },
+  },
+  // Something passing faster than sound: noise in a narrow band diving from 9 kHz
+  whoosh: {
+    duration: 0.45,
+    maxRate: RENDER_RATE.HIGH,
+    variants: 2,
+    build: (ctx, random) => {
+      const dive = filter(ctx, 'bandpass', 9000, 3);
+      dive.frequency.setValueAtTime(9000, 0);
+      dive.frequency.exponentialRampToValueAtTime(300, 0.3);
+      const swell = ctx.createGain();
+      swell.gain.setValueAtTime(0.0001, 0);
+      swell.gain.exponentialRampToValueAtTime(1, 0.04);
+      swell.gain.exponentialRampToValueAtTime(0.0001, 0.4);
+      chain(noiseSource(ctx, random), dive, swell, drive(ctx, 1.5), ctx.destination);
+    },
+  },
+  // The flash: white light as sound, a bright burst shimmering off in a room
+  flash: {
+    duration: 0.8,
+    maxRate: RENDER_RATE.HIGH,
+    variants: 2,
+    build: (ctx, random) => {
+      chain(
+        noiseSource(ctx, random),
+        filter(ctx, 'highpass', 6000),
+        hit(ctx, 1, 0.12),
+        ctx.destination,
+      );
+      chain(
+        burst(ctx, random, 8000, 0.6, 0.02),
+        room(ctx, 0.6, random),
+        filter(ctx, 'highpass', 5000),
+        level(ctx, 0.5),
+        ctx.destination,
+      );
+    },
+  },
+  // The railgun's discharge: an FM sweep tearing upward through crackling arcs
   zap: {
     duration: 0.45,
+    maxRate: RENDER_RATE.HIGH,
     variants: 3,
     build: (ctx, random) => {
       const carrier = sweep(ctx, 'sine', jitter(random, 220, 0.05), 1800, 0.25);
