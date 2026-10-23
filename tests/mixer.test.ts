@@ -256,26 +256,21 @@ describe('paddle hits from their rendered layers', () => {
     expect(layersOf(picked)).toEqual(['thump', 'wall']);
   });
 
-  it('fires an Overdrive in its style, a flash in every one, the music dipping fully', () => {
+  it('fires an Overdrive as a flash, a sonic crack and a plasma discharge, the music dipping', () => {
     const { sfx, picked, ducks, carves } = setup();
 
     sfx.playPowerShot(4);
-    expect(picked).toEqual(expect.arrayContaining(['flash', 'plasma', 'blaster']));
-    picked.length = 0;
-    sfx.powerShotStyle = 'sonic';
-    sfx.playPowerShot(4);
-    expect(picked).toEqual(expect.arrayContaining(['flash', 'crack', 'whoosh']));
-    expect(picked).not.toContain('blaster');
-    expect(ducks).toEqual([1, 1]);
-    expect(carves).toEqual([1, 1]);
+    expect(picked).toEqual(expect.arrayContaining(['flash', 'crack', 'whoosh', 'zap', 'plasma']));
+    expect(ducks).toEqual([1]);
+    expect(carves).toEqual([1]);
   });
 
-  it('chimes up the chord when the Overdrive meter fills', () => {
+  it('charges up the chord when the Overdrive meter fills', () => {
     const { sfx, picked } = setup();
 
     sfx.playOverdriveReady();
     expect(picked.filter((id) => id === 'body.neon')).toHaveLength(4);
-    expect(picked).toContain('charge');
+    expect(picked).toEqual(expect.arrayContaining(['whine', 'plasma']));
   });
 
   it('plays the live synth until the layers are rendered', () => {

@@ -49,21 +49,20 @@ const HIT_MIX = {
   CPU_LEVEL: -1,
   PERFECT_LEVEL: 5,
   // The Overdrive's power shot, this much louder than a perfect hit: the hit with the blade
-  // ringing out whole, the boom and a flash, and each style's own on top (see `PowerShotStyle`)
+  // ringing out whole, the boom and a flash; the sound barrier cracking and something whooshing
+  // past, a discharge tearing upward, the plasma humming on the note and an octave above
   POWER: {
     LEVEL: 2,
     FLASH: 0.3,
-    PLASMA: 0.5,
-    BLASTER: 0.4,
-    CRACK: 0.6,
-    WHOOSH: 0.45,
-    HIGH_PLASMA: 0.3,
-    RAIL_CRACK: 0.5,
-    ZAP: 0.4,
-    RAIL_PLASMA: 0.35,
+    CRACK: 0.55,
+    WHOOSH: 0.4,
+    ZAP: 0.35,
+    PLASMA: 0.4,
+    HIGH_PLASMA: 0.2,
   },
-  // The meter filling: three quick pings climbing the chord over a rising breath, below a hit
-  READY: { LEVEL: -2, PING: 0.45, CHARGE: 0.3, STEP: 0.05 },
+  // The meter filling, the Overdrive's weapon charged: a capacitor's whine rising, three quick
+  // pings climbing the chord as it peaks, the plasma catching on the top one; below a hit
+  READY: { LEVEL: -2, WHINE: 0.35, PING: 0.4, PLASMA: 0.2, START: 0.2, STEP: 0.05, LOCK: 0.15 },
   // A wall: a muted knock, well under a paddle's hit
   WALL: { LEVEL: -5, KNOCK: 0.5, THUMP: 0.12 },
   // The opponent's click a little darker, so the two sides answer each other
@@ -102,14 +101,6 @@ export interface HitFeel {
   force?: number;
 }
 
-/**
- * The Overdrive's character, sketches auditioned on the stand — power as a flash, a weapon past
- * the speed of sound, bright, neon, plasma: `plasma` a cannon's shot diving through a chord of
- * neon gas; `sonic` the sound barrier cracking, something passing too fast to see; `railgun` a
- * crack and a discharge tearing upward, the plasma humming on.
- */
-export type PowerShotStyle = 'plasma' | 'sonic' | 'railgun';
-
 /** One rendered layer to play: a tuned body at a note, or a one-shot. */
 type Layer =
   | { tuned: string; note: number; gain: number; cut?: number; delay?: number }
@@ -126,8 +117,6 @@ export class SoundEffects {
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
   private heatGetter: () => number;
-  /** The power shot's character (sketches, on the stand). */
-  public powerShotStyle: PowerShotStyle = 'plasma';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -366,8 +355,9 @@ export class SoundEffects {
   }
 
   /**
-   * The Overdrive's power shot: a perfect hit with the blade ringing out whole, and the style's
-   * own on top; heard where it was struck (`pan`), the music dipping fully under it.
+   * The Overdrive's power shot, power as a flash, a weapon past the speed of sound (the user,
+   * 24.10.2026): a perfect hit with the blade ringing out whole, the sound barrier cracking, a
+   * plasma discharge; heard where it was struck (`pan`), the music dipping fully under it.
    */
   public playPowerShot(rally: number, pan = 0): void {
     const note = getRallyNote(this.harmonyGetter(), rally);
@@ -380,7 +370,12 @@ export class SoundEffects {
       { shot: 'spark', gain: PERFECT.SPARK },
       { shot: 'boom', gain: PERFECT.BOOM },
       { shot: 'flash', gain: POWER.FLASH },
-      ...this.powerShotLayers(note),
+      { shot: 'crack', gain: POWER.CRACK },
+      { shot: 'whoosh', gain: POWER.WHOOSH },
+      { shot: 'zap', gain: POWER.ZAP },
+      { tuned: 'plasma', note, gain: POWER.PLASMA },
+      { tuned: 'plasma', note: note + 12, gain: POWER.HIGH_PLASMA },
+      { shot: 'tail', gain: PERFECT.TAIL },
     ];
     const level = HIT_MIX.LEVEL + HIT_MIX.PERFECT_LEVEL + POWER.LEVEL;
     const played = this.playLayers(layers, level, pan);
@@ -393,32 +388,6 @@ export class SoundEffects {
     this.beep(freq, 0.32, 'sawtooth', 0.06, 2);
     this.beep(freq * 1.5, 0.26, 'square', 0.035);
     this.beep(freq * 2, 0.4, 'sine', 0.05);
-  }
-
-  /** What the power shot's style adds to it, at the rally's `note`. */
-  private powerShotLayers(note: number): Layer[] {
-    const { POWER, PERFECT } = HIT_MIX;
-    switch (this.powerShotStyle) {
-      case 'plasma':
-        return [
-          { tuned: 'plasma', note, gain: POWER.PLASMA },
-          { shot: 'blaster', gain: POWER.BLASTER },
-          { shot: 'tail', gain: PERFECT.TAIL },
-        ];
-      case 'sonic':
-        return [
-          { shot: 'crack', gain: POWER.CRACK },
-          { shot: 'whoosh', gain: POWER.WHOOSH },
-          { tuned: 'plasma', note: note + 12, gain: POWER.HIGH_PLASMA },
-        ];
-      case 'railgun':
-        return [
-          { shot: 'crack', gain: POWER.RAIL_CRACK },
-          { shot: 'zap', gain: POWER.ZAP },
-          { tuned: 'plasma', note, gain: POWER.RAIL_PLASMA },
-          { shot: 'tail', gain: PERFECT.TAIL },
-        ];
-    }
   }
 
   /** A ball sent off spinning (Arc): a whistle, higher the harder it curves, `strength` in [0, 1]. */
@@ -441,20 +410,28 @@ export class SoundEffects {
   }
 
   /**
-   * The Overdrive meter just filled: three quick pings climbing the chord the music is on, over a
-   * rising breath — a charge, not a hit.
+   * The Overdrive meter just filled, its weapon charged: a capacitor's whine rising, three quick
+   * pings climbing the chord the music is on as it peaks, the plasma catching on the top one.
    */
   public playOverdriveReady(pan = 0): void {
     const harmony = this.harmonyGetter();
     const { READY } = HIT_MIX;
+    const top = getRallyNote(harmony, 3) + 12;
     const layers: Layer[] = [
-      { shot: 'charge', gain: READY.CHARGE },
-      ...[1, 2, 3].map((step) => ({
+      { shot: 'whine', gain: READY.WHINE },
+      ...[0, 1, 2].map((step) => ({
         tuned: HIT_BODIES[0].id,
-        note: getRallyNote(harmony, step) + 12,
+        note: getRallyNote(harmony, step + 1) + 12,
         gain: READY.PING,
-        delay: step * READY.STEP,
+        delay: READY.START + step * READY.STEP,
       })),
+      {
+        tuned: 'plasma',
+        note: top,
+        gain: READY.PLASMA,
+        delay: READY.START + 2 * READY.STEP,
+        cut: READY.LOCK,
+      },
     ];
     if (this.playLayers(layers, HIT_MIX.LEVEL + READY.LEVEL, pan)) return;
     this.beep(1046.5, 0.16, 'triangle', 0.05, 1.5);

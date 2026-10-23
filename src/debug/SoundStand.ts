@@ -56,14 +56,7 @@ export const STAND_SOUNDS: readonly StandSound[] = [
     times: 4,
     every: 0.32,
   },
-  // The power shot's styles, sketches to choose from; the last one played stays for the match
-  ...(['plasma', 'sonic', 'railgun'] as const).map((style) => ({
-    name: `overdrive ${style}`,
-    play: (sfx: SoundEffects) => {
-      sfx.powerShotStyle = style;
-      sfx.playPowerShot(4, -0.9);
-    },
-  })),
+  { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4, -0.9) },
   { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
   { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
   {

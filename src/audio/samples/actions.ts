@@ -215,28 +215,6 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
       );
     },
   },
-  // The plasma cannon's shot: a driven FM tone diving from 2.5 kHz to the floor
-  blaster: {
-    duration: 0.6,
-    maxRate: RENDER_RATE.HIGH,
-    variants: 3,
-    build: (ctx, random) => {
-      const from = jitter(random, 2500, 0.06);
-      const carrier = sweep(ctx, 'sawtooth', from, 60, 0.35);
-      const index = ctx.createGain();
-      index.gain.setValueAtTime(from * 0.8, 0);
-      index.gain.exponentialRampToValueAtTime(40, 0.35);
-      chain(sweep(ctx, 'sine', from * 1.5, 90, 0.35), index);
-      index.connect(carrier.frequency);
-      chain(
-        carrier,
-        hit(ctx, 1, 0.45, 0, 0.002),
-        drive(ctx, 3),
-        filter(ctx, 'lowpass', 10000),
-        ctx.destination,
-      );
-    },
-  },
   // The sound barrier broken: an N-wave's double crack and a tearing hiss
   crack: {
     duration: 0.2,
@@ -318,20 +296,38 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
       );
     },
   },
-  // The Overdrive meter filling: a breath of noise rising into the chime
-  charge: {
-    duration: 0.3,
-    maxRate: RENDER_RATE.MID,
+  // The Overdrive charged: a capacitor's whine rising fast, rippling, crackling as it climbs
+  whine: {
+    duration: 0.4,
+    maxRate: RENDER_RATE.HIGH,
     variants: 2,
     build: (ctx, random) => {
-      const rise = filter(ctx, 'bandpass', 800, 2);
-      rise.frequency.setValueAtTime(800, 0);
-      rise.frequency.exponentialRampToValueAtTime(6000, 0.2);
+      const ripple = ctx.createGain();
+      ripple.gain.value = 0.6;
+      chain(osc(ctx, 'sine', 32), level(ctx, 0.4)).connect(ripple.gain);
       const swell = ctx.createGain();
       swell.gain.setValueAtTime(0.0001, 0);
-      swell.gain.exponentialRampToValueAtTime(1, 0.18);
-      swell.gain.exponentialRampToValueAtTime(0.0001, 0.28);
-      chain(noiseSource(ctx, random), rise, swell, ctx.destination);
+      swell.gain.exponentialRampToValueAtTime(1, 0.28);
+      swell.gain.exponentialRampToValueAtTime(0.0001, 0.36);
+      chain(
+        sweep(ctx, 'sine', jitter(random, 500, 0.05), 4500, 0.3),
+        ripple,
+        swell,
+        drive(ctx, 1.6),
+        ctx.destination,
+      );
+      const crackle = ctx.createGain();
+      crackle.gain.setValueAtTime(0, 0);
+      for (let t = 0.05; t < 0.3; t += 0.006)
+        crackle.gain.setValueAtTime(random() ** 3 * (t / 0.3), t);
+      crackle.gain.setValueAtTime(0, 0.3);
+      chain(
+        noiseSource(ctx, random),
+        filter(ctx, 'highpass', 4000),
+        crackle,
+        level(ctx, 0.5),
+        ctx.destination,
+      );
     },
   },
   // The air ringing after a perfect hit: bright noise in a long room
