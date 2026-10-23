@@ -26,7 +26,7 @@ describe('the soundtrack', () => {
       for (const section of song.sections) {
         const lines: [LeadVoice, typeof section.lead][] = [
           [section.leadVoice ?? song.voices.lead, section.lead],
-          [song.voices.counter, section.counter],
+          [section.counterVoice ?? song.voices.counter, section.counter],
         ];
         for (const [voice, line] of lines) {
           const roots = rootsOf(voice);

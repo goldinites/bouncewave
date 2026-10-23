@@ -302,7 +302,7 @@ export class MusicEngine {
     const voices = [
       song.voices.lead,
       song.voices.counter,
-      ...song.sections.map((s) => s.leadVoice),
+      ...song.sections.flatMap((s) => [s.leadVoice, s.counterVoice]),
     ];
     this.renderLeads(voices.filter((voice): voice is LeadVoice => voice !== undefined));
   }

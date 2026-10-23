@@ -78,6 +78,8 @@ export interface SectionDef {
   leadVoice?: LeadVoice;
   /** A second, quieter line on the song's counter voice. */
   counter?: string;
+  /** Overrides the song's counter voice for this section. */
+  counterVoice?: LeadVoice;
   /** The bass as a pattern relative to the chord; or written out note by note (`bassLine`). */
   bass?: BassPatternName;
   /**

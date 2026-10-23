@@ -276,7 +276,7 @@ export class Arrangement {
       this.playMelody(
         time,
         section.counter?.[sectionStep] ?? this.response(context),
-        song.voices.counter,
+        section.counterVoice ?? song.voices.counter,
         COUNTER_SHARE,
         context,
       );

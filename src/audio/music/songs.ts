@@ -165,6 +165,65 @@ const F2 = `C#6 . A5 . . E5 . A5 . . C#6 . B5 - - - | . . . . . . . . D#5 - F#5 
           | C#6 . A5 . . E5 . A5 . . C#6 . B5 - - - | . . . . . . . . B5 - C#6 - B5 - G#5 -
           | A5 . F#5 . . E5 . F#5 . . A5 . C#6 - - - | B5 - - - - - - - . . . . . . . .`;
 
+// ——— New versions to compare on the stand (5.6a, second take): each part on its own sound, the
+// chorus hook saved for the chorus, a teaser of it in the breakdown, no glide ———
+
+/** Two bars of a line, then two of rest: a hook's head teased before it comes in full. */
+const tease = (line: string) =>
+  [...line.split('|').slice(0, 2), ' . . . . . . . . ', ' . . . . . . . . '].join('|');
+
+/** Neon Cathedral v2: the chorus doubled an octave below on a supersaw, and teased on a bell. */
+const CATHEDRAL_V2 = {
+  callLow: transpose(CATHEDRAL.call, -12),
+  tease: tease(CATHEDRAL.call),
+};
+
+/**
+ * V1, over Bb Bb F F Gm Gm Eb Eb: the Sunset Strip v2 verse, so S3 is saved for the chorus — a
+ * short-short-long figure pushed off the beat, sequenced up the chords to D6 in the sixth bar.
+ */
+const V1 = `. F5 - F5 G5 - Bb5 - | - - - - A5 - F5 - | . F5 - F5 G5 - A5 - | - - - - C6 - A5 -
+          | . G5 - G5 A5 - Bb5 - | - - - - D6 - Bb5 - | . G5 - G5 F5 - G5 - | Bb5 - - - - - - -`;
+
+/** F1's harmony, mostly a third below, for the Memphis chorus (in E major, as F1 is written). */
+const F1_THIRDS = `. . C#5 D#5 E5 - - - G#5 - - - F#5 - E5 - | - - - - D#5 - - - B4 - - - . . . .
+                 | . . C#5 D#5 E5 - - - F#5 - - - E5 - D#5 - | - - - - B4 - - - G#4 - - - . . . .
+                 | . . F#5 G#5 A5 - - - G#5 - - - F#5 - G#5 - | G#5 - - - F#5 - - - D#5 - - - B4 - - -
+                 | . . C#5 D#5 F#5 - - - A5 - - - G#5 - F#5 - | F#5 - - - - - - - . . . . . . . .`;
+
+/** A muted guitar cutting between the beats every half bar, after Tatsuro Yamashita's "Sparkle". */
+const CUTTING = [false, false, true, false, false, true, false, true];
+
+/**
+ * Summer Plaza, the Memphis track, in D major: P1's royal road for the verses, P4's fusion
+ * groove moved down a tone for the chorus and bridge, F1 and F2 with it.
+ */
+const PLAZA = {
+  chops: cycle(
+    [
+      { cell: ['B4', 'F#4'], bars: 1 },
+      { cell: ['A4', 'E4'], bars: 1 },
+      { cell: ['A4', 'F#4'], bars: 1 },
+      { cell: ['B4', 'F#4'], bars: 1 },
+      { cell: ['G4', 'D4'], bars: 1 },
+      { cell: ['G4', 'D4'], bars: 1 },
+      { cell: ['A4', 'F#4'], bars: 2 },
+    ],
+    CUTTING,
+  ),
+  bass: transpose(FUSION.bass, -2),
+  arp: transpose(FUSION.arp, -2),
+  hook: transpose(F1, -2),
+  thirds: transpose(F1_THIRDS, -2),
+  riff: transpose(F2, -2),
+  tease: tease(transpose(F1, -2)),
+  /** A sax solo over the royal road: runs up into held notes, an arpeggio down and back. */
+  solo: `. . . . . . D5 E5 F#5 - - - A5 - B5 - | C#6 - - - - - B5 A5 E5 - - - . . . .
+       | . . . . . . E5 F#5 A5 - C#6 - B5 - A5 - | B5 - - - - - - - . . A5 B5 D6 - B5 -
+       | . . D6 - B5 - G5 - E5 - G5 - B5 - D6 - | D6 - - - - - B5 A5 G5 - E5 - D5 - E5 -
+       | F#5 - - - A5 - - - C#6 - - - - - - - | D6 - - - - - - - . . . . . . . .`,
+};
+
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
  * menu, a verse to play over, a short build and a chorus for the hottest rallies — and the
@@ -1519,6 +1578,394 @@ const SONG_DEFS: SongDef[] = [
         pad: 'hold',
         stabs: 'offbeat',
         layers: { lead: 0.3, arp: 0.45, pads: 0.35 },
+      },
+    ],
+  },
+  // ——— New versions to compare on the stand, never played by the game until accepted: they then
+  // take their backdrop from the version before ———
+  {
+    // Neon Cathedral, second take: each part on a sound of its own — M1's long arch on a
+    // shimmering PWM lead, M2's repeated notes punched out on a pluck, the chorus hook teased on
+    // a bell in the breakdown and doubled an octave below by a supersaw when it comes — and no
+    // glide, so no note slides into the next
+    title: 'Neon Cathedral v2',
+    bpm: 118,
+    swing: 0,
+    level: -1,
+    sketch: true,
+    kit: 'dark',
+    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassReese' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        arpLine: CATHEDRAL.arps,
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M1,
+        leadVoice: 'pwm',
+        arpLine: HYPNOTIC.arp,
+        bassLine: HYPNOTIC.bass,
+        drums: 'drive',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3, drums: 0.3 },
+        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: M2,
+        leadVoice: 'pluck',
+        arpLine: HYPNOTIC.arp,
+        bassLine: HYPNOTIC.bass,
+        drums: 'darkdrive',
+        fill: 'roll',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.6] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: CATHEDRAL_V2.tease,
+        leadVoice: 'bell',
+        arpLine: CATHEDRAL.arps,
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Am | B',
+        arp: 'up',
+        bass: 'pulse16',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: CATHEDRAL.call,
+        counter: CATHEDRAL_V2.callLow,
+        arpLine: CATHEDRAL.arps,
+        bass: 'drive',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: CATHEDRAL.ache,
+        leadVoice: 'sync',
+        arpLine: CATHEDRAL.arps,
+        bass: 'long',
+        drums: 'four',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { drums: 0.35 },
+        sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
+      },
+    ],
+  },
+  {
+    // Sunset Strip, second take, after The Midnight and FM-84: S3 saved for the chorus, where a
+    // sax sings it over its soft harmony; the verses get a melody of their own, V1, on a DX7
+    // electric piano and then a vibraphone; the breakdown teases S3 on the koto that plays the
+    // bridge; no glide
+    title: 'Sunset Strip v2',
+    bpm: 112,
+    swing: 0,
+    sketch: true,
+    voices: { lead: 'epiano', counter: 'soft', arp: 'arpPulse', bass: 'bassFm' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        arpLine: SUNSET,
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: V1,
+        arpLine: SUNSET,
+        bass: 'eighths',
+        drums: 'outrun',
+        fill: 'roll',
+        pad: 'hold',
+        layers: { lead: 0.3, drums: 0.3 },
+        sweep: { arp: [0.4, 1.4] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: V1,
+        leadVoice: 'vibes',
+        arpLine: SUNSET,
+        bass: 'sync',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.5] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: tease(S3),
+        leadVoice: 'koto',
+        arpLine: SUNSET,
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Eb | F',
+        arp: 'up',
+        bass: 'drive',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S3,
+        leadVoice: 'sax',
+        counter: S3_THIRDS,
+        arpLine: SUNSET,
+        bass: 'drive',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Gm | Gm | Eb | Eb | Bb | Bb | F | F',
+        lead: S3_TURNED,
+        leadVoice: 'koto',
+        arpLine: SUNSET_TURN,
+        bass: 'walk',
+        drums: 'break',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.4, 1.4], pads: [0.7, 1.2] },
+      },
+    ],
+  },
+  {
+    // Summer Plaza, for the Memphis backdrop: city pop as Tatsuro Yamashita, Mariya Takeuchi and
+    // Casiopea played it — a band, not a synth. A muted guitar cuts between the beats, a slapped
+    // bass and a pluck walk the royal road (IVmaj7–V–iii7–vi7); the verses' melodies on a DX7
+    // electric piano and a vibraphone; the chorus moves to a falling fusion groove (IVmaj7–iii7–
+    // ii7–Imaj7) under a sax with brass a third below, four on the floor; the bridge's riff on the
+    // guitar; a sax solo in the second half; the breakdown teases the chorus on the vibraphone
+    title: 'Summer Plaza',
+    bpm: 108,
+    swing: 0.1,
+    level: 1.5,
+    sketch: true,
+    voices: { lead: 'epiano', counter: 'guitar', arp: 'pluck', bass: 'bassFm' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'solo',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: C1,
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'stop',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        sweep: { arp: [0.4, 1.3] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: C2,
+        leadVoice: 'vibes',
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'toms',
+        pad: 'hold',
+        layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        sweep: { arp: [0.5, 1.4] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: PLAZA.tease,
+        leadVoice: 'vibes',
+        arpLine: PLAZA.arp,
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Em7 | A7sus4',
+        arp: 'up',
+        bass: 'octave',
+        drums: 'four',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: PLAZA.hook,
+        leadVoice: 'sax',
+        counter: PLAZA.thirds,
+        counterVoice: 'brass',
+        arpLine: PLAZA.arp,
+        bassLine: PLAZA.bass,
+        drums: 'disco',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: PLAZA.riff,
+        leadVoice: 'guitar',
+        arpLine: PLAZA.arp,
+        bassLine: PLAZA.bass,
+        drums: 'euclid',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.5, 1.5] },
+      },
+      {
+        name: 'solo',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: PLAZA.solo,
+        leadVoice: 'sax',
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'roll',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        sweep: { arp: [0.5, 1.4] },
       },
     ],
   },
