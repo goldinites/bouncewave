@@ -44,7 +44,7 @@ overlay has switches for both and counts their uses; `?mods=wind,darkness` plays
 those modifiers (ids in `src/match/modifiers/Modifier.ts`), also switched in the debug overlay;
 `?song=neon-cathedral&part=chorus&mute=drums` holds the music to a song, its part and layers
 (`part=whole-form` plays the whole form in order, peaks included; `&lead=sax`, `&bass=bassSlap`,
-`&pad=choir`, `&kit=japan` swap the lead, bass, pad and kit on any song (the wider palette,
+`&pad=strings`, `&kit=japan` swap the lead, bass, pad and kit on any song (the wider palette,
 `src/audio/music/palette.ts`); the debug overlay's sound stand, which also plays every action sound; song ids are titles in kebab case);
 `?tutorial=perfect` starts the tutorial at that step (ids in `src/match/tutorial.ts`).
 

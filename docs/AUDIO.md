@@ -159,9 +159,9 @@
 
 | Роль                          | Звуки широкой палитры                                                                                                                                                                                                                           |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Лид, подголосок (`LeadVoice`) | brass, soft, sync, pwm, epiano, sax, guitar, vibes, shakuhachi, shamisen, harp, marimba, kalimba, gamelan, celesta, musicBox, rhodes, choir, strings, chip, crush                                                                               |
+| Лид, подголосок (`LeadVoice`) | brass, soft, sync, pwm, epiano, sax, guitar, vibes, shakuhachi, shamisen, harp, marimba, kalimba, gamelan, celesta, musicBox, rhodes, strings, chip, crush                                                                                      |
 | Бас (`voices.bass`)           | bassSlap, bassGrowl; `voices.bassGlide` — подъезд к ноте (808 витч-хауса)                                                                                                                                                                       |
-| Пэд (`voices.pad`)            | synth, strings, choir, reverse; `pad: 'chop'` — аккорд, нарезанный ритмом                                                                                                                                                                       |
+| Пэд (`voices.pad`)            | synth, strings, reverse; `pad: 'chop'` — аккорд, нарезанный ритмом                                                                                                                                                                              |
 | Комп (`stabsVoice`, `stabs`)  | brass, rhodes, guitar (с перебором), strings (стаккато); ритмы `push`, `offbeat`, `comp`, `eighths`                                                                                                                                             |
 | Наборы барабанов (`kit`)      | synthwave, night, dark, band, outrun (синт-тарелка), japan (одайко, гонг, блок, хёсиги), tribal (конги, бонго, уду, дождевая палка), khmer (тарелочки чхинг и чхап, бочка скор, ручной барабан сампхо, гонг), factory (цепь, пар, синт-тарелка) |
 | Удары (`hits`)                | siren, modem, radioStatic, chirp, harpGliss, fanfare — по рисунку части, на слое fx                                                                                                                                                             |
@@ -169,7 +169,7 @@
 Щипковые (сямисэн, арфа, гитарный комп, глиссандо) — модель струны Karplus–Strong
 (`pluckedString`), посчитанная в массиве: петля обратной связи Web Audio не бывает короче 128
 сэмплов. Послушать любой звук на любой песне — ссылкой стенда:
-`?debug&song=sunset-strip&part=whole-form&lead=marimba&bass=bassSlap&pad=choir&kit=japan`.
+`?debug&song=sunset-strip&part=whole-form&lead=marimba&bass=bassSlap&pad=strings&kit=japan`.
 
 **Культура фона — в звуке, а не в названии.** Трек фона играет инструменты, ладами и приёмами
 той культуры, что нарисована на фоне, в звуке игры (синтезаторный бас, бит, комната):

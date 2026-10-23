@@ -85,7 +85,6 @@ interface NoteShape {
 const SLOW_ATTACK: Partial<Record<LeadVoice, number>> = {
   sax: 0.04,
   shakuhachi: 0.05,
-  choir: 0.12,
   strings: 0.15,
 }; // s
 

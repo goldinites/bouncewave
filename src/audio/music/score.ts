@@ -60,7 +60,8 @@ export type LeadVoice =
   | 'guitar'
   | 'vibes'
   // The wider palette for the backdrops' tracks to come (5.6): Japan's flute and lute, plucked
-  // and struck sounds, a choir and strings, the 8-bit and broken digital leads
+  // and struck sounds, strings, the 8-bit and broken digital leads (no choir: the game has no
+  // voices, docs/AUDIO.md)
   | 'shakuhachi'
   | 'shamisen'
   | 'harp'
@@ -70,7 +71,6 @@ export type LeadVoice =
   | 'celesta'
   | 'musicBox'
   | 'rhodes'
-  | 'choir'
   | 'strings'
   | 'chip'
   | 'crush';
@@ -78,8 +78,8 @@ export type LeadVoice =
 /** The rendered basses (audio/samples/pitched.ts); a plain oscillator type plays live. */
 export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808' | 'bassSlap' | 'bassGrowl';
 
-/** The pad's sound: the synth's own, a string section, a wordless choir, or swelling backwards. */
-export type PadVoice = 'synth' | 'strings' | 'choir' | 'reverse';
+/** The pad's sound: the synth's own, a string section, or swelling backwards. */
+export type PadVoice = 'synth' | 'strings' | 'reverse';
 
 /** What plays the chord stabs: a brass section, an electric piano, a guitar, staccato strings. */
 export type StabVoice = 'brass' | 'rhodes' | 'guitar' | 'strings';

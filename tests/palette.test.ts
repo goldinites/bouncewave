@@ -14,7 +14,7 @@ const song = (def: Partial<SongDef>, section: Partial<SectionDef> = {}) =>
     title: 'Palette',
     bpm: 120,
     swing: 0,
-    voices: { lead: 'marimba', counter: 'bell', arp: 'square', bass: 'bassSlap', pad: 'choir' },
+    voices: { lead: 'marimba', counter: 'bell', arp: 'square', bass: 'bassSlap', pad: 'reverse' },
     kit: 'japan',
     ...def,
     sections: [
@@ -37,7 +37,7 @@ describe('the palette a song needs rendered', () => {
   it('is the extra sounds it plays, and none of the core ones', () => {
     const { pitched, oneShots } = soundsFor(song({}));
     expect(Object.keys(pitched).sort()).toEqual(
-      ['bassSlap', 'leadMarimba', 'padChoir', 'stabRhodes'].sort(),
+      ['bassSlap', 'leadMarimba', 'padReverse', 'stabRhodes'].sort(),
     );
     expect(Object.keys(oneShots).sort()).toEqual(
       ['gong', 'hyoshigi', 'odaiko', 'siren', 'woodblock'].sort(),
@@ -76,7 +76,7 @@ describe('the wider palette’s sounds freed', () => {
     ]) {
       expect(free).not.toContain(kept);
     }
-    for (const freed of ['leadShakuhachi', 'odaiko', 'conga', 'bassSlap', 'padChoir']) {
+    for (const freed of ['leadShakuhachi', 'odaiko', 'conga', 'bassSlap', 'padStrings']) {
       expect(free).toContain(freed);
     }
     expect(free.every((id) => LAZY_SOUND_IDS.includes(id))).toBe(true);
@@ -119,7 +119,7 @@ describe('the arrangement with the wider palette', () => {
     const { pad } = play(song({}, { pad: 'chop', stabs: undefined }), 1);
     const gates = [...PAD_CHOP].filter((c) => c !== '.').length;
     expect(pad).toHaveBeenCalledTimes(gates);
-    expect(pad.mock.calls.every((call) => call[6] === 'choir')).toBe(true);
+    expect(pad.mock.calls.every((call) => call[6] === 'reverse')).toBe(true);
   });
 
   it('plays the stabs on the section’s stab voice', () => {

@@ -69,27 +69,6 @@ export const EXTRA_PITCHED = {
       spread(ctx, voices, 0.8, sum);
     },
   },
-  /** Choir pad: a wordless "ooh" held wide, two vowel formants over detuned saws. */
-  padChoir: {
-    maxRate: RENDER_RATE.MID,
-    roots: PAD_ROOTS,
-    duration: LOOPED,
-    loop: LOOP,
-    channels: 2,
-    build: (ctx, _random, f, tune) => {
-      const out = level(ctx, 1);
-      out.connect(ctx.destination);
-      const voices = [-10, -4, 4, 10].map((detune) => {
-        const voice = level(ctx, 0.3);
-        osc(ctx, 'sawtooth', tune(cents(f, detune))).connect(voice);
-        const vowel = level(ctx, 1);
-        chain(voice, filter(ctx, 'bandpass', 320, 4), level(ctx, 1.4), vowel);
-        chain(voice, filter(ctx, 'bandpass', 800, 5), level(ctx, 0.6), vowel);
-        return vowel;
-      });
-      spread(ctx, voices, 0.7, out);
-    },
-  },
   /**
    * Reverse pad: a chord that swells from nothing to full, like a tape run back, then falls
    * away. Mono and three seconds — it is a swell, not a bed — so it costs a fraction of a pad.

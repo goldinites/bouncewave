@@ -18,7 +18,6 @@ export interface VoiceOverrides {
 export const PAD_SOUND: Record<PadVoice, PitchedSampleId | ExtraPitchedId> = {
   synth: 'pad',
   strings: 'padStrings',
-  choir: 'padChoir',
   reverse: 'padReverse',
 };
 

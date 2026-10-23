@@ -29,7 +29,7 @@ export const ROOMS = {
     return: 0.35,
     sends: { pads: 0.5, melody: 0.35, drums: 0.12 },
   },
-  // Stone and height: a long, bright tail on the choir and the arpeggios, the drums kept dry
+  // Stone and height: a long, bright tail on the strings and the arpeggios, the drums kept dry
   // so the four-on-the-floor stays a machine rather than a wash
   cathedral: {
     decay: 3.2,
@@ -57,7 +57,7 @@ export const ROOMS = {
     return: 0.3,
     sends: { pads: 0.35, melody: 0.22, drums: 0.12 },
   },
-  // Rain on a narrow street: a long, dark fog the choir and the music box sink into
+  // Rain on a narrow street: a long, dark fog the pad and the music box sink into
   fog: {
     decay: 3.4,
     preDelay: 0.04,

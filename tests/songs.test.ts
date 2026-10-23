@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LeadVoice, MelodyNote, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
+import { PAD_SOUND } from '@/audio/music/palette';
 import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { isSceneId } from '@/shared/scenes';
@@ -178,6 +179,17 @@ describe('the soundtrack', () => {
       const values = frames.map((frame) => frame[key]);
       expect(new Set(values).size, key).toBe(values.length);
     }
+  });
+
+  // The game has no voices (docs/AUDIO.md, decided 22.10.2026): no vocals, no choirs, no human
+  // sounds, by synthesis or by recording
+  it('sings with no voice: no choir or vocal in the palette', () => {
+    const sounds = [
+      ...Object.keys(EXTRA_LEADS),
+      ...Object.values(EXTRA_LEAD_FOR),
+      ...Object.keys(PAD_SOUND),
+    ];
+    expect(sounds.filter((id) => /choir|vocal|voice|vox|ooh/i.test(id))).toEqual([]);
   });
 
   it('plays every song in a room of its own', () => {

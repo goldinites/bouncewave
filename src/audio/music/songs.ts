@@ -83,8 +83,8 @@ const K3 = `E4 - E4 - E4 - G4 - . . B4 - . . E5 - | - - - - D#5 - - - D5 - - - C
           | G4 - G4 - G4 - B4 - . . D5 - . . G5 - | - - - - F#5 - - - E5 - - - D5 - - -
           | D5 - - - - - C5 - - - B4 - - - A4 - | F#4 - - - - - - - . . . . . . . .`;
 
-/** Under K2, from its fifth bar: a supersaw choir holding one note a bar, under the pluck. */
-const K2_CHOIR = `. . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . .
+/** Under K2, from its fifth bar: a supersaw holding one note a bar, under the pluck. */
+const K2_HOLD = `. . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . .
                 | E5 - - - - - - - | C5 - - - - - - - | D#5 - - - - - - - | F#5 - - - - - - -`;
 
 /** Answering K3 in its rests: the call falls, the second voice climbs back in the gap. */
@@ -480,15 +480,15 @@ const SONG_DEFS: SongDef[] = [
     scene: 'lasers',
     kit: 'dark',
     transitions: 'synth',
-    // The cathedral's long stone tail on the choir and the beams; the bass and pads pump in full
+    // The cathedral's long stone tail on the strings and the beams; the bass and pads pump in full
     // under the kick, the machine the darksynth is
     room: 'cathedral',
     pump: 1,
     // The FM bass fed lightly into the saturation: a rubbery attack settling round, clean under
-    // the choir and the beams, not a second wall of distortion under the distorted kick
+    // the strings and the beams, not a second wall of distortion under the distorted kick
     grit: -6,
-    // A wordless choir holds the chords in place of the synth pad: the cathedral the name promises
-    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassFm', pad: 'choir' },
+    // A string section holds the chords under the vault, as an orchestra would in a cathedral
+    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassFm', pad: 'strings' },
     form: [
       'intro',
       'verse',
@@ -538,7 +538,7 @@ const SONG_DEFS: SongDef[] = [
         chords: 'Em | Em | C | C | Am | Am | B | B',
         lead: K2,
         leadVoice: 'pluck',
-        counter: K2_CHOIR,
+        counter: K2_HOLD,
         arpLine: cycle(octaveUp(HYPNOTIC_CELLS), ARP_RHYTHM.eleven),
         bassLine: HYPNOTIC_BASS,
         drums: 'darkdrive',

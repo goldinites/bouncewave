@@ -347,23 +347,6 @@ export const EXTRA_LEADS = {
       chain(carrier, tremolo, hit(ctx, 1, 2.3, 0, 0.003), ctx.destination);
     },
   },
-  /** Choir: an "ooh" with no words — saws through two vowel formants, held. */
-  leadChoir: {
-    maxRate: RENDER_RATE.MID,
-    roots: ROOTS,
-    duration: LOOPED,
-    loop: LOOP,
-    build: (ctx, _random, f, tune) => {
-      const sum = level(ctx, 0.4);
-      for (const detune of [-8, 0, 8]) {
-        osc(ctx, 'sawtooth', detune ? tune(cents(f, detune)) : f).connect(sum);
-      }
-      const out = level(ctx, 1);
-      out.connect(ctx.destination);
-      chain(sum, filter(ctx, 'bandpass', 320, 4), level(ctx, 1.4), out);
-      chain(sum, filter(ctx, 'bandpass', 800, 5), level(ctx, 0.6), out);
-    },
-  },
   /** Strings: an ensemble's detuned saws, softened, swelling in as a bowed section does. */
   leadStrings: {
     maxRate: RENDER_RATE.MID,
@@ -428,7 +411,6 @@ export const EXTRA_LEAD_FOR: Partial<Record<LeadVoice, ExtraLeadId>> = {
   celesta: 'leadCelesta',
   musicBox: 'leadMusicBox',
   rhodes: 'leadRhodes',
-  choir: 'leadChoir',
   strings: 'leadStrings',
   chip: 'leadChip',
   crush: 'leadCrush',
