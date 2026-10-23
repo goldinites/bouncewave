@@ -351,7 +351,7 @@ export class MusicEngine {
     if (this.isDropPending) {
       this.isDropPending = false;
       if (!isMuted) {
-        arrangement.playDrop(time, chord, stepDuration);
+        arrangement.playDrop(time, chord, stepDuration, conductor.song.transitions);
       }
     }
 

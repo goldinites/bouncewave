@@ -22,6 +22,7 @@ import {
   Song,
   STEPS_PER_BAR,
   Tier,
+  TransitionStyle,
 } from '@/audio/music/score';
 import { Chord, placeAbove, voiceChord } from '@/audio/music/theory';
 import { BarVariation, barVariation, feelStep } from '@/audio/music/variation';
@@ -223,12 +224,17 @@ export class Arrangement {
   }
 
   /**
-   * Decides, on the bar line, which layers play this bar: each comes in once intensity reaches
-   * where the section has it come in, and leaves a little below. A new section starts afresh.
+   * Decides, on the bar line, which layers play this bar: each comes in once the section has
+   * reached the bar it enters on and intensity reaches where the section has it come in, and
+   * leaves a little below. A new section starts afresh.
    */
-  private updateLayers(section: Section, intensity: number, isFresh: boolean): void {
+  private updateLayers(section: Section, bar: number, intensity: number, isFresh: boolean): void {
     const from = section.layers ?? DEFAULT_LAYER_FROM[section.tier] ?? {};
     for (const layer of MUSIC_LAYERS) {
+      if (bar < (section.enter?.[layer] ?? 0)) {
+        this.layersIn.delete(layer);
+        continue;
+      }
       const threshold = from[layer] ?? 0;
       const isIn = !isFresh && this.layersIn.has(layer);
       if (intensity >= (isIn ? threshold - LAYER_HYSTERESIS : threshold)) this.layersIn.add(layer);
@@ -244,7 +250,7 @@ export class Arrangement {
     const time = context.time + (s % 2 ? song.swing * stepDuration : 0);
     this.kit = KITS[song.kit ?? 'synthwave'];
     if (s === 0 || section !== this.layersSection) {
-      this.updateLayers(section, I, section !== this.layersSection || sectionStep === 0);
+      this.updateLayers(section, bar, I, section !== this.layersSection || sectionStep === 0);
       this.layersSection = section;
       this.variation = barVariation(song.id, section.name, context.pass ?? 0, bar);
     }
@@ -253,7 +259,7 @@ export class Arrangement {
       // A crash marks every new section except the quiet ones
       if (section.tier !== 'calm' && this.plays('drums')) this.drum('crash', time, 0.12);
       if (this.has('fx')) this.playTransitions(time, context);
-      if (section.drop) this.playDrop(time, chord, stepDuration);
+      if (section.drop) this.playDrop(time, chord, stepDuration, song.transitions);
     }
 
     // A break: the music stops dead for the section's last steps, then the next one hits
@@ -315,7 +321,15 @@ export class Arrangement {
    * the heat falls away; coming up out of the calm, it draws breath with a whoosh.
    */
   private playTransitions(time: number, context: StepContext): void {
-    const { section, stepDuration, intensity: I, previousTier } = context;
+    const { section, stepDuration, intensity: I, previousTier, song } = context;
+    const style = song.transitions ?? 'synth';
+    // A band marks its turns with what it plays: no swells, no sweeps
+    if (style === 'band') return;
+    if (section.riser && style === 'drums') {
+      const end = time + section.bars * STEPS_PER_BAR * stepDuration;
+      this.play.transition('reverseCrash', time, TRANSITION_VOLUME.REVERSE_CRASH, end);
+      return;
+    }
     if (section.riser) {
       const end = time + section.bars * STEPS_PER_BAR * stepDuration;
       const volume = RISER_VOLUME * (0.6 + 0.4 * I);
@@ -328,7 +342,7 @@ export class Arrangement {
       this.play.transition('reverseCrash', time, TRANSITION_VOLUME.REVERSE_CRASH, end);
       return;
     }
-    if (!previousTier) return;
+    if (!previousTier || style === 'drums') return;
     const change = TIER_HEAT[section.tier] - TIER_HEAT[previousTier];
     if (change < 0 && TIER_HEAT[previousTier] >= TIER_HEAT.rise) {
       this.play.transition('downlifter', time, TRANSITION_VOLUME.DOWNLIFTER);
@@ -337,13 +351,22 @@ export class Arrangement {
     }
   }
 
-  /** One-shot impact when the build-up peaks: crash, heavy kick and a long held bass note. */
-  public playDrop(time: number, chord: Chord, stepDuration: number): void {
+  /**
+   * One-shot impact when the build-up peaks: crash, heavy kick and a long held bass note; a
+   * band's drop is the crash and the kick alone.
+   */
+  public playDrop(
+    time: number,
+    chord: Chord,
+    stepDuration: number,
+    style: TransitionStyle = 'synth',
+  ): void {
     if (this.has('drums')) {
       this.drum('crash', time, 0.22);
       this.drum('kick', time, 1.0);
       this.play.impact(this.kit, time, 0.8);
     }
+    if (style === 'band') return;
     if (this.has('fx')) this.play.transition('boom', time, TRANSITION_VOLUME.BOOM);
     if (!this.has('bass')) return;
     // Bass root register (not an octave lower) so it stays audible on phone speakers

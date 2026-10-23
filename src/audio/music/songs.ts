@@ -70,6 +70,16 @@ const K3 = `E4 - E4 - E4 - G4 - . . B4 - . . E5 - | - - - - D#5 - - - D5 - - - C
           | G4 - G4 - G4 - B4 - . . D5 - . . G5 - | - - - - F#5 - - - E5 - - - D5 - - -
           | D5 - - - - - C5 - - - B4 - - - A4 - | F#4 - - - - - - - . . . . . . . .`;
 
+/** Under K2, from its fifth bar: a supersaw choir holding one note a bar, under the pluck. */
+const K2_CHOIR = `. . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . .
+                | E5 - - - - - - - | C5 - - - - - - - | D#5 - - - - - - - | F#5 - - - - - - -`;
+
+/** Answering K3 in its rests: the call falls, the second voice climbs back in the gap. */
+const K3_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
+                 | . . . . . . . . . . . . . . . . | . . . . . . . . G5 - E5 - C5 - - -
+                 | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
+                 | . . . . . . . . . . . . . . . . | . . . . . . . . A5 - F#5 - D5 - - -`;
+
 /** K4, the bridge: long low notes, each leaning on its neighbour a semitone off. */
 const K4 = `B4 - - - C5 - - - B4 - - - - - - - | G4 - - - - - - - F#4 - - - E4 - - -
           | C5 - - - B4 - - - C5 - - - - - - - | G4 - - - - - - - . . . . . . . .
@@ -100,6 +110,13 @@ const W1 = `D6 - - - - - F5 - - - Bb5 - - - - - | A5 - - - - - - - F5 - - - - - 
           | C6 - - - - - F5 - - - A5 - - - - - | G5 - - - - - - - C6 - - - - - - -
           | Bb5 - - Bb5 - - G5 - - - D6 - - - - - | - - - - C6 - - - Bb5 - - - G5 - - -
           | G5 - - - - - Bb5 - - - G5 - - - F5 - | F5 - - - - - - - . . . . . . . .`;
+
+/**
+ * The passenger's line under W1, from the verse's ninth bar: one or two long notes a bar, low,
+ * moving against the melody — down where it climbs, up where it falls.
+ */
+const W1_UNDER = `F4 - - - D5 - - - | C5 - - - - - - - | A4 - - - C5 - - - | G4 - - - A4 - - -
+                | Bb4 - - - D5 - - - | D5 - - - C5 - - - | Bb4 - - - G4 - - - | G4 - - - - - - -`;
 
 /** S3, the chorus hook (soar): by step from D6, then tied over the bar and climbing, a 3+3+2. */
 const S3 = `D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 - - - - - - -
@@ -158,23 +175,29 @@ const FUSION = {
 /** A muted guitar cutting between the beats every half bar, after Tatsuro Yamashita's "Sparkle". */
 const CUTTING = [false, false, true, false, false, true, false, true];
 
+/** The guitar's two-note cuts over the royal road, a bar each (the last chord two). */
+const CHOP_CELLS: Stretch[] = [
+  { cell: ['B4', 'F#4'], bars: 1 },
+  { cell: ['A4', 'E4'], bars: 1 },
+  { cell: ['A4', 'F#4'], bars: 1 },
+  { cell: ['B4', 'F#4'], bars: 1 },
+  { cell: ['G4', 'D4'], bars: 1 },
+  { cell: ['G4', 'D4'], bars: 1 },
+  { cell: ['A4', 'F#4'], bars: 2 },
+];
+
 /** The fusion groove moved down a tone into D, and the guitar's cutting over the royal road. */
 const PLAZA = {
-  chops: cycle(
-    [
-      { cell: ['B4', 'F#4'], bars: 1 },
-      { cell: ['A4', 'E4'], bars: 1 },
-      { cell: ['A4', 'F#4'], bars: 1 },
-      { cell: ['B4', 'F#4'], bars: 1 },
-      { cell: ['G4', 'D4'], bars: 1 },
-      { cell: ['G4', 'D4'], bars: 1 },
-      { cell: ['A4', 'F#4'], bars: 2 },
-    ],
-    CUTTING,
-  ),
+  chops: cycle(CHOP_CELLS, CUTTING),
+  /** The intro's four bars of it. */
+  introChops: cycle(CHOP_CELLS.slice(0, 4), CUTTING),
   bass: transpose(FUSION.bass, -2),
   arp: transpose(FUSION.arp, -2),
 };
+
+/** Q0, the intro (Gmaj7 A F#m7 Bm7): the electric piano's lick, answered by its own echo. */
+const Q0 = `. . . . . . . . . . . F#5 - . G5 . | A5 - - . . . . . . . . . . . . .
+          | . . . . . . . . . . . E5 - . F#5 . | D5 - - . . . . . . . . . . . . .`;
 
 /** Q1, the verse (the royal road): a note struck off the beat three times, falling. */
 const Q1 = `. . . F#5 - . F#5 - . F#5 - E5 - . D5 - | E5 - - - . . . . . . D#5 E5 - - - -
@@ -213,48 +236,52 @@ const Q5 = `. . . . . . . . B5 - - A5 - - F#5 - | E5 - - - - - F5 F#5 - - - - E5
           | F#5 - - - - - - - C#6 - - - A5 - - - | D6 - - - - - - - . . . . . . . .`;
 
 /**
- * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
- * menu, a verse to play over, a short build and a chorus for the hottest rallies — and the
- * conductor moves between them as the match heats up and cools down. See SectionDef for the
- * notation.
+ * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
+ * the hottest rallies, and the conductor moves between them as the match heats up and cools
+ * down — but each track is built its own way: its form, the length of its parts, its intro, its
+ * beat, its kit, how it climbs to its peak and how it marks its turns (5.6a: three tracks built
+ * on one template sounded like one song). See SectionDef for the notation.
  */
 const SONG_DEFS: SongDef[] = [
   {
-    // After Perturbator: two arpeggio processes turning across the beat, a reese bass, the dark
-    // kit; the melody low and the arpeggios over it
+    // After Perturbator: a cinematic sixteen-bar intro of the arpeggios alone over a reese drone,
+    // two verses, a four-bar riser into a four-on-the-floor chorus with a drop, a breakdown that
+    // teases the hook on a bell, a half-time bridge; the melody low, the arpeggios over it
     title: 'Neon Cathedral',
-    bpm: 118,
+    bpm: 124,
     swing: 0,
     level: -1,
     scene: 'lasers',
     kit: 'dark',
+    transitions: 'synth',
     voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassReese' },
     form: [
       'intro',
       'verse',
       'verse2',
-      'breakdown',
       'build',
       'chorus',
-      'bridge',
-      'verse',
-      'verse2',
       'breakdown',
+      'bridge',
+      'verse2',
       'build',
       'chorus',
-      'bridge',
-      'verse2',
     ],
     sections: [
       {
+        // The lights come on one by one: a single beam (the arpeggio), the reese drone under it,
+        // the haze of the pad, then a bell striking the verse's hammered note
         name: 'intro',
         tier: 'calm',
-        chords: 'Em | Em | C | C | G | G | D | D',
+        chords: 'Em | Em | C | C | G | G | D | D | Em | Em | C | C | G | G | D | D',
+        lead: tease(K1),
+        leadVoice: 'bell',
         arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.eighths),
         bass: 'long',
         drums: 'none',
         pad: 'swell',
-        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+        enter: { bass: 4, pads: 8, lead: 12 },
+        sweep: { arp: [0.15, 1.3], pads: [0.5, 1] },
       },
       {
         name: 'verse',
@@ -268,6 +295,7 @@ const SONG_DEFS: SongDef[] = [
         fill: 'stop',
         pad: 'hold',
         layers: { lead: 0.3, drums: 0.3 },
+        enter: { arp: 4 },
         sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
       },
       {
@@ -276,13 +304,41 @@ const SONG_DEFS: SongDef[] = [
         chords: 'Em | Em | C | C | Am | Am | B | B',
         lead: K2,
         leadVoice: 'pluck',
+        counter: K2_CHOIR,
         arpLine: cycle(octaveUp(HYPNOTIC_CELLS), ARP_RHYTHM.eleven),
         bassLine: HYPNOTIC_BASS,
         drums: 'darkdrive',
         fill: 'roll',
         pad: 'hold',
-        layers: { lead: 0.3 },
+        layers: { lead: 0.3, counter: 0.3 },
         sweep: { arp: [0.6, 1.6] },
+      },
+      {
+        // Four bars of noise rising, the bass in sixteenths, into the drop
+        name: 'build',
+        tier: 'rise',
+        chords: 'Am | Am | B | B',
+        arp: 'up',
+        bass: 'pulse16',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.4, 2.2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: K3,
+        counter: K3_ANSWER,
+        arpLine: cycle(octaveUp(CATHEDRAL_CELLS)),
+        bass: 'drive',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
       },
       {
         name: 'breakdown',
@@ -298,31 +354,7 @@ const SONG_DEFS: SongDef[] = [
         sweep: { arp: [1.2, 0.4] },
       },
       {
-        name: 'build',
-        tier: 'rise',
-        chords: 'Am | B',
-        arp: 'up',
-        bass: 'pulse16',
-        drums: 'drive',
-        fill: 'roll',
-        pad: 'hold',
-        riser: true,
-        sweep: { arp: [0.5, 2] },
-      },
-      {
-        name: 'chorus',
-        tier: 'high',
-        chords: 'Em | Em | C | C | G | G | D | D',
-        lead: K3,
-        arpLine: cycle(octaveUp(CATHEDRAL_CELLS)),
-        bass: 'drive',
-        drums: 'darkdrive',
-        fill: 'toms',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
-      {
+        // The dark beat at half speed: heavy, the hats still running
         name: 'bridge',
         tier: 'groove',
         chords: 'Em | Em | C | C | G | G | D | D',
@@ -330,100 +362,67 @@ const SONG_DEFS: SongDef[] = [
         leadVoice: 'sync',
         arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.eighths),
         bass: 'long',
-        drums: 'four',
+        drums: 'darkdrive',
+        feel: 'half',
         fill: 'stop',
         pad: 'hold',
-        layers: { drums: 0.35 },
         sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
       },
     ],
   },
   {
-    // After The Midnight, FM-84 and Lazerhawk: the seven-note arpeggio, a DX7 electric piano and a
-    // vibraphone in the verses, a sax with its soft harmony at the chorus, a koto in the bridge
+    // After The Midnight and FM-84: a night drive. The engine idles from the first bar — kick,
+    // hats, the bass in eighths under the seven-note arpeggio — then a sixteen-bar verse on the
+    // anthem beat (a kick on one and three, the gated snare on two and four), toms and a reverse
+    // crash into the sax's chorus, the koto's bridge, and an outro that fades on the vibraphone.
+    // Cymbals and drums mark the turns, no synth swells
     title: 'Sunset Strip',
-    bpm: 112,
+    bpm: 100,
     swing: 0,
     scene: 'outrun',
+    transitions: 'drums',
     voices: { lead: 'epiano', counter: 'soft', arp: 'arpPulse', bass: 'bassFm' },
-    form: [
-      'intro',
-      'verse',
-      'verse2',
-      'breakdown',
-      'build',
-      'chorus',
-      'bridge',
-      'verse',
-      'verse2',
-      'breakdown',
-      'build',
-      'chorus',
-      'bridge',
-      'verse2',
-    ],
+    form: ['intro', 'verse', 'build', 'chorus', 'bridge', 'verse2', 'build', 'chorus', 'outro'],
     sections: [
       {
+        // The engine turns over: the kick and the hats, then the bass, then the arpeggio's lights
         name: 'intro',
         tier: 'calm',
         chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
-        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.eighths),
-        bass: 'long',
-        drums: 'none',
-        pad: 'swell',
-        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+        arpLine: cycle(SUNSET_CELLS),
+        bass: 'eighths',
+        drums: 'cruise',
+        pad: 'hold',
+        enter: { bass: 2, arp: 4 },
+        sweep: { arp: [0.3, 1.2] },
       },
       {
         name: 'verse',
         tier: 'groove',
-        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb | Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        // The electric piano drives alone for eight bars; then the passenger's voice joins it
         lead: W1,
+        counter: W1_UNDER,
         arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.nine),
         bass: 'eighths',
-        drums: 'outrun',
-        fill: 'roll',
+        drums: 'anthem',
+        fill: 'toms',
         pad: 'hold',
-        layers: { lead: 0.3, drums: 0.3 },
+        layers: { lead: 0.3, counter: 0.3 },
+        enter: { counter: 8 },
         sweep: { arp: [0.4, 1.4] },
       },
       {
-        name: 'verse2',
-        tier: 'groove',
-        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
-        lead: W1,
-        leadVoice: 'vibes',
-        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.eleven),
-        bass: 'sync',
-        drums: 'outrun',
-        fill: 'toms',
-        pad: 'hold',
-        layers: { lead: 0.3 },
-        sweep: { arp: [0.6, 1.5] },
-      },
-      {
-        name: 'breakdown',
-        tier: 'calm',
-        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
-        lead: tease(S3),
-        leadVoice: 'koto',
-        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.quarters),
-        bass: 'long',
-        drums: 'halftime',
-        pad: 'swell',
-        silence: 4,
-        sweep: { arp: [1.2, 0.4] },
-      },
-      {
+        // Two bars of toms under a reverse crash
         name: 'build',
         tier: 'rise',
         chords: 'Eb | F',
         arp: 'up',
         bass: 'drive',
-        drums: 'drive',
-        fill: 'roll',
+        drums: 'anthem',
+        fill: 'toms',
         pad: 'hold',
         riser: true,
-        sweep: { arp: [0.5, 2] },
       },
       {
         name: 'chorus',
@@ -432,12 +431,12 @@ const SONG_DEFS: SongDef[] = [
         lead: S3,
         leadVoice: 'sax',
         counter: S3_THIRDS,
+        enter: { counter: 4 },
         arpLine: cycle(SUNSET_CELLS),
         bass: 'drive',
-        drums: 'outrun',
+        drums: 'anthem',
         fill: 'toms',
         pad: 'hold',
-        stabs: 'push',
         drop: true,
       },
       {
@@ -454,45 +453,75 @@ const SONG_DEFS: SongDef[] = [
         layers: { lead: 0.3 },
         sweep: { arp: [0.4, 1.4], pads: [0.7, 1.2] },
       },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: W1,
+        leadVoice: 'vibes',
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.eleven),
+        bass: 'sync',
+        drums: 'anthem',
+        fill: 'toms',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.5] },
+      },
+      {
+        // The drums gone, the verse's opening on the vibraphone, the arpeggio slowing to quarters
+        name: 'outro',
+        tier: 'calm',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: tease(W1),
+        leadVoice: 'vibes',
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.quarters),
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [1, 0.3] },
+      },
     ],
   },
   {
-    // After Tatsuro Yamashita, Mariya Takeuchi and Casiopea: a muted guitar cutting, a slapped
-    // bass, the electric piano and the vibraphone for the verses, a sax over brass at the chorus,
-    // the guitar's riff in the bridge, a sax solo in the second half
+    // After Tatsuro Yamashita, Mariya Takeuchi and Casiopea: a band in a room, not a synth. Four
+    // bars count it in — the electric piano's lick, the guitar cutting, hats and a shaker — then
+    // verses on the royal road with no pad at all, a four-bar pre-chorus of brass and a snare
+    // roll into a live funk chorus (a sax over brass), the guitar's riff, a quiet interlude, a sax
+    // solo, and the last chorus a semitone up, in E flat. No swells or sweeps: the band plays
+    // every turn
     title: 'Summer Plaza',
-    bpm: 108,
+    bpm: 112,
     swing: 0.1,
     level: 1.5,
     scene: 'memphis',
+    kit: 'band',
+    transitions: 'band',
     voices: { lead: 'epiano', counter: 'guitar', arp: 'pluck', bass: 'bassFm' },
     form: [
       'intro',
       'verse',
       'verse2',
-      'breakdown',
-      'build',
+      'pre',
       'chorus',
       'bridge',
-      'verse',
+      'interlude',
       'solo',
-      'breakdown',
-      'build',
-      'chorus',
-      'bridge',
-      'verse2',
+      'verse',
+      'pre2',
+      'chorus2',
     ],
     sections: [
       {
+        // The tape starts: the hats and the guitar, the electric piano's lick, the bass on the third
         name: 'intro',
         tier: 'calm',
-        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
-        counter: PLAZA.chops,
-        arpLine: ROYAL_ROAD,
-        bass: 'long',
-        drums: 'none',
-        pad: 'swell',
-        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+        chords: 'Gmaj7 | A | F#m7 | Bm7',
+        lead: Q0,
+        counter: PLAZA.introChops,
+        bass: 'funk',
+        drums: 'bandIntro',
+        pad: 'none',
+        enter: { bass: 2 },
       },
       {
         name: 'verse',
@@ -504,9 +533,10 @@ const SONG_DEFS: SongDef[] = [
         bass: 'funk',
         drums: 'citypop',
         fill: 'stop',
-        pad: 'hold',
+        pad: 'none',
         stabs: 'offbeat',
         layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        enter: { arp: 4 },
         sweep: { arp: [0.4, 1.3] },
       },
       {
@@ -520,40 +550,20 @@ const SONG_DEFS: SongDef[] = [
         bass: 'funk',
         drums: 'citypop',
         fill: 'toms',
-        pad: 'hold',
+        pad: 'none',
         layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
         sweep: { arp: [0.5, 1.4] },
       },
       {
-        name: 'breakdown',
-        tier: 'calm',
-        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
-        lead: tease(Q3),
-        leadVoice: 'vibes',
-        arpLine: transpose(
-          cycle(
-            FUSION_CHORDS.map(({ arp }) => ({ cell: arp, bars: 1 })),
-            ARP_RHYTHM.quarters,
-          ),
-          -2,
-        ),
-        bass: 'long',
-        drums: 'halftime',
-        pad: 'swell',
-        silence: 4,
-        sweep: { arp: [1.2, 0.4] },
-      },
-      {
-        name: 'build',
+        // Four bars of brass pushing up the chords, the bass walking, a snare roll at the end
+        name: 'pre',
         tier: 'rise',
-        chords: 'Em7 | A7sus4',
-        arp: 'up',
-        bass: 'octave',
-        drums: 'four',
+        chords: 'Em7 | F#m7 | Gmaj7 | A7sus4',
+        bass: 'walk',
+        drums: 'band',
         fill: 'roll',
         pad: 'hold',
-        riser: true,
-        sweep: { arp: [0.5, 2] },
+        stabs: 'push',
       },
       {
         name: 'chorus',
@@ -563,9 +573,10 @@ const SONG_DEFS: SongDef[] = [
         leadVoice: 'sax',
         counter: Q3_UNDER,
         counterVoice: 'brass',
+        enter: { counter: 4 },
         arpLine: PLAZA.arp,
         bassLine: PLAZA.bass,
-        drums: 'disco',
+        drums: 'band',
         fill: 'toms',
         pad: 'hold',
         stabs: 'push',
@@ -581,9 +592,20 @@ const SONG_DEFS: SongDef[] = [
         bassLine: PLAZA.bass,
         drums: 'euclid',
         fill: 'stop',
-        pad: 'hold',
+        pad: 'none',
         layers: { lead: 0.3 },
         sweep: { arp: [0.5, 1.5] },
+      },
+      {
+        // The band drops out: the chorus's opening on the vibraphone over held chords
+        name: 'interlude',
+        tier: 'calm',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: tease(Q3),
+        leadVoice: 'vibes',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
       },
       {
         name: 'solo',
@@ -596,10 +618,37 @@ const SONG_DEFS: SongDef[] = [
         bass: 'funk',
         drums: 'citypop',
         fill: 'roll',
-        pad: 'hold',
+        pad: 'none',
         stabs: 'offbeat',
         layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
         sweep: { arp: [0.5, 1.4] },
+      },
+      {
+        // The pre-chorus a semitone up, turning the song into E flat for its last chorus
+        name: 'pre2',
+        tier: 'rise',
+        chords: 'Fm7 | Gm7 | Abmaj7 | Bb7sus4',
+        bass: 'walk',
+        drums: 'band',
+        fill: 'roll',
+        pad: 'hold',
+        stabs: 'push',
+      },
+      {
+        name: 'chorus2',
+        tier: 'high',
+        chords: 'Abmaj7 | Gm7 | Fm7 | Ebmaj7 | Abmaj7 | Gm7 | Fm7 | Bb7sus4',
+        lead: transpose(Q3, 1),
+        leadVoice: 'sax',
+        counter: transpose(Q3_UNDER, 1),
+        counterVoice: 'brass',
+        arpLine: transpose(PLAZA.arp, 1),
+        bassLine: transpose(PLAZA.bass, 1),
+        drums: 'band',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
       },
     ],
   },

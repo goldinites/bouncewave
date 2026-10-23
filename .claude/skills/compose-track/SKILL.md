@@ -35,10 +35,12 @@ and a choice, never with a finished track written blind.
 
 ## 3. The full track
 
-- Build it from the choices (`docs/AUDIO.md`, step 4): a 14-step `form`, the base alone in the
-  intro and breakdown, the melodies in the verses on their chosen leads, the main melody at the
-  chorus with a harmony a third below and the drop, a bridge from another melody or from the
-  motif developed. `transpose` moves material into one key.
+- Build it from the choices (`docs/AUDIO.md`, step 4): first the track's story with its
+  backdrop, then a frame of its own — form and part lengths, tempo, intro, beat, kit, the way up
+  to its peak, `transitions` — that no other track shares (a test checks). Instruments enter one
+  by one (`enter`) and answer each other; the melodies in the verses on their chosen leads, the
+  hook saved for the chorus, a bridge from another melody or the motif developed. `transpose`
+  moves material into one key.
 - Replace the backdrop's previous track (same `scene`); remove the sketches and their unused
   constants.
 - Level it to −25 dB with `npm run loudness -- <id>`; watch it on the stand walk its form and

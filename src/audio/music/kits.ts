@@ -51,6 +51,19 @@ export const KITS = {
     perc: 'rim',
     impact: 'impact',
   },
+  // City pop's band in a room: a punchy kick, a dry snare, a shaker in place of the rim
+  band: {
+    kick: 'kickPunch',
+    snare: 'snare',
+    clap: 'clap',
+    hat: 'hat',
+    open: 'open',
+    crash: 'crash',
+    tom: 'tom',
+    taiko: 'taiko',
+    metal: 'clang',
+    perc: 'shaker',
+  },
 } satisfies Record<string, DrumKit>;
 
 export type KitName = keyof typeof KITS;

@@ -22,6 +22,9 @@ export const MUSIC_LAYERS = ['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 
 
 export type MusicLayer = (typeof MUSIC_LAYERS)[number];
 
+/** How a song marks its turns: synth effects, cymbals and drums, or the band alone. */
+export type TransitionStyle = 'synth' | 'drums' | 'band';
+
 /** A section's feel: as written, half-time (the beat stretched over two bars) or double-time. */
 export type Feel = 'half' | 'double';
 const STEPS_PER_CHORD_SLOT = 8; // chords may change on the bar or halfway through it
@@ -104,6 +107,12 @@ export interface SectionDef {
    */
   layers?: Partial<Record<MusicLayer, number>>;
   /**
+   * The bar of the section each layer enters on, so a part builds as it plays: one instrument
+   * leads, then another joins it, then a third (a layer not named plays from the first bar). The
+   * heat still decides, on top, whether a layer that has entered plays.
+   */
+  enter?: Partial<Record<MusicLayer, number>>;
+  /**
    * Half-time or double-time: the kick, snare, clap, taiko and metal stretched over two bars or
    * squeezed into half of one, the hats kept in time. As written if left out.
    */
@@ -161,6 +170,13 @@ export interface SongDef {
    * stand's meter (its average over the verse and chorus) against the others. 0 if left out.
    */
   level?: number;
+  /**
+   * How the song marks its turns (docs/AUDIO.md): 'synth' with noise risers, a reverse crash,
+   * downlifters and a boom under the drop; 'drums' with the reverse crash alone, the drums doing
+   * the rest; 'band' with nothing but what the band plays — fills, stabs, a crash. 'synth' if
+   * left out.
+   */
+  transitions?: TransitionStyle;
   sections: SectionDef[];
 }
 

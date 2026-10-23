@@ -144,6 +144,26 @@ describe('the soundtrack', () => {
     }
   });
 
+  // Three tracks built on one template sounded like one song (5.6a): each builds its own frame
+  it('gives no two songs the same form, intro, beat at the peak or way up to it', () => {
+    const frames = SONGS.map((song) => {
+      const sections = song.form.map((index) => song.sections[index]);
+      const intro = sections[0];
+      const peak = sections.find((s) => s.tier === 'high')!;
+      const build = sections.find((s) => s.tier === 'rise')!;
+      return {
+        form: sections.map((s) => `${s.tier}:${s.bars}`).join(' '),
+        intro: `${intro.bars} ${intro.drums} ${intro.bass ?? 'line'} ${!!intro.arpLine} ${intro.pad}`,
+        beat: `${peak.drums} ${song.kit ?? 'synthwave'}`,
+        build: `${build.bars} ${build.drums} ${build.riser} ${song.transitions ?? 'synth'}`,
+      };
+    });
+    for (const key of ['form', 'intro', 'beat', 'build'] as const) {
+      const values = frames.map((frame) => frame[key]);
+      expect(new Set(values).size, key).toBe(values.length);
+    }
+  });
+
   it('gives each backdrop one song of its own at most', () => {
     const scenes = SONGS.flatMap((song) => (song.scene ? [song.scene] : []));
     expect(new Set(scenes).size).toBe(scenes.length);

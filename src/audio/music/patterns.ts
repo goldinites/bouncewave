@@ -80,6 +80,34 @@ export const DRUM_PATTERNS = {
     open: '......x.......x.',
     perc: '...x......x..x..',
   },
+  // Outrun idling at the lights: a kick on one and three, the hats on the off-beats, no snare yet
+  cruise: {
+    kick: 'X.......X.......',
+    hat: '..x...x...x...x.',
+  },
+  // The synthwave anthem: a kick on one and three, a huge gated snare on two and four, the kick
+  // pushing into the bar's second half
+  anthem: {
+    kick: 'X.......X.x.....',
+    snare: '....X.......X...',
+    hat: 'x.x.x.x.x.x.x.x.',
+    open: '..............x.',
+  },
+  // A band counting in: hats and the shaker only, the kick a light touch on the one
+  bandIntro: {
+    kick: 'x...............',
+    hat: 'x.x.x.x.x.x.x.x.',
+    perc: '..o...o...o...o.',
+  },
+  // A live funk groove for a chorus: a syncopated kick, ghost notes around the backbeat, the
+  // shaker in sixteenths — not four on the floor
+  band: {
+    kick: 'X..x..x...X..x..',
+    snare: '....X..o.o..X..o',
+    hat: 'x.x.x.x.x.x.x.x.',
+    open: '......x.......x.',
+    perc: 'oxoxoxoxoxoxoxox',
+  },
   // Euclidean: five kicks spread over the bar, a rim and hats in even spreads of their own
   euclid: {
     kick: 'X..x..x..X..x...',
