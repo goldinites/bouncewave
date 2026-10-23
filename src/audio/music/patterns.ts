@@ -157,13 +157,25 @@ export const DRUM_PATTERNS = {
     perc: 'oxoxoxoxoxoxoxox',
   },
   // Witch house in half-time: the snare on the third beat, so 140 feels like 70, under trap hats
-  // rolling into the bar's end
+  // rolling into the bar's end, and a pipe somewhere in the street ringing when struck
   witch: {
     kick: 'X......x..X.....',
     snare: '........X.......',
     clap: '........x.......',
     hat: 'x.x.x.x.x.x.xxxx',
     open: '......x.........',
+    metal: '...........o....',
+  },
+  // The city's iron at the peak (Kabukicho Rain's chorus), after Cyberpunk 2077: the half-time
+  // beat with steel struck across it, a taiko under the off-beats, the hats in triplet rolls
+  neonIron: {
+    kick: 'X..x...x..X..x..',
+    snare: '........X.......',
+    clap: '........x.......',
+    hat: 'x.x.x.x.x.x.x.xx',
+    open: '......x.......x.',
+    metal: '...x..o....x.x..',
+    taiko: '..x.......x...xX',
   },
   // Rain on the window: hats and the shaker ticking, no kick, no snare
   witchIntro: {

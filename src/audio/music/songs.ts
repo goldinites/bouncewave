@@ -284,22 +284,11 @@ const Q5 = `. . . . . . . . B5 - - A5 - - F#5 - | E5 - - - - - F5 F#5 - - - - E5
           | . . G5 . E5 . D5 . E5 - - - G5 - - - | A5 - - - - - G5 - - - E5 - - - D5 -
           | F#5 - - - - - - - C#6 - - - A5 - - - | D6 - - - - - - - . . . . . . . .`;
 
-// ——— Kabukicho Rain (neonCity): witch house in F minor at 140, felt at 70. Rain at night in
-// Tokyo, neon smeared in the puddles: a music-box lullaby — one high note, then a sigh down a
-// semitone, and silence — over a gliding 808 and a chopped choir; a shamisen's ragged riff,
-// the Japanese in-scale's dark semitone in it ———
-
-/** L1, the lullaby (Fm Fm Db Db Bbm Bbm C C): a note, a sigh a semitone down, much silence. */
-const L1 = `. . . . . . . . C6 - - - - - - - | . . Db6 - C6 - - - - - - - . . . .
-          | . . . . . . . . Ab5 - - - - - - - | . . Bb5 - Ab5 - - - - - - - F5 - - -
-          | . . . . . . . . . . . . F5 - - - | . . Gb5 - F5 - - - - - - - Db5 - - -
-          | E5 - - - - - - - . . . . . . . . | . . F5 - E5 - - - C5 - - - - - - -`;
-
-/** H1, the shamisen's riff: a note struck twice and flicked up, then a fall onto the beat. */
-const H1 = `F4 . F4 Ab4 . F4 . C5 . . Bb4 . Ab4 . . . | . . . . . . Gb4 - F4 - - - - - - -
-          | Db5 . Db5 F5 . Db5 . Ab5 . . Gb5 . F5 . . . | . . . . . . C5 - Db5 - - - - - - -
-          | Bb4 . Bb4 Db5 . Bb4 . F5 . . Eb5 . Db5 . . . | C5 - - - Db5 - - - Bb4 - - - - - - -
-          | C5 - - - G4 - - - E5 - - - C5 - - - | . . . . . . . . . . Db5 - C5 - - -`;
+// ——— Kabukicho Rain (neonCity): dark cyberpunk industrial on a witch-house half-time, F minor at
+// 140, felt at 70 — after Cyberpunk 2077's Night City and its Japantown. Rain at night, neon
+// smeared in the puddles, steel and steam: a cold march stepping through the Phrygian semitone
+// over a gliding 808 driven until it tears and a chopped dark pad; a shamisen's riff leaping
+// and gliding, the Japanese in-scale's dark semitone in it ———
 
 /** The 808's line, a chord to two bars, sliding between its notes. */
 const RAIN_808 = `F1 - - - - - - - - - F1 - F2 - - - | - - - - C2 - - - - - - - Eb2 - C2 -
@@ -315,6 +304,51 @@ const NEON_808 = `F1 - - - - - - - - - F1 - F2 - - - | Gb1 - - - - - - - - - - -
                 | Db2 - - - - - - - - - Db2 - Ab1 - - - | Bb1 - - - - - - - - - - - F1 - Ab1 -
                 | Bb1 - - - - - - - - - Bb1 - F2 - - - | Gb1 - - - - - - - - - - - Db2 - Gb1 -
                 | C2 - - - - - - - - - C2 - G1 - - - | - - - - E2 - - - - - - - C2 - G1 -`;
+
+/**
+ * N1, the steel march (Fm Fm Db Db Bbm Bbm C C): even quarters stepping through the Phrygian
+ * semitone, cold and level.
+ */
+const N1_MARCH = `F4 - - - Gb4 - - - F4 - - - C5 - - - | Ab4 - - - - - - - G4 - - - Ab4 - - -
+                | F4 - - - Gb4 - - - F4 - - - Db5 - - - | C5 - - - - - - - Ab4 - - - - - - -
+                | Db5 - - - C5 - - - Bb4 - - - F5 - - - | F5 - - - - - - - Eb5 - - - Db5 - - -
+                | E5 - - - - - - - . . . . G4 - - - | C5 - - - - - - - . . . . . . . .`;
+
+/**
+ * R2, the shamisen's riff (Fm Gbmaj7 Db Bbm7 Bbm Gbmaj7 C C), the Japanese quarter's voice in
+ * the city's iron: a call jerking between the root and its octave in 3+3+2, answered every
+ * other bar by a line gliding down by step on held notes.
+ */
+const R2_LEAP = `F4 - - F5 - - C5 - Ab4 - - Ab4 - - F4 - | Db5 - - - - - - - Bb4 - - - Ab4 - Gb4 -
+               | Db5 - - Db5 - - Ab4 - F4 - - F5 - - Eb5 - | Db5 - - - - - C5 - - - Bb4 - - - - -
+               | Bb4 - - F5 - - Db5 - Bb4 - - F5 - - Db5 - | Gb5 - - - - - F5 - - - Db5 - - - - -
+               | C5 - - C5 - - G4 - E4 - - - G4 - - - | G4 - - - - - - - C5 - - - - - - -`;
+
+/**
+ * The riff's calls alone, every other bar, under the second verse's march (Fm Fm Db Db Bbm Bbm C
+ * C): the glides kept for the chorus.
+ */
+const R2_CALLS = `F4 - - F5 - - C5 - Ab4 - - Ab4 - - F4 - | . . . . . . . . . . . . . . . .
+                | Db5 - - Db5 - - Ab4 - F4 - - F5 - - Eb5 - | . . . . . . . . . . . . . . . .
+                | Bb4 - - F5 - - Db5 - Bb4 - - F5 - - Db5 - | . . . . . . . . . . . . . . . .
+                | C5 - - C5 - - G4 - E4 - - - G4 - - - | . . . . . . . . . . . . . . . .`;
+
+/**
+ * The pulse under the chorus (Fm Gbmaj7 Db Bbm7 Bbm Gbmaj7 C C), after "The Rebel Path": the
+ * chord thrumming low in nine sixteenths a bar, below the shamisen.
+ */
+const IRON_PULSE = cycle(
+  [
+    { cell: ['C4', 'Ab3', 'C4', 'Eb4'], bars: 1 },
+    { cell: ['Bb3', 'Db4', 'Bb3', 'Db4'], bars: 1 },
+    { cell: ['Ab3', 'Db4', 'Ab3', 'Db4'], bars: 1 },
+    { cell: ['Bb3', 'Db4', 'Ab3', 'Db4'], bars: 1 },
+    { cell: ['Bb3', 'Db4', 'Bb3', 'Db4'], bars: 1 },
+    { cell: ['Bb3', 'Db4', 'Bb3', 'Db4'], bars: 1 },
+    { cell: ['G3', 'C4', 'G3', 'E4'], bars: 2 },
+  ],
+  euclid(9, 16),
+);
 
 /**
  * The bridge's koto (Db Gbmaj7 Bbm Ebm7 Ab Fm C C): an in-scale phrase falling, plucked bare,
@@ -868,29 +902,32 @@ const SONG_DEFS: SongDef[] = [
     ],
   },
   {
-    // Witch house in half-time: rain at night in Kabukicho. A music box sings the lullaby over a
-    // gliding 808 and a choir chopped into a rhythm; in the second verse a shamisen's riff creeps
-    // in under it, and at the chorus they change places — the shamisen leads, the lullaby above.
-    // The bridge is a koto alone over the choir; rain ticks open and close it, a rain stick for a
-    // crash
+    // Cyberpunk industrial on a witch-house half-time: rain at night in Kabukicho, after
+    // Cyberpunk 2077. A police radio crackles through the rain, then a music box steps through a
+    // cold march over a gliding 808 that tears and a dark pad chopped into a rhythm; steel rings in
+    // the street; in the second verse the shamisen's calls creep in under it, the beat cuts out in
+    // stutters, and the chorus hits on iron — the shamisen's riff whole, leaping and gliding, a
+    // pulse thrumming under it. The bridge is a koto alone, a siren far off; rain ticks open and
+    // close it, a rain stick for a crash
     title: 'Kabukicho Rain',
     bpm: 140,
     swing: 0,
-    level: -3,
+    level: -4,
     scene: 'neonCity',
     kit: 'rain',
-    transitions: 'synth',
-    // The fog of a rainy street, long and dark; the choir sways lightly with the 808 rather
-    // than ducking under it, the 808 being the kick and the bass at once
+    // Cuts, not swells: the turns are the drums, a reverse crash and the beat stuttering out
+    transitions: 'drums',
+    // The fog of a rainy street, long and dark; the pad ducks under the 808's kick, the city's
+    // machinery breathing, and the 808 is driven into its saturation until it tears
     room: 'fog',
-    pump: 0.4,
+    pump: 0.6,
+    grit: 10,
     voices: {
       lead: 'musicBox',
       counter: 'shamisen',
       arp: 'arpPulse',
       bass: 'bass808',
       bassGlide: 0.07,
-      pad: 'choir',
     },
     form: [
       'intro',
@@ -906,22 +943,24 @@ const SONG_DEFS: SongDef[] = [
     ],
     sections: [
       {
-        // Rain on the window and the choir; the lullaby's opening on the celesta, the 808 under it
+        // Rain on the window, a police radio crackling through it; the lullaby's opening on the
+        // celesta, the 808 under it
         name: 'intro',
         tier: 'calm',
         chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
-        lead: tease(L1),
+        lead: tease(N1_MARCH),
         leadVoice: 'celesta',
         bass: 'long',
         drums: 'witchIntro',
         pad: 'swell',
         enter: { lead: 4, bass: 4 },
+        hits: { radioStatic: 'X' + '.'.repeat(8 * STEPS_PER_BAR - 1) },
       },
       {
         name: 'verse',
         tier: 'groove',
         chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
-        lead: L1,
+        lead: N1_MARCH,
         bassLine: RAIN_808,
         drums: 'witch',
         fill: 'stop',
@@ -929,13 +968,13 @@ const SONG_DEFS: SongDef[] = [
         layers: { lead: 0.3 },
       },
       {
-        // The lullaby on the celesta; the shamisen's riff creeps in under it halfway
+        // The march on the celesta; the riff's calls creep in under it halfway, on the shamisen
         name: 'verse2',
         tier: 'groove',
         chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
-        lead: L1,
+        lead: N1_MARCH,
         leadVoice: 'celesta',
-        counter: H1,
+        counter: R2_CALLS,
         bassLine: RAIN_808,
         drums: 'witch',
         fill: 'roll',
@@ -944,6 +983,7 @@ const SONG_DEFS: SongDef[] = [
         enter: { counter: 4 },
       },
       {
+        // No riser: the beat stutters, torn by a gate, and the chorus hits out of it
         name: 'build',
         tier: 'rise',
         chords: 'Bbm | C',
@@ -951,27 +991,26 @@ const SONG_DEFS: SongDef[] = [
         drums: 'witch',
         fill: 'roll',
         pad: 'hold',
-        riser: true,
+        glitch: 'stutter',
       },
       {
-        // The two change places: the shamisen leads, the music box's lullaby above it, and the
+        // The riff whole on the shamisen, its calls and glides, the pulse thrumming under it; the
         // harmony finds the G flat the riff keeps leaning on
         name: 'chorus',
         tier: 'high',
         chords: 'Fm | Gbmaj7 | Db | Bbm7 | Bbm | Gbmaj7 | C | C',
-        lead: H1,
+        lead: R2_LEAP,
         leadVoice: 'shamisen',
-        counter: L1,
-        counterVoice: 'musicBox',
+        arpLine: IRON_PULSE,
         bassLine: NEON_808,
-        drums: 'witch',
+        drums: 'neonIron',
         fill: 'stop',
-        pad: 'chop',
+        // The pulse takes over the chopped pad's rhythm; the pad holds under it
+        pad: 'hold',
         drop: true,
-        enter: { counter: 4 },
       },
       {
-        // A koto alone over the held choir, the 808 gone: the Japanese insert
+        // A koto alone over the held pad, the 808 gone: the Japanese insert, a siren far off
         name: 'bridge',
         tier: 'groove',
         chords: 'Db | Gbmaj7 | Bbm | Ebm7 | Ab | Fm | C | C',
@@ -981,12 +1020,13 @@ const SONG_DEFS: SongDef[] = [
         drums: 'witchIntro',
         pad: 'swell',
         layers: { lead: 0.3 },
+        hits: { siren: '.'.repeat(4 * STEPS_PER_BAR) + 'o' + '.'.repeat(4 * STEPS_PER_BAR - 1) },
       },
       {
         name: 'outro',
         tier: 'calm',
         chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
-        lead: tease(L1),
+        lead: tease(N1_MARCH),
         leadVoice: 'celesta',
         bass: 'long',
         drums: 'witchIntro',

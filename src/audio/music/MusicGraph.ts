@@ -19,6 +19,7 @@ const ECHO_DAMPING = 3500; // Hz, low-pass inside the feedback loop
 const SATURATION = {
   BASS_KNEE: 0.22,
   BASS_MAKEUP: 1.25, // what the bend takes off the bass's peaks, given back
+  GRIT_TRIM: 0.5, // share of a song's bass drive taken back after the bend
   DRUMS_KNEE: 0.55,
 } as const;
 // Every kick pushes the bass and pads down for a moment and lets them swell back: the
@@ -68,6 +69,7 @@ const GLITCH = {
  * - the pumps duck the bass and pads under every kick (`pump`), as deep as the song asks
  * - each song plays in its own room (`setSongSpace`), built ahead of it (`prepareRoom`)
  * - songLevel evens out the songs' loudness (`setSongLevel`)
+ * - the bass is driven into its saturation as hard as the song asks (`setBassGrit`)
  * - toneFilter follows the game state (muffled in menus and pause), set per step
  * - dramaFilter muffles on match point; separate so it never fights the tone filter
  * - tapeDelay sits at 0 ms until a tape stop sweeps it to bend the pitch down
@@ -102,6 +104,10 @@ export class MusicGraph {
 
   private readonly echoes: DelayNode[];
   private readonly bassPump: GainNode;
+  /** Drives the bass into its saturation as hard as the song asks, and trims it back after. */
+  private readonly bassGrit: GainNode;
+  private readonly bassGritTrim: GainNode;
+  private gritDb: number | null = null;
   private readonly padsPump: GainNode;
   private readonly songLevel: GainNode;
   private songLevelDb: number | null = null;
@@ -173,8 +179,12 @@ export class MusicGraph {
     const bassSaturation = createSoftClipper(ac, SATURATION.BASS_KNEE);
     const bassMakeup = ac.createGain();
     bassMakeup.gain.value = SATURATION.BASS_MAKEUP;
-    this.bass.connect(bassSaturation.input);
-    bassSaturation.output.connect(bassMakeup);
+    this.bassGrit = ac.createGain();
+    this.bassGritTrim = ac.createGain();
+    this.bass.connect(this.bassGrit);
+    this.bassGrit.connect(bassSaturation.input);
+    bassSaturation.output.connect(this.bassGritTrim);
+    this.bassGritTrim.connect(bassMakeup);
     bassMakeup.connect(this.bassPump);
     this.bassPump.connect(this.bus);
 
@@ -334,6 +344,18 @@ export class MusicGraph {
     } catch {
       // Play on without the breathing rather than break audio
     }
+  }
+
+  /**
+   * dB the song drives its bass by into the saturation, from `time`: the harder, the more it
+   * tears, as an industrial bass does. Half of it is trimmed back after, since the bend already
+   * holds the peaks down. Only acts when it changes.
+   */
+  public setBassGrit(db: number, time: number): void {
+    if (db === this.gritDb) return;
+    this.gritDb = db;
+    this.bassGrit.gain.setTargetAtTime(dbToGain(db), time, 0.05);
+    this.bassGritTrim.gain.setTargetAtTime(dbToGain(-db * SATURATION.GRIT_TRIM), time, 0.05);
   }
 
   /** The song's own level in dB, from `time`: songs are evened out so none jumps out. */

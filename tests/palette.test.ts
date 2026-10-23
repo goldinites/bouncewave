@@ -69,7 +69,6 @@ describe('the wider palette’s sounds freed', () => {
     for (const kept of [
       'leadMusicBox',
       'leadShamisen',
-      'padChoir',
       'rainstick',
       'leadGamelan',
       'sampho',
@@ -77,7 +76,7 @@ describe('the wider palette’s sounds freed', () => {
     ]) {
       expect(free).not.toContain(kept);
     }
-    for (const freed of ['leadShakuhachi', 'odaiko', 'conga', 'bassSlap', 'siren']) {
+    for (const freed of ['leadShakuhachi', 'odaiko', 'conga', 'bassSlap', 'padChoir']) {
       expect(free).toContain(freed);
     }
     expect(free.every((id) => LAZY_SOUND_IDS.includes(id))).toBe(true);

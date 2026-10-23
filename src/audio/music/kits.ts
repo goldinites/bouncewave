@@ -81,7 +81,8 @@ export const KITS = {
     metal: 'clang',
     perc: 'rim',
   },
-  // Rain (neonCity): the long 808, a dry snare, and a rain stick where a crash would be
+  // Rain (neonCity): the long 808, a dry snare, steel for the metal, an industrial impact under
+  // the drop, and a rain stick where a crash would be
   rain: {
     kick: 'kick808',
     snare: 'snare',
@@ -93,6 +94,7 @@ export const KITS = {
     taiko: 'taiko',
     metal: 'clang',
     perc: 'shaker',
+    impact: 'impact',
   },
   // Japan (fuji, dojo): the great odaiko for the taiko, a gong for the crash, wood for the rest
   japan: {

@@ -223,6 +223,11 @@ export interface SongDef {
    * pumping of darksynth, 0 for a band that breathes by its own playing. 1 if left out.
    */
   pump?: number;
+  /**
+   * dB the bass is driven by into its saturation: 0 for a clean bass, 10 or more for one that
+   * tears, as an industrial track's does. 0 if left out.
+   */
+  grit?: number;
   sections: SectionDef[];
 }
 
