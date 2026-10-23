@@ -37,32 +37,26 @@ export class SkillMenu {
 
     this.el = document.createElement('nav');
     this.el.setAttribute('aria-label', 'Skills (debug)');
+    this.el.className = 'dbg-grid';
+    // Placed by the debug dock (DebugDock.ts)
     Object.assign(this.el.style, {
-      position: 'fixed',
-      top: 'calc(60px + env(safe-area-inset-top, 0px))',
-      right: 'calc(6px + env(safe-area-inset-right, 0px))',
-      zIndex: '9999',
       display: 'none',
-      gridTemplateColumns: 'auto auto auto auto',
-      columnGap: '8px',
-      rowGap: '2px',
-      alignItems: 'center',
-      padding: '4px 8px',
-      font: '12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-      color: '#19f0ff',
-      background: 'rgba(0, 0, 0, 0.6)',
-      borderRadius: '4px',
     });
 
     const heading = ['skills', 'you', 'cpu', 'used'].map((text) => {
       const cell = document.createElement('span');
       cell.textContent = text;
-      cell.style.color = '#7cfc8a';
+      cell.className = 'dbg-muted';
       return cell;
     });
     this.el.append(...heading);
     for (const skill of skills) this.addRow(skill, chosen);
     document.body.appendChild(this.el);
+  }
+
+  /** The panel's element, for the debug dock to place. */
+  public get element(): HTMLElement {
+    return this.el;
   }
 
   public setVisible(isVisible: boolean): void {
@@ -105,7 +99,7 @@ export class SkillMenu {
 
     const count = document.createElement('span');
     count.textContent = '0·0';
-    count.style.color = '#ffe53b';
+    count.className = 'dbg-mono';
     this.counts.set(skill, count);
 
     this.el.append(name, box('player'), box('cpu'), count);

@@ -3,6 +3,7 @@ import { FixedStep } from '@/app/FixedStep';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
 import { BackgroundMenu } from '@/debug/BackgroundMenu';
+import { DebugDock, DockPanel } from '@/debug/DebugDock';
 import { FpsMeter } from '@/debug/FpsMeter';
 import { ModifierMenu } from '@/debug/ModifierMenu';
 import { SkillMenu, SkillOwner } from '@/debug/SkillMenu';
@@ -137,6 +138,7 @@ export class Game {
   /** Switches the match modifiers on and off for the next quick match. */
   private readonly modifierMenu: ModifierMenu;
   private readonly soundStand: SoundStand;
+  private readonly debugDock: DebugDock;
   /** How often each skill went off in the match on court, for the skill menu. */
   private readonly skillUses = new Map<SkillId, [number, number]>();
   /** The background the debug overlay last showed, to notice when the next match changes it. */
@@ -202,12 +204,17 @@ export class Game {
     });
     // ?song=neon-cathedral&part=chorus&mute=drums holds the music there (the listening stand)
     this.soundStand = new SoundStand(this.audio);
-    this.fpsMeter = new FpsMeter((isVisible) => {
-      this.modifierMenu.setVisible(isVisible);
-      this.soundStand.setVisible(isVisible);
-      this.backgroundMenu.setVisible(isVisible);
-      this.skillMenu.setVisible(isVisible);
-    });
+    // The FPS meter heads one dock of the tools, a tab each, so none crowds another or the court
+    let debugDock: DebugDock | null = null;
+    this.fpsMeter = new FpsMeter((isVisible) => debugDock?.setVisible(isVisible));
+    debugDock = new DebugDock(this.fpsMeter.element, [
+      this.panel('bg', this.backgroundMenu),
+      this.panel('skills', this.skillMenu),
+      this.panel('mods', this.modifierMenu),
+      this.panel('sound', this.soundStand),
+    ]);
+    debugDock.setVisible(this.fpsMeter.isShown);
+    this.debugDock = debugDock;
     // The music opens with the song of whichever backdrop comes up first
     this.audio.music.enterScene(this.renderer.scene);
     this.showDebugDetail();
@@ -723,6 +730,14 @@ export class Game {
    * Shows the dynamic resolution, the last challenge verdict and the background in the ?debug
    * overlay and its menu.
    */
+  /** A debug tool as a tab of the dock. */
+  private panel(
+    name: string,
+    tool: { element: HTMLElement; setVisible(isVisible: boolean): void },
+  ): DockPanel {
+    return { name, element: tool.element, setVisible: (isVisible) => tool.setVisible(isVisible) };
+  }
+
   private showDebugDetail(): void {
     this.debugScene = this.renderer.scene;
     const verdict = this.lastVerdict;
@@ -868,5 +883,6 @@ export class Game {
     this.skillMenu.dispose();
     this.modifierMenu.dispose();
     this.soundStand.dispose();
+    this.debugDock.dispose();
   }
 }

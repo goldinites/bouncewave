@@ -24,26 +24,23 @@ export class ModifierMenu {
 
     this.el = document.createElement('nav');
     this.el.setAttribute('aria-label', 'Modifiers (debug)');
+    // Placed by the debug dock (DebugDock.ts)
     Object.assign(this.el.style, {
-      position: 'fixed',
-      top: 'calc(150px + env(safe-area-inset-top, 0px))',
-      right: 'calc(6px + env(safe-area-inset-right, 0px))',
-      zIndex: '9999',
       display: 'none',
       flexDirection: 'column',
-      gap: '2px',
-      padding: '4px 8px',
-      font: '12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-      color: '#19f0ff',
-      background: 'rgba(0, 0, 0, 0.6)',
-      borderRadius: '4px',
+      gap: '6px',
     });
 
     const title = document.createElement('span');
-    title.textContent = 'mods · next match';
-    title.style.color = '#7cfc8a';
+    title.textContent = 'Played from the next quick match on';
+    title.className = 'dbg-muted';
     this.el.append(title, ...modifiers.map((id) => this.createRow(id, chosen.includes(id))));
     document.body.appendChild(this.el);
+  }
+
+  /** The panel's element, for the debug dock to place. */
+  public get element(): HTMLElement {
+    return this.el;
   }
 
   public setVisible(isVisible: boolean): void {

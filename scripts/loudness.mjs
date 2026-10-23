@@ -44,7 +44,7 @@ async function measure(song) {
   const extra = (mute ? `&mute=${mute}` : '') + (lead ? `&lead=${lead}` : '');
   await page.goto(`${base}?debug&song=${song}&part=${parts[0]}${extra}`);
   await page.waitForTimeout(800);
-  await page.click('[data-stand="toggle"]');
+  await page.click('[data-tab="sound"]');
   await page.evaluate((level) => {
     const range = document.querySelector('input[data-level="intensity"]');
     range.value = String(level);

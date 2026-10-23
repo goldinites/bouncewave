@@ -14,6 +14,7 @@ import {
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
+import { debugHeading } from '@/debug/theme';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
 // The player's form strip: each part coloured by its heat
@@ -94,7 +95,6 @@ export class SoundStand {
   private readonly listeners = new AbortController();
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
   private readoutTimer: ReturnType<typeof setInterval> | null = null;
-  private isOpen = false;
   private isVisible = false;
   /** The master's loudness summed since the music last changed place, for an average. */
   private loudness = { power: 0, readings: 0 };
@@ -104,31 +104,11 @@ export class SoundStand {
 
     this.el = document.createElement('section');
     this.el.setAttribute('aria-label', 'Sound stand (debug)');
-    Object.assign(this.el.style, {
-      position: 'fixed',
-      bottom: 'calc(6px + env(safe-area-inset-bottom, 0px))',
-      left: 'calc(6px + env(safe-area-inset-left, 0px))',
-      zIndex: '9999',
-      display: 'none',
-      flexDirection: 'column',
-      gap: '4px',
-      padding: '4px 8px',
-      width: 'min(260px, calc(100vw - 12px))',
-      maxHeight: '70vh',
-      overflowY: 'auto',
-      boxSizing: 'border-box',
-      font: '12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-      color: '#19f0ff',
-      background: 'rgba(0, 0, 0, 0.75)',
-      borderRadius: '4px',
-    });
-
-    const toggle = this.button('♪ sound stand', () => this.setOpen(!this.isOpen));
-    toggle.style.color = '#7cfc8a';
-    toggle.dataset.stand = 'toggle';
+    // Placed by the debug dock (DebugDock.ts), in its "sound" tab
+    Object.assign(this.el.style, { display: 'none', flexDirection: 'column', gap: '6px' });
 
     this.body = document.createElement('div');
-    Object.assign(this.body.style, { display: 'none', flexDirection: 'column', gap: '4px' });
+    Object.assign(this.body.style, { display: 'flex', flexDirection: 'column', gap: '6px' });
 
     this.songSelect = this.select('song', [
       ['', '— the game’s —'],
@@ -151,30 +131,41 @@ export class SoundStand {
     const next = this.button('⏭', () => this.stepSong(1));
     next.dataset.player = 'next';
     this.clock = document.createElement('span');
-    this.clock.style.color = '#ffd84d';
+    this.clock.className = 'dbg-mono';
     const player = this.row(previous, this.pauseButton, next, this.clock);
     this.timeline = document.createElement('div');
     this.timeline.dataset.stand = 'timeline';
-    Object.assign(this.timeline.style, { display: 'flex', gap: '1px', height: '14px' });
+    Object.assign(this.timeline.style, { display: 'flex', gap: '2px', height: '16px' });
 
-    this.readout = document.createElement('span');
-    this.readout.style.color = '#ffd84d';
+    this.readout = document.createElement('div');
+    this.readout.className = 'dbg-status dbg-mono';
 
     this.body.append(
+      debugHeading('Player'),
       player,
       this.timeline,
+      debugHeading('Music'),
       this.songSelect,
       this.partSelect,
+      debugHeading('Heat (ticked: held by the stand)'),
       this.slider('intensity', (level) => this.audio.music.pinIntensity(level)),
       this.slider('climax', (level) => this.audio.music.pinClimax(level)),
+      debugHeading('Layers'),
       this.layerRows(),
+      debugHeading('Game sounds'),
       this.soundButtons(),
+      debugHeading('Status'),
       this.readout,
     );
-    this.el.append(toggle, this.body);
+    this.el.append(this.body);
     document.body.appendChild(this.el);
 
     this.restoreFromAddress();
+  }
+
+  /** The panel's element, for the debug dock to place. */
+  public get element(): HTMLElement {
+    return this.el;
   }
 
   public setVisible(isVisible: boolean): void {
@@ -226,15 +217,9 @@ export class SoundStand {
     this.audio.music.audition(song, this.partSelect.value || null);
   }
 
-  private setOpen(isOpen: boolean): void {
-    this.isOpen = isOpen;
-    this.body.style.display = isOpen ? 'flex' : 'none';
-    this.updateReadoutTimer();
-  }
-
   /** The readout runs only while someone can see it. */
   private updateReadoutTimer(): void {
-    const shouldRun = this.isOpen && this.isVisible;
+    const shouldRun = this.isVisible;
     if (shouldRun && this.readoutTimer === null) {
       this.showReadout();
       this.readoutTimer = setInterval(() => this.showReadout(), READOUT_MS);
@@ -373,7 +358,7 @@ export class SoundStand {
     const rows = this.row(
       ...MUSIC_LAYERS.map((layer) => {
         const label = document.createElement('label');
-        Object.assign(label.style, { display: 'flex', gap: '3px', alignItems: 'center' });
+        Object.assign(label.style, { display: 'flex', gap: '4px', alignItems: 'center' });
         const box = document.createElement('input');
         box.type = 'checkbox';
         box.checked = true;
@@ -392,6 +377,7 @@ export class SoundStand {
     );
     rows.append(this.glideSwitch());
     rows.style.flexWrap = 'wrap';
+    rows.style.columnGap = '12px';
     return rows;
   }
 
@@ -467,14 +453,23 @@ export class SoundStand {
     range.style.flex = '1';
     const label = document.createElement('span');
     label.textContent = name;
-    label.style.minWidth = '9ch';
-    const apply = () => pin(box.checked ? Number(range.value) : null);
+    label.style.minWidth = '8ch';
+    // The value it holds, or that the game is free to move it
+    const value = document.createElement('span');
+    value.className = 'dbg-mono dbg-muted';
+    value.style.minWidth = '4ch';
+    value.style.textAlign = 'right';
+    const apply = () => {
+      value.textContent = box.checked ? Number(range.value).toFixed(2) : 'game';
+      pin(box.checked ? Number(range.value) : null);
+    };
+    value.textContent = 'game';
     this.on(box, 'change', apply);
     this.on(range, 'input', () => {
       box.checked = true;
       apply();
     });
-    return this.row(box, label, range);
+    return this.row(box, label, range, value);
   }
 
   private select(name: string, options: [string, string][]): HTMLSelectElement {
@@ -496,22 +491,13 @@ export class SoundStand {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = text;
-    Object.assign(button.style, {
-      font: 'inherit',
-      color: 'inherit',
-      background: 'rgba(25, 240, 255, 0.12)',
-      border: '1px solid rgba(25, 240, 255, 0.4)',
-      borderRadius: '3px',
-      padding: '2px 6px',
-      cursor: 'pointer',
-    });
     this.on(button, 'click', onClick);
     return button;
   }
 
   private row(...children: HTMLElement[]): HTMLElement {
     const row = document.createElement('div');
-    Object.assign(row.style, { display: 'flex', gap: '4px', alignItems: 'center' });
+    Object.assign(row.style, { display: 'flex', gap: '6px', alignItems: 'center' });
     row.append(...children);
     return row;
   }

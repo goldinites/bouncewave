@@ -35,8 +35,8 @@ reason, in the commit that needs it. Run `npm run sim` (a few minutes; `SIM_MATC
 changes the balance — a level, a skill, a challenge — and quote its tables. Run `test:visual` after anything that can change what a
 background draws; its baselines are Windows renders of `e2e/stand` (seeded randomness, fixed
 time). Update them with `npm run test:visual -- --update-snapshots` only for an intended change,
-after showing the user the new pictures. In the browser: `?debug` or F3 shows the FPS overlay and a menu of
-backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts`);
+after showing the user the new pictures. In the browser: `?debug` or F3 shows the debug dock (the FPS line,
+then a tab each for backgrounds, skills, modifiers and the sound stand); `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts`);
 `?challenge=<id>` makes every match that challenge (ids in `src/match/challenges.ts`), its last
 verdict shown in the debug overlay; `?skills=arc,analyzer,reflex` gives the player those skills in every
 match against the CPU, `?cpuSkills=` the CPU (ids in `src/match/skills/Skill.ts`); the debug
