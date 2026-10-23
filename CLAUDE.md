@@ -29,7 +29,7 @@ npm run test:e2e      # Playwright smoke: desktop, phone portrait and landscape 
 npm run test:perf     # every background's frame time vs e2e/frameBudget.ts (CI runs it too)
 npm run test:visual   # every background vs its saved picture in e2e/__screenshots__ (local only)
 npm run sim           # balance report, AI against AI: levels, rallies, skills, challenges (local only)
-npm run loudness -- <song-id> ...  # each part's loudness and the `level` change to -25 dB (local only)
+npm run render -- <song-id> ...    # a song rendered silently into renders/<id>/: pictures and a report (local only)
 ```
 
 All four checks (tests, types, lint, format), the smoke and the frame budget must pass before a

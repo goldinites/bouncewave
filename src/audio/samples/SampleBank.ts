@@ -246,6 +246,11 @@ export class SampleBank {
     return variants[turn % variants.length];
   }
 
+  /** Every sound starts again from its first variant: renders that must match play the same takes. */
+  public rewind(): void {
+    this.turns.clear();
+  }
+
   /**
    * Frees rendered sounds, so a sound no song in play needs takes no memory; asked for again, it
    * is rendered again. A note already playing keeps its buffer until it ends.

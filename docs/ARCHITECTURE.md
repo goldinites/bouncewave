@@ -127,7 +127,7 @@ section's `layers` say from what intensity each part comes in; its `feel` (half-
 counter answering a resting lead. Its id is its title in lower case with dashes; listen to it, part by
 part and layer by layer, on the debug overlay's sound stand (`debug/SoundStand.ts`,
 `?song=neon-cathedral&part=chorus&mute=drums`). Its `level` evens out its loudness against the others,
-read off the stand's meter (`npm run loudness`). Its space is its own: `room` (a reverb from
+measured on a render of it (`npm run render`). Its space is its own: `room` (a reverb from
 `audio/music/rooms.ts`, crossfaded in when the song comes up), `pump` (how deep the bass and pads
 dip under the kick) and `grit` (how hard the bass is driven into its saturation).
 

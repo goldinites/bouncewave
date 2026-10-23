@@ -88,11 +88,13 @@ export class MusicEngine {
    * Builds the audio graph and starts the scheduler; safe to call more than once.
    * @param output where the music goes: the mixer's music bus
    * @param samples the rendered instruments; until one is ready its live synth plays
+   * @param clock 'manual' for an offline render: the renderer calls `tick` as its clock advances
    */
   public init(
     audioContext: AudioContext,
     output: AudioNode = audioContext.destination,
     samples: SampleBank = this.samples,
+    clock: 'timer' | 'manual' = 'timer',
   ): void {
     if (this.graph) return;
 
@@ -110,11 +112,19 @@ export class MusicEngine {
       audioContext,
       {
         playStep: (time) => this.playStep(time, graph, arrangement),
-        // During a tape stop no new notes are scheduled; the clock resyncs on recover
-        canRun: () => audioContext.state === 'running' && !this.isTapeStopped,
+        // During a tape stop no new notes are scheduled; the clock resyncs on recover. An
+        // offline render is suspended whenever it ticks, so its state says nothing
+        canRun: () =>
+          (clock === 'manual' || audioContext.state === 'running') && !this.isTapeStopped,
+        hasTimer: clock === 'timer',
       },
       START_DELAY,
     );
+  }
+
+  /** Schedules the steps due now: an offline render's clock, in place of the timer. */
+  public tick(): void {
+    this.scheduler?.tick();
   }
 
   /** Latest game state; read by the scheduler on its next tick. */

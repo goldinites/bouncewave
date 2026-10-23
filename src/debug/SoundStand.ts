@@ -193,7 +193,7 @@ export class SoundStand {
 
     // Another lead, bass, pad or kit on every song, by link only (`&lead=marimba&kit=japan`):
     // how a sound of the wider palette is heard before a track plays it, and how
-    // `npm run loudness -- --lead=` levels the leads
+    // `npm run render -- --lead=` levels the leads
     const overrides: VoiceOverrides = {};
     const lead = params.get('lead');
     const bass = params.get('bass');

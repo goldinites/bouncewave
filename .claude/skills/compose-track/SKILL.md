@@ -18,7 +18,7 @@ and a choice, never with a finished track written blind.
   `src/audio/music/compose.ts`, written lines (`bassLine`, `arpLine`), a `sweep`. Make them
   contrast: key or mode, tempo, rhythm, the reference each follows.
 - Keep the lines' notes in their instruments' ranges (`tests/songs.test.ts` checks it).
-- Level them: `npm run loudness -- --parts=hook,hot <ids>`, set `level`, measure again.
+- Level them: `npm run render -- <ids>`, set `level` as its report says, render again.
 - Tell the user what each is and its reference, and ask which one (or two) to keep.
 
 ## 2. Melodies over the chosen base
@@ -43,8 +43,12 @@ and a choice, never with a finished track written blind.
   moves material into one key.
 - Replace the backdrop's previous track (same `scene`); remove the sketches and their unused
   constants.
-- Level it to −25 dB with `npm run loudness -- <id>`; watch it on the stand walk its form and
-  reach its chorus on a full climax.
+- Render it (`npm run render -- <id>`, `docs/AUDIO.md` "Рендер") and look before the user
+  listens: level it to −25 dB as the report says; fix what the pictures and numbers show — mud
+  or an empty band in the spectrogram, the melody and the arpeggio sharing a register (white on
+  `lead-arp.png`), a paddle hit not heard over the loudest part, a phone losing the bass, a
+  stretch of more than 16 bars without a change of texture. Tell the user what you fixed; taste
+  stays theirs. Then watch it on the stand walk its form and reach its chorus on a full climax.
 - Write the track into `docs/AUDIO.md` as it now is: its row in the soundtrack table and in
   "Треки сейчас" (key, melodic gesture and register, beat and kit, room, `pump`, `grit`), so the
   next track can avoid them; the track's state in `docs/ROADMAP.md`'s "Где сейчас", not a log of
