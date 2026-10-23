@@ -35,15 +35,17 @@ reason, in the commit that needs it. Run `npm run sim` (a few minutes; `SIM_MATC
 changes the balance — a level, a skill, a challenge — and quote its tables. Run `test:visual` after anything that can change what a
 background draws; its baselines are Windows renders of `e2e/stand` (seeded randomness, fixed
 time). Update them with `npm run test:visual -- --update-snapshots` only for an intended change,
-after showing the user the new pictures. In the browser: `?debug` or F3 shows the FPS overlay and a menu of
-backgrounds; `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts`);
+after showing the user the new pictures. In the browser: `?debug` or F3 shows the debug dock (the FPS line,
+then a tab each for backgrounds, skills, modifiers and the sound stand); `?bg=<scene>` pins a background (scene ids in `src/shared/scenes.ts`);
 `?challenge=<id>` makes every match that challenge (ids in `src/match/challenges.ts`), its last
 verdict shown in the debug overlay; `?skills=arc,analyzer,reflex` gives the player those skills in every
 match against the CPU, `?cpuSkills=` the CPU (ids in `src/match/skills/Skill.ts`); the debug
 overlay has switches for both and counts their uses; `?mods=wind,darkness` plays quick matches with
 those modifiers (ids in `src/match/modifiers/Modifier.ts`), also switched in the debug overlay;
-`?song=night-drive&part=chorus&mute=drums` holds the music to a song, its part and layers (the debug
-overlay's sound stand, which also plays every action sound; song ids are titles in kebab case);
+`?song=neon-cathedral&part=chorus&mute=drums` holds the music to a song, its part and layers
+(`part=whole-form` plays the whole form in order, peaks included; `&lead=sax`, `&bass=bassSlap`,
+`&pad=choir`, `&kit=japan` swap the lead, bass, pad and kit on any song (the wider palette,
+`src/audio/music/palette.ts`); the debug overlay's sound stand, which also plays every action sound; song ids are titles in kebab case);
 `?tutorial=perfect` starts the tutorial at that step (ids in `src/match/tutorial.ts`).
 
 ## Architecture

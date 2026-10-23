@@ -21,7 +21,7 @@ export class FpsMeter {
   private count = 0;
   private lastTimestamp = 0;
   private lastRefresh = 0;
-  private statsText = 'FPS ...';
+  private statsText = '… fps';
   private detail = '';
   private errorCount = 0;
   private lastError = '';
@@ -33,18 +33,10 @@ export class FpsMeter {
     this.onVisibilityChange = onVisibilityChange;
     this.el = document.createElement('div');
     this.el.setAttribute('aria-hidden', 'true');
+    this.el.className = 'dbg-fps dbg-mono';
+    // Placed by the debug dock (DebugDock.ts)
     Object.assign(this.el.style, {
-      position: 'fixed',
-      top: 'calc(6px + env(safe-area-inset-top, 0px))',
-      left: 'calc(6px + env(safe-area-inset-left, 0px))',
-      zIndex: '9999',
-      padding: '4px 8px',
-      font: '12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
       whiteSpace: 'pre-wrap',
-      maxWidth: 'calc(100vw - 12px)',
-      color: '#7cfc8a',
-      background: 'rgba(0, 0, 0, 0.6)',
-      borderRadius: '4px',
       pointerEvents: 'none',
       userSelect: 'none',
       display: 'none',
@@ -53,6 +45,16 @@ export class FpsMeter {
 
     this.setVisible(new URLSearchParams(window.location.search).has('debug'));
     window.addEventListener('keydown', this.onKeyDown);
+  }
+
+  /** Whether the tools are shown (`?debug`, F3). */
+  public get isShown(): boolean {
+    return this.visible;
+  }
+
+  /** The panel's element, for the debug dock to place. */
+  public get element(): HTMLElement {
+    return this.el;
   }
 
   /** Call once per frame with the timestamp passed by requestAnimationFrame. */
@@ -115,10 +117,10 @@ export class FpsMeter {
     const nowFps = 1000 / Math.max(lastDelta, 0.001);
 
     this.statsText =
-      `FPS ${avgFps.toFixed(0).padStart(3)}  (now ${nowFps.toFixed(0)})\n` +
-      `ms  ${avgMs.toFixed(1).padStart(5)}  (worst ${worst.toFixed(1)})`;
+      `${avgFps.toFixed(0)} fps · now ${nowFps.toFixed(0)} · ` +
+      `${avgMs.toFixed(1)} ms · worst ${worst.toFixed(0)}`;
     this.updateText();
-    this.el.style.color = avgFps >= 55 ? '#7cfc8a' : avgFps >= 30 ? '#ffd84d' : '#ff5c5c';
+    this.el.dataset.state = avgFps >= 55 ? 'good' : avgFps >= 30 ? 'warn' : 'bad';
   }
 
   private setVisible(value: boolean): void {
@@ -131,7 +133,7 @@ export class FpsMeter {
     this.count = 0;
     this.lastTimestamp = 0;
     this.lastRefresh = 0;
-    this.statsText = 'FPS ...';
+    this.statsText = '… fps';
     this.updateText();
   }
 

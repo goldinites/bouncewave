@@ -1,5 +1,5 @@
 import { Arrangement, BASS_LOW } from '@/audio/music/Arrangement';
-import { Conductor } from '@/audio/music/Conductor';
+import { Conductor, WHOLE_FORM } from '@/audio/music/Conductor';
 import { Harmony, HarmonyTimeline } from '@/audio/music/HarmonyTimeline';
 import { Instruments } from '@/audio/music/Instruments';
 import {
@@ -11,10 +11,8 @@ import {
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { PitchedSampleId } from '@/audio/samples/pitched';
-import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
+import { soundsFor, VoiceOverrides } from '@/audio/music/palette';
 import { SampleBank } from '@/audio/samples/SampleBank';
-import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
 import { chordAt, LeadVoice, MusicLayer, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { StepScheduler } from '@/audio/music/StepScheduler';
@@ -64,7 +62,7 @@ export class MusicEngine {
   private instruments: Instruments | null = null;
   private arrangement: Arrangement | null = null;
   private isGlideOn = true;
-  private leadOverride: LeadVoice | null = null;
+  private overrides: VoiceOverrides = {};
   private samples = new SampleBank();
   private readonly harmony = new HarmonyTimeline(HARMONY_HISTORY);
 
@@ -102,7 +100,7 @@ export class MusicEngine {
     this.instruments = new Instruments(graph, samples);
     const arrangement = new Arrangement(this.instruments, graph, this.mutedLayers);
     arrangement.isGlideOn = this.isGlideOn;
-    arrangement.leadOverride = this.leadOverride;
+    arrangement.overrides = this.overrides;
     this.arrangement = arrangement;
     this.graph = graph;
     this.prepare(this.conductor.song);
@@ -187,11 +185,12 @@ export class MusicEngine {
 
   /**
    * The listening stand holds the music to a song and, if `part` names one of its sections, to
-   * that section, from the next bar line; the music then sounds as in a match even behind the
+   * that section, or with `WHOLE_FORM` to its whole form in order from step `fromStep` of it, from
+   * the next bar line; the music then sounds as in a match even behind the
    * menus. Null song lets the game lead again.
    * @returns false if there is no such song or section (nothing changes)
    */
-  public audition(songId: string | null, part: string | null = null): boolean {
+  public audition(songId: string | null, part: string | null = null, fromStep = 0): boolean {
     const { conductor } = this;
     if (songId === null) {
       conductor.pinTo(null);
@@ -200,118 +199,42 @@ export class MusicEngine {
     const songIndex = SONGS.findIndex((song) => song.id === songId);
     if (songIndex < 0) return false;
     const sectionIndex =
-      part === null ? null : SONGS[songIndex].sections.findIndex((s) => s.name === part);
+      part === null || part === WHOLE_FORM
+        ? part
+        : SONGS[songIndex].sections.findIndex((s) => s.name === part);
     if (sectionIndex === -1) return false;
-    conductor.pinTo(songIndex, sectionIndex, this.wantedTier());
+    conductor.pinTo(songIndex, sectionIndex, this.wantedTier(), fromStep);
     // Before the first step there is nothing to finish: start the song right away
     if (this.currentStep === 0) conductor.advance();
     return true;
   }
 
-  /** The way into the auditioned section again, from the next bar line. */
-  public replayTransition(): void {
-    this.conductor.replayTransition();
-  }
-
-  /**
-   * The listening stand plays one rendered sound on the drums stem, its next variant each time.
-   * @returns false if it isn't rendered (or the audio hasn't started)
-   */
-  /**
-   * The listening stand plays a transition as the songs do: a swell ends on a downbeat (here,
-   * its full length from now).
-   * @returns false if it isn't rendered (or the audio hasn't started)
-   */
-  public playTransition(id: TransitionSampleId, volume = 0.3): boolean {
-    if (!this.graph || !this.instruments) return false;
-    const now = this.graph.context.currentTime + 0.01;
-    const recipe = TRANSITION_SAMPLES[id];
-    const end = 'shape' in recipe && recipe.shape === 'swell' ? now + recipe.duration : undefined;
-    return this.instruments.transition(id, now, volume, end);
-  }
-
-  public playSample(id: string, volume = 0.8): boolean {
-    const buffer = this.samples.pick(id);
-    if (!buffer || !this.graph || !this.instruments) return false;
-    this.instruments.sample(
-      buffer,
-      this.graph.context.currentTime + 0.01,
-      volume,
-      1,
-      this.graph.drums,
-    );
-    return true;
-  }
-
-  /**
-   * The listening stand plays a short phrase on a pitched instrument, in its own register and
-   * stem, through the same envelope and filter the songs use.
-   */
-  public playPhrase(id: PitchedSampleId): void {
-    const { graph, instruments: play } = this;
-    if (!graph || !play) return;
-    const at = (beat: number) => graph.context.currentTime + 0.02 + beat * 0.25;
-    const line = (notes: number[], length: number, each: (note: number, time: number) => void) =>
-      notes.forEach((note, i) => each(note, at(i * length)));
-    switch (id) {
-      case 'bassSaw':
-      case 'bassReese':
-      case 'bassFm':
-      case 'bass808':
-        return line([28, 28, 40, 35, 31, 33], 1, (note, time) =>
-          play.bass(id, note, time, 0.22, 0.2, graph.bass, 1400),
-        );
-      case 'arpPulse':
-        return line([57, 60, 64, 69, 72, 76, 81, 76], 0.5, (note, time) =>
-          play.arp(id, note, time, 0.2, 0.06, graph.melody, 3500),
-        );
-      case 'supersaw':
-      case 'squareLead':
-      case 'pluck': {
-        const voice = id === 'supersaw' ? 'saw' : id === 'squareLead' ? 'square' : 'pluck';
-        line([69, 72, 76], 1, (note, time) =>
-          play.lead(voice, note, time, 0.24, 0.08, graph.melody, 3000),
-        );
-        play.lead(voice, 79, at(3), 1.4, 0.08, graph.melody, 3000);
-        return;
-      }
-      case 'pad':
-        return play.pad([57, 60, 64, 67], at(0), 2.5, 0.03, 2500, false);
-      case 'brass':
-        return line([0, 0, 1], 1.5, (_, time) => play.stab([57, 60, 64], time, 0.3, 0.06));
-    }
-  }
-
-  /**
-   * The listening stand plays every lead on another voice, null for the songs' own; a voice only
-   * auditioned (audio/samples/leads.ts) is rendered first, the live supersaw standing in meanwhile.
-   */
+  /** The listening stand plays every lead on another voice, null for the songs' own. */
   public setLeadVoice(voice: LeadVoice | null): void {
-    this.leadOverride = voice;
-    if (this.arrangement) this.arrangement.leadOverride = voice;
-    if (voice) this.renderLeads([voice]);
+    this.setOverrides({ ...this.overrides, lead: voice ?? undefined });
   }
 
   /**
-   * Renders the extra leads (audio/samples/leads.ts) a song plays, ahead of it: called while it
-   * waits its turn, so they are ready by its first bar. A lead already rendered is skipped.
+   * The listening stand's swaps — another lead, bass, pad or kit on every song — rendered first
+   * if they aren't, the live synths standing in meanwhile.
+   */
+  public setOverrides(overrides: VoiceOverrides): void {
+    this.overrides = overrides;
+    if (this.arrangement) this.arrangement.overrides = overrides;
+    this.prepare(this.conductor.song);
+  }
+
+  /**
+   * Renders the sounds beyond the core palette a song plays (audio/music/palette.ts), ahead of
+   * it: called while it waits its turn, so they are ready by its first bar. A sound already
+   * rendered is skipped.
    */
   private prepare(song: Song): void {
-    const voices = [
-      song.voices.lead,
-      song.voices.counter,
-      ...song.sections.map((s) => s.leadVoice),
-    ];
-    this.renderLeads(voices.filter((voice): voice is LeadVoice => voice !== undefined));
-  }
-
-  private renderLeads(voices: LeadVoice[]): void {
     if (!this.graph) return;
-    for (const voice of voices) {
-      const id = EXTRA_LEAD_FOR[voice];
-      if (id)
-        void this.samples.renderPitched(this.graph.context.sampleRate, { [id]: EXTRA_LEADS[id] });
-    }
+    const { pitched, oneShots } = soundsFor(song, this.overrides);
+    const rate = this.graph.context.sampleRate;
+    void this.samples.renderPitched(rate, pitched);
+    void this.samples.render(rate, oneShots);
   }
 
   /** The listening stand switches the lead's portamento off and on, to compare. */
@@ -424,7 +347,7 @@ export class MusicEngine {
     if (this.isDropPending) {
       this.isDropPending = false;
       if (!isMuted) {
-        arrangement.playDrop(time, chord, stepDuration);
+        arrangement.playDrop(time, chord, stepDuration, conductor.song.transitions);
       }
     }
 

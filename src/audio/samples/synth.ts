@@ -146,3 +146,75 @@ export function level(ctx: BaseAudioContext, value: number): GainNode {
   gain.gain.value = value;
   return gain;
 }
+
+/**
+ * A plucked string, by the Karplus–Strong model: a burst of noise circulating in a delay one
+ * period long, smoothed a little on every pass, so it darkens and dies away as a string does.
+ * Worked out sample by sample and played as a buffer: Web Audio's own feedback delay can't be
+ * shorter than a render quantum (128 samples), too long a period for any note above ~350 Hz.
+ * @param decay     share of the wave kept each period: nearer 1 rings longer
+ * @param smoothing 0–1, how much each pass dulls it: 1 is the classic model, less is brighter
+ * @param time      when it is plucked
+ */
+export function pluckedString(
+  ctx: BaseAudioContext,
+  random: () => number,
+  frequency: number,
+  decay = 0.996,
+  smoothing = 1,
+  time = 0,
+): AudioBufferSourceNode {
+  const rate = ctx.sampleRate;
+  // An offline render's whole length; two seconds anywhere else
+  const length = 'length' in ctx ? (ctx as OfflineAudioContext).length : Math.ceil(rate * 2);
+  const buffer = ctx.createBuffer(1, length, rate);
+  const out = buffer.getChannelData(0);
+  // The smoothing averages two samples, half a sample's delay of its own
+  const period = rate / frequency - 0.5 * smoothing;
+  const burst = Math.ceil(rate / frequency);
+  const at = (position: number) => {
+    const i = Math.floor(position);
+    const fraction = position - i;
+    const a = i >= 0 ? out[i] : 0;
+    const b = i + 1 >= 0 ? out[i + 1] : 0;
+    return a + (b - a) * fraction;
+  };
+  for (let n = 0; n < length; n++) {
+    const input = n < burst ? random() * 2 - 1 : 0;
+    const now = at(n - period);
+    const before = at(n - period - 1);
+    out[n] = input + decay * (now * (1 - smoothing / 2) + before * (smoothing / 2));
+  }
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.start(time);
+  return source;
+}
+
+/** A pulse wave of `duty` (0–1) as a band-limited periodic wave: the 8-bit consoles' tone. */
+export function pulseWave(ctx: BaseAudioContext, duty: number, harmonics = 40): PeriodicWave {
+  const real = new Float32Array(harmonics + 1);
+  const imag = new Float32Array(harmonics + 1);
+  for (let k = 1; k <= harmonics; k++) imag[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty);
+  return ctx.createPeriodicWave(real, imag);
+}
+
+/**
+ * A waveshaper that rounds the signal to `levels` steps: a bit-crushed, lo-fi edge. Each step's
+ * edge is a short slope, not a cliff, so a held note's loop still joins without a click: a
+ * sample a hair different on either side of the join can't land a whole step apart.
+ */
+export function crush(ctx: BaseAudioContext, levels: number): WaveShaperNode {
+  const shaper = ctx.createWaveShaper();
+  const samples = 2048;
+  const curve = new Float32Array(samples);
+  const EDGE = 0.2; // share of a step the slope takes
+  for (let i = 0; i < samples; i++) {
+    const x = ((i / (samples - 1)) * 2 - 1) * levels;
+    const floor = Math.floor(x);
+    const rise = Math.min(1, Math.max(0, (x - floor - (1 - EDGE)) / EDGE));
+    curve[i] = (floor + rise * rise * (3 - 2 * rise)) / levels;
+  }
+  shaper.curve = curve;
+  return shaper;
+}

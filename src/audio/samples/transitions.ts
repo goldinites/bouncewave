@@ -86,6 +86,20 @@ export const TRANSITION_SAMPLES = {
       chain(noiseSource(ctx, random), hit(ctx, 0.9, 1.9), out);
     },
   },
+  /** Reverse snare: a snare's ring run backwards, sucking in to the downbeat — outrun's turn. */
+  reverseSnare: {
+    duration: 1.2,
+    // One variant: the transitions' memory is tight, and it is heard once a build
+    variants: 1,
+    shape: 'swell',
+    reverse: true,
+    level: -3,
+    build: (ctx, random) => {
+      const out = ctx.destination;
+      chain(sweep(ctx, 'triangle', jitter(random, 220, 0.03), 170, 0.08), hit(ctx, 0.7, 0.3), out);
+      chain(noiseSource(ctx, random), filter(ctx, 'bandpass', 4000, 0.7), hit(ctx, 1, 1.1), out);
+    },
+  },
   /** Downlifter: noise and a tone falling away, the music coming down after the heat. */
   downlifter: {
     duration: 2.5,

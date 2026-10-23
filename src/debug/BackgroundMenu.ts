@@ -20,25 +20,20 @@ export class BackgroundMenu {
 
     this.el = document.createElement('nav');
     this.el.setAttribute('aria-label', 'Backgrounds (debug)');
+    this.el.className = 'dbg-chips';
+    // Placed by the debug dock (DebugDock.ts)
     Object.assign(this.el.style, {
-      position: 'fixed',
-      top: 'calc(60px + env(safe-area-inset-top, 0px))',
-      left: 'calc(6px + env(safe-area-inset-right, 0px))',
-      zIndex: '9999',
       display: 'none',
-      flexDirection: 'column',
-      gap: '2px',
-      padding: '4px 8px',
-      font: '12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-      background: 'rgba(0, 0, 0, 0.6)',
-      borderRadius: '4px',
     });
 
-    const title = document.createElement('span');
-    title.textContent = 'bg';
-    title.style.color = '#7cfc8a';
-    this.el.append(title, ...scenes.map((scene) => this.createLink(scene)));
+    // Its tab in the debug dock names it
+    this.el.append(...scenes.map((scene) => this.createLink(scene)));
     document.body.appendChild(this.el);
+  }
+
+  /** The panel's element, for the debug dock to place. */
+  public get element(): HTMLElement {
+    return this.el;
   }
 
   public setVisible(isVisible: boolean): void {
@@ -49,8 +44,6 @@ export class BackgroundMenu {
   public setCurrent(scene: SceneId): void {
     for (const link of this.el.querySelectorAll<HTMLAnchorElement>('a')) {
       const isCurrent = link.dataset.scene === scene;
-      link.style.color = isCurrent ? '#ffe53b' : '#19f0ff';
-      link.style.fontWeight = isCurrent ? 'bold' : 'normal';
       if (isCurrent) {
         link.setAttribute('aria-current', 'true');
       } else {
@@ -69,7 +62,6 @@ export class BackgroundMenu {
     link.textContent = scene;
     link.dataset.scene = scene;
     link.href = BackgroundMenu.addressFor(scene);
-    link.style.textDecoration = 'none';
 
     link.addEventListener(
       'click',

@@ -8,6 +8,7 @@ import {
 } from '@/audio/music/patterns';
 import { KitName } from '@/audio/music/kits';
 import { Chord, parseChord, parseNote } from '@/audio/music/theory';
+import { FxHitId } from '@/audio/samples/percussion';
 import { SceneId } from '@/shared/scenes';
 
 export const STEPS_PER_BAR = 16;
@@ -21,6 +22,9 @@ export const STEPS_PER_BAR = 16;
 export const MUSIC_LAYERS = ['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as const;
 
 export type MusicLayer = (typeof MUSIC_LAYERS)[number];
+
+/** How a song marks its turns: synth effects, cymbals and drums, or the band alone. */
+export type TransitionStyle = 'synth' | 'drums' | 'band';
 
 /** A section's feel: as written, half-time (the beat stretched over two bars) or double-time. */
 export type Feel = 'half' | 'double';
@@ -47,10 +51,37 @@ export type LeadVoice =
   | 'soft'
   | 'brass'
   | 'sync'
-  | 'pwm';
+  | 'pwm'
+  // City pop's band, for the Memphis track: an FM electric piano, a sax, a muted funk guitar
+  // and a vibraphone
+  | 'epiano'
+  | 'sax'
+  | 'guitar'
+  | 'vibes'
+  // The wider palette for the backdrops' tracks to come (5.6): Japan's flute and lute, plucked
+  // and struck sounds, a choir and strings, the 8-bit and broken digital leads
+  | 'shakuhachi'
+  | 'shamisen'
+  | 'harp'
+  | 'marimba'
+  | 'kalimba'
+  | 'gamelan'
+  | 'celesta'
+  | 'musicBox'
+  | 'rhodes'
+  | 'choir'
+  | 'strings'
+  | 'chip'
+  | 'crush';
 
 /** The rendered basses (audio/samples/pitched.ts); a plain oscillator type plays live. */
-export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808';
+export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808' | 'bassSlap' | 'bassGrowl';
+
+/** The pad's sound: the synth's own, a string section, a wordless choir, or swelling backwards. */
+export type PadVoice = 'synth' | 'strings' | 'choir' | 'reverse';
+
+/** What plays the chord stabs: a brass section, an electric piano, a guitar, staccato strings. */
+export type StabVoice = 'brass' | 'rhodes' | 'guitar' | 'strings';
 
 /** The rendered arpeggio voices; a plain oscillator type plays live. */
 export type ArpVoice = 'arpPulse' | 'pluck';
@@ -72,6 +103,8 @@ export interface SectionDef {
   leadVoice?: LeadVoice;
   /** A second, quieter line on the song's counter voice. */
   counter?: string;
+  /** Overrides the song's counter voice for this section. */
+  counterVoice?: LeadVoice;
   /** The bass as a pattern relative to the chord; or written out note by note (`bassLine`). */
   bass?: BassPatternName;
   /**
@@ -85,8 +118,17 @@ export interface SectionDef {
   drums: DrumPatternName;
   /** Played in the second half of the section's last bar. */
   fill?: DrumFillName;
-  pad: 'swell' | 'hold' | 'none';
+  /** The pad held, swelling in, gated into a rhythm (`chop`, witch house's chopped chords) or none. */
+  pad: 'swell' | 'hold' | 'chop' | 'none';
   stabs?: StabPatternName;
+  /** What plays the stabs in this section; brass if left out. */
+  stabsVoice?: StabVoice;
+  /**
+   * One-shot sounds struck on a pattern, on the fx layer (audio/samples/percussion.ts, FX_HITS):
+   * a character a sixteenth, the pattern repeating through the section — `X` accented, `x`
+   * normal, `o` soft, `.` silent.
+   */
+  hits?: Partial<Record<FxHitId, string>>;
   /** A noise sweep rising over the whole section, into what follows. */
   riser?: boolean;
   /**
@@ -95,6 +137,12 @@ export interface SectionDef {
    * its arpeggio in from 0.4 and its counter-melody from 0.55.
    */
   layers?: Partial<Record<MusicLayer, number>>;
+  /**
+   * The bar of the section each layer enters on, so a part builds as it plays: one instrument
+   * leads, then another joins it, then a third (a layer not named plays from the first bar). The
+   * heat still decides, on top, whether a layer that has entered plays.
+   */
+  enter?: Partial<Record<MusicLayer, number>>;
   /**
    * Half-time or double-time: the kick, snare, clap, taiko and metal stretched over two bars or
    * squeezed into half of one, the hats kept in time. As written if left out.
@@ -124,6 +172,13 @@ export interface SongDef {
     counter: LeadVoice;
     arp: OscillatorType | ArpVoice;
     bass: OscillatorType | BassVoice;
+    /** The pad's sound; the synth's if left out. */
+    pad?: PadVoice;
+    /**
+     * Portamento on the bass, in seconds: a note following another slides in from it, the 808's
+     * glide in witch house and trap. None if left out.
+     */
+    bassGlide?: number;
     /**
      * Portamento on the lead, in seconds: a note that follows another without a gap slides in
      * from it, so the line sings rather than steps. None if left out.
@@ -153,6 +208,13 @@ export interface SongDef {
    * stand's meter (its average over the verse and chorus) against the others. 0 if left out.
    */
   level?: number;
+  /**
+   * How the song marks its turns (docs/AUDIO.md): 'synth' with noise risers, a reverse crash,
+   * downlifters and a boom under the drop; 'drums' with the reverse crash alone, the drums doing
+   * the rest; 'band' with nothing but what the band plays — fills, stabs, a crash. 'synth' if
+   * left out.
+   */
+  transitions?: TransitionStyle;
   sections: SectionDef[];
 }
 
@@ -180,12 +242,12 @@ export interface Section extends Omit<
 export interface Song extends Omit<SongDef, 'sections' | 'form'> {
   /** The form as section indices. */
   form: number[];
-  /** The title in lower case with dashes, for links to it (`?song=night-drive`). */
+  /** The title in lower case with dashes, for links to it (`?song=neon-cathedral`). */
   id: string;
   sections: Section[];
 }
 
-/** A song's id from its title: "Night Drive" → "night-drive". */
+/** A song's id from its title: "Neon Cathedral" → "neon-cathedral". */
 export const songId = (title: string): string =>
   title
     .toLowerCase()

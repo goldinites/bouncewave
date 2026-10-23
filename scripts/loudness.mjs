@@ -5,6 +5,10 @@
 //
 //   npm run loudness -- neon-cathedral sunset-strip
 //   npm run loudness -- --parts=hook,hot outrun-o3-sunset
+//
+// --lead=<voice> plays the melodies on that lead (the stand's `?lead=`), and --mute= silences
+// layers: `--mute=drums,bass,pads,arp,fx --lead=sax` hears the sax alone, to level a lead voice
+// against the others (LEAD_VOLUME in Arrangement.ts).
 
 import { chromium } from '@playwright/test';
 import { createServer } from 'vite';
@@ -18,8 +22,11 @@ const LEVEL_EFFECT = 0.75;
 const PARALLEL = 4;
 
 const args = process.argv.slice(2);
-const partsArg = args.find((arg) => arg.startsWith('--parts='));
-const parts = partsArg ? partsArg.slice('--parts='.length).split(',') : ['verse', 'chorus'];
+const option = (name) =>
+  args.find((arg) => arg.startsWith(`--${name}=`))?.slice(`--${name}=`.length) ?? null;
+const parts = option('parts')?.split(',') ?? ['verse', 'chorus'];
+const lead = option('lead');
+const mute = option('mute');
 const songs = args.filter((arg) => !arg.startsWith('--'));
 if (songs.length === 0) {
   console.error('Usage: npm run loudness -- [--parts=verse,chorus] <song-id> ...');
@@ -34,9 +41,10 @@ const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gestur
 /** One song's parts, each as the stand's average over its listening time. */
 async function measure(song) {
   const page = await browser.newPage();
-  await page.goto(`${base}?debug&song=${song}&part=${parts[0]}`);
+  const extra = (mute ? `&mute=${mute}` : '') + (lead ? `&lead=${lead}` : '');
+  await page.goto(`${base}?debug&song=${song}&part=${parts[0]}${extra}`);
   await page.waitForTimeout(800);
-  await page.click('[data-stand="toggle"]');
+  await page.click('[data-tab="sound"]');
   await page.evaluate((level) => {
     const range = document.querySelector('input[data-level="intensity"]');
     range.value = String(level);

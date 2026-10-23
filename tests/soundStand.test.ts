@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { SONGS } from '@/audio/music/songs';
-import { DRUM_SAMPLES } from '@/audio/samples/drums';
-import { PITCHED_SAMPLES } from '@/audio/samples/pitched';
-import { TRANSITION_SAMPLES } from '@/audio/samples/transitions';
 import { SoundStand, STAND_SOUNDS } from '@/debug/SoundStand';
+import { WHOLE_FORM } from '@/audio/music/Conductor';
+import { MusicEngine } from '@/audio/music/MusicEngine';
 
 describe('SoundStand', () => {
   const stands: SoundStand[] = [];
@@ -36,31 +35,34 @@ describe('SoundStand', () => {
     const part = get<HTMLSelectElement>('select[data-stand="part"]');
 
     expect([...song.options].slice(1).map((o) => o.value)).toEqual(SONGS.map((s) => s.id));
-    song.value = 'night-drive';
+    song.value = 'neon-cathedral';
     song.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith('night-drive', null);
+    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', null, 0);
     expect([...part.options].map((o) => o.value)).toEqual([
       '',
+      'whole-form',
       ...SONGS[0].sections.map((s) => s.name),
     ]);
 
     part.value = 'chorus';
     part.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith('night-drive', 'chorus');
-    expect(params().get('song')).toBe('night-drive');
+    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', 'chorus', 0);
+    expect(params().get('song')).toBe('neon-cathedral');
     expect(params().get('part')).toBe('chorus');
     expect(window.location.search).toMatch(/[?&]debug(&|$)/);
 
     song.value = '';
     song.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith(null, null);
+    expect(audition).toHaveBeenLastCalledWith(null, null, 0);
     expect(params().has('song')).toBe(false);
   });
 
   it('opens on the place a link points at, silenced layers included', () => {
-    const { audition, setLayerMuted, get } = setup('/?song=night-drive&part=chorus&mute=drums,arp');
+    const { audition, setLayerMuted, get } = setup(
+      '/?song=neon-cathedral&part=chorus&mute=drums,arp',
+    );
 
-    expect(audition).toHaveBeenCalledWith('night-drive', 'chorus');
+    expect(audition).toHaveBeenCalledWith('neon-cathedral', 'chorus');
     expect(setLayerMuted).toHaveBeenCalledWith('drums', true);
     expect(setLayerMuted).toHaveBeenCalledWith('bass', false);
     expect(get<HTMLInputElement>('input[data-layer="arp"]').checked).toBe(false);
@@ -113,47 +115,58 @@ describe('SoundStand', () => {
     }
   });
 
-  it('plays every rendered instrument on its own, one button each', () => {
-    const { audio, get } = setup();
-    const play = vi.spyOn(audio.music, 'playSample');
+  it('shows the playing song’s form, a segment a step, and plays it through from one clicked', () => {
+    const { audition, get } = setup();
+    const song = get<HTMLSelectElement>('select[data-stand="song"]');
+    song.value = 'neon-cathedral';
+    song.dispatchEvent(new Event('change'));
 
-    for (const id of Object.keys(DRUM_SAMPLES)) {
-      get<HTMLButtonElement>(`button[data-sample="${id}"]`).click();
-    }
-    expect(play.mock.calls.map(([id]) => id)).toEqual(Object.keys(DRUM_SAMPLES));
+    const { form } = SONGS.find((s) => s.id === 'neon-cathedral')!;
+    const segments = document.querySelectorAll<HTMLElement>('[data-stand="timeline"] [data-step]');
+    expect(segments).toHaveLength(form.length);
+    segments[5].click();
+    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', WHOLE_FORM, 5);
+    expect(get<HTMLSelectElement>('select[data-stand="part"]').value).toBe(WHOLE_FORM);
   });
 
-  it('plays a phrase on every pitched instrument', () => {
-    const { audio, get } = setup();
-    const phrase = vi.spyOn(audio.music, 'playPhrase');
-
-    for (const id of Object.keys(PITCHED_SAMPLES)) {
-      get<HTMLButtonElement>(`button[data-phrase="${id}"]`).click();
-    }
-    expect(phrase.mock.calls.map(([id]) => id)).toEqual(Object.keys(PITCHED_SAMPLES));
+  it('steps to the next and previous song, played through from the start', () => {
+    const { audition, get } = setup();
+    get<HTMLButtonElement>('button[data-player="next"]').click();
+    expect(audition).toHaveBeenLastCalledWith(SONGS[0].id, WHOLE_FORM, 0);
+    get<HTMLButtonElement>('button[data-player="next"]').click();
+    expect(audition).toHaveBeenLastCalledWith(SONGS[1].id, WHOLE_FORM, 0);
+    get<HTMLButtonElement>('button[data-player="previous"]').click();
+    get<HTMLButtonElement>('button[data-player="previous"]').click();
+    expect(audition).toHaveBeenLastCalledWith(SONGS[SONGS.length - 1].id, WHOLE_FORM, 0);
   });
 
-  it('plays every transition', () => {
+  it('pauses and resumes, and plays again whatever is picked', () => {
     const { audio, get } = setup();
-    const transition = vi.spyOn(audio.music, 'playTransition');
+    const pause = get<HTMLButtonElement>('button[data-player="pause"]');
+    pause.click();
+    expect(audio.isPaused).toBe(true);
+    pause.click();
+    expect(audio.isPaused).toBe(false);
 
-    for (const id of Object.keys(TRANSITION_SAMPLES)) {
-      get<HTMLButtonElement>(`button[data-transition="${id}"]`).click();
-    }
-    expect(transition.mock.calls.map(([id]) => id)).toEqual(Object.keys(TRANSITION_SAMPLES));
+    pause.click();
+    get<HTMLButtonElement>('button[data-player="next"]').click();
+    expect(audio.isPaused).toBe(false);
   });
 
-  it('puts the lead on another voice, or back on the song’s own', () => {
-    const { audio, get } = setup();
-    const voice = vi.spyOn(audio.music, 'setLeadVoice');
-    const select = get<HTMLSelectElement>('select[data-stand="leadVoice"]');
-
-    select.value = 'pwm';
-    select.dispatchEvent(new Event('change'));
-    expect(voice).toHaveBeenLastCalledWith('pwm');
-    select.value = '';
-    select.dispatchEvent(new Event('change'));
-    expect(voice).toHaveBeenLastCalledWith(null);
+  it('swaps the lead, bass, pad and kit a link names, and nothing without one', () => {
+    const swap = vi.spyOn(MusicEngine.prototype, 'setOverrides');
+    setup('/?debug&lead=marimba&bass=bassSlap&pad=choir&kit=japan');
+    expect(swap).toHaveBeenLastCalledWith({
+      lead: 'marimba',
+      bass: 'bassSlap',
+      pad: 'choir',
+      kit: 'japan',
+    });
+    swap.mockClear();
+    setup('/?debug&kit=no-such-kit');
+    setup('/?debug');
+    expect(swap).not.toHaveBeenCalled();
+    swap.mockRestore();
   });
 
   it('switches the glide off and on', () => {

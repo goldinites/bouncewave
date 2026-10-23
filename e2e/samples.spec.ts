@@ -64,6 +64,42 @@ test('renders every drum sound, sounding, dying away, within budget', async ({ p
   });
 });
 
+test('renders the wider palette’s percussion and hits, sounding and dying away', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const report = await page.evaluate(async () => {
+    const source = (path: string) => `/bouncewave/src/audio/samples/${path}`;
+    const { SampleBank } = (await import(
+      /* @vite-ignore */ source('SampleBank.ts')
+    )) as typeof import('../src/audio/samples/SampleBank');
+    const { EXTRA_DRUMS, FX_HITS } = (await import(
+      /* @vite-ignore */ source('percussion.ts')
+    )) as typeof import('../src/audio/samples/percussion');
+    const recipes = { ...EXTRA_DRUMS, ...FX_HITS };
+    const bank = new SampleBank();
+    await bank.render(48000, recipes);
+    return Object.entries(recipes).flatMap(([id, recipe]) =>
+      Array.from({ length: recipe.variants }, () => {
+        const data = bank.pick(id)!.getChannelData(0);
+        let peak = 0;
+        let finite = true;
+        for (const sample of data) {
+          if (!Number.isFinite(sample)) finite = false;
+          peak = Math.max(peak, Math.abs(sample));
+        }
+        const tail = data.subarray(Math.floor(data.length * 0.98));
+        return { id, peak, finite, tailPeak: Math.max(...tail.map(Math.abs)) };
+      }),
+    );
+  });
+  for (const { id, peak, finite, tailPeak } of report) {
+    expect(finite, id).toBe(true);
+    expect(peak, id).toBeGreaterThan(0.3);
+    expect(tailPeak / peak, `${id} dies away`).toBeLessThan(TAIL_SHARE);
+  }
+});
+
 // Budgets for the pitched instruments: what the 24 MB leaves after the drums and the voices to come
 const PITCHED_MEMORY = 14 * 1024 * 1024; // bytes
 const PITCHED_RENDER_MS = 4000; // on a CI runner, in the background while the menu plays
@@ -87,13 +123,16 @@ test('renders every pitched instrument at every root, its loops seamless', async
       const { EXTRA_LEADS } = (await import(
         /* @vite-ignore */ source('leads.ts')
       )) as typeof import('../src/audio/samples/leads');
+      const { EXTRA_PITCHED } = (await import(
+        /* @vite-ignore */ source('extra.ts')
+      )) as typeof import('../src/audio/samples/extra');
       const bank = new SampleBank();
       await bank.renderPitched(rate, PITCHED_SAMPLES);
-      // The leads auditioned on the stand are checked too, in a bank of their own: they are
-      // rendered only on the stand's asking, so they don't count toward the game's memory
+      // The wider palette is checked too, in a bank of its own: it is rendered only when a song
+      // plays it or the stand asks, so it doesn't count toward the game's memory
       const auditions = new SampleBank();
-      await auditions.renderPitched(rate, EXTRA_LEADS);
-      const recipes = { ...PITCHED_SAMPLES, ...EXTRA_LEADS };
+      await auditions.renderPitched(rate, { ...EXTRA_LEADS, ...EXTRA_PITCHED });
+      const recipes = { ...PITCHED_SAMPLES, ...EXTRA_LEADS, ...EXTRA_PITCHED };
       const notes = Object.entries(recipes).flatMap(([id, recipe]) =>
         recipe.roots.map((root) => {
           const note = (bank.pickNote(id, root) ?? auditions.pickNote(id, root))!;

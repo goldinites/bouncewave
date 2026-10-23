@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Conductor, PEAK_COOLDOWN_BARS, SONG_BARS } from '@/audio/music/Conductor';
+import { Conductor, PEAK_COOLDOWN_BARS, SONG_BARS, WHOLE_FORM } from '@/audio/music/Conductor';
 import { compileSong, SongDef, Tier } from '@/audio/music/score';
 
 const section = (name: string, tier: Tier, bars: number) => ({
@@ -160,6 +160,24 @@ describe('Conductor', () => {
       expect(titles).toEqual(new Set(['One', 'Two', 'City', 'Lasers']));
     });
 
+    it('lets a challenge’s backdrop with no song of its own borrow any other', () => {
+      const owned = [
+        compileSong({ ...def('Lasers'), scene: 'lasers' }),
+        compileSong({ ...def('Outrun'), scene: 'outrun' }),
+      ];
+      const titles = new Set<string>();
+      for (const roll of [0, 0.99]) {
+        const conductor = new Conductor(owned, 0, 'groove', () => roll);
+        conductor.enterScene('dojo');
+        for (let i = 0; i < 3; i++) {
+          conductor.skip('groove');
+          conductor.advance();
+          titles.add(conductor.song.title);
+        }
+      }
+      expect(titles).toEqual(new Set(['Lasers', 'Outrun']));
+    });
+
     it('moves on from the backdrop’s own song to the other quick-match songs', () => {
       const titles = new Set<string>();
       for (const roll of [0, 0.5, 0.99]) {
@@ -226,22 +244,34 @@ describe('Conductor', () => {
       expect(play(conductor, 'groove', 4)).toContain('verse');
     });
 
-    it('replays the way in: the end of the section before, then the pinned part', () => {
+    it('plays the whole form in order from the start, peaks and all, whatever the heat', () => {
       const conductor = new Conductor(SONGS, 0);
-      conductor.pinTo(0, 1); // the 8-bar verse, after the 4-bar intro
-      conductor.advance();
       play(conductor, 'groove', 3);
-
-      conductor.replayTransition();
-      expect(play(conductor, 'groove', 6)).toEqual(['verse', ...Array(4).fill('intro'), 'verse']);
-
-      // A longer section before: only its last four bars
-      conductor.pinTo(0, 2); // the build, after the 8-bar verse
+      // From the start of its form, though another song was mid-way through its intro
+      conductor.pinTo(1, WHOLE_FORM);
       conductor.advance();
-      conductor.replayTransition();
-      play(conductor, 'groove', 1);
-      expect(conductor.section.name).toBe('verse');
-      expect(conductor.bar).toBe(4);
+
+      expect(conductor.song.title).toBe('Two');
+      expect(play(conductor, 'calm', 30)).toEqual([
+        ...Array(4).fill('intro'),
+        ...Array(8).fill('verse'),
+        ...Array(2).fill('build'),
+        ...Array(8).fill('chorus'),
+        ...Array(4).fill('breakdown'),
+        // Round again, never to another song
+        ...Array(4).fill('intro'),
+      ]);
+    });
+
+    it('plays the whole form from the step asked for', () => {
+      const conductor = new Conductor(SONGS, 0);
+      conductor.pinTo(1, WHOLE_FORM, 'groove', 2);
+      conductor.advance();
+      expect(play(conductor, 'calm', 11)).toEqual([
+        ...Array(2).fill('build'),
+        ...Array(8).fill('chorus'),
+        'breakdown',
+      ]);
     });
 
     it('lets the game lead again, back to the backdrop’s own song', () => {

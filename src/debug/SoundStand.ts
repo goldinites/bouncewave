@@ -1,26 +1,30 @@
 import { AudioEngine } from '@/audio/AudioEngine';
-import { LeadVoice, MUSIC_LAYERS, MusicLayer } from '@/audio/music/score';
+import { WHOLE_FORM } from '@/audio/music/Conductor';
+import { MusicPosition } from '@/audio/music/MusicEngine';
+import { KITS, KitName } from '@/audio/music/kits';
+import { VoiceOverrides } from '@/audio/music/palette';
+import {
+  BassVoice,
+  LeadVoice,
+  MUSIC_LAYERS,
+  MusicLayer,
+  PadVoice,
+  STEPS_PER_BAR,
+  Tier,
+} from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
-import { DRUM_SAMPLES } from '@/audio/samples/drums';
-import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
-import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
-
-// The lead voices the stand can put a melody on, the auditioned ones last
-const LEAD_VOICES: LeadVoice[] = [
-  'saw',
-  'square',
-  'pluck',
-  'bell',
-  'koto',
-  'flute',
-  'soft',
-  'brass',
-  'sync',
-  'pwm',
-];
+import { debugHeading } from '@/debug/theme';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
+// The player's form strip: each part coloured by its heat
+const TIER_COLOURS: Record<Tier, string> = {
+  calm: '#3d6bff',
+  groove: '#19f0ff',
+  rise: '#ffd84d',
+  high: '#ff6ad5',
+};
+const BEATS_PER_BAR = STEPS_PER_BAR / 4;
 
 /** A sound of the game's, or a series of it, as the stand plays it. */
 interface StandSound {
@@ -67,11 +71,13 @@ export const STAND_SOUNDS: readonly StandSound[] = [
 
 /**
  * Developer-only listening stand, shown with the debug overlay (`?debug` or F3): holds the music
- * to a song and one of its parts, pins intensity and the climax, silences layers, replays the way
- * into a part, and plays every action sound and its series — so music is composed by ear, not
- * blind (docs/AUDIO.md). The address keeps the song, the part and the silenced layers
- * (`?song=night-drive&part=chorus&mute=drums`), so a link points at a place in a song; it works
- * without `?debug` too.
+ * to a song and one of its parts, pins intensity and the climax, silences layers, and plays every
+ * action sound and its series — so music is composed by ear, not blind (docs/AUDIO.md). A
+ * player on top pauses, steps between songs, shows where the music is in the song's form and
+ * the time, and jumps to any part of the form with a click. The address keeps the song, the
+ * part and the silenced layers (`?song=neon-cathedral&part=chorus&mute=drums`), so a link points at
+ * a place in a song, and `&lead=sax` puts every melody on another lead; it works without
+ * `?debug` too.
  */
 export class SoundStand {
   private readonly audio: AudioEngine;
@@ -80,11 +86,15 @@ export class SoundStand {
   private readonly songSelect: HTMLSelectElement;
   private readonly partSelect: HTMLSelectElement;
   private readonly readout: HTMLElement;
+  private readonly pauseButton: HTMLButtonElement;
+  private readonly clock: HTMLElement;
+  /** The playing song's form, one segment a step, wide as its bars. */
+  private readonly timeline: HTMLElement;
+  private timelineSong: string | null = null;
   private readonly layerBoxes = new Map<MusicLayer, HTMLInputElement>();
   private readonly listeners = new AbortController();
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
   private readoutTimer: ReturnType<typeof setInterval> | null = null;
-  private isOpen = false;
   private isVisible = false;
   /** The master's loudness summed since the music last changed place, for an average. */
   private loudness = { power: 0, readings: 0 };
@@ -94,31 +104,11 @@ export class SoundStand {
 
     this.el = document.createElement('section');
     this.el.setAttribute('aria-label', 'Sound stand (debug)');
-    Object.assign(this.el.style, {
-      position: 'fixed',
-      bottom: 'calc(6px + env(safe-area-inset-bottom, 0px))',
-      left: 'calc(6px + env(safe-area-inset-left, 0px))',
-      zIndex: '9999',
-      display: 'none',
-      flexDirection: 'column',
-      gap: '4px',
-      padding: '4px 8px',
-      width: 'min(260px, calc(100vw - 12px))',
-      maxHeight: '70vh',
-      overflowY: 'auto',
-      boxSizing: 'border-box',
-      font: '12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-      color: '#19f0ff',
-      background: 'rgba(0, 0, 0, 0.75)',
-      borderRadius: '4px',
-    });
-
-    const toggle = this.button('♪ sound stand', () => this.setOpen(!this.isOpen));
-    toggle.style.color = '#7cfc8a';
-    toggle.dataset.stand = 'toggle';
+    // Placed by the debug dock (DebugDock.ts), in its "sound" tab
+    Object.assign(this.el.style, { display: 'none', flexDirection: 'column', gap: '6px' });
 
     this.body = document.createElement('div');
-    Object.assign(this.body.style, { display: 'none', flexDirection: 'column', gap: '4px' });
+    Object.assign(this.body.style, { display: 'flex', flexDirection: 'column', gap: '6px' });
 
     this.songSelect = this.select('song', [
       ['', '— the game’s —'],
@@ -134,41 +124,48 @@ export class SoundStand {
     });
     this.on(this.partSelect, 'change', () => this.audition());
 
-    const leadSelect = this.select('leadVoice', [
-      ['', 'lead: the song’s'],
-      ...LEAD_VOICES.map((voice): [string, string] => [voice, `lead: ${voice}`]),
-    ]);
-    this.on(leadSelect, 'change', () => {
-      this.audio.unlock();
-      this.audio.music.setLeadVoice((leadSelect.value || null) as LeadVoice | null);
-    });
+    const previous = this.button('⏮', () => this.stepSong(-1));
+    previous.dataset.player = 'previous';
+    this.pauseButton = this.button('⏸', () => this.setPaused(!this.audio.isPaused));
+    this.pauseButton.dataset.player = 'pause';
+    const next = this.button('⏭', () => this.stepSong(1));
+    next.dataset.player = 'next';
+    this.clock = document.createElement('span');
+    this.clock.className = 'dbg-mono';
+    const player = this.row(previous, this.pauseButton, next, this.clock);
+    this.timeline = document.createElement('div');
+    this.timeline.dataset.stand = 'timeline';
+    Object.assign(this.timeline.style, { display: 'flex', gap: '2px', height: '16px' });
 
-    const transport = this.row(
-      this.button('↻ transition', () => this.audio.music.replayTransition()),
-      this.button('drop', () => this.audio.music.triggerDrop()),
-    );
-
-    this.readout = document.createElement('span');
-    this.readout.style.color = '#ffd84d';
+    this.readout = document.createElement('div');
+    this.readout.className = 'dbg-status dbg-mono';
 
     this.body.append(
+      debugHeading('Player'),
+      player,
+      this.timeline,
+      debugHeading('Music'),
       this.songSelect,
       this.partSelect,
-      leadSelect,
-      transport,
+      debugHeading('Heat (ticked: held by the stand)'),
       this.slider('intensity', (level) => this.audio.music.pinIntensity(level)),
       this.slider('climax', (level) => this.audio.music.pinClimax(level)),
+      debugHeading('Layers'),
       this.layerRows(),
-      this.sampleButtons(),
-      this.phraseButtons(),
-      this.transitionButtons(),
+      debugHeading('Game sounds'),
       this.soundButtons(),
+      debugHeading('Status'),
       this.readout,
     );
-    this.el.append(toggle, this.body);
+    this.el.append(this.body);
     document.body.appendChild(this.el);
 
     this.restoreFromAddress();
+  }
+
+  /** The panel's element, for the debug dock to place. */
+  public get element(): HTMLElement {
+    return this.el;
   }
 
   public setVisible(isVisible: boolean): void {
@@ -194,6 +191,20 @@ export class SoundStand {
       this.audio.music.setLayerMuted(layer, !box.checked);
     });
 
+    // Another lead, bass, pad or kit on every song, by link only (`&lead=marimba&kit=japan`):
+    // how a sound of the wider palette is heard before a track plays it, and how
+    // `npm run loudness -- --lead=` levels the leads
+    const overrides: VoiceOverrides = {};
+    const lead = params.get('lead');
+    const bass = params.get('bass');
+    const pad = params.get('pad');
+    const kit = params.get('kit');
+    if (lead) overrides.lead = lead as LeadVoice;
+    if (bass) overrides.bass = bass as BassVoice;
+    if (pad) overrides.pad = pad as PadVoice;
+    if (kit && kit in KITS) overrides.kit = kit as KitName;
+    if (Object.keys(overrides).length > 0) this.audio.music.setOverrides(overrides);
+
     const song = params.get('song');
     if (!song || !SONGS.some((s) => s.id === song)) return;
     this.songSelect.value = song;
@@ -206,15 +217,9 @@ export class SoundStand {
     this.audio.music.audition(song, this.partSelect.value || null);
   }
 
-  private setOpen(isOpen: boolean): void {
-    this.isOpen = isOpen;
-    this.body.style.display = isOpen ? 'flex' : 'none';
-    this.updateReadoutTimer();
-  }
-
   /** The readout runs only while someone can see it. */
   private updateReadoutTimer(): void {
-    const shouldRun = this.isOpen && this.isVisible;
+    const shouldRun = this.isVisible;
     if (shouldRun && this.readoutTimer === null) {
       this.showReadout();
       this.readoutTimer = setInterval(() => this.showReadout(), READOUT_MS);
@@ -225,7 +230,9 @@ export class SoundStand {
   }
 
   private showReadout(): void {
-    const { songId, part, bar, step, steps, pass } = this.audio.music.getPosition();
+    const position = this.audio.music.getPosition();
+    this.showPlayer(position);
+    const { songId, part, bar, step, steps, pass } = position;
     const place = (step >= 0 ? ` ${step + 1}/${steps}` : '') + (pass > 0 ? ` ×${pass + 1}` : '');
     const latency = this.audio.getLatency();
     const ms = (seconds: number) => (seconds * 1000).toFixed(0);
@@ -234,12 +241,16 @@ export class SoundStand {
     this.readout.style.whiteSpace = 'pre-wrap';
   }
 
-  /** The chosen song's parts, "any" first: the song then follows the game's heat. */
+  /**
+   * The chosen song's parts: "any" first, the song then following the game's heat; then its
+   * whole form, played in order from the start, peaks and all.
+   */
   private fillParts(): void {
     const song = SONGS.find((s) => s.id === this.songSelect.value);
     const options: [string, string][] = song
       ? [
           ['', 'any part'],
+          [WHOLE_FORM, 'whole form'],
           ...song.sections.map((s): [string, string] => [s.name, `${s.name} · ${s.tier}`]),
         ]
       : [];
@@ -262,20 +273,92 @@ export class SoundStand {
     return `\nrms ${db(levels.rms)} (avg ${db(average)}) · peak ${db(levels.peak)} dB`;
   }
 
-  private audition(): void {
+  /** Plays what is picked: the song and part, from step `fromStep` of a whole form. */
+  private audition(fromStep = 0): void {
     this.loudness = { power: 0, readings: 0 };
+    // Picking music means hearing it
+    if (this.audio.isPaused) this.setPaused(false);
     this.audio.unlock();
     const song = this.songSelect.value || null;
     const part = (song && this.partSelect.value) || null;
-    this.audio.music.audition(song, part);
+    this.audio.music.audition(song, part, fromStep);
     this.saveToAddress({ song, part });
+    this.showReadout();
+  }
+
+  private setPaused(isPaused: boolean): void {
+    this.audio.setPaused(isPaused);
+    this.pauseButton.textContent = isPaused ? '▶' : '⏸';
+  }
+
+  /** The song before or after the picked one in the list, played through from its start. */
+  private stepSong(by: number): void {
+    const ids = SONGS.map((song) => song.id);
+    const index = ids.indexOf(this.songSelect.value);
+    const next = index < 0 ? (by > 0 ? 0 : ids.length - 1) : (index + by + ids.length) % ids.length;
+    this.playForm(ids[next], 0);
+  }
+
+  /** A song's whole form, in order, from one of its steps. */
+  private playForm(songId: string, step: number): void {
+    this.songSelect.value = songId;
+    this.fillParts();
+    this.partSelect.value = WHOLE_FORM;
+    this.audition(step);
+  }
+
+  /** The time through the playing song's form and its length, and the strip of its parts. */
+  private showPlayer({ songId, part, bar, step }: MusicPosition): void {
+    const song = SONGS.find((s) => s.id === songId);
+    if (!song) return;
+    const bars = song.form.map((index) => song.sections[index].bars);
+    if (this.timelineSong !== songId) {
+      this.timelineSong = songId;
+      this.timeline.replaceChildren(
+        ...song.form.map((index, i) => {
+          const { name, tier } = song.sections[index];
+          const segment = document.createElement('div');
+          segment.dataset.step = String(i);
+          segment.title = `${i + 1}. ${name} · ${tier} · ${bars[i]} bars`;
+          Object.assign(segment.style, {
+            flex: `${bars[i]} 1 0`,
+            minWidth: '2px',
+            borderRadius: '2px',
+            cursor: 'pointer',
+          });
+          this.on(segment, 'click', () => this.playForm(songId, i));
+          return segment;
+        }),
+      );
+    }
+    [...this.timeline.children].forEach((child, i) => {
+      const segment = child as HTMLElement;
+      const colour = TIER_COLOURS[song.sections[song.form[i]].tier];
+      if (i === step) {
+        // The playing part fills up bar by bar
+        const done = Math.round(((bar + 1) / bars[i]) * 100);
+        segment.style.background = `linear-gradient(90deg, ${colour} ${done}%, ${colour}55 ${done}%)`;
+        segment.style.opacity = '1';
+      } else {
+        segment.style.background = colour;
+        segment.style.opacity = i < step ? '0.55' : '0.25';
+      }
+    });
+    const barSeconds = (BEATS_PER_BAR * 60) / song.bpm;
+    const sum = (list: number[]) => list.reduce((total, n) => total + n, 0);
+    const time = (seconds: number) =>
+      `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+    this.clock.textContent =
+      step >= 0
+        ? `${time((sum(bars.slice(0, step)) + bar) * barSeconds)} / ${time(sum(bars) * barSeconds)} · ${part}`
+        : part;
   }
 
   private layerRows(): HTMLElement {
     const rows = this.row(
       ...MUSIC_LAYERS.map((layer) => {
         const label = document.createElement('label');
-        Object.assign(label.style, { display: 'flex', gap: '3px', alignItems: 'center' });
+        Object.assign(label.style, { display: 'flex', gap: '4px', alignItems: 'center' });
         const box = document.createElement('input');
         box.type = 'checkbox';
         box.checked = true;
@@ -294,6 +377,7 @@ export class SoundStand {
     );
     rows.append(this.glideSwitch());
     rows.style.flexWrap = 'wrap';
+    rows.style.columnGap = '12px';
     return rows;
   }
 
@@ -310,57 +394,6 @@ export class SoundStand {
     name.textContent = 'glide';
     label.append(box, name);
     return label;
-  }
-
-  /** Every rendered instrument, each press its next variant, to hear them one by one. */
-  private sampleButtons(): HTMLElement {
-    const buttons = this.row(
-      ...Object.keys(DRUM_SAMPLES).map((id) => {
-        const button = this.button(id, () => {
-          this.audio.unlock();
-          this.audio.music.playSample(id);
-        });
-        button.dataset.sample = id;
-        button.style.color = '#ff6ad5';
-        return button;
-      }),
-    );
-    buttons.style.flexWrap = 'wrap';
-    return buttons;
-  }
-
-  /** Every rendered pitched instrument, each press a short phrase in its register. */
-  private phraseButtons(): HTMLElement {
-    const buttons = this.row(
-      ...(Object.keys(PITCHED_SAMPLES) as PitchedSampleId[]).map((id) => {
-        const button = this.button(id, () => {
-          this.audio.unlock();
-          this.audio.music.playPhrase(id);
-        });
-        button.dataset.phrase = id;
-        button.style.color = '#ffd84d';
-        return button;
-      }),
-    );
-    buttons.style.flexWrap = 'wrap';
-    return buttons;
-  }
-
-  /** Every transition: risers, the reverse crash, the downlifter, the boom, the whoosh. */
-  private transitionButtons(): HTMLElement {
-    const buttons = this.row(
-      ...(Object.keys(TRANSITION_SAMPLES) as TransitionSampleId[]).map((id) => {
-        const button = this.button(id, () => {
-          this.audio.unlock();
-          this.audio.music.playTransition(id);
-        });
-        button.dataset.transition = id;
-        button.style.color = '#7cfc8a';
-        return button;
-      }),
-    );
-    buttons.style.flexWrap = 'wrap';
-    return buttons;
   }
 
   /** How many instruments are rendered, the memory they take and how long they took. */
@@ -420,14 +453,23 @@ export class SoundStand {
     range.style.flex = '1';
     const label = document.createElement('span');
     label.textContent = name;
-    label.style.minWidth = '9ch';
-    const apply = () => pin(box.checked ? Number(range.value) : null);
+    label.style.minWidth = '8ch';
+    // The value it holds, or that the game is free to move it
+    const value = document.createElement('span');
+    value.className = 'dbg-mono dbg-muted';
+    value.style.minWidth = '4ch';
+    value.style.textAlign = 'right';
+    const apply = () => {
+      value.textContent = box.checked ? Number(range.value).toFixed(2) : 'game';
+      pin(box.checked ? Number(range.value) : null);
+    };
+    value.textContent = 'game';
     this.on(box, 'change', apply);
     this.on(range, 'input', () => {
       box.checked = true;
       apply();
     });
-    return this.row(box, label, range);
+    return this.row(box, label, range, value);
   }
 
   private select(name: string, options: [string, string][]): HTMLSelectElement {
@@ -449,22 +491,13 @@ export class SoundStand {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = text;
-    Object.assign(button.style, {
-      font: 'inherit',
-      color: 'inherit',
-      background: 'rgba(25, 240, 255, 0.12)',
-      border: '1px solid rgba(25, 240, 255, 0.4)',
-      borderRadius: '3px',
-      padding: '2px 6px',
-      cursor: 'pointer',
-    });
     this.on(button, 'click', onClick);
     return button;
   }
 
   private row(...children: HTMLElement[]): HTMLElement {
     const row = document.createElement('div');
-    Object.assign(row.style, { display: 'flex', gap: '4px', alignItems: 'center' });
+    Object.assign(row.style, { display: 'flex', gap: '6px', alignItems: 'center' });
     row.append(...children);
     return row;
   }

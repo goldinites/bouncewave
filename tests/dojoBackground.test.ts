@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SONGS } from '@/audio/music/songs';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { DojoBackground } from '@/render/backgrounds/DojoBackground';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
@@ -68,11 +67,5 @@ describe('DojoBackground', () => {
     const at = phases(still);
     still.advance(0.5, 0, 0);
     expect(phases(still)).toEqual(at);
-  });
-
-  it('has its own song, which plays only behind it', () => {
-    expect(SONGS.filter((song) => song.scene === 'dojo').map((song) => song.title)).toEqual([
-      'Black Belt',
-    ]);
   });
 });

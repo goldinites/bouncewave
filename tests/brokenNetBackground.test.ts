@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SONGS } from '@/audio/music/songs';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { BrokenNetBackground } from '@/render/backgrounds/BrokenNetBackground';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
@@ -155,11 +154,5 @@ describe('BrokenNetBackground', () => {
       vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
       expect(breakFrame(ran(), 1).slabs).toBe(0);
     });
-  });
-
-  it('has its own song, which plays only behind it', () => {
-    expect(SONGS.filter((song) => song.scene === 'brokenNet').map((song) => song.title)).toEqual([
-      'No Carrier',
-    ]);
   });
 });

@@ -9,12 +9,11 @@ export const SONG_BARS = 64;
 const MIN_BARS: Record<Tier, number> = { calm: 2, groove: 2, rise: Infinity, high: 4 };
 // Early exits land on a phrase boundary, so a melody is never cut off mid-phrase
 const PHRASE_BARS = 2;
-// A replayed transition starts this many bars before the part it leads into, or at the start
-// of the section before it if that is shorter, so a build's riser is heard from its start
-const REPLAY_BARS = 4;
 // Bars after a peak before a hot rally may take the music to one again: the chorus is a reward,
 // and one heard on every rally would stop being one
 export const PEAK_COOLDOWN_BARS = 16;
+/** The listening stand's part that plays the song's whole form in order, peaks and all. */
+export const WHOLE_FORM = 'whole-form';
 
 interface Position {
   songIndex: number;
@@ -24,10 +23,14 @@ interface Position {
   bar: number;
 }
 
-/** What the listening stand holds the music to: a song, and one of its sections or any. */
+/**
+ * What the listening stand holds the music to: a song, and one of its sections, any, or its
+ * whole form.
+ */
 interface Pin {
   songIndex: number;
   sectionIndex: number | null;
+  isWholeForm: boolean;
 }
 
 const isPeak = (tier: Tier) => tier === 'rise' || tier === 'high';
@@ -141,13 +144,15 @@ export class Conductor {
 
   /**
    * The listening stand: from the next bar line, play this song and nothing else — only this
-   * section, looping, if one is given, or otherwise its form as the game calls for it.
-   * Null lets the game lead the music again.
+   * section, looping, if one is given; its whole form, every part in order from `fromStep`, for
+   * `WHOLE_FORM`; or otherwise its form as the game calls for it. Null lets the game lead the
+   * music again.
    */
   public pinTo(
     songIndex: number | null,
-    sectionIndex: number | null = null,
+    part: number | typeof WHOLE_FORM | null = null,
     wanted: Tier = 'groove',
+    fromStep = 0,
   ): void {
     if (songIndex === null) {
       this.pin = null;
@@ -155,32 +160,17 @@ export class Conductor {
       if (this.scene) this.enterScene(this.scene);
       return;
     }
-    this.pin = { songIndex, sectionIndex };
-    this.skipTarget =
-      sectionIndex === null
-        ? this.entry(songIndex, wanted)
-        : this.atSection(songIndex, sectionIndex);
-    this.planned = this.skipTarget;
-  }
-
-  /**
-   * Plays the way into the pinned section again from the next bar line: the last bars of the
-   * section before it in the form, its fill included, then the pinned section.
-   */
-  public replayTransition(): void {
-    if (this.pin?.sectionIndex == null) return;
-    const { songIndex, sectionIndex } = this.pin;
-    const song = this.songs[songIndex];
-    const step = song.form.indexOf(sectionIndex);
-    const before =
-      step > 0
-        ? song.form[step - 1]
-        : (sectionIndex - 1 + song.sections.length) % song.sections.length;
-    const bars = song.sections[before].bars;
-    this.skipTarget = {
-      ...this.atSection(songIndex, before),
-      bar: bars <= REPLAY_BARS ? 0 : bars - REPLAY_BARS,
-    };
+    const isWholeForm = part === WHOLE_FORM;
+    const sectionIndex = isWholeForm ? null : part;
+    this.pin = { songIndex, sectionIndex, isWholeForm };
+    if (isWholeForm) {
+      const last = this.songs[songIndex].form.length - 1;
+      this.skipTarget = this.at(songIndex, Math.min(Math.max(0, fromStep), last));
+    } else
+      this.skipTarget =
+        sectionIndex === null
+          ? this.entry(songIndex, wanted)
+          : this.atSection(songIndex, sectionIndex);
     this.planned = this.skipTarget;
   }
 
@@ -230,6 +220,13 @@ export class Conductor {
       const isIn = position.sectionIndex === pinned;
       this.planned =
         isIn || !isEnd ? this.continuation() : this.atSection(position.songIndex, pinned);
+      return;
+    }
+    // The stand's whole form: every part in the order written, whatever the heat
+    if (this.pin?.isWholeForm) {
+      this.planned = isEnd
+        ? this.at(position.songIndex, this.nextFormStep(position.step))
+        : this.continuation();
       return;
     }
 
@@ -417,10 +414,11 @@ export class Conductor {
     const scene = this.scene;
     const isQuickMatch = scene === null || isPickableScene(scene);
     const hasOwn = this.songs.some((song) => song.scene !== undefined && song.scene === scene);
-    // Sketches are for the stand only
+    // Sketches are for the stand only. A challenge's backdrop with no song of its own yet
+    // borrows any other; a quick match's plays the quick-match songs, as it always does
     const fits = (song: Song) => {
       if (song.sketch) return false;
-      if (song.scene === undefined) return true;
+      if (song.scene === undefined || (!isQuickMatch && !hasOwn)) return true;
       return song.scene === scene || (isQuickMatch && isPickableScene(song.scene));
     };
     const candidates = this.songs.flatMap((song, i) =>

@@ -3,7 +3,7 @@ import { Arrangement } from '@/audio/music/Arrangement';
 import { Conductor } from '@/audio/music/Conductor';
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { MUSIC_LAYERS, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import { compileSong, MUSIC_LAYERS, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { DifficultyLevel } from '@/match/difficulty';
 import { fakeAudioContext } from './helpers/fakeAudioContext';
@@ -44,7 +44,7 @@ describe('Arrangement', () => {
         }
       });
     });
-  });
+  }, 20000); // every section of every song, the versions on the stand included: seconds of work
 
   it('cuts the music out and rewinds it over the last bar of a section that breaks down', () => {
     const { ctx } = fakeAudioContext();
@@ -52,7 +52,33 @@ describe('Arrangement', () => {
     const cutOut = vi.spyOn(graph, 'cutOut');
     const rewind = vi.spyOn(graph, 'rewind');
     const arrangement = new Arrangement(new Instruments(graph), graph);
-    const song = SONGS.find((s) => s.title === 'No Carrier')!;
+    // A song that breaks down, as a challenge's may: the line drops out, then the tape rewinds
+    const song = compileSong({
+      title: 'Broken',
+      bpm: 104,
+      swing: 0,
+      voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'sawtooth' },
+      sections: [
+        {
+          name: 'intro',
+          tier: 'calm',
+          chords: 'Am',
+          bass: 'long',
+          drums: 'none',
+          pad: 'swell',
+          glitch: 'dropout',
+        },
+        {
+          name: 'build',
+          tier: 'rise',
+          chords: 'Am',
+          bass: 'long',
+          drums: 'four',
+          pad: 'hold',
+          glitch: 'rewind',
+        },
+      ],
+    });
     const step = 60 / song.bpm / 4;
 
     const playLastBar = (name: string, isLastBar = true) => {
@@ -89,30 +115,84 @@ describe('Arrangement', () => {
     expect(cutOut).not.toHaveBeenCalled();
   });
 
+  it('brings a layer in on the bar the section has it enter on', () => {
+    const { ctx, calls } = fakeAudioContext();
+    const graph = new MusicGraph(ctx);
+    const others = MUSIC_LAYERS.filter((layer) => layer !== 'lead');
+    const arrangement = new Arrangement(new Instruments(graph), graph, new Set(others));
+    const song = compileSong({
+      title: 'Building',
+      bpm: 120,
+      swing: 0,
+      voices: { lead: 'square', counter: 'bell', arp: 'square', bass: 'sawtooth' },
+      sections: [
+        {
+          name: 'verse',
+          tier: 'groove',
+          chords: 'Am | Am | Am | Am',
+          lead: 'A4 - - - C5 - - - | A4 - - - C5 - - - | A4 - - - C5 - - - | A4 - - - C5 - - -',
+          bass: 'long',
+          drums: 'none',
+          pad: 'none',
+          layers: { lead: 0 },
+          enter: { lead: 2 },
+        },
+      ],
+    });
+    const section = song.sections[0];
+    const step = 60 / song.bpm / 4;
+    const notesIn = (bar: number) => {
+      const before = calls.length;
+      for (let stepInBar = 0; stepInBar < STEPS_PER_BAR; stepInBar++) {
+        arrangement.playStep({
+          time: (bar * STEPS_PER_BAR + stepInBar) * step,
+          stepDuration: step,
+          song,
+          section,
+          bar,
+          stepInBar,
+          isLastBar: bar === section.bars - 1,
+          nextBarChord: section.chords[0],
+          intensity: 1,
+          climaxLevel: 0,
+          difficulty: DifficultyLevel.NORMAL,
+        });
+      }
+      return calls.slice(before).filter((c) => c.method === 'createOscillator').length;
+    };
+
+    expect(notesIn(0)).toBe(0);
+    expect(notesIn(1)).toBe(0);
+    expect(notesIn(2)).toBeGreaterThan(0);
+    expect(notesIn(3)).toBeGreaterThan(0);
+  });
+
   it('plays nothing of the layers the listening stand silences', () => {
     const notesWith = (muted: MusicLayer[]) => {
       const { ctx, calls } = fakeAudioContext();
       const graph = new MusicGraph(ctx);
       const arrangement = new Arrangement(new Instruments(graph), graph, new Set(muted));
-      const song = SONGS[0];
-      const step = 60 / song.bpm / 4;
-      for (const section of song.sections) {
-        for (let s = 0; s < section.bars * STEPS_PER_BAR; s++) {
-          arrangement.playStep({
-            time: s * step,
-            stepDuration: step,
-            song,
-            section,
-            bar: Math.floor(s / STEPS_PER_BAR),
-            stepInBar: s % STEPS_PER_BAR,
-            isLastBar: true,
-            nextBarChord: section.chords[0],
-            intensity: 1,
-            climaxLevel: 1,
-            difficulty: DifficultyLevel.NORMAL,
-          });
+      // Every song, so every layer is in it somewhere (a band's song has no swells, for one)
+      for (const song of SONGS) {
+        const step = 60 / song.bpm / 4;
+        for (const section of song.sections) {
+          for (let s = 0; s < section.bars * STEPS_PER_BAR; s++) {
+            arrangement.playStep({
+              time: s * step,
+              stepDuration: step,
+              song,
+              section,
+              bar: Math.floor(s / STEPS_PER_BAR),
+              stepInBar: s % STEPS_PER_BAR,
+              isLastBar: true,
+              nextBarChord: section.chords[0],
+              intensity: 1,
+              climaxLevel: 1,
+              difficulty: DifficultyLevel.NORMAL,
+            });
+          }
+          arrangement.playDrop(0, section.chords[0], step);
         }
-        arrangement.playDrop(0, section.chords[0], step);
       }
       return calls.filter((c) => /^create(Oscillator|BufferSource)$/.test(c.method)).length;
     };

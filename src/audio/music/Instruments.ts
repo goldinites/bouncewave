@@ -1,7 +1,9 @@
 import { DrumKit, DrumRole } from '@/audio/music/kits';
 import { MusicGraph, PAD_SPREAD } from '@/audio/music/MusicGraph';
-import { ArpVoice, BassVoice, LeadVoice } from '@/audio/music/score';
-import { ExtraLeadId } from '@/audio/samples/leads';
+import { PAD_SOUND, STAB_SOUND } from '@/audio/music/palette';
+import { ArpVoice, BassVoice, LeadVoice, PadVoice, StabVoice } from '@/audio/music/score';
+import { ExtraPitchedId } from '@/audio/samples/extra';
+import { EXTRA_LEAD_FOR, ExtraLeadId } from '@/audio/samples/leads';
 import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { TransitionSampleId } from '@/audio/samples/transitions';
@@ -49,6 +51,8 @@ const LIVE_BASS: Record<BassVoice, OscillatorType> = {
   bassReese: 'sawtooth',
   bassFm: 'square',
   bass808: 'sine',
+  bassSlap: 'triangle',
+  bassGrowl: 'sawtooth',
 };
 const LIVE_ARP: Record<ArpVoice, OscillatorType> = { arpPulse: 'square', pluck: 'sawtooth' };
 const OSCILLATOR_TYPES: readonly string[] = ['sine', 'square', 'sawtooth', 'triangle'];
@@ -57,10 +61,7 @@ const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId | ExtraLeadId>> =
   saw: 'supersaw',
   square: 'squareLead',
   pluck: 'pluck',
-  soft: 'leadSoft',
-  brass: 'leadBrass',
-  sync: 'leadSync',
-  pwm: 'leadPwm',
+  ...EXTRA_LEAD_FOR,
 };
 // A rendered note is played a touch louder or softer each time, never out of tune
 const NOTE_HUMANIZE = 0.05; // ± share of the volume
@@ -78,6 +79,61 @@ interface NoteShape {
   vibrato?: boolean;
   /** Portamento: the note slides in from this MIDI note over `glide.time` seconds. */
   glide?: { from: number; time: number };
+}
+
+// Sustained leads that breathe or bow in slower than a synth's
+const SLOW_ATTACK: Partial<Record<LeadVoice, number>> = {
+  sax: 0.04,
+  shakuhachi: 0.05,
+  choir: 0.12,
+  strings: 0.15,
+}; // s
+
+/**
+ * How a rendered lead is played. A pluck or a muted guitar dies away with its filter closing;
+ * an electric piano or a vibraphone rings out as struck, its own decay its shape; the sustained
+ * leads settle and sing, the sax breathing in more slowly.
+ */
+function leadShape(
+  voice: LeadVoice,
+  duration: number,
+  filterCutoff: number,
+  glide?: { from: number; time: number },
+): NoteShape {
+  switch (voice) {
+    case 'pluck':
+    case 'guitar':
+      return {
+        attack: 0.002,
+        release: 0.03,
+        cutoff: { from: filterCutoff * 1.4, to: filterCutoff * 0.28, over: duration },
+      };
+    case 'epiano':
+    case 'vibes':
+    case 'rhodes':
+    case 'shamisen':
+    case 'harp':
+    case 'marimba':
+    case 'kalimba':
+    case 'gamelan':
+    case 'celesta':
+    case 'musicBox':
+      return { attack: 0.002, release: 0.08 };
+    // The 8-bit and crushed leads are machines: they snap on and never waver
+    case 'chip':
+    case 'crush':
+      return { attack: 0.002, release: 0.02, glide };
+    default:
+      return {
+        attack: SLOW_ATTACK[voice] ?? 0.015,
+        sustain: 0.75,
+        decay: 0.2,
+        release: 0.12,
+        cutoff: { from: filterCutoff * 1.6, to: filterCutoff, over: 0.2 },
+        vibrato: true,
+        glide,
+      };
+  }
 }
 
 export class Instruments {
@@ -134,6 +190,12 @@ export class Instruments {
     return true;
   }
 
+  /** A one-shot sound a section strikes (`SectionDef.hits`), straight into the mix. */
+  public fxHit(id: string, time: number, volume: number): void {
+    const buffer = this.samples.pick(id);
+    if (buffer) this.sample(buffer, time, volume, 1, this.graph.bus);
+  }
+
   /** A drum's extra hit under the drop, if its kit has one. */
   public impact(kit: DrumKit, time: number, volume: number): void {
     const buffer = kit.impact ? this.samples.pick(kit.impact) : null;
@@ -146,7 +208,7 @@ export class Instruments {
    * @returns false if the instrument isn't rendered yet (play the live synth instead)
    */
   private playNote(
-    id: PitchedSampleId | ExtraLeadId,
+    id: PitchedSampleId | ExtraLeadId | ExtraPitchedId,
     midiNote: number,
     time: number,
     duration: number,
@@ -231,17 +293,20 @@ export class Instruments {
     volume: number,
     destination: AudioNode,
     filterCutoff: number,
+    glide?: { from: number; time: number },
   ): void {
     if (!OSCILLATOR_TYPES.includes(voice)) {
       const bass = voice as BassVoice;
-      // The 808 rings out on its own; the others hold, their filter snapping open on the attack
+      // The 808 and the slap ring out on their own; the others hold, their filter snapping open
+      // on the attack
       const shape: NoteShape =
-        bass === 'bass808'
-          ? { attack: 0.003, release: 0.04 }
+        bass === 'bass808' || bass === 'bassSlap'
+          ? { attack: 0.003, release: 0.04, glide }
           : {
               attack: 0.004,
               release: 0.03,
               cutoff: { from: filterCutoff * 2.2, to: filterCutoff, over: 0.12 },
+              glide,
             };
       if (this.playNote(bass, midiNote, time, duration, volume, destination, shape)) return;
       voice = LIVE_BASS[bass];
@@ -366,23 +431,7 @@ export class Instruments {
   ): void {
     const sampled = SAMPLED_LEADS[voice];
     if (sampled) {
-      // A pluck dies away with its filter closing; the sustained leads settle and sing
-      const shape: NoteShape =
-        voice === 'pluck'
-          ? {
-              attack: 0.002,
-              release: 0.03,
-              cutoff: { from: filterCutoff * 1.4, to: filterCutoff * 0.28, over: duration },
-            }
-          : {
-              attack: 0.015,
-              sustain: 0.75,
-              decay: 0.2,
-              release: 0.12,
-              cutoff: { from: filterCutoff * 1.6, to: filterCutoff, over: 0.2 },
-              vibrato: true,
-              glide,
-            };
+      const shape = leadShape(voice, duration, filterCutoff, glide);
       if (this.playNote(sampled, midiNote, time, duration, volume, destination, shape)) return;
     }
     switch (voice) {
@@ -390,7 +439,21 @@ export class Instruments {
         this.bell(midiNote, time, duration, volume, destination);
         return;
       case 'pluck':
+      case 'guitar':
         this.note('sawtooth', midiNote, time, duration, volume, destination, filterCutoff * 1.4);
+        return;
+      // Struck and plucked voices not rendered yet: the live bell meanwhile
+      case 'epiano':
+      case 'vibes':
+      case 'rhodes':
+      case 'shamisen':
+      case 'harp':
+      case 'marimba':
+      case 'kalimba':
+      case 'gamelan':
+      case 'celesta':
+      case 'musicBox':
+        this.bell(midiNote, time, duration, volume, destination);
         return;
       case 'koto':
         this.koto(midiNote, time, duration, volume, destination, filterCutoff);
@@ -625,8 +688,11 @@ export class Instruments {
     volume: number,
     filterCutoff: number,
     swell: boolean,
+    voice: PadVoice = 'synth',
   ): void {
-    const attack = swell ? duration * 0.25 : Math.min(0.08, duration * 0.1);
+    // A reverse pad swells by itself: its envelope only opens and closes the note
+    const attack =
+      voice === 'reverse' ? 0.01 : swell ? duration * 0.25 : Math.min(0.08, duration * 0.1);
     // The rendered pad is already wide and detuned: one voice per note
     const shape: NoteShape = {
       attack,
@@ -635,7 +701,7 @@ export class Instruments {
     };
     // A pad sample is about twice as loud as one of the live pad's six detuned saws
     const played = chordNotes.map((note) =>
-      this.playNote('pad', note, time, duration, volume * 2, this.graph.pads, shape),
+      this.playNote(PAD_SOUND[voice], note, time, duration, volume * 2, this.graph.pads, shape),
     );
     if (played.every(Boolean)) return;
 
@@ -675,10 +741,26 @@ export class Instruments {
   }
 
   /** Short brassy chord hit: saws through one filter snapping shut. */
-  public stab(chordNotes: number[], time: number, duration: number, volume: number): void {
+  public stab(
+    chordNotes: number[],
+    time: number,
+    duration: number,
+    volume: number,
+    voice: StabVoice = 'brass',
+  ): void {
     const shape: NoteShape = { attack: 0.005, release: Math.min(0.06, duration * 0.3) };
-    const played = chordNotes.map((note) =>
-      this.playNote('brass', note + 12, time, duration, volume, this.graph.pads, shape),
+    // A guitar strums: each string a touch after the one below
+    const strum = voice === 'guitar' ? 0.012 : 0;
+    const played = chordNotes.map((note, i) =>
+      this.playNote(
+        STAB_SOUND[voice],
+        note + 12,
+        time + i * strum,
+        duration,
+        volume,
+        this.graph.pads,
+        shape,
+      ),
     );
     if (played.every(Boolean)) return;
 

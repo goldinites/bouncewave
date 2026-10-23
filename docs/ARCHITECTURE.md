@@ -126,7 +126,7 @@ section's `layers` say from what intensity each part comes in; its `feel` (half-
 (`audio/music/variation.ts`): ghost notes, phrase fills, bass octaves, a shifted arpeggio, the
 counter answering a resting lead. Its id is its title in lower case with dashes; listen to it, part by
 part and layer by layer, on the debug overlay's sound stand (`debug/SoundStand.ts`,
-`?song=night-drive&part=chorus&mute=drums`). Its `level` evens out its loudness against the others,
+`?song=neon-cathedral&part=chorus&mute=drums`). Its `level` evens out its loudness against the others,
 read off the stand's meter.
 
 **A sound.** Everything heard goes through `audio/Mixer.ts`: music, action sounds and menu sounds
