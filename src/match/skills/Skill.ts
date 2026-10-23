@@ -6,7 +6,7 @@ import { Paddle } from '@/match/Paddle';
 /**
  * Every skill the match can play (docs/PROGRESSION.md): so far the prototypes, mastery's first
  * and the implants' first two, which only developers turn on (?skills=arc,analyzer,reflex, or
- * the debug overlay). The rest join with stage 7.
+ * the debug overlay). The rest join with stage 9.
  */
 export const SKILL_IDS = ['arc', 'analyzer', 'reflex'] as const;
 export type SkillId = (typeof SKILL_IDS)[number];

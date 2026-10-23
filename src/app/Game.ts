@@ -89,7 +89,7 @@ export class Game {
    */
   private isLandscape = false;
   /**
-   * The backdrop the match on court asked for when it started: a challenge's (or, in stage 9, a
+   * The backdrop the match on court asked for when it started: a challenge's (or, in stage 7, a
    * story chapter's) own; null plays it on the player's. Set by whatever starts the match.
    */
   private matchScene: SceneId | null = null;
@@ -442,7 +442,7 @@ export class Game {
   }
 
   /**
-   * Keeps a passed challenge in the profile (its reward comes with the money, stage 7) and shows
+   * Keeps a passed challenge in the profile (its reward comes with the money, stage 9) and shows
    * the attempt's result in place of the game-over menu.
    */
   private recordVerdict(verdict: ChallengeVerdict): void {
