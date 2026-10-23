@@ -19,58 +19,19 @@ import {
  * boom and a ringing tail — the layers a hit is felt through, as a parry in Sekiro is.
  */
 
-/** The rendered bodies and clicks a hit is mixed from (`body.<material>`, `click.<material>`). */
-type Material = 'steel' | 'neon' | 'glass';
-
 /**
- * A hit's character: the bodies and clicks it mixes, each at its gain; a body with `cut` is only
- * its attack, faded out after that many seconds — the edge of one material on the ring of
- * another. The perfect hit's octave is the first body's.
+ * The paddle hit's tuned bodies, mixed (chosen by ear with the user, 24.10.2026, over steel, neon
+ * and glass alone): the neon paddle's ring with a blade's edge on its attack — the bite of a
+ * parry, then the paddle's light. A body with `cut` is heard only as its attack, faded out after
+ * that many seconds. The opponent plays each body's `.cpu` twin; the perfect hit's octave is the
+ * first body's.
  */
-export interface HitStyleMix {
-  bodies: { material: Material; gain: number; cut?: number }[];
-  clicks: { material: Material; gain: number }[];
-}
-
-/** The characters a paddle hit can have, auditioned on the stand (`?sfx=`). */
-export const HIT_STYLES = {
-  steel: { bodies: [{ material: 'steel', gain: 1 }], clicks: [{ material: 'steel', gain: 1 }] },
-  neon: { bodies: [{ material: 'neon', gain: 1 }], clicks: [{ material: 'neon', gain: 1 }] },
-  glass: { bodies: [{ material: 'glass', gain: 1 }], clicks: [{ material: 'glass', gain: 1 }] },
-  // The neon ring with a blade's edge on its attack: the parry's bite, then the paddle's light
-  neonSteel: {
-    bodies: [
-      { material: 'neon', gain: 0.9 },
-      { material: 'steel', gain: 0.6, cut: 0.12 },
-    ],
-    clicks: [{ material: 'steel', gain: 1 }],
-  },
-  // The neon ring with glass shimmering over it: clear and bright
-  neonGlass: {
-    bodies: [
-      { material: 'neon', gain: 0.9 },
-      { material: 'glass', gain: 0.5 },
-    ],
-    clicks: [
-      { material: 'neon', gain: 0.7 },
-      { material: 'glass', gain: 0.5 },
-    ],
-  },
-  // All three: the neon ring, the blade's edge on its attack, the glass's shimmer above
-  fusion: {
-    bodies: [
-      { material: 'neon', gain: 0.85 },
-      { material: 'steel', gain: 0.45, cut: 0.1 },
-      { material: 'glass', gain: 0.35 },
-    ],
-    clicks: [
-      { material: 'steel', gain: 0.8 },
-      { material: 'glass', gain: 0.4 },
-    ],
-  },
-} satisfies Record<string, HitStyleMix>;
-export type HitStyle = keyof typeof HIT_STYLES;
-export const isHitStyle = (value: string): value is HitStyle => value in HIT_STYLES;
+export const HIT_BODIES: readonly { id: string; gain: number; cut?: number }[] = [
+  { id: 'body.neon', gain: 0.9 },
+  { id: 'body.steel', gain: 0.6, cut: 0.12 },
+];
+/** The click of contact, the blade's. */
+export const HIT_CLICK = 'click.steel';
 
 // The rally's notes run from about E3 to C6 (sfx/harmony.ts): roots three semitones either side
 const BODY_ROOTS = [55, 61, 67, 73, 79];
@@ -148,32 +109,6 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
       chain(carrier, hit(ctx, 1, 0.5), drive(ctx, 1.6), ctx.destination);
     },
   },
-  // A glass struck: near-harmonic sines, clear and quick
-  'body.glass': {
-    roots: BODY_ROOTS,
-    maxRate: BODY_RATE,
-    duration: 0.7,
-    build: (ctx, _random, f) => {
-      partials(
-        ctx,
-        f * 2,
-        [1, 2.02, 3.01, 4.2],
-        [1, 0.45, 0.3, 0.15],
-        [0.6, 0.3, 0.18, 0.1],
-        ctx.destination,
-      );
-      chain(osc(ctx, 'sine', f), hit(ctx, 0.5, 0.35), ctx.destination);
-    },
-  },
-  // The opponent's: a wooden bar, a marimba's fourth and tenth partials
-  'body.glass.cpu': {
-    roots: BODY_ROOTS,
-    maxRate: BODY_RATE,
-    duration: 0.7,
-    build: (ctx, _random, f) => {
-      partials(ctx, f, [1, 4, 10], [1, 0.4, 0.15], [0.4, 0.12, 0.05], ctx.destination);
-    },
-  },
 };
 
 /** The noise a click is cut from, `decay` seconds, through a band at `hz`. */
@@ -195,27 +130,6 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
     build: (ctx, random) => {
       chain(burst(ctx, random, jitter(random, 4200, 0.1), 0.9, 0.006), ctx.destination);
       chain(osc(ctx, 'sine', jitter(random, 3100, 0.05)), hit(ctx, 0.6, 0.004), ctx.destination);
-    },
-  },
-  'click.neon': {
-    duration: 0.05,
-    variants: 4,
-    build: (ctx, random) => {
-      chain(
-        osc(ctx, 'square', jitter(random, 2200, 0.05)),
-        hit(ctx, 0.5, 0.005),
-        filter(ctx, 'lowpass', 7000),
-        ctx.destination,
-      );
-      chain(burst(ctx, random, 3000, 0.7, 0.003), ctx.destination);
-    },
-  },
-  'click.glass': {
-    duration: 0.04,
-    variants: 4,
-    build: (ctx, random) => {
-      chain(osc(ctx, 'sine', jitter(random, 5200, 0.06)), hit(ctx, 1, 0.003), ctx.destination);
-      chain(burst(ctx, random, 6000, 1.2, 0.002), level(ctx, 0.5), ctx.destination);
     },
   },
   // Weight: a punch dropping fast from 180 Hz, which a phone still plays, into the low end

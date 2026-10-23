@@ -218,22 +218,12 @@ describe('paddle hits from their rendered layers', () => {
     return { sfx, calls, carves, ducks, picked };
   };
 
-  it('layers a click, the tuned body and a thump, the opponent in its own voice', () => {
+  it('layers a click, the neon body with the steel’s edge and a thump, the opponent its twins', () => {
     const { sfx, picked } = setup();
 
-    sfx.hitStyle = 'steel';
     sfx.playPaddleHit(1, false, 0);
-    expect(picked).toEqual(['body.steel', 'click.steel', 'thump']);
+    expect(picked).toEqual(['body.neon', 'body.steel', 'click.steel', 'thump']);
     picked.length = 0;
-    sfx.hitStyle = 'glass';
-    sfx.playPaddleHit(1, false, 1);
-    expect(picked).toEqual(['body.glass.cpu', 'click.glass', 'thump']);
-  });
-
-  it('mixes the bodies and clicks of a character made of several materials', () => {
-    const { sfx, picked } = setup();
-
-    sfx.hitStyle = 'neonSteel';
     sfx.playPaddleHit(1, false, 1);
     expect(picked).toEqual(['body.neon.cpu', 'body.steel.cpu', 'click.steel', 'thump']);
   });

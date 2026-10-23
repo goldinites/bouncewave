@@ -13,7 +13,6 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
-import { isHitStyle } from '@/audio/samples/actions';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
 
@@ -208,9 +207,6 @@ export class SoundStand {
     if (pad) overrides.pad = pad as PadVoice;
     if (kit && kit in KITS) overrides.kit = kit as KitName;
     if (Object.keys(overrides).length > 0) this.audio.music.setOverrides(overrides);
-    // The paddle hits' character, in a match too (`&sfx=neon`)
-    const style = params.get('sfx');
-    if (style && isHitStyle(style)) this.audio.sfx.hitStyle = style;
 
     const song = params.get('song');
     if (!song || !SONGS.some((s) => s.id === song)) return;

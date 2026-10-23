@@ -1,6 +1,7 @@
+import { dbToGain } from '@/audio/curves';
 import { Mixer } from '@/audio/Mixer';
 import { Harmony } from '@/audio/music/HarmonyTimeline';
-import { HIT_STYLES, HitStyle, HitStyleMix } from '@/audio/samples/actions';
+import { HIT_BODIES, HIT_CLICK } from '@/audio/samples/actions';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
@@ -41,6 +42,10 @@ const HIT_MIX = {
   THUMP: 0.18,
   SPARK: 0.1,
   PERFECT: { BODY: 0.28, OCTAVE: 0.1, THUMP: 0.28, SPARK: 0.18, BOOM: 0.25, TAIL: 0.08 },
+  // dB the whole hit sits at, and the opponent's against the player's: heard over every peak of
+  // the soundtrack (the render's "heard"), not standing out of the game
+  LEVEL: -6,
+  CPU_LEVEL: -1,
   // The opponent's click a little darker, so the two sides answer each other
   CPU_CLICK_RATE: 0.85,
   // Takes in a row differ: the unpitched layers' pitch and every layer's level, as shares
@@ -67,8 +72,6 @@ export class SoundEffects {
   private harmonyGetter: () => Harmony | null;
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
-  /** The paddle hits' character (`?sfx=` on the stand). */
-  public hitStyle: HitStyle = 'neonSteel';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -182,9 +185,8 @@ export class SoundEffects {
   ): boolean {
     const samples = this.samplesGetter();
     const isCpu = paddleIndex !== 0;
-    const mix: HitStyleMix = HIT_STYLES[this.hitStyle];
-    const bodies = mix.bodies.map(({ material, gain, cut }) => ({
-      note: samples?.pickNote(`body.${material}${isCpu ? '.cpu' : ''}`, note),
+    const bodies = HIT_BODIES.map(({ id, gain, cut }) => ({
+      note: samples?.pickNote(`${id}${isCpu ? '.cpu' : ''}`, note),
       gain,
       cut,
     }));
@@ -195,20 +197,15 @@ export class SoundEffects {
 
     const hard = clamp(force, 0, 1);
     const strength = isPerfect ? 1 : 0.5 + 0.5 * hard;
-    const at = { ac, pan: clamp(pan, -1, 1) * HIT_MIX.PAN };
+    const trim = dbToGain(HIT_MIX.LEVEL + (isCpu ? HIT_MIX.CPU_LEVEL : 0));
+    const at = { ac, pan: clamp(pan, -1, 1) * HIT_MIX.PAN, trim };
     const unpitched = (id: string, gain: number, rate = 1) => {
       const buffer = samples.pick(id);
       if (buffer)
         this.layer({ ...at, buffer, gain, rate: rate * this.jitter(HIT_MIX.JITTER.RATE) });
     };
 
-    for (const click of mix.clicks) {
-      unpitched(
-        `click.${click.material}`,
-        HIT_MIX.CLICK * strength * click.gain,
-        isCpu ? HIT_MIX.CPU_CLICK_RATE : 1,
-      );
-    }
+    unpitched(HIT_CLICK, HIT_MIX.CLICK * strength, isCpu ? HIT_MIX.CPU_CLICK_RATE : 1);
     const playBodies = (level: number) => {
       for (const body of bodies) {
         const { buffer, rate } = body.note!;
@@ -218,7 +215,7 @@ export class SoundEffects {
     if (isPerfect) {
       const { PERFECT } = HIT_MIX;
       playBodies(PERFECT.BODY);
-      const octave = samples.pickNote(`body.${mix.bodies[0].material}`, note + 12);
+      const octave = samples.pickNote(HIT_BODIES[0].id, note + 12);
       if (octave)
         this.layer({ ...at, buffer: octave.buffer, rate: octave.rate, gain: PERFECT.OCTAVE });
       unpitched('thump', PERFECT.THUMP);
@@ -250,6 +247,7 @@ export class SoundEffects {
     gain,
     rate,
     pan,
+    trim,
     cut,
   }: {
     ac: AudioContext;
@@ -257,6 +255,8 @@ export class SoundEffects {
     gain: number;
     rate: number;
     pan: number;
+    /** The hit's own level, on every layer. */
+    trim: number;
     cut?: number;
   }): void {
     try {
@@ -264,7 +264,7 @@ export class SoundEffects {
       source.buffer = buffer;
       source.playbackRate.value = rate;
       const level = ac.createGain();
-      level.gain.value = gain * this.jitter(HIT_MIX.JITTER.GAIN);
+      level.gain.value = gain * trim * this.jitter(HIT_MIX.JITTER.GAIN);
       if (cut !== undefined) level.gain.setTargetAtTime(0, ac.currentTime + cut, HIT_MIX.CUT_FADE);
       const panner = ac.createStereoPanner();
       panner.pan.value = pan;

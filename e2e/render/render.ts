@@ -37,7 +37,6 @@ const { ANALYSIS, REPORT_BANDS } = analysis;
 
 type LeadVoice = import('@/audio/music/score').LeadVoice;
 type BassVoice = import('@/audio/music/score').BassVoice;
-type HitStyle = import('@/audio/samples/actions').HitStyle;
 type MusicLayer = import('@/audio/music/score').MusicLayer;
 type Song = import('@/audio/music/score').Song;
 type Tier = import('@/audio/music/score').Tier;
@@ -81,8 +80,6 @@ export interface RenderOptions {
   lead?: LeadVoice;
   bass?: BassVoice;
   kit?: KitName;
-  /** The paddle hits' character. */
-  sfx?: HitStyle;
   mute?: MusicLayer[];
 }
 
@@ -95,7 +92,6 @@ interface MusicRender {
   lead?: LeadVoice;
   bass?: BassVoice;
   kit?: KitName;
-  sfx?: HitStyle;
   /** Paddle hits played at these times, s, of these kinds. */
   hits?: { at: number; kind: (typeof HIT_KINDS)[number]; rally: number }[];
 }
@@ -124,7 +120,6 @@ async function renderMusic({
   lead,
   bass,
   kit,
-  sfx: style,
   hits = [],
 }: MusicRender) {
   const overrides = { lead, bass, kit };
@@ -164,7 +159,6 @@ async function renderMusic({
     () => mixer,
     () => bank,
   );
-  if (style) sfx.hitStyle = style;
 
   // Every action at its render quantum (128 frames), where the context can be suspended
   const actions = new Map<number, (() => void)[]>();
@@ -360,14 +354,14 @@ function similarityPicture(song: Song, similarity: number[][]) {
   return element.toDataURL('image/png');
 }
 
-async function renderSong({ song: id, lead, bass, kit, sfx, mute = [] }: RenderOptions) {
+async function renderSong({ song: id, lead, bass, kit, mute = [] }: RenderOptions) {
   const song = SONGS.find((s) => s.id === id);
   if (!song) throw new Error(`No song called ${id}`);
   const startedAt = performance.now();
   const parts = partsOf(song);
   const bars = parts.reduce((sum, part) => sum + part.section.bars, 0);
   const seconds = START_DELAY + bars * barSeconds(song) + TAIL;
-  const whole = { song, part: WHOLE_FORM, seconds, lead, bass, kit, sfx };
+  const whole = { song, part: WHOLE_FORM, seconds, lead, bass, kit };
   const others = (keep: MusicLayer) =>
     (['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as MusicLayer[]).filter(
       (l) => l !== keep,
@@ -436,7 +430,7 @@ async function renderSong({ song: id, lead, bass, kit, sfx, mute = [] }: RenderO
     kind: HIT_KINDS[i % HIT_KINDS.length],
     rally: i + 1,
   }));
-  const partMusic = { song, part: section.name, seconds: hitSeconds, lead, bass, kit, sfx, mute };
+  const partMusic = { song, part: section.name, seconds: hitSeconds, lead, bass, kit, mute };
   const without = analysis.toMono(await renderMusic(partMusic));
   const withHits = analysis.toMono(await renderMusic({ ...partMusic, hits }));
   const beforeHits = Math.round(hits[0].at * RATE);
@@ -462,7 +456,6 @@ async function renderSong({ song: id, lead, bass, kit, sfx, mute = [] }: RenderO
   const options = [
     lead ? `--lead=${lead}` : '',
     bass ? `--bass=${bass}` : '',
-    sfx ? `--sfx=${sfx}` : '',
     kit ? `--kit=${kit}` : '',
     mute.length ? `--mute=${mute.join(',')}` : '',
   ]
