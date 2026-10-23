@@ -56,9 +56,33 @@ export const STAND_SOUNDS: readonly StandSound[] = [
     times: 4,
     every: 0.32,
   },
-  { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4) },
-  { name: 'od ready', play: (sfx) => sfx.playOverdriveReady() },
-  { name: 'wall', play: (sfx) => sfx.playWallBounce() },
+  // The power shot's styles, sketches to choose from; the last one played stays for the match
+  {
+    name: 'overdrive charge',
+    play: (sfx) => {
+      sfx.powerShotStyle = 'charge';
+      sfx.playPowerShot(4, -0.9);
+    },
+  },
+  {
+    name: 'overdrive hammer',
+    play: (sfx) => {
+      sfx.powerShotStyle = 'hammer';
+      sfx.playPowerShot(4, -0.9);
+    },
+  },
+  { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
+  { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
+  {
+    // A rally's walls and hits as they come: hit, wall, hit
+    name: 'hit wall hit',
+    play: (sfx, i) =>
+      i === 1
+        ? sfx.playWallBounce(0)
+        : sfx.playPaddleHit(i + 1, false, i / 2, { pan: i ? 0.9 : -0.9 }),
+    times: 3,
+    every: 0.25,
+  },
   { name: 'arc', play: (sfx) => sfx.playSpin(0.4) },
   { name: 'arc max', play: (sfx) => sfx.playSpin(1) },
   { name: 'analyzer', play: (sfx) => sfx.playScan() },

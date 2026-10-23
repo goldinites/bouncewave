@@ -110,6 +110,19 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
       chain(carrier, hit(ctx, 1, 0.5), drive(ctx, 1.6), ctx.destination);
     },
   },
+  // A wall: a muted knock on the chord's fifth, low and short, under the paddles' ring
+  wall: {
+    roots: [47, 53, 59],
+    maxRate: RENDER_RATE.MID,
+    duration: 0.4,
+    build: (ctx, random, f) => {
+      const out = filter(ctx, 'lowpass', 1800);
+      out.connect(ctx.destination);
+      chain(osc(ctx, 'sine', f), hit(ctx, 1, 0.18), out);
+      chain(osc(ctx, 'triangle', f * 2), hit(ctx, 0.35, 0.08), out);
+      chain(burst(ctx, random, 900, 0.8, 0.012), level(ctx, 0.5), out);
+    },
+  },
 };
 
 /** The noise a click is cut from, `decay` seconds, through a band at `hz`. */
@@ -179,6 +192,66 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
         drive(ctx, 2.2),
         ctx.destination,
       );
+    },
+  },
+  // An Overdrive's blast: a wall of noise falling from bright to dark, in a long room
+  blast: {
+    duration: 1.6,
+    maxRate: RENDER_RATE.MID,
+    variants: 2,
+    build: (ctx, random) => {
+      const fall = filter(ctx, 'lowpass', 4000);
+      fall.frequency.setValueAtTime(4000, 0);
+      fall.frequency.exponentialRampToValueAtTime(250, 0.6);
+      chain(
+        noiseSource(ctx, random),
+        fall,
+        hit(ctx, 1, 0.5, 0, 0.004),
+        drive(ctx, 2),
+        ctx.destination,
+      );
+      chain(
+        burst(ctx, random, 1500, 0.5, 0.05),
+        room(ctx, 1, random),
+        level(ctx, 0.6),
+        ctx.destination,
+      );
+    },
+  },
+  // The charge let go: an FM sweep tearing upward through crackling arcs
+  zap: {
+    duration: 0.45,
+    variants: 3,
+    build: (ctx, random) => {
+      const carrier = sweep(ctx, 'sine', jitter(random, 220, 0.05), 1800, 0.25);
+      const index = ctx.createGain();
+      index.gain.setValueAtTime(900, 0);
+      index.gain.exponentialRampToValueAtTime(60, 0.3);
+      chain(sweep(ctx, 'sine', 330, 2700, 0.25), index);
+      index.connect(carrier.frequency);
+      chain(
+        carrier,
+        hit(ctx, 1, 0.35, 0, 0.003),
+        drive(ctx, 2.5),
+        filter(ctx, 'lowpass', 9000),
+        ctx.destination,
+      );
+    },
+  },
+  // The Overdrive meter filling: a breath of noise rising into the chime
+  charge: {
+    duration: 0.3,
+    maxRate: RENDER_RATE.MID,
+    variants: 2,
+    build: (ctx, random) => {
+      const rise = filter(ctx, 'bandpass', 800, 2);
+      rise.frequency.setValueAtTime(800, 0);
+      rise.frequency.exponentialRampToValueAtTime(6000, 0.2);
+      const swell = ctx.createGain();
+      swell.gain.setValueAtTime(0.0001, 0);
+      swell.gain.exponentialRampToValueAtTime(1, 0.18);
+      swell.gain.exponentialRampToValueAtTime(0.0001, 0.28);
+      chain(noiseSource(ctx, random), rise, swell, ctx.destination);
     },
   },
   // The air ringing after a perfect hit: bright noise in a long room

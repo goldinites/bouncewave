@@ -58,8 +58,8 @@ const START_DELAY = 0.1; // s: the music engine's own delay before its first ste
 const TAIL = 2; // s rendered past the form, for the last reverb
 const TICK = 0.05; // s of audio between the scheduler's ticks (it looks 0.15 s ahead)
 const HIT_STEP = 4; // the step of each bar a test hit lands on: the second beat
-const HIT_KINDS = ['player', 'cpu', 'perfect'] as const;
-const HIT_BARS = 13; // at least: a hit of each kind on four bars
+const HIT_KINDS = ['player', 'cpu', 'perfect', 'overdrive'] as const;
+const HIT_BARS = 17; // at least: a hit of each kind on four bars
 
 // The pictures: a bar's width, the spectrum's height and range, the similarity's cell
 const PICTURE = {
@@ -172,7 +172,9 @@ async function renderMusic({
   for (let time = TICK; time < seconds; time += TICK) at(time, () => music.tick());
   for (const hit of hits) {
     at(hit.at, () =>
-      sfx.playPaddleHit(hit.rally, hit.kind === 'perfect', hit.kind === 'cpu' ? 1 : 0),
+      hit.kind === 'overdrive'
+        ? sfx.playPowerShot(hit.rally)
+        : sfx.playPaddleHit(hit.rally, hit.kind === 'perfect', hit.kind === 'cpu' ? 1 : 0),
     );
   }
   for (const [frame, run] of actions) {

@@ -214,7 +214,7 @@ describe('EffectsDirector.handle', () => {
       chargedOverdrive: false,
     });
 
-    expect(audio.sfx.playPowerShot).toHaveBeenCalledWith(9);
+    expect(audio.sfx.playPowerShot).toHaveBeenCalledWith(9, expect.any(Number));
     expect(audio.sfx.playPaddleHit).not.toHaveBeenCalled();
     expect(particles.particles.some((p) => p.color === COLORS.YELLOW)).toBe(true);
     expect(renderer.addFlash).toHaveBeenCalled();

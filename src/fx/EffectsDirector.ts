@@ -122,6 +122,9 @@ export interface ChallengeFinale {
   isPassed: boolean;
 }
 
+/** Where across the court `x` is, as a sound's pan: -1 the left edge, 1 the right. */
+const courtPan = (x: number) => (x / COURT.WIDTH) * 2 - 1;
+
 /**
  * Everything the player sees and hears in response to the match: hit sounds, sparks and glow,
  * screen shake, deciding-point drama, the rally climax and the end-of-match finale.
@@ -297,14 +300,14 @@ export class EffectsDirector {
 
       case 'wallBounce':
         this.renderer.addShake(SHAKE.WALL_BOUNCE);
-        this.audio.sfx.playWallBounce();
+        this.audio.sfx.playWallBounce(courtPan(event.x));
         break;
 
       case 'brickBreak': {
         // It bounces like a wall and shatters in its own colour
         const { brick } = event;
         this.renderer.addShake(SHAKE.WALL_BOUNCE);
-        this.audio.sfx.playWallBounce();
+        this.audio.sfx.playWallBounce(courtPan(event.x));
         this.particles.burst(
           brick.x + brick.width / 2,
           brick.y + brick.height / 2,
@@ -364,14 +367,14 @@ export class EffectsDirector {
       this.onPowerShot(hit);
     } else {
       this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, paddle.side, {
-        pan: (hit.x / COURT.WIDTH) * 2 - 1,
+        pan: courtPan(hit.x),
         force: getSpeedHeat(hit.speed, this.maxBallSpeed),
       });
     }
 
     if (hit.chargedOverdrive) {
       this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, OVERDRIVE_FX.READY_RING_SPEED);
-      this.audio.sfx.playOverdriveReady();
+      this.audio.sfx.playOverdriveReady(courtPan(hit.x));
     }
   }
 
@@ -384,7 +387,7 @@ export class EffectsDirector {
     this.particles.shockwave(hit.x, hit.y, COLORS.PINK, SHOCKWAVE_SPEED.PERFECT);
     this.renderer.addFlash(OVERDRIVE_FX.POWER_FLASH);
     this.renderer.addShake(OVERDRIVE_FX.POWER_SHAKE);
-    this.audio.sfx.playPowerShot(hit.rally);
+    this.audio.sfx.playPowerShot(hit.rally, courtPan(hit.x));
   }
 
   /** A skill's sound and burst; what lasts (a spin, a slowed world) the renderer draws itself. */

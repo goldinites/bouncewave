@@ -3,7 +3,7 @@ import { Mixer } from '@/audio/Mixer';
 import { Harmony } from '@/audio/music/HarmonyTimeline';
 import { HIT_BODIES, HIT_CLICK } from '@/audio/samples/actions';
 import { SampleBank } from '@/audio/samples/SampleBank';
-import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
+import { getRallyNote, getWallNote, MELODY_LOW } from '@/audio/sfx/harmony';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp, midiToFrequency } from '@/shared/math';
 
@@ -48,6 +48,14 @@ const HIT_MIX = {
   LEVEL: -11,
   CPU_LEVEL: -1,
   PERFECT_LEVEL: 5,
+  // The Overdrive's power shot: everything a perfect hit has with the blade ringing out whole, and
+  // this much louder than a perfect hit; each style adds its own (see `PowerShotStyle`)
+  POWER: { LEVEL: 2, ZAP: 0.35, BLAST: 0.25, HAMMER_BOOM: 0.7, HAMMER_BLAST: 0.35 },
+  HAMMER_DELAY: 0.09, // s, the hammer's second blow after the first
+  // The meter filling: three quick pings climbing the chord over a rising breath, below a hit
+  READY: { LEVEL: -2, PING: 0.45, CHARGE: 0.3, STEP: 0.05 },
+  // A wall: a muted knock, well under a paddle's hit
+  WALL: { LEVEL: -5, KNOCK: 0.5, THUMP: 0.12 },
   // The opponent's click a little darker, so the two sides answer each other
   CPU_CLICK_RATE: 0.85,
   // Takes in a row differ: the unpitched layers' pitch and every layer's level, as shares
@@ -84,6 +92,17 @@ export interface HitFeel {
   force?: number;
 }
 
+/**
+ * The Overdrive's character, sketches auditioned on the stand: `charge` a discharge tearing
+ * upward through crackling arcs, `hammer` a blow struck twice into a heavier blast.
+ */
+export type PowerShotStyle = 'charge' | 'hammer';
+
+/** One rendered layer to play: a tuned body at a note, or a one-shot. */
+type Layer =
+  | { tuned: string; note: number; gain: number; cut?: number; delay?: number }
+  | { shot: string; gain: number; rate?: number; delay?: number };
+
 /** Which of the mixer's buses a sound plays on. */
 type Bus = 'sfx' | 'menu';
 
@@ -95,6 +114,8 @@ export class SoundEffects {
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
   private heatGetter: () => number;
+  /** The power shot's character (sketches, on the stand). */
+  public powerShotStyle: PowerShotStyle = 'charge';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -165,9 +186,16 @@ export class SoundEffects {
     }
   }
 
-  public playWallBounce(): void {
-    const freq = midiToFrequency(getWallNote(this.harmonyGetter()));
-    this.beep(freq, 0.06, 'triangle', 0.07);
+  /** A wall bounce: a muted knock on the chord's fifth, where on the court it bounced (`pan`). */
+  public playWallBounce(pan = 0): void {
+    const note = getWallNote(this.harmonyGetter());
+    const { WALL } = HIT_MIX;
+    const layers: Layer[] = [
+      { tuned: 'wall', note, gain: WALL.KNOCK },
+      { shot: 'thump', gain: WALL.THUMP, rate: 1.4 },
+    ];
+    if (this.playLayers(layers, HIT_MIX.LEVEL + WALL.LEVEL, pan)) return;
+    this.beep(midiToFrequency(note), 0.06, 'triangle', 0.07);
   }
 
   /**
@@ -209,57 +237,73 @@ export class SoundEffects {
     paddleIndex: number,
     { pan = 0, force = 0.5 }: HitFeel,
   ): boolean {
-    const samples = this.samplesGetter();
     const isCpu = paddleIndex !== 0;
-    const bodies = HIT_BODIES.map(({ id, gain, cut }) => ({
-      note: samples?.pickNote(`${id}${isCpu ? '.cpu' : ''}`, note),
-      gain,
-      cut,
-    }));
-    if (!samples || bodies.some((body) => !body.note)) return false;
+    const hard = clamp(force, 0, 1);
+    const strength = isPerfect ? 1 : 0.5 + 0.5 * hard;
+    const click: Layer = {
+      shot: HIT_CLICK,
+      gain: HIT_MIX.CLICK * strength,
+      rate: isCpu ? HIT_MIX.CPU_CLICK_RATE : 1,
+    };
+    const { PERFECT } = HIT_MIX;
+    const layers = isPerfect
+      ? [
+          click,
+          ...this.bodies(note, PERFECT.BODY, isCpu),
+          { tuned: HIT_BODIES[0].id, note: note + 12, gain: PERFECT.OCTAVE },
+          { shot: 'thump', gain: PERFECT.THUMP },
+          { shot: 'spark', gain: PERFECT.SPARK },
+          { shot: 'boom', gain: PERFECT.BOOM },
+          { shot: 'tail', gain: PERFECT.TAIL },
+        ]
+      : [
+          click,
+          ...this.bodies(note, HIT_MIX.BODY, isCpu),
+          { shot: 'thump', gain: HIT_MIX.THUMP * (0.4 + 0.6 * hard) },
+          ...(hard > 0.5 ? [{ shot: 'spark', gain: HIT_MIX.SPARK * (hard - 0.5) * 2 }] : []),
+        ];
+    const level =
+      HIT_MIX.LEVEL + (isCpu ? HIT_MIX.CPU_LEVEL : 0) + (isPerfect ? HIT_MIX.PERFECT_LEVEL : 0);
+    if (!this.playLayers(layers, level, pan)) return false;
+    if (isPerfect) this.duckMusic(HIT_DUCK.PERFECT);
+    this.mixerGetter()?.carveForHit(strength);
+    return true;
+  }
 
+  /** The hit's tuned bodies at `note` (the opponent's twins), `gain` shared out among them. */
+  private bodies(note: number, gain: number, isCpu = false, whole = false): Layer[] {
+    return HIT_BODIES.map((body) => ({
+      tuned: `${body.id}${isCpu ? '.cpu' : ''}`,
+      note,
+      gain: gain * body.gain,
+      cut: whole ? undefined : body.cut,
+    }));
+  }
+
+  /**
+   * Plays rendered layers together, at `levelDb` with the music's heat on top, at `pan`; false if
+   * they aren't rendered yet, for the live synth to play instead (true and silent while the game
+   * can't be heard).
+   */
+  private playLayers(layers: Layer[], levelDb: number, pan: number): boolean {
+    const samples = this.samplesGetter();
+    // The layers are rendered all at once, the bodies last
+    if (!samples?.pickNote(HIT_BODIES[0].id, MELODY_LOW)) return false;
     const ac = this.audioContextGetter();
     if (!ac || this.isMutedGetter() || !this.isGameplayAudibleGetter()) return true;
 
-    const hard = clamp(force, 0, 1);
-    const strength = isPerfect ? 1 : 0.5 + 0.5 * hard;
-    const trim = dbToGain(
-      HIT_MIX.LEVEL +
-        (isCpu ? HIT_MIX.CPU_LEVEL : 0) +
-        (isPerfect ? HIT_MIX.PERFECT_LEVEL : 0) +
-        heatLevel(this.heatGetter()),
-    );
-    const at = { ac, pan: clamp(pan, -1, 1) * HIT_MIX.PAN, trim };
-    const unpitched = (id: string, gain: number, rate = 1) => {
-      const buffer = samples.pick(id);
-      if (buffer)
-        this.layer({ ...at, buffer, gain, rate: rate * this.jitter(HIT_MIX.JITTER.RATE) });
-    };
-
-    unpitched(HIT_CLICK, HIT_MIX.CLICK * strength, isCpu ? HIT_MIX.CPU_CLICK_RATE : 1);
-    const playBodies = (level: number) => {
-      for (const body of bodies) {
-        const { buffer, rate } = body.note!;
-        this.layer({ ...at, buffer, rate, gain: level * body.gain, cut: body.cut });
+    const trim = dbToGain(levelDb + heatLevel(this.heatGetter()));
+    const at = { ac, trim, pan: clamp(pan, -1, 1) * HIT_MIX.PAN };
+    for (const layer of layers) {
+      if ('tuned' in layer) {
+        const tuned = samples.pickNote(layer.tuned, layer.note);
+        if (tuned) this.layer({ ...at, ...layer, buffer: tuned.buffer, rate: tuned.rate });
+      } else {
+        const buffer = samples.pick(layer.shot);
+        const rate = (layer.rate ?? 1) * this.jitter(HIT_MIX.JITTER.RATE);
+        if (buffer) this.layer({ ...at, ...layer, buffer, rate });
       }
-    };
-    if (isPerfect) {
-      const { PERFECT } = HIT_MIX;
-      playBodies(PERFECT.BODY);
-      const octave = samples.pickNote(HIT_BODIES[0].id, note + 12);
-      if (octave)
-        this.layer({ ...at, buffer: octave.buffer, rate: octave.rate, gain: PERFECT.OCTAVE });
-      unpitched('thump', PERFECT.THUMP);
-      unpitched('spark', PERFECT.SPARK);
-      unpitched('boom', PERFECT.BOOM);
-      unpitched('tail', PERFECT.TAIL);
-      this.duckMusic(HIT_DUCK.PERFECT);
-    } else {
-      playBodies(HIT_MIX.BODY);
-      unpitched('thump', HIT_MIX.THUMP * (0.4 + 0.6 * hard));
-      if (hard > 0.5) unpitched('spark', HIT_MIX.SPARK * (hard - 0.5) * 2);
     }
-    this.mixerGetter()?.carveForHit(strength);
     return true;
   }
 
@@ -269,8 +313,9 @@ export class SoundEffects {
   }
 
   /**
-   * One rendered layer, now, at `gain` (jittered), panned, played at `rate`; faded out after
-   * `cut` seconds, if given, for a layer heard only as an attack.
+   * One rendered layer, `delay` seconds from now, at `gain` (jittered) times the sound's `trim`,
+   * panned, played at `rate`; faded out after `cut` seconds, if given, for a layer heard only as
+   * an attack.
    */
   private layer({
     ac,
@@ -280,36 +325,69 @@ export class SoundEffects {
     pan,
     trim,
     cut,
+    delay = 0,
   }: {
     ac: AudioContext;
     buffer: AudioBuffer;
     gain: number;
     rate: number;
     pan: number;
-    /** The hit's own level, on every layer. */
     trim: number;
     cut?: number;
+    delay?: number;
   }): void {
     try {
+      const start = ac.currentTime + delay;
       const source = ac.createBufferSource();
       source.buffer = buffer;
       source.playbackRate.value = rate;
       const level = ac.createGain();
       level.gain.value = gain * trim * this.jitter(HIT_MIX.JITTER.GAIN);
-      if (cut !== undefined) level.gain.setTargetAtTime(0, ac.currentTime + cut, HIT_MIX.CUT_FADE);
+      if (cut !== undefined) level.gain.setTargetAtTime(0, start + cut, HIT_MIX.CUT_FADE);
       const panner = ac.createStereoPanner();
       panner.pan.value = pan;
       source.connect(level).connect(panner).connect(this.output(ac));
-      source.start();
+      source.start(start);
     } catch {
       // Audio playback fails silently if browser policy blocks it
     }
   }
 
-  /** Overdrive power shot: the rally's note as a rising saw roar with a fifth and an octave. */
-  public playPowerShot(rally: number): void {
-    const freq = midiToFrequency(getRallyNote(this.harmonyGetter(), rally));
+  /**
+   * The Overdrive's power shot: a perfect hit with the blade ringing out whole, and the style's
+   * own on top; heard where it was struck (`pan`), the music dipping fully under it.
+   */
+  public playPowerShot(rally: number, pan = 0): void {
+    const note = getRallyNote(this.harmonyGetter(), rally);
+    const { PERFECT, POWER } = HIT_MIX;
+    const layers: Layer[] = [
+      { shot: HIT_CLICK, gain: HIT_MIX.CLICK },
+      ...this.bodies(note, PERFECT.BODY, false, true),
+      { tuned: HIT_BODIES[0].id, note: note + 12, gain: PERFECT.OCTAVE },
+      { shot: 'thump', gain: PERFECT.THUMP },
+      { shot: 'spark', gain: PERFECT.SPARK },
+      { shot: 'boom', gain: PERFECT.BOOM },
+      { shot: 'tail', gain: PERFECT.TAIL },
+      ...(this.powerShotStyle === 'charge'
+        ? [
+            { shot: 'zap', gain: POWER.ZAP },
+            { shot: 'spark', gain: PERFECT.SPARK, delay: 0.05 },
+            { shot: 'blast', gain: POWER.BLAST },
+          ]
+        : [
+            { shot: 'boom', gain: PERFECT.BOOM * POWER.HAMMER_BOOM, delay: HIT_MIX.HAMMER_DELAY },
+            { shot: HIT_CLICK, gain: HIT_MIX.CLICK, delay: HIT_MIX.HAMMER_DELAY },
+            { shot: 'blast', gain: POWER.HAMMER_BLAST },
+          ]),
+    ];
+    const level = HIT_MIX.LEVEL + HIT_MIX.PERFECT_LEVEL + POWER.LEVEL;
+    const played = this.playLayers(layers, level, pan);
     this.duckMusic(HIT_DUCK.POWER_SHOT);
+    if (played) {
+      this.mixerGetter()?.carveForHit(1);
+      return;
+    }
+    const freq = midiToFrequency(note);
     this.beep(freq, 0.32, 'sawtooth', 0.06, 2);
     this.beep(freq * 1.5, 0.26, 'square', 0.035);
     this.beep(freq * 2, 0.4, 'sine', 0.05);
@@ -334,8 +412,23 @@ export class SoundEffects {
     this.beep(196, 0.6, 'sawtooth', 0.04, 0.6);
   }
 
-  /** The Overdrive meter just filled: a bright two-tone chime. */
-  public playOverdriveReady(): void {
+  /**
+   * The Overdrive meter just filled: three quick pings climbing the chord the music is on, over a
+   * rising breath — a charge, not a hit.
+   */
+  public playOverdriveReady(pan = 0): void {
+    const harmony = this.harmonyGetter();
+    const { READY } = HIT_MIX;
+    const layers: Layer[] = [
+      { shot: 'charge', gain: READY.CHARGE },
+      ...[1, 2, 3].map((step) => ({
+        tuned: HIT_BODIES[0].id,
+        note: getRallyNote(harmony, step) + 12,
+        gain: READY.PING,
+        delay: step * READY.STEP,
+      })),
+    ];
+    if (this.playLayers(layers, HIT_MIX.LEVEL + READY.LEVEL, pan)) return;
     this.beep(1046.5, 0.16, 'triangle', 0.05, 1.5);
     this.beep(1568, 0.26, 'sine', 0.035);
   }

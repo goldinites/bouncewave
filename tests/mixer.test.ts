@@ -193,6 +193,9 @@ describe('SoundEffects on the mixer', () => {
 });
 
 describe('paddle hits from their rendered layers', () => {
+  // The sounds a hit picked, each once, sorted: the check that the layers are rendered aside
+  const layersOf = (picked: string[]) => [...new Set(picked.slice(1))].sort();
+
   const setup = ({ rendered = true } = {}) => {
     const { ctx, calls } = fakeAudioContext(1);
     const mixer = new Mixer(ctx);
@@ -222,10 +225,10 @@ describe('paddle hits from their rendered layers', () => {
     const { sfx, picked } = setup();
 
     sfx.playPaddleHit(1, false, 0);
-    expect(picked).toEqual(['body.neon', 'body.steel', 'click.steel', 'thump']);
+    expect(layersOf(picked)).toEqual(['body.neon', 'body.steel', 'click.steel', 'thump']);
     picked.length = 0;
     sfx.playPaddleHit(1, false, 1);
-    expect(picked).toEqual(['body.neon.cpu', 'body.steel.cpu', 'click.steel', 'thump']);
+    expect(layersOf(picked)).toEqual(['body.neon.cpu', 'body.steel.cpu', 'click.steel', 'thump']);
   });
 
   it('throws sparks off a hard hit and carves the music deeper', () => {
@@ -244,6 +247,35 @@ describe('paddle hits from their rendered layers', () => {
     sfx.playPaddleHit(3, true, 0);
     expect(picked).toEqual(expect.arrayContaining(['boom', 'tail', 'spark']));
     expect(ducks).toEqual([0.6]);
+  });
+
+  it('knocks a wall in its own muted voice, well under a hit', () => {
+    const { sfx, picked } = setup();
+
+    sfx.playWallBounce(0.5);
+    expect(layersOf(picked)).toEqual(['thump', 'wall']);
+  });
+
+  it('lets an Overdrive tear upward or strike twice, by its style, the music dipping fully', () => {
+    const { sfx, picked, ducks, carves } = setup();
+
+    sfx.playPowerShot(4);
+    expect(picked).toContain('zap');
+    picked.length = 0;
+    sfx.powerShotStyle = 'hammer';
+    sfx.playPowerShot(4);
+    expect(picked).not.toContain('zap');
+    expect(picked.filter((id) => id === 'boom')).toHaveLength(2);
+    expect(ducks).toEqual([1, 1]);
+    expect(carves).toEqual([1, 1]);
+  });
+
+  it('chimes up the chord when the Overdrive meter fills', () => {
+    const { sfx, picked } = setup();
+
+    sfx.playOverdriveReady();
+    expect(picked.filter((id) => id === 'body.neon')).toHaveLength(4);
+    expect(picked).toContain('charge');
   });
 
   it('plays the live synth until the layers are rendered', () => {
