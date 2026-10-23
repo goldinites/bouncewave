@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { chordAt, compileSong, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
+import {
+  chordAt,
+  compileSong,
+  partLevel,
+  SongDef,
+  STEPS_PER_BAR,
+  TIER_LEVEL,
+} from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { isChordTone, parseChord, parseNote, voiceChord } from '@/audio/music/theory';
 
@@ -42,6 +49,16 @@ describe('music theory', () => {
 });
 
 describe('score', () => {
+  // The compressor flattened what a peak's layers added: the tiers are set apart after it
+  it('plays a peak above the grooves and a calm part below them, a part’s own level on top', () => {
+    expect(TIER_LEVEL.high).toBeGreaterThan(TIER_LEVEL.rise);
+    expect(TIER_LEVEL.rise).toBeGreaterThanOrEqual(TIER_LEVEL.groove);
+    expect(TIER_LEVEL.groove).toBe(0);
+    expect(TIER_LEVEL.calm).toBeLessThan(0);
+    expect(partLevel({ tier: 'calm', level: 5 })).toBe(TIER_LEVEL.calm + 5);
+    expect(partLevel({ tier: 'high' })).toBe(TIER_LEVEL.high);
+  });
+
   it('splits bars into chords and holds melody notes over the holds', () => {
     const { sections } = compileSong(song('Am | F G', 'A4 - - . C5 . . . | E5 - - - - - - -'));
     const [section] = sections;

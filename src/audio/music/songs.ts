@@ -87,11 +87,14 @@ const K3 = `E4 - E4 - E4 - G4 - . . B4 - . . E5 - | - - - - D#5 - - - D5 - - - C
 const K2_HOLD = `. . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . .
                 | E5 - - - - - - - | C5 - - - - - - - | D#5 - - - - - - - | F#5 - - - - - - -`;
 
-/** Answering K3 in its rests: the call falls, the second voice climbs back in the gap. */
-const K3_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
+/**
+ * With K3: its first phrase answered in the rests, the call falling and the second voice
+ * climbing back in the gap; its second sung in thirds over it, the peak in two voices.
+ */
+const K3_THIRDS = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
                  | . . . . . . . . . . . . . . . . | . . . . . . . . G5 - E5 - C5 - - -
-                 | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
-                 | . . . . . . . . . . . . . . . . | . . . . . . . . A5 - F#5 - D5 - - -`;
+                 | B4 - B4 - B4 - D5 - . . F#5 - . . B5 - | - - - - A5 - - - G5 - - - F#5 - - -
+                 | F#5 - - - - - E5 - - - D5 - - - C5 - | A4 - - - - - - - A5 - F#5 - D5 - - -`;
 
 /**
  * K4, the bridge (Em Cmaj7 Fmaj7 Fmaj7 Am7 G D D): long low notes, each leaning on its neighbour
@@ -317,143 +320,155 @@ const C1_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . A4 
  * beat, its kit, how it climbs to its peak and how it marks its turns (5.6a: three tracks built
  * on one template sounded like one song). See SectionDef for the notation.
  */
+const NEON_CATHEDRAL: SongDef = {
+  // After Perturbator: a cinematic sixteen-bar intro of the arpeggios alone over a bass drone,
+  // two verses on a broken beat, a four-bar riser into the four-on-the-floor the chorus earns,
+  // with a drop, a breakdown that teases the hook on a bell, a half-time bridge; the melody low,
+  // the arpeggios over it; a timpani for a kick, the cathedral's orchestra
+  title: 'Neon Cathedral',
+  bpm: 124,
+  swing: 0,
+  level: 1,
+  scene: 'lasers',
+  kit: 'cathedral',
+  transitions: 'synth',
+  // The cathedral's long stone tail on the strings and the beams; the bass and pads breathe under
+  // the kick, half as deep as a darksynth machine pumps: the whole mix pounding on every beat
+  // was what tired the ear
+  room: 'cathedral',
+  pump: 0.5,
+  // The FM bass fed lightly into the saturation: a rubbery attack settling round, clean under
+  // the strings and the beams
+  grit: -6,
+  // A string section holds the chords under the vault, as an orchestra would in a cathedral
+  voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassFm', pad: 'strings' },
+  form: [
+    'intro',
+    'verse',
+    'verse2',
+    'build',
+    'chorus',
+    'breakdown',
+    'bridge',
+    'verse2',
+    'build',
+    'chorus',
+  ],
+  sections: [
+    {
+      // The lights come on one by one: a single beam (the arpeggio), the bass drone under it,
+      // the haze of the pad, then a bell striking the verse's hammered note
+      name: 'intro',
+      tier: 'calm',
+      chords: 'Em | Em | C | C | G | G | D | D | Em | Em | C | C | G | G | D | D',
+      lead: tease(K1),
+      leadVoice: 'bell',
+      arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.eighths),
+      bass: 'long',
+      drums: 'none',
+      pad: 'swell',
+      enter: { bass: 4, pads: 8, lead: 12 },
+      sweep: { arp: [0.15, 1.3], pads: [0.5, 1] },
+      // Its drone and swelling pad hold it up: a little further down, below the verses
+      level: -1,
+    },
+    {
+      name: 'verse',
+      tier: 'groove',
+      chords: 'Em | Em | C | C | Am | Am | B | B',
+      lead: K1,
+      leadVoice: 'pwm',
+      arpLine: cycle(octaveUp(HYPNOTIC_CELLS), ARP_RHYTHM.seven),
+      bassLine: HYPNOTIC_BASS,
+      drums: 'darkbreak',
+      fill: 'stop',
+      pad: 'hold',
+      layers: { lead: 0.3, drums: 0.3 },
+      enter: { arp: 4 },
+      sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
+    },
+    {
+      name: 'verse2',
+      tier: 'groove',
+      chords: 'Em | Em | C | C | Am | Am | B | B',
+      lead: K2,
+      leadVoice: 'pluck',
+      counter: K2_HOLD,
+      arpLine: cycle(octaveUp(HYPNOTIC_CELLS), ARP_RHYTHM.eleven),
+      bassLine: HYPNOTIC_BASS,
+      drums: 'darkbreak2',
+      fill: 'roll',
+      pad: 'hold',
+      layers: { lead: 0.3, counter: 0.3 },
+      sweep: { arp: [0.6, 1.6] },
+    },
+    {
+      // Four bars of noise rising, the bass in sixteenths, into the drop
+      name: 'build',
+      tier: 'rise',
+      chords: 'Am | Am | B | B',
+      arp: 'up',
+      bass: 'pulse16',
+      drums: 'drive',
+      fill: 'roll',
+      pad: 'hold',
+      riser: true,
+      sweep: { arp: [0.4, 2.2] },
+    },
+    {
+      // The floor at last, opened on the offbeats; the bass gallops, and the saw sings the
+      // second phrase in thirds over the brass
+      name: 'chorus',
+      tier: 'high',
+      chords: 'Em | Em | C | C | G | G | D | D',
+      lead: K3,
+      counter: K3_THIRDS,
+      arpLine: cycle(octaveUp(CATHEDRAL_CELLS)),
+      bass: 'gallop',
+      drums: 'darkpeak',
+      fill: 'toms',
+      pad: 'hold',
+      stabs: 'push',
+      drop: true,
+    },
+    {
+      name: 'breakdown',
+      tier: 'calm',
+      chords: 'Em | Em | C | C | G | G | D | D',
+      lead: tease(K3),
+      leadVoice: 'bell',
+      arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.quarters),
+      bass: 'long',
+      drums: 'halftime',
+      pad: 'swell',
+      silence: 4,
+      sweep: { arp: [1.2, 0.4] },
+      level: -1,
+    },
+    {
+      // The dark beat at half speed: heavy, the hats still running, and the harmony going down
+      // into the crypt — the F a semitone over the home E
+      name: 'bridge',
+      tier: 'groove',
+      chords: 'Em | Cmaj7 | Fmaj7 | Fmaj7 | Am7 | G | D | D',
+      lead: K4,
+      leadVoice: 'sync',
+      // The arpeggio waits four bars and walks in quarters, leaving the sync lead the room it
+      // shared with it
+      arpLine: cycle(octaveUp(CRYPT_CELLS), ARP_RHYTHM.quarters),
+      enter: { arp: 4 },
+      bass: 'long',
+      drums: 'darkdrive',
+      feel: 'half',
+      fill: 'stop',
+      pad: 'hold',
+      sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
+    },
+  ],
+};
+
 const SONG_DEFS: SongDef[] = [
-  {
-    // After Perturbator: a cinematic sixteen-bar intro of the arpeggios alone over a bass drone,
-    // two verses, a four-bar riser into a four-on-the-floor chorus with a drop, a breakdown that
-    // teases the hook on a bell, a half-time bridge; the melody low, the arpeggios over it
-    title: 'Neon Cathedral',
-    bpm: 124,
-    swing: 0,
-    level: -0.5,
-    scene: 'lasers',
-    kit: 'dark',
-    transitions: 'synth',
-    // The cathedral's long stone tail on the strings and the beams; the bass and pads pump in full
-    // under the kick, the machine the darksynth is
-    room: 'cathedral',
-    pump: 1,
-    // The FM bass fed lightly into the saturation: a rubbery attack settling round, clean under
-    // the strings and the beams, not a second wall of distortion under the distorted kick
-    grit: -6,
-    // A string section holds the chords under the vault, as an orchestra would in a cathedral
-    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassFm', pad: 'strings' },
-    form: [
-      'intro',
-      'verse',
-      'verse2',
-      'build',
-      'chorus',
-      'breakdown',
-      'bridge',
-      'verse2',
-      'build',
-      'chorus',
-    ],
-    sections: [
-      {
-        // The lights come on one by one: a single beam (the arpeggio), the bass drone under it,
-        // the haze of the pad, then a bell striking the verse's hammered note
-        name: 'intro',
-        tier: 'calm',
-        chords: 'Em | Em | C | C | G | G | D | D | Em | Em | C | C | G | G | D | D',
-        lead: tease(K1),
-        leadVoice: 'bell',
-        arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.eighths),
-        bass: 'long',
-        drums: 'none',
-        pad: 'swell',
-        enter: { bass: 4, pads: 8, lead: 12 },
-        sweep: { arp: [0.15, 1.3], pads: [0.5, 1] },
-      },
-      {
-        name: 'verse',
-        tier: 'groove',
-        chords: 'Em | Em | C | C | Am | Am | B | B',
-        lead: K1,
-        leadVoice: 'pwm',
-        arpLine: cycle(octaveUp(HYPNOTIC_CELLS), ARP_RHYTHM.seven),
-        bassLine: HYPNOTIC_BASS,
-        drums: 'drive',
-        fill: 'stop',
-        pad: 'hold',
-        layers: { lead: 0.3, drums: 0.3 },
-        enter: { arp: 4 },
-        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
-      },
-      {
-        name: 'verse2',
-        tier: 'groove',
-        chords: 'Em | Em | C | C | Am | Am | B | B',
-        lead: K2,
-        leadVoice: 'pluck',
-        counter: K2_HOLD,
-        arpLine: cycle(octaveUp(HYPNOTIC_CELLS), ARP_RHYTHM.eleven),
-        bassLine: HYPNOTIC_BASS,
-        drums: 'darkdrive',
-        fill: 'roll',
-        pad: 'hold',
-        layers: { lead: 0.3, counter: 0.3 },
-        sweep: { arp: [0.6, 1.6] },
-      },
-      {
-        // Four bars of noise rising, the bass in sixteenths, into the drop
-        name: 'build',
-        tier: 'rise',
-        chords: 'Am | Am | B | B',
-        arp: 'up',
-        bass: 'pulse16',
-        drums: 'drive',
-        fill: 'roll',
-        pad: 'hold',
-        riser: true,
-        sweep: { arp: [0.4, 2.2] },
-      },
-      {
-        name: 'chorus',
-        tier: 'high',
-        chords: 'Em | Em | C | C | G | G | D | D',
-        lead: K3,
-        counter: K3_ANSWER,
-        arpLine: cycle(octaveUp(CATHEDRAL_CELLS)),
-        bass: 'drive',
-        drums: 'darkdrive',
-        fill: 'toms',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
-      {
-        name: 'breakdown',
-        tier: 'calm',
-        chords: 'Em | Em | C | C | G | G | D | D',
-        lead: tease(K3),
-        leadVoice: 'bell',
-        arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.quarters),
-        bass: 'long',
-        drums: 'halftime',
-        pad: 'swell',
-        silence: 4,
-        sweep: { arp: [1.2, 0.4] },
-      },
-      {
-        // The dark beat at half speed: heavy, the hats still running, and the harmony going down
-        // into the crypt — the F a semitone over the home E
-        name: 'bridge',
-        tier: 'groove',
-        chords: 'Em | Cmaj7 | Fmaj7 | Fmaj7 | Am7 | G | D | D',
-        lead: K4,
-        leadVoice: 'sync',
-        arpLine: cycle(octaveUp(CRYPT_CELLS), ARP_RHYTHM.eighths),
-        bass: 'long',
-        drums: 'darkdrive',
-        feel: 'half',
-        fill: 'stop',
-        pad: 'hold',
-        sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
-      },
-    ],
-  },
+  NEON_CATHEDRAL,
   {
     // After The Midnight and FM-84: a night drive. The engine idles from the first bar — kick,
     // hats, the bass in eighths under the seven-note arpeggio — then a sixteen-bar verse on the
@@ -463,7 +478,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Sunset Strip',
     bpm: 100,
     swing: 0,
-    level: 1,
+    level: -0.5,
     // Its backdrop, the outrun, is gone: it plays behind any of the quick match's
     transitions: 'drums',
     // A short plate for the gated snare; the bass breathes with the kick, but less than the
@@ -627,6 +642,8 @@ const SONG_DEFS: SongDef[] = [
         bass: 'long',
         drums: 'witchIntro',
         pad: 'swell',
+        // Quiet by its own sparseness already: the calm tier's dip would take it out of hearing
+        level: 5,
         enter: { lead: 4, bass: 4 },
         hits: { radioStatic: 'X' + '.'.repeat(8 * STEPS_PER_BAR - 1) },
       },
@@ -681,10 +698,13 @@ const SONG_DEFS: SongDef[] = [
         fill: 'stop',
         // The pulse takes over the chopped pad's rhythm; the pad holds under it
         pad: 'hold',
+        // The track's own contrast is wide already: the peak's lift is taken back a little
+        level: -1,
         drop: true,
       },
       {
-        // A koto alone over the held pad, the 808 gone: the Japanese insert, a siren far off
+        // A koto alone over the held pad, the 808 gone: the Japanese insert, a siren far off.
+        // Lifted to the verses' level, as it plays in a rally: an insert, not a hole in the music
         name: 'bridge',
         tier: 'groove',
         chords: 'Db | Gbmaj7 | Bbm | Ebm7 | Ab | Fm | C | C',
@@ -695,6 +715,7 @@ const SONG_DEFS: SongDef[] = [
         pad: 'swell',
         layers: { lead: 0.3 },
         hits: { siren: '.'.repeat(4 * STEPS_PER_BAR) + 'o' + '.'.repeat(4 * STEPS_PER_BAR - 1) },
+        level: 4,
       },
       {
         name: 'outro',
@@ -705,6 +726,7 @@ const SONG_DEFS: SongDef[] = [
         bass: 'long',
         drums: 'witchIntro',
         pad: 'swell',
+        level: 5,
       },
     ],
   },

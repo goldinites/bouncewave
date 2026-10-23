@@ -68,6 +68,30 @@ export const DRUM_PATTERNS = {
     hat: 'x.xxx.xxx.xxx.xx',
     open: '......x.......x.',
   },
+  // Darksynth's verse without the four-on-the-floor: the kick on one, a push and three, so the
+  // floor is the peak's to earn
+  darkbreak: {
+    kick: 'X.....x...X.....',
+    snare: '....X.......X...',
+    hat: 'x.x.x.x.x.x.x.x.',
+    open: '..............x.',
+  },
+  // The same, restless: a second push, a clap on the snare, the hats in sixteenths
+  darkbreak2: {
+    kick: 'X.....x.x.X.....',
+    snare: '....X.......X...',
+    clap: '....x.......x...',
+    hat: 'x.xxx.xxx.xxx.xx',
+  },
+  // Darksynth's peak: the four-on-the-floor opened up — straight eighth hats and an open hat on
+  // every offbeat, the lift a verse's restless sixteenths never have
+  darkpeak: {
+    kick: 'X...X...X...X...',
+    snare: '....X.......X...',
+    clap: '....X.......X...',
+    hat: 'x.x.x.x.x.x.x.x.',
+    open: '..x...x...x...x.',
+  },
   // Outrun: a straight kick, the hats accented on the eighths like a revving engine
   outrun: {
     kick: 'X...X...X...X...',

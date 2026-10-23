@@ -16,6 +16,10 @@ export const ANALYSIS = {
   LEVEL_EFFECT: 0.75,
   PHONE_CUT: 150, // Hz: a phone's speaker plays nothing below this
   HIT_BAND: [1000, 4000], // Hz: where the paddle hits sit (docs/AUDIO.md, "Микс")
+  // How a song's parts should stand to its grooves (docs/AUDIO.md, "Микс"): a peak louder, calm
+  // parts quieter, dB, as [least, most]
+  PEAK_LIFT: [2, 4],
+  CALM_DROP: [3, 6],
   HIT_WINDOW: 0.06, // s after a hit's onset that it is heard against the music
   HIT_AUDIBLE_DB: 6, // a hit this far above the music in its band is clearly heard
   // Renders with and without hits differing by less than this against the music, where there is
@@ -386,6 +390,35 @@ export function levelChange(loudness: number): number {
   return Math.round(((ANALYSIS.TARGET_DB - loudness) / ANALYSIS.LEVEL_EFFECT) * 2) / 2;
 }
 
+/**
+ * How a song's tiers stand to its grooves, from its parts: each tier's mean loudness, how much
+ * louder the peaks are and how much quieter the calm parts (dB; NaN for a tier the song lacks),
+ * and how much brighter the peaks are in the presence band.
+ */
+export function dynamics(parts: readonly Pick<PartReport, 'tier' | 'rms' | 'bands'>[]) {
+  const mean = (values: number[]) =>
+    values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : NaN;
+  const of = (tier: string) => parts.filter((part) => part.tier === tier);
+  const presence = REPORT_BANDS.findIndex((band) => band.name === 'presence');
+  const groove = mean(of('groove').map((p) => p.rms));
+  const high = mean(of('high').map((p) => p.rms));
+  const calm = mean(of('calm').map((p) => p.rms));
+  return {
+    groove,
+    high,
+    calm,
+    peakLift: high - groove,
+    calmDrop: groove - calm,
+    peakBrightening:
+      mean(of('high').map((p) => p.bands[presence])) -
+      mean(of('groove').map((p) => p.bands[presence])),
+  };
+}
+
+/** Whether `value` is within [least, most]: the verdict a report prints beside it. */
+const verdict = (value: number, [least, most]: readonly number[]) =>
+  Number.isNaN(value) ? '—' : value < least ? 'too little' : value > most ? 'too much' : 'ok';
+
 /** One part of the form as rendered. */
 export interface PartReport {
   name: string;
@@ -418,7 +451,6 @@ export interface TrackReport {
   id: string;
   bpm: number;
   level: number;
-  intensity: number;
   /** The stand's swaps and mutes the render was made with, as written on the command line. */
   options: string;
   parts: PartReport[];
@@ -443,10 +475,11 @@ const percent = (share: number) => `${Math.round(share * 100)}%`;
 export function formatReport(report: TrackReport): string {
   const { parts, hits } = report;
   const change = levelChange(report.loudness);
+  const dyn = dynamics(parts);
   const lines = [
     `# ${report.title}`,
     '',
-    `${report.bpm} bpm · ${report.bars} bars · whole form at intensity ${report.intensity}` +
+    `${report.bpm} bpm · ${report.bars} bars · whole form, each part at its tier's heat in a match` +
       (report.options ? ` · ${report.options}` : '') +
       ` · rendered in ${report.renderSeconds.toFixed(1)} s`,
     '',
@@ -465,6 +498,14 @@ export function formatReport(report: TrackReport): string {
         `| ${p.name} · ${p.tier} | ${p.bar + 1}–${p.bar + p.bars} | ${p.rms.toFixed(1)} | ${p.peak.toFixed(1)} | ` +
         `${p.bands.map((band) => band.toFixed(0)).join(' | ')} | ${signed(-p.phoneLoss)} |`,
     ),
+    '',
+    '## Dynamics',
+    '',
+    `Against the grooves (${dyn.groove.toFixed(1)} dB): peaks ${signed(dyn.peakLift)} dB ` +
+      `(${ANALYSIS.PEAK_LIFT.join('–')} wanted: ${verdict(dyn.peakLift, ANALYSIS.PEAK_LIFT)}), ` +
+      `calm parts ${signed(-dyn.calmDrop)} dB (${ANALYSIS.CALM_DROP.join('–')} quieter wanted: ` +
+      `${verdict(dyn.calmDrop, ANALYSIS.CALM_DROP)}); peaks ${signed(dyn.peakBrightening)} dB ` +
+      'brighter in the presence band.',
     '',
     `## Paddle hits over ${report.hitPart}, the loudest part`,
     '',

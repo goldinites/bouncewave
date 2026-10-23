@@ -6,6 +6,9 @@ import { clamp } from '@/shared/math';
 // synths were, so it sits lower to leave the action sounds on top (docs/AUDIO.md, "Микс")
 const MUSIC_MASTER_LEVEL = 0.21;
 const MUSIC_DUCK_LEVEL = 0.25; // music level under the victory sting
+// Time constants of a part's level change (setPartLevel): up on the downbeat, down gently
+const PART_RISE = 0.01; // s
+const PART_FALL = 0.25; // s
 // Low-pass cutoff of the music bus at full match-point drama (fully open at level 0)
 const DRAMA_FILTER_MIN_FREQ = 550;
 const DRAMA_FILTER_MAX_FREQ = 20000;
@@ -62,13 +65,15 @@ const GLITCH = {
  *         └─ echo L ⇄ echo R (ping-pong) ───┤
  * drums, pads, melody ─ sends → the song's room ┤
  *                                           bus → songLevel → toneFilter → compressor
- *   → dramaFilter → glitchDelay → tapeDelay → glitchGain → duckGain ─┬─ master → output
+ *   → partLevel → dramaFilter → glitchDelay → tapeDelay → glitchGain → duckGain ─┬─ master → output
  *                                                                   └─ analyser
  * ```
  * - each stem is a part of the arrangement: its own saturation, sidechain and sends
  * - the pumps duck the bass and pads under every kick (`pump`), as deep as the song asks
  * - each song plays in its own room (`setSongSpace`), built ahead of it (`prepareRoom`)
  * - songLevel evens out the songs' loudness (`setSongLevel`)
+ * - partLevel sets a part above or below the song's grooves (`setPartLevel`): after the
+ *   compressor, which would flatten whatever the arrangement adds, so a peak really is louder
  * - the bass is driven into its saturation as hard as the song asks (`setBassGrit`)
  * - toneFilter follows the game state (muffled in menus and pause), set per step
  * - dramaFilter muffles on match point; separate so it never fights the tone filter
@@ -111,6 +116,8 @@ export class MusicGraph {
   private readonly padsPump: GainNode;
   private readonly songLevel: GainNode;
   private songLevelDb: number | null = null;
+  private readonly partLevel: GainNode;
+  private partLevelDb: number | null = null;
   /** Share of the full sidechain the song playing asks for. */
   private pumpDepth = 1;
   /** The rooms built: the song playing's, and the next one's or the last one's fading out. */
@@ -153,6 +160,7 @@ export class MusicGraph {
     this.bassPump = ac.createGain();
     this.padsPump = ac.createGain();
     this.songLevel = ac.createGain();
+    this.partLevel = ac.createGain();
     this.toneFilter = ac.createBiquadFilter();
     this.dramaFilter = ac.createBiquadFilter();
     this.tapeDelay = ac.createDelay(1);
@@ -196,7 +204,8 @@ export class MusicGraph {
     this.bus.connect(this.songLevel);
     this.songLevel.connect(this.toneFilter);
     this.toneFilter.connect(compressor);
-    compressor.connect(this.dramaFilter);
+    compressor.connect(this.partLevel);
+    this.partLevel.connect(this.dramaFilter);
     this.dramaFilter.connect(this.glitchDelay);
     this.glitchDelay.connect(this.tapeDelay);
     this.tapeDelay.connect(this.glitchGain);
@@ -363,6 +372,17 @@ export class MusicGraph {
     if (db === this.songLevelDb) return;
     this.songLevelDb = db;
     this.songLevel.gain.setTargetAtTime(dbToGain(db), time, 0.05);
+  }
+
+  /**
+   * The part playing's level in dB against the song's grooves, from `time`: a peak lifts at
+   * once, on its downbeat; a calm part settles down over a beat or so.
+   */
+  public setPartLevel(db: number, time: number): void {
+    if (db === this.partLevelDb) return;
+    const isRising = this.partLevelDb === null || db > this.partLevelDb;
+    this.partLevelDb = db;
+    this.partLevel.gain.setTargetAtTime(dbToGain(db), time, isRising ? PART_RISE : PART_FALL);
   }
 
   private get now(): number {

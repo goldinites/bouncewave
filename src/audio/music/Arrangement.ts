@@ -1,6 +1,6 @@
 import { Instruments, TOM_RATES } from '@/audio/music/Instruments';
 import { VoiceOverrides } from '@/audio/music/palette';
-import { DrumKit, DrumRole, KITS } from '@/audio/music/kits';
+import { DrumKit, DrumRole, kickRate, KITS } from '@/audio/music/kits';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import {
   ARP_PATTERNS,
@@ -208,6 +208,8 @@ export class Arrangement {
   private voicing: number[] | null = null;
   /** The drums of the song playing; the drop, which comes between steps, plays on them too. */
   private kit: DrumKit = KITS.synthwave;
+  /** The chord of the step playing, for a tuned kick to keep clear of. */
+  private chord: Chord | null = null;
   /** The lead's last note and when it ends, for a legato note to slide in from it. */
   private lastLead: { note: number; end: number } | null = null;
   private lastBass: { note: number; end: number } | null = null;
@@ -272,6 +274,7 @@ export class Arrangement {
     // Swing pushes the off-beat 16ths late
     const time = context.time + (s % 2 ? song.swing * stepDuration : 0);
     this.kit = KITS[this.overrides.kit ?? song.kit ?? 'synthwave'];
+    this.chord = chord;
     if (s === 0 || section !== this.layersSection) {
       this.updateLayers(section, bar, I, section !== this.layersSection || sectionStep === 0);
       this.layersSection = section;
@@ -654,7 +657,9 @@ export class Arrangement {
   }
 
   private playKick(time: number, velocity: number, intensity: number): void {
-    if (velocity) this.drum('kick', time, velocity * (0.4 + 0.35 * intensity));
+    if (!velocity) return;
+    const rate = this.chord ? kickRate(this.kit, this.chord) : 1;
+    this.drum('kick', time, velocity * (0.4 + 0.35 * intensity), rate);
   }
 
   private playTaiko(time: number, velocity: number, intensity: number): void {

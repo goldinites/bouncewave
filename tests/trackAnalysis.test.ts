@@ -121,7 +121,6 @@ describe('track analysis', () => {
       id: 'test-song',
       bpm: 120,
       level: -1,
-      intensity: 0.7,
       options: '',
       parts: [
         {

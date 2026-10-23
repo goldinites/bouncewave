@@ -4,7 +4,7 @@
  * game's own mixer — faster than real time, silently, every bar as the stand's "whole form"
  * plays it — and turns it into pictures and numbers (analysis.ts).
  *
- * The script calls `window.renderSong({ song, lead, mute })`, which resolves to the report and
+ * The script calls `window.renderSong({ song, lead, kit, mute })`, which resolves to the report and
  * the pictures as PNG data URLs.
  */
 
@@ -37,9 +37,21 @@ const { ANALYSIS, REPORT_BANDS } = analysis;
 type LeadVoice = import('@/audio/music/score').LeadVoice;
 type MusicLayer = import('@/audio/music/score').MusicLayer;
 type Song = import('@/audio/music/score').Song;
+type Tier = import('@/audio/music/score').Tier;
+type KitName = import('@/audio/music/kits').KitName;
 
 const RATE = 48000;
-const INTENSITY = 0.7; // a rally's heat, held throughout, as the stand's loudness was read
+// Each part played at the heat its tier has in a match (audio/music/intensity.ts): calm in the
+// menus and between points, the groove in an ordinary rally, the build and the peak in a hot one
+// with the climax building, so a peak is heard against a verse as a player hears it
+const PLAYED_AT: Record<Tier, { intensity: number; climax: number }> = {
+  calm: { intensity: 0.35, climax: 0 },
+  groove: { intensity: 0.6, climax: 0 },
+  rise: { intensity: 0.8, climax: 0.5 },
+  high: { intensity: 1, climax: 1 },
+};
+// s before a part starts that its heat is set: the scheduler plans steps 0.15 s ahead
+const HEAT_LEAD = 0.2;
 const START_DELAY = 0.1; // s: the music engine's own delay before its first step
 const TAIL = 2; // s rendered past the form, for the last reverb
 const TICK = 0.05; // s of audio between the scheduler's ticks (it looks 0.15 s ahead)
@@ -64,6 +76,7 @@ const GRID_HZ = [50, 100, ANALYSIS.PHONE_CUT, 300, 1000, 3000, 10000];
 export interface RenderOptions {
   song: string;
   lead?: LeadVoice;
+  kit?: KitName;
   mute?: MusicLayer[];
 }
 
@@ -74,6 +87,7 @@ interface MusicRender {
   seconds: number;
   mute?: MusicLayer[];
   lead?: LeadVoice;
+  kit?: KitName;
   /** Paddle hits played at these times, s, of these kinds. */
   hits?: { at: number; kind: (typeof HIT_KINDS)[number]; rally: number }[];
 }
@@ -92,8 +106,9 @@ await bank.render(RATE, TRANSITION_SAMPLES);
 const barSeconds = (song: Song) => (60 / song.bpm / 4) * STEPS_PER_BAR;
 
 /** The song, or a part of it, rendered through the game's mixer: the master's output. */
-async function renderMusic({ song, part, seconds, mute = [], lead, hits = [] }: MusicRender) {
-  const { pitched, oneShots } = soundsFor(song, lead ? { lead } : {});
+async function renderMusic({ song, part, seconds, mute = [], lead, kit, hits = [] }: MusicRender) {
+  const overrides = { lead, kit };
+  const { pitched, oneShots } = soundsFor(song, overrides);
   await bank.renderPitched(RATE, pitched);
   await bank.render(RATE, oneShots);
   reseed();
@@ -105,8 +120,17 @@ async function renderMusic({ song, part, seconds, mute = [], lead, hits = [] }: 
   const mixer = new Mixer(ac);
   const music = new MusicEngine();
   for (const layer of mute) music.setLayerMuted(layer, true);
-  if (lead) music.setLeadVoice(lead);
-  music.pinIntensity(INTENSITY);
+  music.setOverrides(overrides);
+  // The heat of each part, from just before it starts
+  const heats =
+    part === WHOLE_FORM
+      ? partsOf(song).map(({ section, start }) => ({ at: start - HEAT_LEAD, tier: section.tier }))
+      : [{ at: 0, tier: song.sections.find((s) => s.name === part)!.tier }];
+  const heat = (tier: Tier) => {
+    music.pinIntensity(PLAYED_AT[tier].intensity);
+    music.pinClimax(PLAYED_AT[tier].climax);
+  };
+  heat(heats[0].tier);
   // Before init, so the engine prepares this song's sounds and room, not one picked at random
   music.audition(song.id, part);
   music.init(ac, mixer.music, bank, 'manual');
@@ -127,6 +151,7 @@ async function renderMusic({ song, part, seconds, mute = [], lead, hits = [] }: 
     if (frame <= 0 || frame >= context.length) return;
     actions.set(frame, [...(actions.get(frame) ?? []), action]);
   };
+  for (const { at: time, tier } of heats.slice(1)) at(time, () => heat(tier));
   for (let time = TICK; time < seconds; time += TICK) at(time, () => music.tick());
   for (const hit of hits) {
     at(hit.at, () =>
@@ -313,14 +338,14 @@ function similarityPicture(song: Song, similarity: number[][]) {
   return element.toDataURL('image/png');
 }
 
-async function renderSong({ song: id, lead, mute = [] }: RenderOptions) {
+async function renderSong({ song: id, lead, kit, mute = [] }: RenderOptions) {
   const song = SONGS.find((s) => s.id === id);
   if (!song) throw new Error(`No song called ${id}`);
   const startedAt = performance.now();
   const parts = partsOf(song);
   const bars = parts.reduce((sum, part) => sum + part.section.bars, 0);
   const seconds = START_DELAY + bars * barSeconds(song) + TAIL;
-  const whole = { song, part: WHOLE_FORM, seconds, lead };
+  const whole = { song, part: WHOLE_FORM, seconds, lead, kit };
   const others = (keep: MusicLayer) =>
     (['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as MusicLayer[]).filter(
       (l) => l !== keep,
@@ -389,7 +414,7 @@ async function renderSong({ song: id, lead, mute = [] }: RenderOptions) {
     kind: HIT_KINDS[i % HIT_KINDS.length],
     rally: i + 1,
   }));
-  const partMusic = { song, part: section.name, seconds: hitSeconds, lead, mute };
+  const partMusic = { song, part: section.name, seconds: hitSeconds, lead, kit, mute };
   const without = analysis.toMono(await renderMusic(partMusic));
   const withHits = analysis.toMono(await renderMusic({ ...partMusic, hits }));
   const beforeHits = Math.round(hits[0].at * RATE);
@@ -412,7 +437,11 @@ async function renderSong({ song: id, lead, mute = [] }: RenderOptions) {
   const novelty = analysis.novelty(similarity);
   const changes = analysis.textureChanges(novelty);
 
-  const options = [lead ? `--lead=${lead}` : '', mute.length ? `--mute=${mute.join(',')}` : '']
+  const options = [
+    lead ? `--lead=${lead}` : '',
+    kit ? `--kit=${kit}` : '',
+    mute.length ? `--mute=${mute.join(',')}` : '',
+  ]
     .filter(Boolean)
     .join(' ');
   const report: import('./analysis').TrackReport = {
@@ -420,7 +449,6 @@ async function renderSong({ song: id, lead, mute = [] }: RenderOptions) {
     id: song.id,
     bpm: song.bpm,
     level: song.level ?? 0,
-    intensity: INTENSITY,
     options,
     parts: partReports,
     loudness,

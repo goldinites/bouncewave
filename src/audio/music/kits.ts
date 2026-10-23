@@ -1,3 +1,4 @@
+import { Chord, isChordTone } from '@/audio/music/theory';
 import { DrumSampleId } from '@/audio/samples/drums';
 import { ExtraDrumId } from '@/audio/samples/percussion';
 
@@ -11,6 +12,25 @@ export type KitSampleId = DrumSampleId | ExtraDrumId;
 /** A song's drums: a sound for every role, and an extra hit under the drop if it has one. */
 export interface DrumKit extends Record<DrumRole, KitSampleId> {
   impact?: KitSampleId;
+}
+
+/** The kicks tuned to a note (MIDI), which move where it would clash (`kickRate`). */
+const TUNED_KICKS: Partial<Record<KitSampleId, number>> = { kickTimpani: 40 }; // E2
+
+/**
+ * How fast a tuned kick plays over `chord`, 1 at its own pitch: where its note would clash a
+ * semitone above a chord tone (docs/AUDIO.md's strong-beat rule, and a kick is on the strong
+ * beats), it moves to the chord's root nearest it — a timpanist's second drum, tuned to the
+ * dominant. 1 for a kick that isn't tuned.
+ */
+export function kickRate(kit: DrumKit, chord: Chord): number {
+  const note = TUNED_KICKS[kit.kick];
+  if (note === undefined) return 1;
+  const clashes = !isChordTone(chord, note) && isChordTone(chord, note - 1);
+  if (!clashes) return 1;
+  // The root's nearest octave: from a tritone down to a fourth up
+  const shift = ((((chord.root - note) % 12) + 18) % 12) - 6;
+  return 2 ** (shift / 12);
 }
 
 /** The kits the songs pick from (`kit` in songs.ts), by genre (docs/AUDIO.md, "Саундтрек"). */
@@ -44,6 +64,21 @@ export const KITS = {
   // Darksynth and industrial: a distorted kick, metal for percussion, an impact under the drop
   dark: {
     kick: 'kickDistorted',
+    snare: 'snareGated',
+    clap: 'clap',
+    hat: 'hat',
+    open: 'open',
+    crash: 'crash',
+    tom: 'tom',
+    taiko: 'taiko',
+    metal: 'clang',
+    perc: 'rim',
+    impact: 'impact',
+  },
+  // Neon Cathedral's: the dark kit with a timpani tuned to E for its kick, the cathedral's
+  // orchestra, round where the distorted kick pounded
+  cathedral: {
+    kick: 'kickTimpani',
     snare: 'snareGated',
     clap: 'clap',
     hat: 'hat',

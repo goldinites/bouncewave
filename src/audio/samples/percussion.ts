@@ -22,6 +22,33 @@ import {
  * uses them or the stand asks, so they take no memory before.
  */
 export const EXTRA_DRUMS = {
+  /**
+   * A timpani tuned to E (E2), the cathedral's orchestra: a stretched skin's inharmonic partials
+   * blooming after the mallet, its pitch settling a little as it rings.
+   */
+  kickTimpani: {
+    maxRate: RENDER_RATE.MID,
+    duration: 1.2,
+    variants: 2,
+    build: (ctx, random) => {
+      const out = ctx.destination;
+      const root = jitter(random, 82.4, 0.005);
+      const partials: [number, number, number][] = [
+        [1, 1, 0.9],
+        [1.5, 0.45, 0.6],
+        [1.99, 0.3, 0.45],
+        [2.44, 0.15, 0.3],
+      ];
+      for (const [ratio, peak, decay] of partials) {
+        chain(
+          sweep(ctx, 'sine', root * ratio * 1.04, root * ratio, 0.08),
+          hit(ctx, peak, decay, 0, 0.003),
+          out,
+        );
+      }
+      chain(noiseSource(ctx, random), filter(ctx, 'bandpass', 400, 1.2), hit(ctx, 0.35, 0.03), out);
+    },
+  },
   /** A temple gong: inharmonic partials blooming slowly and ringing for seconds. */
   gong: {
     maxRate: RENDER_RATE.MID,
