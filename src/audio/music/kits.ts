@@ -55,6 +55,21 @@ export const KITS = {
     perc: 'rim',
     impact: 'impact',
   },
+  // Neon Cathedral's: the dark kit with a timpani tuned to E for its kick, the cathedral's
+  // orchestra, round where the distorted kick pounded
+  cathedral: {
+    kick: 'kickTimpani',
+    snare: 'snareGated',
+    clap: 'clap',
+    hat: 'hat',
+    open: 'open',
+    crash: 'crash',
+    tom: 'tom',
+    taiko: 'taiko',
+    metal: 'clang',
+    perc: 'rim',
+    impact: 'impact',
+  },
   // City pop's band in a room: a punchy kick, a dry snare, a shaker in place of the rim
   band: {
     kick: 'kickPunch',

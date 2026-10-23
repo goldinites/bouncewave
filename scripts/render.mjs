@@ -13,7 +13,8 @@
 //   npm run render -- neon-cathedral kabukicho-rain
 //   npm run render -- --lead=sax --mute=drums sunset-strip
 //
-// --lead=<voice> plays the melodies on that lead (the stand's `?lead=`); --mute= silences layers
+// --lead=<voice> plays the melodies on that lead and --kit=<kit> the drums on that kit (the
+// stand's `?lead=`, `?kit=`); --mute= silences layers
 // in the mix (the melody and arpeggio pictures always have their layer alone).
 
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -27,10 +28,13 @@ const args = process.argv.slice(2);
 const option = (name) =>
   args.find((arg) => arg.startsWith(`--${name}=`))?.slice(`--${name}=`.length) ?? null;
 const lead = option('lead') ?? undefined;
+const kit = option('kit') ?? undefined;
 const mute = option('mute')?.split(',') ?? [];
 const songs = args.filter((arg) => !arg.startsWith('--'));
 if (songs.length === 0) {
-  console.error('Usage: npm run render -- [--lead=<voice>] [--mute=drums,...] <song-id> ...');
+  console.error(
+    'Usage: npm run render -- [--lead=<voice>] [--kit=<kit>] [--mute=drums,...] <song-id> ...',
+  );
   process.exit(1);
 }
 
@@ -48,6 +52,7 @@ async function render(song) {
   const { markdown, images } = await page.evaluate((options) => window.renderSong(options), {
     song,
     lead,
+    kit,
     mute,
   });
   await page.close();

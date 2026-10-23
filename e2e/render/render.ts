@@ -4,7 +4,7 @@
  * game's own mixer — faster than real time, silently, every bar as the stand's "whole form"
  * plays it — and turns it into pictures and numbers (analysis.ts).
  *
- * The script calls `window.renderSong({ song, lead, mute })`, which resolves to the report and
+ * The script calls `window.renderSong({ song, lead, kit, mute })`, which resolves to the report and
  * the pictures as PNG data URLs.
  */
 
@@ -38,6 +38,7 @@ type LeadVoice = import('@/audio/music/score').LeadVoice;
 type MusicLayer = import('@/audio/music/score').MusicLayer;
 type Song = import('@/audio/music/score').Song;
 type Tier = import('@/audio/music/score').Tier;
+type KitName = import('@/audio/music/kits').KitName;
 
 const RATE = 48000;
 // Each part played at the heat its tier has in a match (audio/music/intensity.ts): calm in the
@@ -75,6 +76,7 @@ const GRID_HZ = [50, 100, ANALYSIS.PHONE_CUT, 300, 1000, 3000, 10000];
 export interface RenderOptions {
   song: string;
   lead?: LeadVoice;
+  kit?: KitName;
   mute?: MusicLayer[];
 }
 
@@ -85,6 +87,7 @@ interface MusicRender {
   seconds: number;
   mute?: MusicLayer[];
   lead?: LeadVoice;
+  kit?: KitName;
   /** Paddle hits played at these times, s, of these kinds. */
   hits?: { at: number; kind: (typeof HIT_KINDS)[number]; rally: number }[];
 }
@@ -103,8 +106,9 @@ await bank.render(RATE, TRANSITION_SAMPLES);
 const barSeconds = (song: Song) => (60 / song.bpm / 4) * STEPS_PER_BAR;
 
 /** The song, or a part of it, rendered through the game's mixer: the master's output. */
-async function renderMusic({ song, part, seconds, mute = [], lead, hits = [] }: MusicRender) {
-  const { pitched, oneShots } = soundsFor(song, lead ? { lead } : {});
+async function renderMusic({ song, part, seconds, mute = [], lead, kit, hits = [] }: MusicRender) {
+  const overrides = { lead, kit };
+  const { pitched, oneShots } = soundsFor(song, overrides);
   await bank.renderPitched(RATE, pitched);
   await bank.render(RATE, oneShots);
   reseed();
@@ -116,7 +120,7 @@ async function renderMusic({ song, part, seconds, mute = [], lead, hits = [] }: 
   const mixer = new Mixer(ac);
   const music = new MusicEngine();
   for (const layer of mute) music.setLayerMuted(layer, true);
-  if (lead) music.setLeadVoice(lead);
+  music.setOverrides(overrides);
   // The heat of each part, from just before it starts
   const heats =
     part === WHOLE_FORM
@@ -334,14 +338,14 @@ function similarityPicture(song: Song, similarity: number[][]) {
   return element.toDataURL('image/png');
 }
 
-async function renderSong({ song: id, lead, mute = [] }: RenderOptions) {
+async function renderSong({ song: id, lead, kit, mute = [] }: RenderOptions) {
   const song = SONGS.find((s) => s.id === id);
   if (!song) throw new Error(`No song called ${id}`);
   const startedAt = performance.now();
   const parts = partsOf(song);
   const bars = parts.reduce((sum, part) => sum + part.section.bars, 0);
   const seconds = START_DELAY + bars * barSeconds(song) + TAIL;
-  const whole = { song, part: WHOLE_FORM, seconds, lead };
+  const whole = { song, part: WHOLE_FORM, seconds, lead, kit };
   const others = (keep: MusicLayer) =>
     (['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as MusicLayer[]).filter(
       (l) => l !== keep,
@@ -410,7 +414,7 @@ async function renderSong({ song: id, lead, mute = [] }: RenderOptions) {
     kind: HIT_KINDS[i % HIT_KINDS.length],
     rally: i + 1,
   }));
-  const partMusic = { song, part: section.name, seconds: hitSeconds, lead, mute };
+  const partMusic = { song, part: section.name, seconds: hitSeconds, lead, kit, mute };
   const without = analysis.toMono(await renderMusic(partMusic));
   const withHits = analysis.toMono(await renderMusic({ ...partMusic, hits }));
   const beforeHits = Math.round(hits[0].at * RATE);
@@ -433,7 +437,11 @@ async function renderSong({ song: id, lead, mute = [] }: RenderOptions) {
   const novelty = analysis.novelty(similarity);
   const changes = analysis.textureChanges(novelty);
 
-  const options = [lead ? `--lead=${lead}` : '', mute.length ? `--mute=${mute.join(',')}` : '']
+  const options = [
+    lead ? `--lead=${lead}` : '',
+    kit ? `--kit=${kit}` : '',
+    mute.length ? `--mute=${mute.join(',')}` : '',
+  ]
     .filter(Boolean)
     .join(' ');
   const report: import('./analysis').TrackReport = {
