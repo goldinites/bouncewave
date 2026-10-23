@@ -215,6 +215,22 @@ const N1_MARCH = `F4 - - - Gb4 - - - F4 - - - C5 - - - | Ab4 - - - - - - - G4 - 
                 | E5 - - - - - - - . . . . G4 - - - | C5 - - - - - - - C5 C5 Db5 C5 Bb4 - G4 -`;
 
 /**
+ * N2, the march in dialogue under the second verse (Fm Fm Db Db Bbm Bbm C C): it plays a bar and
+ * holds, and the shamisen takes the next with the march's stutter of sixteenths — the two
+ * trading bars, so the verse comes back developed rather than note for note.
+ */
+const N2_DIALOGUE = `F4 - - - C5 - - - Ab4 - - - Gb4 - - - | F4 - - - - - - - . . . . . . . .
+                   | Ab4 - - - F5 - Eb5 - Db5 - - - C5 - - - | Db5 - - - - - C5 - . . . . . . . .
+                   | Db5 - - - - - Bb4 - F5 - - - Gb5 - - - | F5 - - - Eb5 - - - . . . . . . . .
+                   | G4 - - - C5 - - - E5 - - - Db5 - - - | C5 - - - - - - - . . . . . . . .`;
+
+/** The shamisen's bars in the dialogue: the riff's calls are kept for the chorus. */
+const N2_DIALOGUE_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . C5 C5 Db5 C5 Ab4 - F4 -
+                          | . . . . . . . . . . . . . . . . | . . . . . . . . F5 F5 Gb5 F5 Db5 - Ab4 -
+                          | . . . . . . . . . . . . . . . . | . . . . . . . . Bb4 Bb4 C5 Bb4 F4 - Db5 -
+                          | . . . . . . . . . . . . . . . . | . . . . . . . . G4 G4 Ab4 G4 E4 - G4 -`;
+
+/**
  * R2, the shamisen's riff (Fm Gbmaj7 Db Bbm7 Bbm Gbmaj7 C C), the Japanese quarter's voice in
  * the city's iron: a call jerking between the root and its octave in 3+3+2, answered every
  * other bar by a line gliding down by step on held notes.
@@ -223,15 +239,6 @@ const R2_LEAP = `F4 - - F5 - - C5 - Ab4 - - Ab4 - - F4 - | Db5 - - - - - - - Bb4
                | Db5 - - Db5 - - Ab4 - F4 - - F5 Eb5 Db5 Eb5 - | Db5 - - - - - C5 - - - Bb4 - - - - -
                | Bb4 - - F5 - - Db5 - Bb4 - - F5 - - Db5 - | Gb5 - - - - - F5 - - - Db5 - - - - -
                | C5 - - C5 - - G4 - E4 G4 F4 E4 G4 - - - | G4 - - - - - - - C5 - - - - - - -`;
-
-/**
- * The riff's calls alone, every other bar, under the second verse's march (Fm Fm Db Db Bbm Bbm C
- * C): the glides kept for the chorus.
- */
-const R2_CALLS = `F4 - - F5 - - C5 - Ab4 - - Ab4 - - F4 - | . . . . . . . . . . . . . . . .
-                | Db5 - - Db5 - - Ab4 - F4 - - F5 Eb5 Db5 Eb5 - | . . . . . . . . . . . . . . . .
-                | Bb4 - - F5 - - Db5 - Bb4 - - F5 - - Db5 - | . . . . . . . . . . . . . . . .
-                | C5 - - C5 - - G4 - E4 G4 F4 E4 G4 - - - | . . . . . . . . . . . . . . . .`;
 
 /**
  * The pulse under the chorus (Fm Gbmaj7 Db Bbm7 Bbm Gbmaj7 C C), after "The Rebel Path": the
@@ -594,8 +601,8 @@ const SONG_DEFS: SongDef[] = [
     // Cyberpunk industrial on a witch-house half-time: rain at night in Kabukicho, after
     // Cyberpunk 2077. A police radio crackles through the rain, then a music box steps through a
     // cold march over a gliding 808 that tears and a dark pad chopped into a rhythm; steel rings in
-    // the street; in the second verse the shamisen's calls creep in under it, the beat cuts out in
-    // stutters, and the chorus hits on iron — the shamisen's riff whole, leaping and gliding, a
+    // the street; in the second verse the march trades bars with the shamisen, the beat cuts out
+    // in stutters, and the chorus hits on iron — the shamisen's riff whole, leaping and gliding, a
     // pulse thrumming under it. The bridge is a koto alone, a siren far off; rain ticks open and
     // close it, a rain stick for a crash
     title: 'Kabukicho Rain',
@@ -659,19 +666,18 @@ const SONG_DEFS: SongDef[] = [
         layers: { lead: 0.3 },
       },
       {
-        // The march on the celesta; the riff's calls creep in under it halfway, on the shamisen
+        // The march on the celesta, trading bars with the shamisen
         name: 'verse2',
         tier: 'groove',
         chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
-        lead: N1_MARCH,
+        lead: N2_DIALOGUE,
         leadVoice: 'celesta',
-        counter: R2_CALLS,
+        counter: N2_DIALOGUE_ANSWER,
         bassLine: RAIN_808,
         drums: 'witch',
         fill: 'roll',
         pad: 'chop',
         layers: { lead: 0.3, counter: 0.3 },
-        enter: { counter: 4 },
       },
       {
         // No riser: the beat stutters, torn by a gate, and the chorus hits out of it
