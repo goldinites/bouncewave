@@ -27,6 +27,8 @@ export class AudioEngine {
   private readonly listeners = new AbortController();
   /** Set by the listening stand while it plays a sound, so it is heard behind the menus too. */
   public isAuditioning = false;
+  /** The listening stand's pause: the audio clock stopped, the music held where it was. */
+  private isStandPaused = false;
 
   /**
    * Both getters are read live, at the moment a sound plays, so a settings toggle or a
@@ -51,7 +53,7 @@ export class AudioEngine {
         if (!this.audioContext) return;
         if (document.hidden) {
           this.audioContext.suspend();
-        } else {
+        } else if (!this.isStandPaused) {
           this.audioContext.resume();
         }
       },
@@ -83,6 +85,21 @@ export class AudioEngine {
     return this.mixer?.getLevels() ?? null;
   }
 
+  public get isPaused(): boolean {
+    return this.isStandPaused;
+  }
+
+  /**
+   * The listening stand pauses everything: the audio clock stops, so the music's scheduler, which
+   * runs on it, waits where it was, and resumes from the same step.
+   */
+  public setPaused(isPaused: boolean): void {
+    this.isStandPaused = isPaused;
+    if (!this.audioContext) return;
+    if (isPaused) void this.audioContext.suspend();
+    else if (!document.hidden) void this.audioContext.resume();
+  }
+
   public setLook(look: Look): void {
     this.look = look;
   }
@@ -111,8 +128,9 @@ export class AudioEngine {
 
     const ac = this.audioContext;
     // Not only 'suspended': iOS also has 'interrupted', which a home-screen app can start in and
-    // falls back to after a call or the app switcher, and only a gesture's resume() clears it
-    if (ac.state !== 'running') {
+    // falls back to after a call or the app switcher, and only a gesture's resume() clears it.
+    // The stand's pause holds it stopped, whatever gesture comes
+    if (ac.state !== 'running' && !this.isStandPaused) {
       void ac.resume().catch(() => {});
       // iOS keeps a resumed context silent until a sound is started inside a gesture, so the
       // music stayed mute until the first paddle hit. A one-sample silent buffer is enough

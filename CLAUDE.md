@@ -43,7 +43,8 @@ match against the CPU, `?cpuSkills=` the CPU (ids in `src/match/skills/Skill.ts`
 overlay has switches for both and counts their uses; `?mods=wind,darkness` plays quick matches with
 those modifiers (ids in `src/match/modifiers/Modifier.ts`), also switched in the debug overlay;
 `?song=night-drive&part=chorus&mute=drums` holds the music to a song, its part and layers
-(`part=whole-form` plays the whole form in order, peaks included; the debug overlay's sound stand, which also plays every action sound; song ids are titles in kebab case);
+(`part=whole-form` plays the whole form in order, peaks included; `&lead=sax` puts every melody on
+another lead; the debug overlay's sound stand, which also plays every action sound; song ids are titles in kebab case);
 `?tutorial=perfect` starts the tutorial at that step (ids in `src/match/tutorial.ts`).
 
 ## Architecture

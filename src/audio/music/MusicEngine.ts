@@ -185,11 +185,12 @@ export class MusicEngine {
 
   /**
    * The listening stand holds the music to a song and, if `part` names one of its sections, to
-   * that section, or with `WHOLE_FORM` to its whole form in order, from the next bar line; the music then sounds as in a match even behind the
+   * that section, or with `WHOLE_FORM` to its whole form in order from step `fromStep` of it, from
+   * the next bar line; the music then sounds as in a match even behind the
    * menus. Null song lets the game lead again.
    * @returns false if there is no such song or section (nothing changes)
    */
-  public audition(songId: string | null, part: string | null = null): boolean {
+  public audition(songId: string | null, part: string | null = null, fromStep = 0): boolean {
     const { conductor } = this;
     if (songId === null) {
       conductor.pinTo(null);
@@ -202,15 +203,10 @@ export class MusicEngine {
         ? part
         : SONGS[songIndex].sections.findIndex((s) => s.name === part);
     if (sectionIndex === -1) return false;
-    conductor.pinTo(songIndex, sectionIndex, this.wantedTier());
+    conductor.pinTo(songIndex, sectionIndex, this.wantedTier(), fromStep);
     // Before the first step there is nothing to finish: start the song right away
     if (this.currentStep === 0) conductor.advance();
     return true;
-  }
-
-  /** The way into the auditioned section again, from the next bar line. */
-  public replayTransition(): void {
-    this.conductor.replayTransition();
   }
 
   /**

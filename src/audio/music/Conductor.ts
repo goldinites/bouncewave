@@ -9,9 +9,6 @@ export const SONG_BARS = 64;
 const MIN_BARS: Record<Tier, number> = { calm: 2, groove: 2, rise: Infinity, high: 4 };
 // Early exits land on a phrase boundary, so a melody is never cut off mid-phrase
 const PHRASE_BARS = 2;
-// A replayed transition starts this many bars before the part it leads into, or at the start
-// of the section before it if that is shorter, so a build's riser is heard from its start
-const REPLAY_BARS = 4;
 // Bars after a peak before a hot rally may take the music to one again: the chorus is a reward,
 // and one heard on every rally would stop being one
 export const PEAK_COOLDOWN_BARS = 16;
@@ -147,7 +144,7 @@ export class Conductor {
 
   /**
    * The listening stand: from the next bar line, play this song and nothing else — only this
-   * section, looping, if one is given; its whole form from the start, every part in order, for
+   * section, looping, if one is given; its whole form, every part in order from `fromStep`, for
    * `WHOLE_FORM`; or otherwise its form as the game calls for it. Null lets the game lead the
    * music again.
    */
@@ -155,6 +152,7 @@ export class Conductor {
     songIndex: number | null,
     part: number | typeof WHOLE_FORM | null = null,
     wanted: Tier = 'groove',
+    fromStep = 0,
   ): void {
     if (songIndex === null) {
       this.pin = null;
@@ -165,33 +163,14 @@ export class Conductor {
     const isWholeForm = part === WHOLE_FORM;
     const sectionIndex = isWholeForm ? null : part;
     this.pin = { songIndex, sectionIndex, isWholeForm };
-    if (isWholeForm) this.skipTarget = this.at(songIndex, 0);
-    else
+    if (isWholeForm) {
+      const last = this.songs[songIndex].form.length - 1;
+      this.skipTarget = this.at(songIndex, Math.min(Math.max(0, fromStep), last));
+    } else
       this.skipTarget =
         sectionIndex === null
           ? this.entry(songIndex, wanted)
           : this.atSection(songIndex, sectionIndex);
-    this.planned = this.skipTarget;
-  }
-
-  /**
-   * Plays the way into the pinned section again from the next bar line: the last bars of the
-   * section before it in the form, its fill included, then the pinned section.
-   */
-  public replayTransition(): void {
-    if (this.pin?.sectionIndex == null) return;
-    const { songIndex, sectionIndex } = this.pin;
-    const song = this.songs[songIndex];
-    const step = song.form.indexOf(sectionIndex);
-    const before =
-      step > 0
-        ? song.form[step - 1]
-        : (sectionIndex - 1 + song.sections.length) % song.sections.length;
-    const bars = song.sections[before].bars;
-    this.skipTarget = {
-      ...this.atSection(songIndex, before),
-      bar: bars <= REPLAY_BARS ? 0 : bars - REPLAY_BARS,
-    };
     this.planned = this.skipTarget;
   }
 

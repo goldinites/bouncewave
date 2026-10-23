@@ -6,7 +6,7 @@
 //   npm run loudness -- neon-cathedral sunset-strip
 //   npm run loudness -- --parts=hook,hot outrun-o3-sunset
 //
-// --lead=<voice> plays the melodies on that lead, as the stand's switch does, and --mute= silences
+// --lead=<voice> plays the melodies on that lead (the stand's `?lead=`), and --mute= silences
 // layers: `--mute=drums,bass,pads,arp,fx --lead=sax` hears the sax alone, to level a lead voice
 // against the others (LEAD_VOLUME in Arrangement.ts).
 
@@ -41,10 +41,10 @@ const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gestur
 /** One song's parts, each as the stand's average over its listening time. */
 async function measure(song) {
   const page = await browser.newPage();
-  await page.goto(`${base}?debug&song=${song}&part=${parts[0]}${mute ? `&mute=${mute}` : ''}`);
+  const extra = (mute ? `&mute=${mute}` : '') + (lead ? `&lead=${lead}` : '');
+  await page.goto(`${base}?debug&song=${song}&part=${parts[0]}${extra}`);
   await page.waitForTimeout(800);
   await page.click('[data-stand="toggle"]');
-  if (lead) await page.selectOption('select[data-stand="leadVoice"]', lead);
   await page.evaluate((level) => {
     const range = document.querySelector('input[data-level="intensity"]');
     range.value = String(level);

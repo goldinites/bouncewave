@@ -245,22 +245,15 @@ describe('Conductor', () => {
       ]);
     });
 
-    it('replays the way in: the end of the section before, then the pinned part', () => {
+    it('plays the whole form from the step asked for', () => {
       const conductor = new Conductor(SONGS, 0);
-      conductor.pinTo(0, 1); // the 8-bar verse, after the 4-bar intro
+      conductor.pinTo(1, WHOLE_FORM, 'groove', 2);
       conductor.advance();
-      play(conductor, 'groove', 3);
-
-      conductor.replayTransition();
-      expect(play(conductor, 'groove', 6)).toEqual(['verse', ...Array(4).fill('intro'), 'verse']);
-
-      // A longer section before: only its last four bars
-      conductor.pinTo(0, 2); // the build, after the 8-bar verse
-      conductor.advance();
-      conductor.replayTransition();
-      play(conductor, 'groove', 1);
-      expect(conductor.section.name).toBe('verse');
-      expect(conductor.bar).toBe(4);
+      expect(play(conductor, 'calm', 11)).toEqual([
+        ...Array(2).fill('build'),
+        ...Array(8).fill('chorus'),
+        'breakdown',
+      ]);
     });
 
     it('lets the game lead again, back to the backdrop’s own song', () => {

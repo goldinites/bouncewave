@@ -30,7 +30,8 @@ and a choice, never with a finished track written blind.
   long note, which every 5.6a melody leaned on. Keep the melody clear of the arpeggio's
   register, above it or below it. Lead `brass`, no glide.
 - `npm test` must pass: the strong-beat rule, the C4–D6 register, the ranges.
-- Ask which melodies, and on which lead sound (the stand's "lead: …" switch).
+- Ask which melodies, and on which lead sound: give stand links with `&lead=<voice>` (voices in
+  `src/audio/music/score.ts`, `LeadVoice`) to hear one melody on several.
 
 ## 3. The full track
 

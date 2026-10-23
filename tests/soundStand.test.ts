@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { SONGS } from '@/audio/music/songs';
 import { SoundStand, STAND_SOUNDS } from '@/debug/SoundStand';
+import { WHOLE_FORM } from '@/audio/music/Conductor';
+import { MusicEngine } from '@/audio/music/MusicEngine';
 
 describe('SoundStand', () => {
   const stands: SoundStand[] = [];
@@ -35,7 +37,7 @@ describe('SoundStand', () => {
     expect([...song.options].slice(1).map((o) => o.value)).toEqual(SONGS.map((s) => s.id));
     song.value = 'night-drive';
     song.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith('night-drive', null);
+    expect(audition).toHaveBeenLastCalledWith('night-drive', null, 0);
     expect([...part.options].map((o) => o.value)).toEqual([
       '',
       'whole-form',
@@ -44,14 +46,14 @@ describe('SoundStand', () => {
 
     part.value = 'chorus';
     part.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith('night-drive', 'chorus');
+    expect(audition).toHaveBeenLastCalledWith('night-drive', 'chorus', 0);
     expect(params().get('song')).toBe('night-drive');
     expect(params().get('part')).toBe('chorus');
     expect(window.location.search).toMatch(/[?&]debug(&|$)/);
 
     song.value = '';
     song.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith(null, null);
+    expect(audition).toHaveBeenLastCalledWith(null, null, 0);
     expect(params().has('song')).toBe(false);
   });
 
@@ -111,17 +113,52 @@ describe('SoundStand', () => {
     }
   });
 
-  it('puts the lead on another voice, or back on the song’s own', () => {
-    const { audio, get } = setup();
-    const voice = vi.spyOn(audio.music, 'setLeadVoice');
-    const select = get<HTMLSelectElement>('select[data-stand="leadVoice"]');
+  it('shows the playing song’s form, a segment a step, and plays it through from one clicked', () => {
+    const { audition, get } = setup();
+    const song = get<HTMLSelectElement>('select[data-stand="song"]');
+    song.value = 'neon-cathedral';
+    song.dispatchEvent(new Event('change'));
 
-    select.value = 'pwm';
-    select.dispatchEvent(new Event('change'));
-    expect(voice).toHaveBeenLastCalledWith('pwm');
-    select.value = '';
-    select.dispatchEvent(new Event('change'));
-    expect(voice).toHaveBeenLastCalledWith(null);
+    const { form } = SONGS.find((s) => s.id === 'neon-cathedral')!;
+    const segments = document.querySelectorAll<HTMLElement>('[data-stand="timeline"] [data-step]');
+    expect(segments).toHaveLength(form.length);
+    segments[5].click();
+    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', WHOLE_FORM, 5);
+    expect(get<HTMLSelectElement>('select[data-stand="part"]').value).toBe(WHOLE_FORM);
+  });
+
+  it('steps to the next and previous song, played through from the start', () => {
+    const { audition, get } = setup();
+    get<HTMLButtonElement>('button[data-player="next"]').click();
+    expect(audition).toHaveBeenLastCalledWith(SONGS[0].id, WHOLE_FORM, 0);
+    get<HTMLButtonElement>('button[data-player="next"]').click();
+    expect(audition).toHaveBeenLastCalledWith(SONGS[1].id, WHOLE_FORM, 0);
+    get<HTMLButtonElement>('button[data-player="previous"]').click();
+    get<HTMLButtonElement>('button[data-player="previous"]').click();
+    expect(audition).toHaveBeenLastCalledWith(SONGS[SONGS.length - 1].id, WHOLE_FORM, 0);
+  });
+
+  it('pauses and resumes, and plays again whatever is picked', () => {
+    const { audio, get } = setup();
+    const pause = get<HTMLButtonElement>('button[data-player="pause"]');
+    pause.click();
+    expect(audio.isPaused).toBe(true);
+    pause.click();
+    expect(audio.isPaused).toBe(false);
+
+    pause.click();
+    get<HTMLButtonElement>('button[data-player="next"]').click();
+    expect(audio.isPaused).toBe(false);
+  });
+
+  it('puts every melody on the lead a link names, and on the songs’ own without one', () => {
+    const setLead = vi.spyOn(MusicEngine.prototype, 'setLeadVoice');
+    setup('/?debug&lead=sax');
+    expect(setLead).toHaveBeenLastCalledWith('sax');
+    setLead.mockClear();
+    setup('/?debug');
+    expect(setLead).not.toHaveBeenCalled();
+    setLead.mockRestore();
   });
 
   it('switches the glide off and on', () => {
