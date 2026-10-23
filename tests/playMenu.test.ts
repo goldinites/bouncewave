@@ -272,7 +272,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
 
     arrows('Previous')[0].click();
     arrows('Previous')[2].click();
-    expect(labels().slice(0, 3)).toEqual(['BACKGROUND: JUNGLE', 'DIFFICULTY: EASY', 'POINTS: 3']);
+    expect(labels().slice(0, 3)).toEqual(['BACKGROUND: FUJI', 'DIFFICULTY: EASY', 'POINTS: 3']);
     arrows('Next')[0].click();
     arrows('Previous')[1].click(); // below the easiest, round to the hardest
     expect(store.current).toMatchObject({ matchBackground: 'random', matchPoints: 3 });

@@ -64,19 +64,12 @@ describe('the palette a song needs rendered', () => {
 describe('the wider palette’s sounds freed', () => {
   it('are those neither the song playing nor the next one plays', () => {
     const rain = SONGS.find((s) => s.title === 'Kabukicho Rain')!;
-    const temple = SONGS.find((s) => s.title === 'Firefly Temple')!;
-    const free = unneeded([rain, temple]);
-    for (const kept of [
-      'leadMusicBox',
-      'leadShamisen',
-      'rainstick',
-      'leadGamelan',
-      'sampho',
-      'chhing',
-    ]) {
+    const fuji = SONGS.find((s) => s.title === 'Above the Clouds')!;
+    const free = unneeded([rain, fuji]);
+    for (const kept of ['leadMusicBox', 'leadShamisen', 'rainstick', 'leadShakuhachi', 'odaiko']) {
       expect(free).not.toContain(kept);
     }
-    for (const freed of ['leadShakuhachi', 'odaiko', 'conga', 'bassSlap', 'padStrings']) {
+    for (const freed of ['leadGamelan', 'chhing', 'conga', 'bassSlap', 'padStrings']) {
       expect(free).toContain(freed);
     }
     expect(free.every((id) => LAZY_SOUND_IDS.includes(id))).toBe(true);

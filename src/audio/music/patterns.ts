@@ -43,51 +43,6 @@ export const DRUM_PATTERNS = {
     snare: '....X..o.o..X..o',
     hat: 'x.x.x.x.x.x.x.x.',
   },
-  // A rolling temple groove: an off-kilter kick, a deep drum answering it, and the time kept as
-  // a Khmer ensemble keeps it — the cymbals pressed on the beat, let ring between
-  tribal: {
-    kick: 'X.....x...X..x..',
-    snare: '....x.......x...',
-    hat: 'x...x...x...x...',
-    open: '..x...x...x...x.',
-    taiko: '..x.....x.x.....',
-  },
-  // The temple waking (Firefly Temple's intro): hand drums alone, no kick — the barrel drum,
-  // the small drum answering it, a lone ring of the cymbals every half bar
-  temple: {
-    taiko: 'x.....o...x.....',
-    perc: '..o..o....o..o.o',
-    open: 'o.......o.......',
-  },
-  // The canopy (Firefly Temple's second verse): the kit thins to let the marimba and kalimba
-  // interlock, and the bongos take up their three against four
-  canopy: {
-    kick: 'X.......X..x....',
-    snare: '............x...',
-    hat: 'x...x...x...x...',
-    open: '..o.......o.....',
-    taiko: '......x.......x.',
-    perc: '..x..x..x..x..x.',
-  },
-  // A stampede into the chorus: the kick in threes, the cymbals in sixteenths, the barrel drum
-  // rolling louder to the bar's end
-  stampede: {
-    kick: 'X..x..x..x..x.x.',
-    snare: '....x.......x.x.',
-    hat: 'xoxoxoxoxoxoxoxo',
-    taiko: 'o.o.o.x.x.x.xXxX',
-  },
-  // The ritual at the peak: a tresillo kick twice a bar, clap on the backbeat, the barrel drum
-  // and the hand drum all in, the cymbals ringing on every off-beat
-  ritual: {
-    kick: 'X..x..x.X..x..x.',
-    snare: '....X.......X...',
-    clap: '....x.......x...',
-    hat: 'x..ox..ox..ox..o',
-    open: '..x...x...x...x.',
-    taiko: 'X.....x...X...x.',
-    perc: 'o.o.oxo.o.o.oxo.',
-  },
   // A straight beat with a taiko answering the kick, like a festival drum line: the drum's
   // "don" and, on the rim, its "ka"
   matsuri: {

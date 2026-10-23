@@ -1,4 +1,4 @@
-import { cycle, euclid, pulse, Stretch, transpose } from '@/audio/music/compose';
+import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 
 /*
@@ -102,7 +102,7 @@ const K4 = `B4 - - - C5 - - - B4 - - - - - - - | G4 - - - - - - - F#4 - - - E4 -
           | D5 - - - - - - - B4 - - - C5 - - - | B4 - - - A4 - - - G4 - - - - - - -
           | A4 - - - - - - - . . . . F#4 - - - | D4 - - - - - - - . . . . . . . .`;
 
-// ——— Sunset Strip (outrun): B flat major. Wide leaps and long notes sung down from the top
+// ——— Sunset Strip (no backdrop of its own, behind any of the quick match's): B flat major. Wide leaps and long notes sung down from the top
 // (F5–D6) over a seven-note arpeggio; the chorus hook moves by step, the one line that does ———
 
 /** Seven-note cells over Bb, F, Gm and Eb, two bars each: never landing the same way twice. */
@@ -310,54 +310,6 @@ const C1_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . A4 
                  | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
                  | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . E5 C#5 B4 A4`;
 
-// ——— Firefly Temple (jungle): A dorian, 110 BPM. Night at a Khmer temple in the jungle (Koh
-// Ker), fireflies: a pinpeat ensemble in the game's sound — the roneat's xylophone (the
-// marimba) on a pulse of three sixteenths across the four beats, the kong vong's gong circle
-// (the gamelan) interlocking between its notes, the melody on the pentatonic, the chhing's
-// cymbals keeping time, the skor's barrel drum and the sampho's hand drum ———
-
-/** The marimba: a note every three sixteenths, crossing the bar (Am7 D Am7 D Em7 G Am7 Am7). */
-const MARIMBA_PULSE = pulse(
-  [
-    { cell: ['A5', 'E5', 'G5', 'C6'], bars: 4 },
-    { cell: ['B5', 'E5', 'G5', 'D6'], bars: 2 },
-    { cell: ['A5', 'E5', 'G5', 'C6'], bars: 2 },
-  ],
-  3,
-);
-
-/** The gong circle between the marimba's notes, a sixteenth after each: the two interlock. */
-const GONG_PULSE = pulse(
-  [
-    { cell: ['E5', 'C5', 'D5', 'A4'], bars: 1 },
-    { cell: ['D5', 'A4', 'F#4', 'E5'], bars: 1 },
-    { cell: ['E5', 'C5', 'D5', 'A4'], bars: 1 },
-    { cell: ['D5', 'A4', 'F#4', 'E5'], bars: 1 },
-    { cell: ['B4', 'G4', 'E5', 'D5'], bars: 1 },
-    { cell: ['D5', 'B4', 'G4', 'A4'], bars: 1 },
-    { cell: ['E5', 'C5', 'D5', 'A4'], bars: 2 },
-  ],
-  3,
-  1,
-);
-
-/**
- * F1, the verse's melody (Am7 D Am7 D Em7 G Am7 Am7), below the marimba and on the pentatonic
- * of the Khmer and their neighbours (A C D E G): a three-note call in 3+3+2, the jungle
- * answering it from further off — sung on a reedy pulse wave, as the pinpeat's oboe sings.
- */
-const F1_CALL = `E4 - - G4 - - A4 - . . A4 A4 G4 . E4 . | . . . . A4 - - E4 - - D4 - - - - -
-               | E4 - - G4 - - C5 - . . C5 A4 G4 A4 . . | . . . . C5 - - A4 - - E4 - - A4 - -
-               | G4 - - D5 - - E5 - - - - - D5 - A4 - | D5 - - - - - A4 - - G4 - - E4 - - -
-               | . . . . E4 - - G4 - - A4 - - - - - | C5 - - - D5 - - - A4 - - - - - - -`;
-
-/**
- * G1, the temple bells on the gamelan (Am7 D Am7 D C G Fadd9 Am7): repeated notes, fourths, a
- * 3+3+2, up to D6 and home.
- */
-const G1_BELLS = `E5 - - - E5 - A5 - | F#5 - - E5 - - D5 - | E5 - - - E5 - C6 - | A5 - - - - - - -
-                | G5 - B5 - D6 - - - | D6 - - - - - B5 - - - - - G5 A5 G5 E5 | A5 - - - - - E5 G5 | A5 - - - - - - -`;
-
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
  * the hottest rallies, and the conductor moves between them as the match heats up and cools
@@ -512,7 +464,7 @@ const SONG_DEFS: SongDef[] = [
     bpm: 100,
     swing: 0,
     level: 1,
-    scene: 'outrun',
+    // Its backdrop, the outrun, is gone: it plays behind any of the quick match's
     transitions: 'drums',
     // A short plate for the gated snare; the bass breathes with the kick, but less than the
     // darksynth's, so the drive rolls rather than pumps
@@ -849,106 +801,6 @@ const SONG_DEFS: SongDef[] = [
         tier: 'calm',
         chords: 'Gsus2 | Gsus2 | Gm | Gm | Ebmaj7 | Ebmaj7 | Dsus4 | Asus4',
         lead: VALLEY_SHADOW,
-        bass: 'long',
-        drums: 'none',
-        pad: 'swell',
-      },
-    ],
-  },
-  {
-    // Night at a Khmer temple in the jungle, fireflies: the barrel drum and the hand drum open
-    // it, the gong circle joins; in the verse a reed sings a call and its echo over the marimba,
-    // which strikes a note every three sixteenths, three against four, landing somewhere new each
-    // bar; in the second verse the gongs play between the marimba's notes, the two interlocking
-    // as a pinpeat's do; the temple's bells carry the chorus over the marimba; a still break with
-    // a swelling, backward pad. Every part its own beat, the chhing keeping time in all of them;
-    // the drums mark the turns, no synth swells
-    title: 'Firefly Temple',
-    bpm: 110,
-    swing: 0,
-    level: 0.5,
-    scene: 'jungle',
-    kit: 'khmer',
-    transitions: 'band',
-    // A stone temple the hand drums and mallets ring in; no sidechain, the groove is the drums'
-    // own
-    room: 'stone',
-    pump: 0,
-    voices: { lead: 'gamelan', counter: 'gamelan', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
-    form: ['intro', 'verse', 'build', 'chorus', 'verse2', 'break', 'build', 'chorus'],
-    sections: [
-      {
-        name: 'intro',
-        tier: 'calm',
-        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
-        counter: GONG_PULSE,
-        bass: 'long',
-        drums: 'temple',
-        pad: 'swell',
-        enter: { counter: 4, bass: 4 },
-      },
-      {
-        // The call and its echo on the reed, the marimba's pulse under it
-        name: 'verse',
-        tier: 'groove',
-        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
-        lead: F1_CALL,
-        leadVoice: 'pwm',
-        counter: MARIMBA_PULSE,
-        counterVoice: 'marimba',
-        bass: 'sync',
-        drums: 'tribal',
-        fill: 'taiko',
-        pad: 'none',
-        layers: { lead: 0.3 },
-      },
-      {
-        name: 'build',
-        tier: 'rise',
-        chords: 'Em7 | G',
-        bass: 'gallop',
-        drums: 'stampede',
-        fill: 'taiko',
-        pad: 'hold',
-      },
-      {
-        name: 'chorus',
-        tier: 'high',
-        // The vamp opens out in its second half: C, G and F, the F a step outside the dorian
-        chords: 'Am7 | D | Am7 | D | C | G | Fadd9 | Am7',
-        lead: G1_BELLS,
-        counter: MARIMBA_PULSE,
-        counterVoice: 'marimba',
-        bass: 'gallop',
-        drums: 'ritual',
-        fill: 'taiko',
-        pad: 'hold',
-        drop: true,
-      },
-      {
-        // The hocket: the gong circle plays between the marimba's notes
-        name: 'verse2',
-        tier: 'groove',
-        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
-        lead: MARIMBA_PULSE,
-        leadVoice: 'marimba',
-        counter: GONG_PULSE,
-        bass: 'sync',
-        drums: 'canopy',
-        fill: 'toms',
-        pad: 'none',
-        layers: { lead: 0.3, counter: 0.2 },
-        enter: { counter: 2 },
-      },
-      {
-        // The temple's stillness: no drums, the backward pad swelling, the bells' opening on the
-        // marimba; the dorian's bright F sharp gives way to F, and the harmony steps up from D to
-        // the build's E
-        name: 'break',
-        tier: 'calm',
-        chords: 'Am7 | D | Fadd9 | Fadd9 | C | C | Dm7 | Dm7',
-        lead: tease(G1_BELLS),
-        leadVoice: 'marimba',
         bass: 'long',
         drums: 'none',
         pad: 'swell',

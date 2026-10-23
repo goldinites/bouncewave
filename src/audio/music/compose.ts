@@ -81,7 +81,7 @@ export function transpose(line: string, semitones: number): string {
 /**
  * A cell on a pulse that ignores the bar: a note every `every` sixteenths, counted from the
  * start of the line (plus `offset`), so a pulse of three crosses the four beats — three against
- * four, the jungle's hocket — and lands somewhere new each bar. The cell changes with the
+ * four, a hocket's pulse — and lands somewhere new each bar. The cell changes with the
  * stretches, its notes running on through them.
  */
 export function pulse(stretches: readonly Stretch[], every: number, offset = 0): string {

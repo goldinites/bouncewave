@@ -123,7 +123,7 @@ export const KITS = {
     metal: 'clang',
     perc: 'bongo',
   },
-  // The Khmer temple (jungle), after the pinpeat ensemble of Angkor's courts: the chhing's
+  // A Khmer temple (for the story's jungle temple to come), after the pinpeat ensemble of Angkor's courts: the chhing's
   // cups for the hats (struck and pressed, or let ring), the skor's barrel drum for the big one,
   // the sampho's hand drum for the toms and the small percussion, a temple gong for the crash
   khmer: {
