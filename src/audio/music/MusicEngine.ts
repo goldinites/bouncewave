@@ -14,7 +14,15 @@ import { MusicGraph } from '@/audio/music/MusicGraph';
 import { soundsFor, unneeded, VoiceOverrides } from '@/audio/music/palette';
 import { DEFAULT_ROOM } from '@/audio/music/rooms';
 import { SampleBank } from '@/audio/samples/SampleBank';
-import { chordAt, LeadVoice, MusicLayer, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import {
+  chordAt,
+  LeadVoice,
+  MusicLayer,
+  partLevel,
+  Song,
+  STEPS_PER_BAR,
+  Tier,
+} from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { StepScheduler } from '@/audio/music/StepScheduler';
 import { placeAbove } from '@/audio/music/theory';
@@ -368,6 +376,7 @@ export class MusicEngine {
 
     graph.setToneFilter(TONE_FILTER[gameState], time);
     graph.setSongLevel(song.level ?? 0, time);
+    graph.setPartLevel(partLevel(section), time);
     graph.setSongSpace(song.room ?? DEFAULT_ROOM, song.pump ?? 1, time);
     graph.setBassGrit(song.grit ?? 0, time);
     graph.setEchoTime(stepDuration * ECHO_STEPS, time);

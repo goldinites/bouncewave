@@ -325,7 +325,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Neon Cathedral',
     bpm: 124,
     swing: 0,
-    level: -0.5,
+    level: -2,
     scene: 'lasers',
     kit: 'dark',
     transitions: 'synth',
@@ -463,7 +463,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Sunset Strip',
     bpm: 100,
     swing: 0,
-    level: 1,
+    level: -0.5,
     // Its backdrop, the outrun, is gone: it plays behind any of the quick match's
     transitions: 'drums',
     // A short plate for the gated snare; the bass breathes with the kick, but less than the
@@ -627,6 +627,8 @@ const SONG_DEFS: SongDef[] = [
         bass: 'long',
         drums: 'witchIntro',
         pad: 'swell',
+        // Quiet by its own sparseness already: the calm tier's dip would take it out of hearing
+        level: 5,
         enter: { lead: 4, bass: 4 },
         hits: { radioStatic: 'X' + '.'.repeat(8 * STEPS_PER_BAR - 1) },
       },
@@ -681,10 +683,13 @@ const SONG_DEFS: SongDef[] = [
         fill: 'stop',
         // The pulse takes over the chopped pad's rhythm; the pad holds under it
         pad: 'hold',
+        // The track's own contrast is wide already: the peak's lift is taken back a little
+        level: -1,
         drop: true,
       },
       {
-        // A koto alone over the held pad, the 808 gone: the Japanese insert, a siren far off
+        // A koto alone over the held pad, the 808 gone: the Japanese insert, a siren far off.
+        // Lifted to the verses' level, as it plays in a rally: an insert, not a hole in the music
         name: 'bridge',
         tier: 'groove',
         chords: 'Db | Gbmaj7 | Bbm | Ebm7 | Ab | Fm | C | C',
@@ -695,6 +700,7 @@ const SONG_DEFS: SongDef[] = [
         pad: 'swell',
         layers: { lead: 0.3 },
         hits: { siren: '.'.repeat(4 * STEPS_PER_BAR) + 'o' + '.'.repeat(4 * STEPS_PER_BAR - 1) },
+        level: 4,
       },
       {
         name: 'outro',
@@ -705,6 +711,7 @@ const SONG_DEFS: SongDef[] = [
         bass: 'long',
         drums: 'witchIntro',
         pad: 'swell',
+        level: 5,
       },
     ],
   },

@@ -38,6 +38,17 @@ const STEPS_PER_CHORD_SLOT = 8; // chords may change on the bar or halfway throu
 export type Tier = 'calm' | 'groove' | 'rise' | 'high';
 
 /**
+ * dB each tier plays at against the grooves, after the music's compressor (docs/AUDIO.md,
+ * "Микс"): a peak hits harder than the verses, a calm part sinks below them — the payoff of a
+ * hot rally is heard, not only the extra layers the compressor would flatten.
+ */
+export const TIER_LEVEL: Record<Tier, number> = { calm: -4, groove: 0, rise: 0.5, high: 1.5 };
+
+/** The level a section plays at against the song's grooves, dB. */
+export const partLevel = (section: Pick<SectionDef, 'tier' | 'level'>): number =>
+  TIER_LEVEL[section.tier] + (section.level ?? 0);
+
+/**
  * Synth voices a melody can be played on. Koto is a plucked string that snaps up into pitch;
  * flute is a breathy, shakuhachi-like sine that scoops into each note.
  */
@@ -159,6 +170,11 @@ export interface SectionDef {
   silence?: number;
   /** The section opens with a drop: crash, kick, the kit's impact and a boom. */
   drop?: boolean;
+  /**
+   * dB the section plays above or below its tier's level (`TIER_LEVEL`), for a part that should
+   * stand apart from the others of its kind. 0 if left out.
+   */
+  level?: number;
   /** Faults on the whole mix over the section's last bar, for a song that breaks down. */
   glitch?: GlitchPatternName;
 }

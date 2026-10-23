@@ -37,9 +37,20 @@ const { ANALYSIS, REPORT_BANDS } = analysis;
 type LeadVoice = import('@/audio/music/score').LeadVoice;
 type MusicLayer = import('@/audio/music/score').MusicLayer;
 type Song = import('@/audio/music/score').Song;
+type Tier = import('@/audio/music/score').Tier;
 
 const RATE = 48000;
-const INTENSITY = 0.7; // a rally's heat, held throughout, as the stand's loudness was read
+// Each part played at the heat its tier has in a match (audio/music/intensity.ts): calm in the
+// menus and between points, the groove in an ordinary rally, the build and the peak in a hot one
+// with the climax building, so a peak is heard against a verse as a player hears it
+const PLAYED_AT: Record<Tier, { intensity: number; climax: number }> = {
+  calm: { intensity: 0.35, climax: 0 },
+  groove: { intensity: 0.6, climax: 0 },
+  rise: { intensity: 0.8, climax: 0.5 },
+  high: { intensity: 1, climax: 1 },
+};
+// s before a part starts that its heat is set: the scheduler plans steps 0.15 s ahead
+const HEAT_LEAD = 0.2;
 const START_DELAY = 0.1; // s: the music engine's own delay before its first step
 const TAIL = 2; // s rendered past the form, for the last reverb
 const TICK = 0.05; // s of audio between the scheduler's ticks (it looks 0.15 s ahead)
@@ -106,7 +117,16 @@ async function renderMusic({ song, part, seconds, mute = [], lead, hits = [] }: 
   const music = new MusicEngine();
   for (const layer of mute) music.setLayerMuted(layer, true);
   if (lead) music.setLeadVoice(lead);
-  music.pinIntensity(INTENSITY);
+  // The heat of each part, from just before it starts
+  const heats =
+    part === WHOLE_FORM
+      ? partsOf(song).map(({ section, start }) => ({ at: start - HEAT_LEAD, tier: section.tier }))
+      : [{ at: 0, tier: song.sections.find((s) => s.name === part)!.tier }];
+  const heat = (tier: Tier) => {
+    music.pinIntensity(PLAYED_AT[tier].intensity);
+    music.pinClimax(PLAYED_AT[tier].climax);
+  };
+  heat(heats[0].tier);
   // Before init, so the engine prepares this song's sounds and room, not one picked at random
   music.audition(song.id, part);
   music.init(ac, mixer.music, bank, 'manual');
@@ -127,6 +147,7 @@ async function renderMusic({ song, part, seconds, mute = [], lead, hits = [] }: 
     if (frame <= 0 || frame >= context.length) return;
     actions.set(frame, [...(actions.get(frame) ?? []), action]);
   };
+  for (const { at: time, tier } of heats.slice(1)) at(time, () => heat(tier));
   for (let time = TICK; time < seconds; time += TICK) at(time, () => music.tick());
   for (const hit of hits) {
     at(hit.at, () =>
@@ -420,7 +441,6 @@ async function renderSong({ song: id, lead, mute = [] }: RenderOptions) {
     id: song.id,
     bpm: song.bpm,
     level: song.level ?? 0,
-    intensity: INTENSITY,
     options,
     parts: partReports,
     loudness,
