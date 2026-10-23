@@ -27,11 +27,13 @@ the way, as a professional game designer would. Look at what the player will fee
   the game's rules and words, and on a phone in either orientation.
 - **Cost**: scope and risk against what the player gains.
 
-Say plainly when a requirement is objectively bad (it hurts the player experience by a
-recognised principle, not by taste): what goes wrong for the player, why, and a better option.
-Keep taste apart from problems, and keep it short; no remarks for the sake of remarks. Flag it
-before writing code; if the user keeps the requirement, build it as asked and record the decision
-in the roadmap.
+**Every new decision is discussed before it is built**: give its pros and cons, how it fits the
+game's direction, and a recommendation, then wait for the user's answer. Say plainly when a
+requirement is objectively bad (it hurts the player experience by a recognised principle, not by
+taste): what goes wrong for the player, why, and a better option. Keep taste apart from problems,
+and keep it short; no remarks for the sake of remarks. If the user keeps the requirement, build it
+as asked and record the decision where it lives (the roadmap's decisions or the topic's doc),
+rewriting that place rather than appending history.
 
 ## 2. Branch
 
@@ -66,8 +68,9 @@ a yes.
 
 ## 5. Roadmap and commit
 
-- In `docs/ROADMAP.md` set the step to ✅ with its PR number once known (🔄 while the PR is open),
-  and note any decision taken during the step in its paragraph.
+- In `docs/ROADMAP.md` set the step to ✅ with its PR number once known (🔄 while the PR is open).
+  Decisions taken during the step go where they live (the roadmap's decisions, `AUDIO.md`,
+  `CHALLENGES.md`…), rewritten into the current state; no "done" logs — git and the PR keep them.
 - Commit in the repository's style (see `CLAUDE.md` → Git): one or a few commits that each make
   sense on their own.
 

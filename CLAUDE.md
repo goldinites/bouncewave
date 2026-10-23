@@ -6,9 +6,13 @@ screens, an installable offline PWA. Played at https://goldinites.github.io/boun
 - The user writes in Russian: answer in Russian. Code, comments, commits and PRs are in English.
 - **The development plan is [docs/ROADMAP.md](docs/ROADMAP.md).** Read it before any roadmap
   work; it holds the stages, each step's scope, its status and the agreed decisions.
-- Review every new requirement of the user's, and every step of the plan, as a professional game
-  designer and point out objectively bad decisions before building them (how: `/roadmap-step`,
-  step 1a).
+- **Discuss every new decision before building it**: as a professional game designer, say what it
+  gives and what it costs, how it fits the game's direction, and recommend one option; then wait
+  for the user's answer (how: `/roadmap-step`, step 1a). Point out objectively bad decisions
+  plainly. Mechanical follow-ups of an agreed decision need no discussion.
+- The docs hold only what is in force — decisions, steps, the current state — not history (that
+  is in git and the PRs). Keep them so: when a decision changes, rewrite the place it lives
+  instead of appending, and keep the docs free of contradictions.
 - Skills for recurring jobs: `/roadmap-step` (carry out the next step of the plan), `/release`
   (ship a version to GitHub Pages), `/compose-track` (write a soundtrack track by ear with the
   user, as `docs/AUDIO.md` "Как делаем трек" describes).
