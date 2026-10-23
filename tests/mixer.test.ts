@@ -131,6 +131,18 @@ describe('the music’s stems', () => {
     const set = callsOf(calls, 'setTargetAtTime').slice(before);
     expect(set.map((c) => c.args[0])).toEqual([dbToGain(-1.5), dbToGain(2)]);
   });
+
+  it('lifts a part’s pads and melody against the beat only when the part changes them', () => {
+    const { ctx, calls } = fakeAudioContext(0);
+    const graph = new MusicGraph(ctx);
+    const before = callsOf(calls, 'setTargetAtTime').length;
+
+    for (let i = 0; i < 50; i++) graph.setPartMix({}, i);
+    for (let i = 50; i < 100; i++) graph.setPartMix({ pads: 6, melody: 4 }, i);
+    graph.setPartMix({}, 100);
+    const set = callsOf(calls, 'setTargetAtTime').slice(before);
+    expect(set.map((c) => c.args[0])).toEqual([dbToGain(6), dbToGain(4), 1, 1]);
+  });
 });
 
 describe('SoundEffects on the mixer', () => {

@@ -258,6 +258,13 @@ const IRON_PULSE = cycle(
 );
 
 /**
+ * The strings under the chorus (Fm Gbmaj7 Db Bbm7 Bbm Gbmaj7 C C): an inner voice sinking a
+ * note a chord, held long under the shamisen's short ones, what the plucked riff can't sustain.
+ */
+const IRON_STRINGS = `C5 - - - - - - - | Bb4 - - - - - - - | Ab4 - - - - - - - | Ab4 - - - - - - -
+                    | F4 - - - - - - - | F4 - - - - - - - | E4 - - - - - - - | G4 - - - - - - -`;
+
+/**
  * The bridge's koto (Db Gbmaj7 Bbm Ebm7 Ab Fm C C): an in-scale phrase falling, plucked bare,
  * over the furthest the song strays — to A flat, the relative major, and back.
  */
@@ -602,9 +609,9 @@ const SONG_DEFS: SongDef[] = [
     // Cyberpunk 2077. A police radio crackles through the rain, then a music box steps through a
     // cold march over a gliding 808 that tears and a dark pad chopped into a rhythm; steel rings in
     // the street; in the second verse the march trades bars with the shamisen, the beat cuts out
-    // in stutters, and the chorus hits on iron — the shamisen's riff whole, leaping and gliding, a
-    // pulse thrumming under it. The bridge is a koto alone, a siren far off; rain ticks open and
-    // close it, a rain stick for a crash
+    // in stutters, and the chorus hits on iron at the full tempo — the shamisen's riff whole,
+    // leaping and gliding, strings holding and a pulse thrumming under it. The bridge is a koto
+    // alone, a siren far off; rain ticks open and close it, a rain stick for a crash
     title: 'Kabukicho Rain',
     bpm: 140,
     swing: 0,
@@ -691,21 +698,26 @@ const SONG_DEFS: SongDef[] = [
         glitch: 'stutter',
       },
       {
-        // The riff whole on the shamisen, its calls and glides, the pulse thrumming under it; the
-        // harmony finds the G flat the riff keeps leaning on
+        // The riff whole on the shamisen, its calls and glides, strings holding under it and the
+        // pulse thrumming, the beat out of the half-time; the harmony finds the G flat the riff
+        // keeps leaning on
         name: 'chorus',
         tier: 'high',
         chords: 'Fm | Gbmaj7 | Db | Bbm7 | Bbm | Gbmaj7 | C | C',
         lead: R2_LEAP,
         leadVoice: 'shamisen',
+        counter: IRON_STRINGS,
+        counterVoice: 'strings',
         arpLine: IRON_PULSE,
         bassLine: NEON_808,
         drums: 'neonIron',
         fill: 'stop',
         // The pulse takes over the chopped pad's rhythm; the pad holds under it
         pad: 'hold',
-        // The track's own contrast is wide already: the peak's lift is taken back a little
-        level: -1,
+        layers: { counter: 0 },
+        // Fuller, not only louder: the pads and the melody lifted against the beat and the 808,
+        // which buried them 17-19 dB under
+        mix: { pads: 6, melody: 4 },
         drop: true,
       },
       {

@@ -377,6 +377,7 @@ export class MusicEngine {
     graph.setToneFilter(TONE_FILTER[gameState], time);
     graph.setSongLevel(song.level ?? 0, time);
     graph.setPartLevel(partLevel(section), time);
+    graph.setPartMix(section.mix ?? {}, time);
     graph.setSongSpace(song.room ?? DEFAULT_ROOM, song.pump ?? 1, time);
     graph.setBassGrit(song.grit ?? 0, time);
     graph.setEchoTime(stepDuration * ECHO_STEPS, time);
