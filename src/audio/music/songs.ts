@@ -1,4 +1,4 @@
-import { cycle, transpose } from '@/audio/music/compose';
+import { additive, cycle, euclid, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef } from '@/audio/music/score';
 
 // ——— Lines written by processes (audio/music/compose.ts) ———
@@ -95,6 +95,69 @@ const SUNSET_TURN = cycle([
   { cell: ['Bb3', 'D4', 'F4', 'Bb4', 'D5', 'Bb4', 'F4'], bars: 2 },
   { cell: ['A3', 'C4', 'F4', 'A4', 'C5', 'A4', 'F4'], bars: 2 },
 ]);
+
+// ——— Bases for the Memphis backdrop's track, to choose between on the stand ———
+
+/** P1: chord tones in five Euclidean hits a bar, a four-note cell so each bar starts elsewhere. */
+const ROYAL_ROAD = cycle(
+  [
+    { cell: ['D4', 'F#4', 'G4', 'B4'], bars: 1 },
+    { cell: ['C#4', 'E4', 'A4', 'C#5'], bars: 1 },
+    { cell: ['C#4', 'E4', 'F#4', 'A4'], bars: 1 },
+    { cell: ['D4', 'F#4', 'A4', 'B4'], bars: 1 },
+    { cell: ['D4', 'E4', 'G4', 'B4'], bars: 1 },
+    { cell: ['D4', 'E4', 'G4', 'A4'], bars: 1 },
+    { cell: ['C#4', 'D4', 'F#4', 'A4'], bars: 2 },
+  ],
+  euclid(5, 16),
+);
+
+/** P2: the cell growing from three notes to six and back, a chord to the bar (after Glass). */
+const PLASTIC = [
+  additive(['F4', 'A4', 'C5', 'E5', 'C5', 'A4'], [3]),
+  additive(['E4', 'G#4', 'B4', 'D5', 'B4', 'G#4'], [4]),
+  additive(['E4', 'A4', 'C5', 'E5', 'G4', 'C5'], [5, 6]),
+  additive(['D4', 'F4', 'A4', 'C5', 'A4', 'F4'], [6]),
+  additive(['D4', 'G4', 'B4', 'D5', 'B4', 'G4'], [5]),
+  additive(['E4', 'G4', 'B4', 'C5', 'G4', 'E4'], [4]),
+  additive(['E4', 'G#4', 'B4', 'D5', 'B4', 'G#4'], [3]),
+].join(' | ');
+
+/** P3: soft electric-piano comping in the tresillo (3+3+2), a four-note cell over six hits. */
+const TWO_OF_US = cycle(
+  [
+    { cell: ['F4', 'Ab4', 'C5', 'Db5'], bars: 1 },
+    { cell: ['E4', 'G4', 'Bb4', 'C5'], bars: 1 },
+    { cell: ['F4', 'Ab4', 'C5', 'Eb5'], bars: 2 },
+    { cell: ['F4', 'Ab4', 'C5', 'Db5'], bars: 1 },
+    { cell: ['E4', 'G4', 'Bb4', 'C5'], bars: 1 },
+    { cell: ['Gb4', 'Bb4', 'Db5', 'Eb5'], bars: 1 },
+    { cell: ['Gb4', 'Ab4', 'C5', 'Eb5'], bars: 1 },
+  ],
+  euclid(3, 8),
+);
+
+/** P4: a slapped three-note bass in seven hits a bar against a four-note pluck in nine. */
+const FUSION_CHORDS = [
+  { bass: ['A1', 'A2', 'E2'], arp: ['E4', 'G#4', 'A4', 'C#5'] },
+  { bass: ['G#1', 'G#2', 'D#2'], arp: ['D#4', 'F#4', 'G#4', 'B4'] },
+  { bass: ['F#1', 'F#2', 'C#2'], arp: ['C#4', 'E4', 'F#4', 'A4'] },
+  { bass: ['E1', 'E2', 'B1'], arp: ['D#4', 'E4', 'G#4', 'B4'] },
+  { bass: ['A1', 'A2', 'E2'], arp: ['E4', 'G#4', 'A4', 'C#5'] },
+  { bass: ['G#1', 'G#2', 'D#2'], arp: ['D#4', 'F#4', 'G#4', 'B4'] },
+  { bass: ['F#1', 'F#2', 'C#2'], arp: ['C#4', 'E4', 'F#4', 'A4'] },
+  { bass: ['B1', 'B2', 'F#2'], arp: ['E4', 'F#4', 'A4', 'B4'] },
+];
+const FUSION = {
+  bass: cycle(
+    FUSION_CHORDS.map(({ bass }) => ({ cell: bass, bars: 1 })),
+    euclid(7, 16),
+  ),
+  arp: cycle(
+    FUSION_CHORDS.map(({ arp }) => ({ cell: arp, bars: 1 })),
+    euclid(9, 16, 1),
+  ),
+};
 
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
@@ -1450,6 +1513,149 @@ const SONG_DEFS: SongDef[] = [
         pad: 'hold',
         stabs: 'offbeat',
         layers: { lead: 0.3, arp: 0.45, pads: 0.35 },
+      },
+    ],
+  },
+  // ——— Sketches for the Memphis backdrop's track: process bases to choose between on the stand,
+  // each as it sounds in a rally (hook) and at the peak (hot); the melodies come next ———
+  {
+    // P1, royal road: after Tatsuro Yamashita's "Sparkle" — the Japanese royal road
+    // (IVmaj7–V–iii7–vi7) under a slapped FM bass, a plucked comp in five uneven hits a bar
+    title: 'Memphis P1 Royal Road',
+    bpm: 104,
+    swing: 0.12,
+    level: 1.5,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'pluck', bass: 'bassFm' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'stop',
+        pad: 'hold',
+        stabs: 'offbeat',
+        sweep: { arp: [0.5, 1.4] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // P2, plastic: after Mariya Takeuchi's "Plastic Love" — disco four on the floor, the bass
+    // bouncing octaves, a minor-key night; the arpeggio's cell grows by a note a bar and shrinks
+    title: 'Memphis P2 Plastic',
+    bpm: 112,
+    swing: 0.06,
+    level: 2.5,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Fmaj7 | E7 | Am7 | Am7 | Dm7 | G | Cmaj7 | E7',
+        arpLine: PLASTIC,
+        bass: 'octave',
+        drums: 'disco',
+        fill: 'roll',
+        pad: 'hold',
+        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Fmaj7 | E7 | Am7 | Am7 | Dm7 | G | Cmaj7 | E7',
+        arpLine: PLASTIC,
+        bass: 'octave',
+        drums: 'disco',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'offbeat',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // P3, two of us: after "Just the Two of Us" and Anri — the city-pop changes
+    // (IVmaj7–III7–vi7), slow and swung, a soft electric-piano comp in the 3+3+2 tresillo
+    title: 'Memphis P3 Two Of Us',
+    bpm: 96,
+    swing: 0.15,
+    level: -0.5,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'triangle', bass: 'bassFm' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Dbmaj7 | C7 | Fm7 | Fm7 | Dbmaj7 | C7 | Ebm7 | Ab7',
+        arpLine: TWO_OF_US,
+        bass: 'walk',
+        drums: 'break',
+        fill: 'stop',
+        pad: 'swell',
+        sweep: { pads: [0.6, 1.3] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Dbmaj7 | C7 | Fm7 | Fm7 | Dbmaj7 | C7 | Ebm7 | Ab7',
+        arpLine: TWO_OF_US,
+        bass: 'walk',
+        drums: 'citypop',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // P4, fusion: after Casiopea's "Asayake" — a bright, quick major groove, a slapped bass and
+    // a pluck in Euclidean rhythms of seven and nine hits that interlock and keep shifting
+    title: 'Memphis P4 Fusion',
+    bpm: 116,
+    swing: 0,
+    level: 1.5,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'pluck', bass: 'bassFm' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Amaj7 | G#m7 | F#m7 | Emaj7 | Amaj7 | G#m7 | F#m7 | B7sus4',
+        arpLine: FUSION.arp,
+        bassLine: FUSION.bass,
+        drums: 'euclid',
+        fill: 'roll',
+        pad: 'hold',
+        sweep: { arp: [0.5, 1.5] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Amaj7 | G#m7 | F#m7 | Emaj7 | Amaj7 | G#m7 | F#m7 | B7sus4',
+        arpLine: FUSION.arp,
+        bassLine: FUSION.bass,
+        drums: 'drive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
       },
     ],
   },
