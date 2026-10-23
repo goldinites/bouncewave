@@ -11,7 +11,7 @@ import {
   stepIntensity,
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { soundsFor, VoiceOverrides } from '@/audio/music/palette';
+import { soundsFor, unneeded, VoiceOverrides } from '@/audio/music/palette';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { chordAt, LeadVoice, MusicLayer, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
@@ -231,6 +231,8 @@ export class MusicEngine {
    */
   private prepare(song: Song): void {
     if (!this.graph) return;
+    // What neither the song playing nor this one plays is freed first
+    this.samples.release(unneeded([this.conductor.song, song], this.overrides));
     const { pitched, oneShots } = soundsFor(song, this.overrides);
     const rate = this.graph.context.sampleRate;
     void this.samples.renderPitched(rate, pitched);

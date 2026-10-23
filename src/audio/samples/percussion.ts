@@ -1,4 +1,4 @@
-import { SampleRecipe } from '@/audio/samples/SampleBank';
+import { RENDER_RATE, SampleRecipe } from '@/audio/samples/SampleBank';
 import {
   chain,
   drive,
@@ -24,6 +24,7 @@ import {
 export const EXTRA_DRUMS = {
   /** A temple gong: inharmonic partials blooming slowly and ringing for seconds. */
   gong: {
+    maxRate: RENDER_RATE.MID,
     duration: 4.5,
     variants: 2,
     level: -2,
@@ -74,6 +75,7 @@ export const EXTRA_DRUMS = {
   },
   /** Odaiko: the great festival drum, deeper and longer than the taiko, felt as much as heard. */
   odaiko: {
+    maxRate: RENDER_RATE.LOW,
     duration: 1.8,
     variants: 2,
     build: (ctx, random) => {
@@ -87,6 +89,7 @@ export const EXTRA_DRUMS = {
   },
   /** Bongo: the small hand drum's high, quick pop. */
   bongo: {
+    maxRate: RENDER_RATE.MID,
     duration: 0.3,
     variants: 3,
     level: -2,
@@ -98,6 +101,7 @@ export const EXTRA_DRUMS = {
   },
   /** Conga: the tall hand drum, a rounder tone and the slap of the palm. */
   conga: {
+    maxRate: RENDER_RATE.MID,
     duration: 0.5,
     variants: 3,
     level: -2,
@@ -109,6 +113,7 @@ export const EXTRA_DRUMS = {
   },
   /** Udu: a clay pot drum struck over its hole — a deep "oong" bending up, like water. */
   udu: {
+    maxRate: RENDER_RATE.LOW,
     duration: 0.8,
     variants: 2,
     build: (ctx, random) => {
@@ -130,6 +135,7 @@ export const EXTRA_DRUMS = {
   },
   /** Rain stick: seeds trickling down a hollow cactus, a long rustle of tiny clicks. */
   rainstick: {
+    maxRate: RENDER_RATE.MID,
     duration: 2.4,
     variants: 2,
     level: -3,
@@ -167,6 +173,7 @@ export const EXTRA_DRUMS = {
   },
   /** Steam: a pneumatic valve's hiss, sharp on the attack and blowing out. */
   steam: {
+    maxRate: RENDER_RATE.MID,
     duration: 0.9,
     variants: 2,
     level: -3,
@@ -200,6 +207,7 @@ export type ExtraDrumId = keyof typeof EXTRA_DRUMS;
 export const FX_HITS = {
   /** A siren rising and falling twice. */
   siren: {
+    maxRate: RENDER_RATE.MID,
     duration: 2.4,
     variants: 1,
     level: -4,
@@ -221,6 +229,7 @@ export const FX_HITS = {
   },
   /** A dial-up modem's handshake: an answer tone, warbling tones, then a screech of noise. */
   modem: {
+    maxRate: RENDER_RATE.MID,
     duration: 1.6,
     variants: 1,
     level: -5,
@@ -246,6 +255,7 @@ export const FX_HITS = {
   },
   /** A radio between stations: crackling static and a tuning whistle sliding past. */
   radioStatic: {
+    maxRate: RENDER_RATE.MID,
     duration: 1.4,
     variants: 2,
     level: -5,
@@ -277,6 +287,7 @@ export const FX_HITS = {
   },
   /** A harp's glissando: strings plucked up a pentatonic scale in a rush. */
   harpGliss: {
+    maxRate: RENDER_RATE.MID,
     duration: 2.6,
     variants: 1,
     level: -3,
@@ -294,6 +305,7 @@ export const FX_HITS = {
   },
   /** A brass fanfare: two short blasts and a long one on a major chord. */
   fanfare: {
+    maxRate: RENDER_RATE.MID,
     duration: 1.8,
     variants: 1,
     level: -3,

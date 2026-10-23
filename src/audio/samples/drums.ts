@@ -1,4 +1,4 @@
-import { SampleRecipe } from '@/audio/samples/SampleBank';
+import { RENDER_RATE, SampleRecipe } from '@/audio/samples/SampleBank';
 import {
   chain,
   drive,
@@ -19,6 +19,7 @@ import {
 export const DRUM_SAMPLES = {
   /** Synthwave's kick: a tight thump with a click on top, a little saturated for punch. */
   kickPunch: {
+    maxRate: RENDER_RATE.MID,
     duration: 0.5,
     variants: 3,
     build: (ctx, random) => {
@@ -31,6 +32,7 @@ export const DRUM_SAMPLES = {
   },
   /** The 808: a long sine tail gliding down, its overtones kept so a phone still hears it. */
   kick808: {
+    maxRate: RENDER_RATE.LOW,
     duration: 1.6,
     variants: 2,
     // Its long tail is mostly sub: at full scale it would swamp a song
@@ -45,6 +47,7 @@ export const DRUM_SAMPLES = {
   },
   /** Darksynth's kick: the punch driven hard into distortion, then the fizz taken off the top. */
   kickDistorted: {
+    maxRate: RENDER_RATE.MID,
     duration: 0.45,
     variants: 3,
     build: (ctx, random) => {
@@ -169,6 +172,7 @@ export const DRUM_SAMPLES = {
   },
   /** A tom, tuned mid; fills play it faster or slower for the high and low ones. */
   tom: {
+    maxRate: RENDER_RATE.MID,
     duration: 0.5,
     variants: 3,
     build: (ctx, random) => {
@@ -189,6 +193,7 @@ export const DRUM_SAMPLES = {
   },
   /** Taiko: a deep skin dropping in pitch under the slap of the stick. */
   taiko: {
+    maxRate: RENDER_RATE.LOW,
     duration: 0.9,
     variants: 3,
     build: (ctx, random) => {

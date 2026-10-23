@@ -2,9 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { Arrangement } from '@/audio/music/Arrangement';
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { soundsFor } from '@/audio/music/palette';
+import { LAZY_SOUND_IDS, soundsFor, unneeded } from '@/audio/music/palette';
 import { PAD_CHOP } from '@/audio/music/patterns';
 import { compileSong, SectionDef, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
+import { SONGS } from '@/audio/music/songs';
 import { DifficultyLevel } from '@/match/difficulty';
 import { fakeAudioContext } from './helpers/fakeAudioContext';
 
@@ -57,6 +58,28 @@ describe('the palette a song needs rendered', () => {
     });
     expect(Object.keys(swapped.pitched).sort()).toEqual(['bassGrowl', 'leadHarp', 'padReverse']);
     expect(Object.keys(swapped.oneShots).sort()).toEqual(['chain', 'steam', 'synthCymbal']);
+  });
+});
+
+describe('the wider palette’s sounds freed', () => {
+  it('are those neither the song playing nor the next one plays', () => {
+    const rain = SONGS.find((s) => s.title === 'Kabukicho Rain')!;
+    const temple = SONGS.find((s) => s.title === 'Firefly Temple')!;
+    const free = unneeded([rain, temple]);
+    for (const kept of [
+      'leadMusicBox',
+      'leadShamisen',
+      'padChoir',
+      'rainstick',
+      'leadGamelan',
+      'conga',
+    ]) {
+      expect(free).not.toContain(kept);
+    }
+    for (const freed of ['leadShakuhachi', 'gong', 'odaiko', 'bassSlap', 'siren']) {
+      expect(free).toContain(freed);
+    }
+    expect(free.every((id) => LAZY_SOUND_IDS.includes(id))).toBe(true);
   });
 });
 
