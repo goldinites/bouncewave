@@ -1,4 +1,4 @@
-import { additive, cycle, euclid, transpose } from '@/audio/music/compose';
+import { cycle, euclid, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef } from '@/audio/music/score';
 
 // ——— Lines written by processes (audio/music/compose.ts) ———
@@ -96,7 +96,7 @@ const SUNSET_TURN = cycle([
   { cell: ['A3', 'C4', 'F4', 'A4', 'C5', 'A4', 'F4'], bars: 2 },
 ]);
 
-// ——— Bases for the Memphis backdrop's track, to choose between on the stand ———
+// ——— The Memphis track's bases, chosen on the stand ———
 
 /** P1: chord tones in five Euclidean hits a bar, a four-note cell so each bar starts elsewhere. */
 const ROYAL_ROAD = cycle(
@@ -110,31 +110,6 @@ const ROYAL_ROAD = cycle(
     { cell: ['C#4', 'D4', 'F#4', 'A4'], bars: 2 },
   ],
   euclid(5, 16),
-);
-
-/** P2: the cell growing from three notes to six and back, a chord to the bar (after Glass). */
-const PLASTIC = [
-  additive(['F4', 'A4', 'C5', 'E5', 'C5', 'A4'], [3]),
-  additive(['E4', 'G#4', 'B4', 'D5', 'B4', 'G#4'], [4]),
-  additive(['E4', 'A4', 'C5', 'E5', 'G4', 'C5'], [5, 6]),
-  additive(['D4', 'F4', 'A4', 'C5', 'A4', 'F4'], [6]),
-  additive(['D4', 'G4', 'B4', 'D5', 'B4', 'G4'], [5]),
-  additive(['E4', 'G4', 'B4', 'C5', 'G4', 'E4'], [4]),
-  additive(['E4', 'G#4', 'B4', 'D5', 'B4', 'G#4'], [3]),
-].join(' | ');
-
-/** P3: soft electric-piano comping in the tresillo (3+3+2), a four-note cell over six hits. */
-const TWO_OF_US = cycle(
-  [
-    { cell: ['F4', 'Ab4', 'C5', 'Db5'], bars: 1 },
-    { cell: ['E4', 'G4', 'Bb4', 'C5'], bars: 1 },
-    { cell: ['F4', 'Ab4', 'C5', 'Eb5'], bars: 2 },
-    { cell: ['F4', 'Ab4', 'C5', 'Db5'], bars: 1 },
-    { cell: ['E4', 'G4', 'Bb4', 'C5'], bars: 1 },
-    { cell: ['Gb4', 'Bb4', 'Db5', 'Eb5'], bars: 1 },
-    { cell: ['Gb4', 'Ab4', 'C5', 'Eb5'], bars: 1 },
-  ],
-  euclid(3, 8),
 );
 
 /** P4: a slapped three-note bass in seven hits a bar against a four-note pluck in nine. */
@@ -158,6 +133,37 @@ const FUSION = {
     euclid(9, 16, 1),
   ),
 };
+
+// ——— Melodies over the Memphis bases. They sit above the arpeggios' top (C sharp 5), so the ear
+// keeps the two apart ———
+
+/**
+ * C1, sparkle, over P1 (Gmaj7 A F#m7 Bm7 Em7 A7sus4 Dmaj7 Dmaj7): a rising pickup to a held
+ * note, pushed ahead of the beat in city pop's way, an arch peaking on D6 in the sixth bar.
+ */
+const C1 = `. . D5 E5 F#5 - A5 - | - - - - E5 - - - | . . E5 F#5 A5 - C#6 - | - - B5 - A5 - F#5 -
+          | . . E5 F#5 G5 - B5 - | D6 - - - B5 - A5 - | - - F#5 - E5 - D5 E5 | F#5 - - - - - - -`;
+
+/** C2, call, over P1: a 3+3+2 figure of repeated notes, a bar's rest, a run climbing back. */
+const C2 = `B5 - - B5 - - A5 - F#5 - - - . . . . | . . . . . . . . E5 - F#5 - A5 - - -
+          | C#6 - - C#6 - - B5 - A5 - - - . . . . | . . . . . . . . F#5 - A5 - B5 - D6 -
+          | D6 - - D6 - - B5 - G5 - - - . . . . | . . . . . . . . E5 - G5 - A5 - D6 -
+          | C#6 - - A5 - - F#5 - E5 - - - D5 - - - | F#5 - - - - - - - . . . . . . . .`;
+
+/**
+ * F1, sunrise, over P4 (Amaj7 G#m7 F#m7 Emaj7 Amaj7 G#m7 F#m7 B7sus4): a quick run of
+ * sixteenths up into a long note, falling back by step; the answer climbs to C sharp 6.
+ */
+const F1 = `. . E5 F#5 G#5 - - - B5 - - - A5 - G#5 - | - - - - F#5 - - - D#5 - - - . . . .
+          | . . E5 F#5 G#5 - - - A5 - - - G#5 - F#5 - | - - - - D#5 - - - E5 - - - . . . .
+          | . . A5 B5 C#6 - - - B5 - - - A5 - B5 - | C#6 - - - B5 - - - G#5 - - - F#5 - - -
+          | . . E5 F#5 A5 - - - C#6 - - - B5 - A5 - | B5 - - - - - - - . . . . . . . .`;
+
+/** F2, staccato, over P4: short syncopated notes the slap answers, then a climbing run. */
+const F2 = `C#6 . A5 . . E5 . A5 . . C#6 . B5 - - - | . . . . . . . . D#5 - F#5 - G#5 - B5 -
+          | A5 . F#5 . . E5 . F#5 . . A5 . G#5 - - - | . . . . . . . . E5 - G#5 - B5 - C#6 -
+          | C#6 . A5 . . E5 . A5 . . C#6 . B5 - - - | . . . . . . . . B5 - C#6 - B5 - G#5 -
+          | A5 . F#5 . . E5 . F#5 . . A5 . C#6 - - - | B5 - - - - - - - . . . . . . . .`;
 
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
@@ -1516,8 +1522,8 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // ——— Sketches for the Memphis backdrop's track: process bases to choose between on the stand,
-  // each as it sounds in a rally (hook) and at the peak (hot); the melodies come next ———
+  // ——— Sketches for the Memphis backdrop's track: P1 and P4, the bases chosen on the stand,
+  // alone ———
   {
     // P1, royal road: after Tatsuro Yamashita's "Sparkle" — the Japanese royal road
     // (IVmaj7–V–iii7–vi7) under a slapped FM bass, a plucked comp in five uneven hits a bar
@@ -1555,76 +1561,6 @@ const SONG_DEFS: SongDef[] = [
     ],
   },
   {
-    // P2, plastic: after Mariya Takeuchi's "Plastic Love" — disco four on the floor, the bass
-    // bouncing octaves, a minor-key night; the arpeggio's cell grows by a note a bar and shrinks
-    title: 'Memphis P2 Plastic',
-    bpm: 112,
-    swing: 0.06,
-    level: 2.5,
-    sketch: true,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Fmaj7 | E7 | Am7 | Am7 | Dm7 | G | Cmaj7 | E7',
-        arpLine: PLASTIC,
-        bass: 'octave',
-        drums: 'disco',
-        fill: 'roll',
-        pad: 'hold',
-        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Fmaj7 | E7 | Am7 | Am7 | Dm7 | G | Cmaj7 | E7',
-        arpLine: PLASTIC,
-        bass: 'octave',
-        drums: 'disco',
-        fill: 'toms',
-        pad: 'hold',
-        stabs: 'offbeat',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // P3, two of us: after "Just the Two of Us" and Anri — the city-pop changes
-    // (IVmaj7–III7–vi7), slow and swung, a soft electric-piano comp in the 3+3+2 tresillo
-    title: 'Memphis P3 Two Of Us',
-    bpm: 96,
-    swing: 0.15,
-    level: -0.5,
-    sketch: true,
-    voices: { lead: 'brass', counter: 'square', arp: 'triangle', bass: 'bassFm' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Dbmaj7 | C7 | Fm7 | Fm7 | Dbmaj7 | C7 | Ebm7 | Ab7',
-        arpLine: TWO_OF_US,
-        bass: 'walk',
-        drums: 'break',
-        fill: 'stop',
-        pad: 'swell',
-        sweep: { pads: [0.6, 1.3] },
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Dbmaj7 | C7 | Fm7 | Fm7 | Dbmaj7 | C7 | Ebm7 | Ab7',
-        arpLine: TWO_OF_US,
-        bass: 'walk',
-        drums: 'citypop',
-        fill: 'toms',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
-    ],
-  },
-  {
     // P4, fusion: after Casiopea's "Asayake" — a bright, quick major groove, a slapped bass and
     // a pluck in Euclidean rhythms of seven and nine hits that interlock and keep shifting
     title: 'Memphis P4 Fusion',
@@ -1649,6 +1585,153 @@ const SONG_DEFS: SongDef[] = [
         name: 'hot',
         tier: 'high',
         chords: 'Amaj7 | G#m7 | F#m7 | Emaj7 | Amaj7 | G#m7 | F#m7 | B7sus4',
+        arpLine: FUSION.arp,
+        bassLine: FUSION.bass,
+        drums: 'drive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  // ——— Melodies over P1 and P4 for the Memphis track: choose, then each one's lead sound ———
+  {
+    // P1 with C1: a rising pickup to a held note, an arch
+    title: 'Memphis P1 C1 Sparkle',
+    bpm: 104,
+    swing: 0.12,
+    level: 1.5,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'pluck', bass: 'bassFm', glide: 0.04 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: C1,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'stop',
+        pad: 'hold',
+        stabs: 'offbeat',
+        sweep: { arp: [0.5, 1.4] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: C1,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // P1 with C2: a 3+3+2 figure, a rest, a climbing run
+    title: 'Memphis P1 C2 Call',
+    bpm: 104,
+    swing: 0.12,
+    level: 1.5,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'pluck', bass: 'bassFm', glide: 0.04 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: C2,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'stop',
+        pad: 'hold',
+        stabs: 'offbeat',
+        sweep: { arp: [0.5, 1.4] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: C2,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // P4 with F1: a quick run up into a long note, falling by step
+    title: 'Memphis P4 F1 Sunrise',
+    bpm: 116,
+    swing: 0,
+    level: 1.5,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'pluck', bass: 'bassFm', glide: 0.04 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Amaj7 | G#m7 | F#m7 | Emaj7 | Amaj7 | G#m7 | F#m7 | B7sus4',
+        lead: F1,
+        arpLine: FUSION.arp,
+        bassLine: FUSION.bass,
+        drums: 'euclid',
+        fill: 'roll',
+        pad: 'hold',
+        sweep: { arp: [0.5, 1.5] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Amaj7 | G#m7 | F#m7 | Emaj7 | Amaj7 | G#m7 | F#m7 | B7sus4',
+        lead: F1,
+        arpLine: FUSION.arp,
+        bassLine: FUSION.bass,
+        drums: 'drive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // P4 with F2: short syncopated notes, then a climbing run
+    title: 'Memphis P4 F2 Staccato',
+    bpm: 116,
+    swing: 0,
+    level: 1.5,
+    sketch: true,
+    voices: { lead: 'brass', counter: 'square', arp: 'pluck', bass: 'bassFm', glide: 0.04 },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Amaj7 | G#m7 | F#m7 | Emaj7 | Amaj7 | G#m7 | F#m7 | B7sus4',
+        lead: F2,
+        arpLine: FUSION.arp,
+        bassLine: FUSION.bass,
+        drums: 'euclid',
+        fill: 'roll',
+        pad: 'hold',
+        sweep: { arp: [0.5, 1.5] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Amaj7 | G#m7 | F#m7 | Emaj7 | Amaj7 | G#m7 | F#m7 | B7sus4',
+        lead: F2,
         arpLine: FUSION.arp,
         bassLine: FUSION.bass,
         drums: 'drive',
