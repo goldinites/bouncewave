@@ -37,10 +37,11 @@ describe('SoundStand', () => {
     expect([...song.options].slice(1).map((o) => o.value)).toEqual(SONGS.map((s) => s.id));
     song.value = 'neon-cathedral';
     song.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', null, 0);
+    // A song picked plays its whole form first
+    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', 'whole-form', 0);
     expect([...part.options].map((o) => o.value)).toEqual([
-      '',
       'whole-form',
+      '',
       ...SONGS[0].sections.map((s) => s.name),
     ]);
 

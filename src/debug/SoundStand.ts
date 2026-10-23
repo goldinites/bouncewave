@@ -249,8 +249,8 @@ export class SoundStand {
     const song = SONGS.find((s) => s.id === this.songSelect.value);
     const options: [string, string][] = song
       ? [
-          ['', 'any part'],
           [WHOLE_FORM, 'whole form'],
+          ['', 'any part'],
           ...song.sections.map((s): [string, string] => [s.name, `${s.name} · ${s.tier}`]),
         ]
       : [];

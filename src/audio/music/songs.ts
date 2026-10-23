@@ -470,13 +470,13 @@ const G1_BELLS = `E5 - - - E5 - A5 - | F#5 - - E5 - - D5 - | E5 - - - E5 - C6 - 
  */
 const SONG_DEFS: SongDef[] = [
   {
-    // After Perturbator: a cinematic sixteen-bar intro of the arpeggios alone over a reese drone,
+    // After Perturbator: a cinematic sixteen-bar intro of the arpeggios alone over a bass drone,
     // two verses, a four-bar riser into a four-on-the-floor chorus with a drop, a breakdown that
     // teases the hook on a bell, a half-time bridge; the melody low, the arpeggios over it
     title: 'Neon Cathedral',
     bpm: 124,
     swing: 0,
-    level: -1,
+    level: -0.5,
     scene: 'lasers',
     kit: 'dark',
     transitions: 'synth',
@@ -484,8 +484,11 @@ const SONG_DEFS: SongDef[] = [
     // under the kick, the machine the darksynth is
     room: 'cathedral',
     pump: 1,
+    // The FM bass fed lightly into the saturation: a rubbery attack settling round, clean under
+    // the choir and the beams, not a second wall of distortion under the distorted kick
+    grit: -6,
     // A wordless choir holds the chords in place of the synth pad: the cathedral the name promises
-    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassReese', pad: 'choir' },
+    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassFm', pad: 'choir' },
     form: [
       'intro',
       'verse',
@@ -500,7 +503,7 @@ const SONG_DEFS: SongDef[] = [
     ],
     sections: [
       {
-        // The lights come on one by one: a single beam (the arpeggio), the reese drone under it,
+        // The lights come on one by one: a single beam (the arpeggio), the bass drone under it,
         // the haze of the pad, then a bell striking the verse's hammered note
         name: 'intro',
         tier: 'calm',

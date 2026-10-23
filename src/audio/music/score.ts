@@ -224,8 +224,8 @@ export interface SongDef {
    */
   pump?: number;
   /**
-   * dB the bass is driven by into its saturation: 0 for a clean bass, 10 or more for one that
-   * tears, as an industrial track's does. 0 if left out.
+   * dB the bass is driven by into its saturation: 10 or more for one that tears, as an
+   * industrial track's does; below 0 for a cleaner one than the mix's own bend. 0 if left out.
    */
   grit?: number;
   sections: SectionDef[];
