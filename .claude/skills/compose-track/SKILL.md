@@ -25,8 +25,10 @@ and a choice, never with a finished track written blind.
 
 - Drop the unchosen bases. Write 3–4 melodies as constants over the chosen progression, each as
   its own sketch with the base: a motif with its own rhythm, a 4-bar question and its answer, an
-  arch peaking in bar 5–6, strong-beat notes resolving by step. Keep the melody above the
-  arpeggio's top note. Lead `brass`, `glide: 0.04`.
+  arch peaking in bar 5–6, strong-beat notes resolving by step. Give the track a melodic gesture
+  and a register no other track has (`docs/AUDIO.md`, step 2) — not a pickup run climbing into a
+  long note, which every 5.6a melody leaned on. Keep the melody clear of the arpeggio's
+  register, above it or below it. Lead `brass`, no glide.
 - `npm test` must pass: the strong-beat rule, the C4–D6 register, the ranges.
 - Ask which melodies, and on which lead sound (the stand's "lead: …" switch).
 

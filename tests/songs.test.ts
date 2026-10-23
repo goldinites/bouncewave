@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LeadVoice, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
+import { LeadVoice, MelodyNote, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
@@ -43,6 +43,11 @@ const LOOPING_SONGS = new Set<string>([
   'Summer Plaza',
   'Memphis P4 F1 Sunrise',
   'Memphis P4 F2 Staccato',
+  'Neon Cathedral v3',
+  'Sunset Strip v3',
+  'Summer Plaza v2',
+  'Memphis P1 C1 Sparkle',
+  'Memphis P1 C2 Call',
 ]);
 
 describe('the soundtrack', () => {
@@ -114,6 +119,56 @@ describe('the soundtrack', () => {
           expect(most(phrases), `${song.title} ${name}: one phrase's rhythm`).toBeLessThanOrEqual(
             2,
           );
+        }
+      }
+    }
+  });
+
+  /** A melody's notes in order, each with its length. */
+  const notesOf = (line: readonly (MelodyNote | null)[]) =>
+    line.filter((note): note is MelodyNote => note !== null);
+
+  // Every 5.6a melody climbed into a long note by a pickup run, and the tracks sounded like one
+  // tune on different sounds: a song may climb that way once in eight bars, no more
+  it('climbs into a long note by a pickup run at most once in eight bars', () => {
+    for (const song of SONGS.filter((s) => !LOOPING_SONGS.has(s.title))) {
+      for (const { name, lead } of song.sections) {
+        if (!lead) continue;
+        const notes = notesOf(lead);
+        let runs = 0;
+        for (let i = 0; i + 3 < notes.length; i++) {
+          const [a, b, c, target] = notes.slice(i, i + 4);
+          const climbs = [b.note - a.note, c.note - b.note, target.note - c.note].every(
+            (step) => step >= 1 && step <= 4,
+          );
+          const isPickup = [a, b, c].every((note) => note.steps <= 2);
+          if (climbs && isPickup && target.steps > c.steps) runs++;
+        }
+        const eights = Math.max(1, lead.length / (8 * STEPS_PER_BAR));
+        expect(runs, `${song.title} ${name}`).toBeLessThanOrEqual(eights);
+      }
+    }
+  });
+
+  // Tracks must not share a melody: a figure of five notes — its four intervals and five
+  // lengths — belongs to one song (its versions aside)
+  it('gives no two songs the same five-note figure', () => {
+    const owner = new Map<string, string>();
+    for (const song of SONGS.filter((s) => !LOOPING_SONGS.has(s.title))) {
+      const track = song.title.replace(/ v\d+$/, '');
+      for (const { name, lead } of song.sections) {
+        if (!lead) continue;
+        const notes = notesOf(lead);
+        for (let i = 0; i + 4 < notes.length; i++) {
+          const five = notes.slice(i, i + 5);
+          const figure = five
+            .map((note, j) => `${j ? note.note - five[j - 1].note : ''}:${note.steps}`)
+            .join(' ');
+          const other = owner.get(figure);
+          expect(other === undefined || other === track, `${track} ${name} and ${other}`).toBe(
+            true,
+          );
+          owner.set(figure, track);
         }
       }
     }

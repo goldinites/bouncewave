@@ -321,6 +321,89 @@ const M3_V3 = `G5 - - - - - Eb5 F5 | G5 - - - Bb5 - G5 - | C6 - - - - - Bb5 Ab5 
 const S3_TURNED_V3 = `G5 - - - A5 - Bb5 - | C6 - - - Bb5 - - - | G5 - - - Bb5 - C6 - | D6 - - - - - - -
                     | D6 - - - - - - - | C6 - - - Bb5 - - - | A5 - - - - - - - | C6 - - - - - A5 -`;
 
+// ——— Fourth takes (5.6a): the three tracks no longer share one melody. Every 5.6a line leaned on
+// a pickup run climbing into a long note, all in D5–D6, so the tracks sounded like one tune on
+// different sounds. Now each has a gesture and a register of its own: the darksynth hammers
+// repeated notes, leaps an octave and falls chromatically, low, under arpeggios moved up an
+// octave; the outrun leaps wide and sings long notes down from the top; the city pop syncopates
+// on a repeated note, slides into notes from a semitone below and falls by thirds, in between ———
+
+/** Cells an octave up, so a low melody plays beneath the arpeggio rather than inside it. */
+const octaveUp = (cells: readonly Stretch[]): Stretch[] =>
+  cells.map(({ cell, bars }) => ({ cell: cell.map((note) => transpose(note, 12)), bars }));
+
+/** K1, the Cathedral verse (Em Em C C Am Am B B): a hammered low note leaping its octave. */
+const K1 = `E4 . E4 . E5 . E4 . D5 - - - B4 - - - | . . E4 . G4 - - - F#4 - - - E4 - - -
+          | E4 . E4 . E5 . E4 . C5 - - - G4 - - - | . . G4 . B4 - - - A4 - - - G4 - - -
+          | A4 - - - G#4 - A4 - C5 - - - B4 - A4 - | E4 - - - - - - - . . . . . . . .
+          | B4 . B4 . D#5 - - - A4 - - - F#4 - - - | D#4 - - - - - - - . . . . . . . .`;
+
+/** K2, the second verse: a falling triad struck twice, a 3+3+4 push, a slow rise to close. */
+const K2 = `B4 . G4 . E4 . . . B4 . G4 . E4 . F#4 . | G4 - - - - - - - . . E5 . D5 . B4 .
+          | C5 . G4 . E4 . . . C5 . G4 . E4 . D4 . | E4 - - - - - - - . . G4 . F#4 . E4 .
+          | A4 - - A4 - - A4 - - - G4 - - - E4 - | C5 - - C5 - - B4 - - - A4 - - - - -
+          | F#4 - - - - - - - D#4 - - - - - - - | D#4 - - - F#4 - - - B4 - - - - - - -`;
+
+/** K3, the Cathedral chorus (Em Em C C G G D D): up the triad to the octave, a chromatic fall. */
+const K3 = `E4 - E4 - E4 - G4 - . . B4 - . . E5 - | - - - - D#5 - - - D5 - - - C#5 - - -
+          | C5 - - - - - - - B4 - - - A4 - G4 - | E4 - - - - - - - . . . . . . . .
+          | G4 - G4 - G4 - B4 - . . D5 - . . G5 - | - - - - F#5 - - - E5 - - - D5 - - -
+          | D5 - - - - - C5 - - - B4 - - - A4 - | F#4 - - - - - - - . . . . . . . .`;
+
+/** K4, the Cathedral bridge: long low notes, each leaning on its neighbour a semitone off. */
+const K4 = `B4 - - - C5 - - - B4 - - - - - - - | G4 - - - - - - - F#4 - - - E4 - - -
+          | C5 - - - B4 - - - C5 - - - - - - - | G4 - - - - - - - . . . . . . . .
+          | D5 - - - - - - - B4 - - - C5 - - - | B4 - - - A4 - - - G4 - - - - - - -
+          | A4 - - - - - - - . . . . F#4 - - - | D4 - - - - - - - . . . . . . . .`;
+
+/** W1, the Sunset Strip verse (Bb Bb F F Gm Gm Eb Eb): wide leaps down from the top, held. */
+const W1 = `D6 - - - - - F5 - - - Bb5 - - - - - | A5 - - - - - - - F5 - - - - - - -
+          | C6 - - - - - F5 - - - A5 - - - - - | G5 - - - - - - - C6 - - - - - - -
+          | Bb5 - - Bb5 - - G5 - - - D6 - - - - - | - - - - C6 - - - Bb5 - - - G5 - - -
+          | G5 - - - - - Bb5 - - - G5 - - - F5 - | F5 - - - - - - - . . . . . . . .`;
+
+/** W2, the Sunset Strip bridge (Gm Gm Eb Eb Bb Bb F F): falling fifths and sixths, held long. */
+const W2 = `D6 - - - - - - - G5 - - - - - - - | Bb5 - - - A5 - - - G5 - - - - - - -
+          | Bb5 - - - - - - - G5 - - - - - - - | F5 - - - - - - - D6 - - - - - - -
+          | - - - - C6 - - - Bb5 - - - F5 - - - | D6 - - - - - - - . . . . . . . .
+          | C6 - - - A5 - - - F5 - - - C6 - - - | A5 - - - - - - - . . . . . . . .`;
+
+/** Q1, the Summer Plaza verse (the royal road): a note struck off the beat three times, falling. */
+const Q1 = `. . . F#5 - . F#5 - . F#5 - E5 - . D5 - | E5 - - - . . . . . . D#5 E5 - - - -
+          | . . . A5 - . A5 - . A5 - G#5 - . F#5 - | D5 - - - . . . . . . . C#5 D5 - - -
+          | B5 - G5 - E5 - G5 - B5 - - - A5 - - - | G5 - E5 - D5 - - - . . . . E5 - D5 -
+          | F#5 - - - - - - E5 - - F#5 - - - . . | A5 - - - - - - - . . . . . . . .`;
+
+/** Q2, the second verse: a two-note call and its answer, then held notes and a fall to D. */
+const Q2 = `B5 - . G5 - . . . . . . . . . . . | . . . . . . . . E5 - C#5 - E5 - A5 -
+          | A5 - . F#5 - . . . . . . . . . . . | . . . . . . . . F#5 - D5 - F#5 - B5 -
+          | G5 - - - - - E5 - - - - - D5 - - - | E5 - - - - - - - . . . . . . . .
+          | . . C#6 . . A5 . . F#5 - - - - - - - | . . . . . . . . E5 - - - D5 - - -`;
+
+/** Q3, the Summer Plaza chorus (Gmaj7 F#m7 Em7 Dmaj7 Gmaj7 F#m7 Em7 A7sus4): 3+3 and a fall. */
+const Q3 = `F#5 - - F#5 - - F#5 - - - E5 - D5 - - - | E5 - - - - - - - . . . . . . . .
+          | G5 - - G5 - - G5 - - - F#5 - E5 - - - | F#5 - - - - - - - . . . . . . . .
+          | B5 - - - A5 - - - F#5 - - - D5 - - - | C#6 - - - A5 - - - . . F#5 - . . E5 -
+          | E5 - - - G5 - - - - - - - F#5 - - - | E5 - - - - - - - D5 - - - - - - -`;
+
+/** Q3's harmony below it, on brass. */
+const Q3_UNDER = `D5 - - D5 - - D5 - - - C#5 - B4 - - - | C#5 - - - - - - - . . . . . . . .
+                | E5 - - E5 - - E5 - - - D5 - C#5 - - - | D5 - - - - - - - . . . . . . . .
+                | G5 - - - F#5 - - - D5 - - - B4 - - - | A5 - - - F#5 - - - . . D5 - . . C#5 -
+                | C#5 - - - E5 - - - - - - - D5 - - - | A4 - - - - - - - B4 - - - - - - -`;
+
+/** Q4, the Summer Plaza bridge riff on the guitar: notes slid into from below, then even eighths. */
+const Q4 = `. . D5 . . D5 . C#5 D5 . . . B4 . . . | . . C#5 . . C#5 . C5 C#5 . . . A4 . . .
+          | . . B4 . . B4 . A#4 B4 . . . G4 . . . | A4 - - - - - - - . . . . . . . .
+          | F#5 . D5 . B4 . D5 . F#5 . . . . . . . | . . . . . . . . E5 . C#5 . A4 . C#5 .
+          | D5 - - - B4 - - - G4 - - - B4 - - - | E5 - - - - - - - . . . . . . . .`;
+
+/** Q5, the sax solo over the royal road: falling, a blue note slid up, a 3+3+3, a held D6. */
+const Q5 = `. . . . . . . . B5 - - A5 - - F#5 - | E5 - - - - - F5 F#5 - - - - E5 - C#5 -
+          | A5 - . A5 - . A5 - . C#6 - - - . . . | B5 - - - A5 - F#5 - - - - - . . . .
+          | . . G5 . E5 . D5 . E5 - - - G5 - - - | A5 - - - - - G5 - - - E5 - - - D5 -
+          | F#5 - - - - - - - C#6 - - - A5 - - - | D6 - - - - - - - . . . . . . . .`;
+
 /**
  * The soundtrack. Every song has a part for each tier — calm intros and breakdowns for the
  * menu, a verse to play over, a short build and a chorus for the hottest rallies — and the
@@ -2441,6 +2524,393 @@ const SONG_DEFS: SongDef[] = [
         tier: 'groove',
         chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
         lead: PLAZA.solo,
+        leadVoice: 'sax',
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'roll',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        sweep: { arp: [0.5, 1.4] },
+      },
+    ],
+  },
+  {
+    // Neon Cathedral, fourth take: a melody of its own, low (E4–C5) under arpeggios moved up an
+    // octave — a hammered note leaping its octave in the verse, a falling triad in the second,
+    // the chorus climbing the triad to the octave and falling chromatically, the bridge leaning
+    // on semitones; the chorus is the only part with unbroken arpeggios
+    title: 'Neon Cathedral v4',
+    bpm: 118,
+    swing: 0,
+    level: -1,
+    sketch: true,
+    kit: 'dark',
+    voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassReese' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.eighths),
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: K1,
+        leadVoice: 'pwm',
+        arpLine: cycle(octaveUp(HYPNOTIC_CELLS), ARP_RHYTHM.seven),
+        bassLine: HYPNOTIC.bass,
+        drums: 'drive',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3, drums: 0.3 },
+        sweep: { arp: [0.4, 1.5], pads: [0.7, 1.2] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | Am | Am | B | B',
+        lead: K2,
+        leadVoice: 'pluck',
+        arpLine: cycle(octaveUp(HYPNOTIC_CELLS), ARP_RHYTHM.eleven),
+        bassLine: HYPNOTIC.bass,
+        drums: 'darkdrive',
+        fill: 'roll',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.6] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: tease(K3),
+        leadVoice: 'bell',
+        arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.quarters),
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Am | B',
+        arp: 'up',
+        bass: 'pulse16',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: K3,
+        arpLine: cycle(octaveUp(CATHEDRAL_CELLS)),
+        bass: 'drive',
+        drums: 'darkdrive',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Em | Em | C | C | G | G | D | D',
+        lead: K4,
+        leadVoice: 'sync',
+        arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.eighths),
+        bass: 'long',
+        drums: 'four',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { drums: 0.35 },
+        sweep: { arp: [0.3, 1.4], pads: [0.7, 1.2] },
+      },
+    ],
+  },
+  {
+    // Sunset Strip, fourth take: the outrun sings high and leaps wide — the verse falls a sixth and
+    // climbs a fourth on long notes, the bridge falls by fifths and sixths; S3 stays the chorus
+    // hook, sung by step, the one melody here that moves by step
+    title: 'Sunset Strip v4',
+    bpm: 112,
+    swing: 0,
+    sketch: true,
+    voices: { lead: 'epiano', counter: 'soft', arp: 'arpPulse', bass: 'bassFm' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.eighths),
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: W1,
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.nine),
+        bass: 'eighths',
+        drums: 'outrun',
+        fill: 'roll',
+        pad: 'hold',
+        layers: { lead: 0.3, drums: 0.3 },
+        sweep: { arp: [0.4, 1.4] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: W1,
+        leadVoice: 'vibes',
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.eleven),
+        bass: 'sync',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.6, 1.5] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: tease(S3_V3),
+        leadVoice: 'koto',
+        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.quarters),
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Eb | F',
+        arp: 'up',
+        bass: 'drive',
+        drums: 'drive',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        lead: S3_V3,
+        leadVoice: 'sax',
+        counter: S3_V3_THIRDS,
+        arpLine: SUNSET,
+        bass: 'drive',
+        drums: 'outrun',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Gm | Gm | Eb | Eb | Bb | Bb | F | F',
+        lead: W2,
+        leadVoice: 'koto',
+        arpLine: cycle(SUNSET_TURN_CELLS, ARP_RHYTHM.eighths),
+        bass: 'walk',
+        drums: 'break',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.4, 1.4], pads: [0.7, 1.2] },
+      },
+    ],
+  },
+  {
+    // Summer Plaza, third take: city pop's own melodic speech — a note struck off the beat and
+    // repeated, slid into from a semitone below, falling by thirds, short calls answered — in the
+    // middle of the range, between the darksynth's low line and the outrun's high one
+    title: 'Summer Plaza v3',
+    bpm: 108,
+    swing: 0.1,
+    level: 1.5,
+    sketch: true,
+    voices: { lead: 'epiano', counter: 'guitar', arp: 'pluck', bass: 'bassFm' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse',
+      'solo',
+      'breakdown',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+    ],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        sweep: { arp: [0.3, 1.1], pads: [0.6, 1] },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: Q1,
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'stop',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        sweep: { arp: [0.4, 1.3] },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: Q2,
+        leadVoice: 'vibes',
+        counter: PLAZA.chops,
+        arpLine: ROYAL_ROAD,
+        bass: 'funk',
+        drums: 'citypop',
+        fill: 'toms',
+        pad: 'hold',
+        layers: { lead: 0.3, counter: 0.2, arp: 0.5 },
+        sweep: { arp: [0.5, 1.4] },
+      },
+      {
+        name: 'breakdown',
+        tier: 'calm',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: tease(Q3),
+        leadVoice: 'vibes',
+        arpLine: transpose(
+          cycle(
+            FUSION_CHORDS.map(({ arp }) => ({ cell: arp, bars: 1 })),
+            ARP_RHYTHM.quarters,
+          ),
+          -2,
+        ),
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'swell',
+        silence: 4,
+        sweep: { arp: [1.2, 0.4] },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Em7 | A7sus4',
+        arp: 'up',
+        bass: 'octave',
+        drums: 'four',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+        sweep: { arp: [0.5, 2] },
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: Q3,
+        leadVoice: 'sax',
+        counter: Q3_UNDER,
+        counterVoice: 'brass',
+        arpLine: PLAZA.arp,
+        bassLine: PLAZA.bass,
+        drums: 'disco',
+        fill: 'toms',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+      {
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Gmaj7 | F#m7 | Em7 | Dmaj7 | Gmaj7 | F#m7 | Em7 | A7sus4',
+        lead: Q4,
+        leadVoice: 'guitar',
+        arpLine: PLAZA.arp,
+        bassLine: PLAZA.bass,
+        drums: 'euclid',
+        fill: 'stop',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+        sweep: { arp: [0.5, 1.5] },
+      },
+      {
+        name: 'solo',
+        tier: 'groove',
+        chords: 'Gmaj7 | A | F#m7 | Bm7 | Em7 | A7sus4 | Dmaj7 | Dmaj7',
+        lead: Q5,
         leadVoice: 'sax',
         counter: PLAZA.chops,
         arpLine: ROYAL_ROAD,
