@@ -6,7 +6,7 @@ import { clamp } from '@/shared/math';
 // synths were, so it sits lower to leave the action sounds on top (docs/AUDIO.md, "Микс")
 const MUSIC_MASTER_LEVEL = 0.21;
 const MUSIC_DUCK_LEVEL = 0.25; // music level under the victory sting
-// Time constants of a part's level change (setPartLevel): up on the downbeat, down gently
+// Time constants of a part's level change (setPartLevel, setPartMix): up on the downbeat, down gently
 const PART_RISE = 0.01; // s
 const PART_FALL = 0.25; // s
 // Low-pass cutoff of the music bus at full match-point drama (fully open at level 0)
@@ -75,6 +75,8 @@ const GLITCH = {
  * - partLevel sets a part above or below the song's grooves (`setPartLevel`): after the
  *   compressor, which would flatten whatever the arrangement adds, so a peak really is louder
  * - the bass is driven into its saturation as hard as the song asks (`setBassGrit`)
+ * - pads and melody are raised or lowered against the drums and bass as a part asks
+ *   (`setPartMix`), before the compressor, so a fuller part pushes the beat back
  * - toneFilter follows the game state (muffled in menus and pause), set per step
  * - dramaFilter muffles on match point; separate so it never fights the tone filter
  * - tapeDelay sits at 0 ms until a tape stop sweeps it to bend the pitch down
@@ -118,6 +120,7 @@ export class MusicGraph {
   private songLevelDb: number | null = null;
   private readonly partLevel: GainNode;
   private partLevelDb: number | null = null;
+  private partMix = { pads: 0, melody: 0 };
   /** Share of the full sidechain the song playing asks for. */
   private pumpDepth = 1;
   /** The rooms built: the song playing's, and the next one's or the last one's fading out. */
@@ -383,6 +386,20 @@ export class MusicGraph {
     const isRising = this.partLevelDb === null || db > this.partLevelDb;
     this.partLevelDb = db;
     this.partLevel.gain.setTargetAtTime(dbToGain(db), time, isRising ? PART_RISE : PART_FALL);
+  }
+
+  /**
+   * The pads' and the melody's levels in dB against the drums and bass, from `time`, as the
+   * part playing asks; following the part level's rise and fall. Only acts when they change.
+   */
+  public setPartMix(mix: { pads?: number; melody?: number }, time: number): void {
+    for (const bus of ['pads', 'melody'] as const) {
+      const db = mix[bus] ?? 0;
+      if (db === this.partMix[bus]) continue;
+      const isRising = db > this.partMix[bus];
+      this.partMix[bus] = db;
+      this[bus].gain.setTargetAtTime(dbToGain(db), time, isRising ? PART_RISE : PART_FALL);
+    }
   }
 
   private get now(): number {

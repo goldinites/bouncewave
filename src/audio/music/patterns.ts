@@ -122,13 +122,14 @@ export const DRUM_PATTERNS = {
     open: '......x.........',
     metal: '...........o....',
   },
-  // The city's iron at the peak (Kabukicho Rain's chorus), after Cyberpunk 2077: the half-time
-  // beat with steel struck across it, a taiko under the off-beats, the hats in triplet rolls
+  // The city's iron at the peak (Kabukicho Rain's chorus), after Cyberpunk 2077: out of the
+  // verses' half-time, the snare on two and four and the hats in sixteenths, so the peak runs at
+  // the full 140 the verses only hint at; steel struck across it, a taiko under the off-beats
   neonIron: {
-    kick: 'X..x...x..X..x..',
-    snare: '........X.......',
-    clap: '........x.......',
-    hat: 'x.x.x.x.x.x.x.xx',
+    kick: 'X..x....X.x..x..',
+    snare: '....X.......X...',
+    clap: '....x.......x...',
+    hat: 'x.xxx.xxx.xxx.xx',
     open: '......x.......x.',
     metal: '...x..o....x.x..',
     taiko: '..x.......x...xX',

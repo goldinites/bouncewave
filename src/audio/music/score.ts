@@ -175,6 +175,12 @@ export interface SectionDef {
    * stand apart from the others of its kind. 0 if left out.
    */
   level?: number;
+  /**
+   * dB the pads (stabs too) and the melodic parts (lead, counter, arpeggio) play at against the
+   * drums and bass in this section, before the compressor: a peak that should sound fuller, not
+   * only louder. As balanced if left out.
+   */
+  mix?: { pads?: number; melody?: number };
   /** Faults on the whole mix over the section's last bar, for a song that breaks down. */
   glitch?: GlitchPatternName;
 }

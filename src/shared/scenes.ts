@@ -11,7 +11,7 @@ export type PickableSceneId = (typeof SCENES)[number];
  * Backdrops a mode keeps for itself, by mode: never offered to the quick match, nor dealt by
  * "random". A match of that mode asks for one when it starts. The challenges' are one per tier of
  * the list (docs/CHALLENGES.md), each one's background coming in its own step (2.7–2.9); the
- * story's chapters (stage 9) will list theirs here. A scene with no background yet gets the
+ * story's chapters (stage 7 on) will list theirs here. A scene with no background yet gets the
  * player's.
  */
 export const EXCLUSIVE_SCENES = {

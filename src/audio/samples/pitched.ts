@@ -1,5 +1,15 @@
 import { PitchedRecipe, RENDER_RATE } from '@/audio/samples/SampleBank';
-import { cents, chain, drive, filter, hit, level, osc } from '@/audio/samples/synth';
+import {
+  cents,
+  chain,
+  drive,
+  filter,
+  hit,
+  level,
+  noiseSource,
+  osc,
+  sweep,
+} from '@/audio/samples/synth';
 
 // A sustained sound loops over one second after a quarter-second settling: long enough that the
 // beating of its detuned voices has room to move, short enough to keep memory down. The render
@@ -79,13 +89,25 @@ export const PITCHED_SAMPLES = {
       chain(carrier, drive(ctx, 1.5), ctx.destination);
     },
   },
-  /** 808 sub: a long sine, driven so its overtones carry it on a phone speaker. */
+  /**
+   * 808 sub: a long sine, driven so its overtones carry it on a phone speaker, which plays
+   * nothing of the sub itself. Each note is knocked in: the sine starts three times higher and
+   * drops onto the note in 40 ms, the punch of a struck drum, with a soft click at 1.2 kHz, so
+   * the phone hears the note's pitch and its start.
+   */
   bass808: {
-    maxRate: RENDER_RATE.LOW,
+    maxRate: RENDER_RATE.MID,
     roots: BASS_ROOTS,
     duration: 1.8,
-    build: (ctx, _random, f) => {
-      chain(osc(ctx, 'sine', f), hit(ctx, 1, 1.7, 0, 0.003), drive(ctx, 2.6), ctx.destination);
+    build: (ctx, random, f) => {
+      const knock = sweep(ctx, 'sine', f * 3, f, 0.04);
+      chain(knock, hit(ctx, 1, 1.7, 0, 0.003), drive(ctx, 2.6), ctx.destination);
+      chain(
+        noiseSource(ctx, random),
+        filter(ctx, 'bandpass', 1200, 1.2),
+        hit(ctx, 0.25, 0.012),
+        ctx.destination,
+      );
     },
   },
   /** Supersaw: seven detuned saws spread wide, the anthem lead. */
