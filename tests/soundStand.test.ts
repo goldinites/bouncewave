@@ -41,6 +41,7 @@ describe('SoundStand', () => {
     expect(audition).toHaveBeenLastCalledWith('night-drive', null);
     expect([...part.options].map((o) => o.value)).toEqual([
       '',
+      'whole-form',
       ...SONGS[0].sections.map((s) => s.name),
     ]);
 

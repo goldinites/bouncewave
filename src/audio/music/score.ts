@@ -47,7 +47,13 @@ export type LeadVoice =
   | 'soft'
   | 'brass'
   | 'sync'
-  | 'pwm';
+  | 'pwm'
+  // City pop's band, for the Memphis track: an FM electric piano, a sax, a muted funk guitar
+  // and a vibraphone
+  | 'epiano'
+  | 'sax'
+  | 'guitar'
+  | 'vibes';
 
 /** The rendered basses (audio/samples/pitched.ts); a plain oscillator type plays live. */
 export type BassVoice = 'bassSaw' | 'bassReese' | 'bassFm' | 'bass808';

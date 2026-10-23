@@ -15,6 +15,8 @@ const REPLAY_BARS = 4;
 // Bars after a peak before a hot rally may take the music to one again: the chorus is a reward,
 // and one heard on every rally would stop being one
 export const PEAK_COOLDOWN_BARS = 16;
+/** The listening stand's part that plays the song's whole form in order, peaks and all. */
+export const WHOLE_FORM = 'whole-form';
 
 interface Position {
   songIndex: number;
@@ -24,10 +26,14 @@ interface Position {
   bar: number;
 }
 
-/** What the listening stand holds the music to: a song, and one of its sections or any. */
+/**
+ * What the listening stand holds the music to: a song, and one of its sections, any, or its
+ * whole form.
+ */
 interface Pin {
   songIndex: number;
   sectionIndex: number | null;
+  isWholeForm: boolean;
 }
 
 const isPeak = (tier: Tier) => tier === 'rise' || tier === 'high';
@@ -141,12 +147,13 @@ export class Conductor {
 
   /**
    * The listening stand: from the next bar line, play this song and nothing else — only this
-   * section, looping, if one is given, or otherwise its form as the game calls for it.
-   * Null lets the game lead the music again.
+   * section, looping, if one is given; its whole form from the start, every part in order, for
+   * `WHOLE_FORM`; or otherwise its form as the game calls for it. Null lets the game lead the
+   * music again.
    */
   public pinTo(
     songIndex: number | null,
-    sectionIndex: number | null = null,
+    part: number | typeof WHOLE_FORM | null = null,
     wanted: Tier = 'groove',
   ): void {
     if (songIndex === null) {
@@ -155,11 +162,15 @@ export class Conductor {
       if (this.scene) this.enterScene(this.scene);
       return;
     }
-    this.pin = { songIndex, sectionIndex };
-    this.skipTarget =
-      sectionIndex === null
-        ? this.entry(songIndex, wanted)
-        : this.atSection(songIndex, sectionIndex);
+    const isWholeForm = part === WHOLE_FORM;
+    const sectionIndex = isWholeForm ? null : part;
+    this.pin = { songIndex, sectionIndex, isWholeForm };
+    if (isWholeForm) this.skipTarget = this.at(songIndex, 0);
+    else
+      this.skipTarget =
+        sectionIndex === null
+          ? this.entry(songIndex, wanted)
+          : this.atSection(songIndex, sectionIndex);
     this.planned = this.skipTarget;
   }
 
@@ -230,6 +241,13 @@ export class Conductor {
       const isIn = position.sectionIndex === pinned;
       this.planned =
         isIn || !isEnd ? this.continuation() : this.atSection(position.songIndex, pinned);
+      return;
+    }
+    // The stand's whole form: every part in the order written, whatever the heat
+    if (this.pin?.isWholeForm) {
+      this.planned = isEnd
+        ? this.at(position.songIndex, this.nextFormStep(position.step))
+        : this.continuation();
       return;
     }
 

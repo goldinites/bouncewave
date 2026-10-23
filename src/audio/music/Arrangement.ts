@@ -96,6 +96,10 @@ const LEAD_VOLUME: Record<LeadVoice, number> = {
   brass: 0.07,
   sync: 0.06,
   pwm: 0.07,
+  epiano: 0.11,
+  sax: 0.06,
+  guitar: 0.1,
+  vibes: 0.095,
 };
 const COUNTER_SHARE = 0.55;
 const ARP_VOLUME = 0.045;

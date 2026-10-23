@@ -61,6 +61,10 @@ const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId | ExtraLeadId>> =
   brass: 'leadBrass',
   sync: 'leadSync',
   pwm: 'leadPwm',
+  epiano: 'leadEpiano',
+  sax: 'leadSax',
+  guitar: 'leadGuitar',
+  vibes: 'leadVibes',
 };
 // A rendered note is played a touch louder or softer each time, never out of tune
 const NOTE_HUMANIZE = 0.05; // ± share of the volume
@@ -78,6 +82,41 @@ interface NoteShape {
   vibrato?: boolean;
   /** Portamento: the note slides in from this MIDI note over `glide.time` seconds. */
   glide?: { from: number; time: number };
+}
+
+/**
+ * How a rendered lead is played. A pluck or a muted guitar dies away with its filter closing;
+ * an electric piano or a vibraphone rings out as struck, its own decay its shape; the sustained
+ * leads settle and sing, the sax breathing in more slowly.
+ */
+function leadShape(
+  voice: LeadVoice,
+  duration: number,
+  filterCutoff: number,
+  glide?: { from: number; time: number },
+): NoteShape {
+  switch (voice) {
+    case 'pluck':
+    case 'guitar':
+      return {
+        attack: 0.002,
+        release: 0.03,
+        cutoff: { from: filterCutoff * 1.4, to: filterCutoff * 0.28, over: duration },
+      };
+    case 'epiano':
+    case 'vibes':
+      return { attack: 0.002, release: 0.08 };
+    default:
+      return {
+        attack: voice === 'sax' ? 0.04 : 0.015,
+        sustain: 0.75,
+        decay: 0.2,
+        release: 0.12,
+        cutoff: { from: filterCutoff * 1.6, to: filterCutoff, over: 0.2 },
+        vibrato: true,
+        glide,
+      };
+  }
 }
 
 export class Instruments {
@@ -366,23 +405,7 @@ export class Instruments {
   ): void {
     const sampled = SAMPLED_LEADS[voice];
     if (sampled) {
-      // A pluck dies away with its filter closing; the sustained leads settle and sing
-      const shape: NoteShape =
-        voice === 'pluck'
-          ? {
-              attack: 0.002,
-              release: 0.03,
-              cutoff: { from: filterCutoff * 1.4, to: filterCutoff * 0.28, over: duration },
-            }
-          : {
-              attack: 0.015,
-              sustain: 0.75,
-              decay: 0.2,
-              release: 0.12,
-              cutoff: { from: filterCutoff * 1.6, to: filterCutoff, over: 0.2 },
-              vibrato: true,
-              glide,
-            };
+      const shape = leadShape(voice, duration, filterCutoff, glide);
       if (this.playNote(sampled, midiNote, time, duration, volume, destination, shape)) return;
     }
     switch (voice) {
@@ -390,7 +413,12 @@ export class Instruments {
         this.bell(midiNote, time, duration, volume, destination);
         return;
       case 'pluck':
+      case 'guitar':
         this.note('sawtooth', midiNote, time, duration, volume, destination, filterCutoff * 1.4);
+        return;
+      case 'epiano':
+      case 'vibes':
+        this.bell(midiNote, time, duration, volume, destination);
         return;
       case 'koto':
         this.koto(midiNote, time, duration, volume, destination, filterCutoff);

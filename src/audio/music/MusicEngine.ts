@@ -1,5 +1,5 @@
 import { Arrangement, BASS_LOW } from '@/audio/music/Arrangement';
-import { Conductor } from '@/audio/music/Conductor';
+import { Conductor, WHOLE_FORM } from '@/audio/music/Conductor';
 import { Harmony, HarmonyTimeline } from '@/audio/music/HarmonyTimeline';
 import { Instruments } from '@/audio/music/Instruments';
 import {
@@ -187,7 +187,7 @@ export class MusicEngine {
 
   /**
    * The listening stand holds the music to a song and, if `part` names one of its sections, to
-   * that section, from the next bar line; the music then sounds as in a match even behind the
+   * that section, or with `WHOLE_FORM` to its whole form in order, from the next bar line; the music then sounds as in a match even behind the
    * menus. Null song lets the game lead again.
    * @returns false if there is no such song or section (nothing changes)
    */
@@ -200,7 +200,9 @@ export class MusicEngine {
     const songIndex = SONGS.findIndex((song) => song.id === songId);
     if (songIndex < 0) return false;
     const sectionIndex =
-      part === null ? null : SONGS[songIndex].sections.findIndex((s) => s.name === part);
+      part === null || part === WHOLE_FORM
+        ? part
+        : SONGS[songIndex].sections.findIndex((s) => s.name === part);
     if (sectionIndex === -1) return false;
     conductor.pinTo(songIndex, sectionIndex, this.wantedTier());
     // Before the first step there is nothing to finish: start the song right away

@@ -1,4 +1,5 @@
 import { AudioEngine } from '@/audio/AudioEngine';
+import { WHOLE_FORM } from '@/audio/music/Conductor';
 import { LeadVoice, MUSIC_LAYERS, MusicLayer } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
@@ -18,6 +19,10 @@ const LEAD_VOICES: LeadVoice[] = [
   'brass',
   'sync',
   'pwm',
+  'epiano',
+  'sax',
+  'guitar',
+  'vibes',
 ];
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -234,12 +239,16 @@ export class SoundStand {
     this.readout.style.whiteSpace = 'pre-wrap';
   }
 
-  /** The chosen song's parts, "any" first: the song then follows the game's heat. */
+  /**
+   * The chosen song's parts: "any" first, the song then following the game's heat; then its
+   * whole form, played in order from the start, peaks and all.
+   */
   private fillParts(): void {
     const song = SONGS.find((s) => s.id === this.songSelect.value);
     const options: [string, string][] = song
       ? [
           ['', 'any part'],
+          [WHOLE_FORM, 'whole form'],
           ...song.sections.map((s): [string, string] => [s.name, `${s.name} · ${s.tier}`]),
         ]
       : [];

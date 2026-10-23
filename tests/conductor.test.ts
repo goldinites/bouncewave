@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Conductor, PEAK_COOLDOWN_BARS, SONG_BARS } from '@/audio/music/Conductor';
+import { Conductor, PEAK_COOLDOWN_BARS, SONG_BARS, WHOLE_FORM } from '@/audio/music/Conductor';
 import { compileSong, SongDef, Tier } from '@/audio/music/score';
 
 const section = (name: string, tier: Tier, bars: number) => ({
@@ -224,6 +224,25 @@ describe('Conductor', () => {
       expect(conductor.song.title).toBe('Two');
       // ...but still follows the game from section to section
       expect(play(conductor, 'groove', 4)).toContain('verse');
+    });
+
+    it('plays the whole form in order from the start, peaks and all, whatever the heat', () => {
+      const conductor = new Conductor(SONGS, 0);
+      play(conductor, 'groove', 3);
+      // From the start of its form, though another song was mid-way through its intro
+      conductor.pinTo(1, WHOLE_FORM);
+      conductor.advance();
+
+      expect(conductor.song.title).toBe('Two');
+      expect(play(conductor, 'calm', 30)).toEqual([
+        ...Array(4).fill('intro'),
+        ...Array(8).fill('verse'),
+        ...Array(2).fill('build'),
+        ...Array(8).fill('chorus'),
+        ...Array(4).fill('breakdown'),
+        // Round again, never to another song
+        ...Array(4).fill('intro'),
+      ]);
     });
 
     it('replays the way in: the end of the section before, then the pinned part', () => {
