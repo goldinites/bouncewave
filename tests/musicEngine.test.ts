@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { INITIAL_MUSIC_STATE } from '@/audio/music/intensity';
 import { MusicEngine } from '@/audio/music/MusicEngine';
 import { SONGS } from '@/audio/music/songs';
-import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { fakeAudioContext } from './helpers/fakeAudioContext';
 
 const setup = ({ muted = false, state = 'running' } = {}) => {
@@ -117,14 +116,6 @@ describe('MusicEngine', () => {
       play(30);
 
       expect(engine.getPosition().songId).toBe('night-drive');
-    });
-
-    it('plays a phrase on every pitched instrument, live until they are rendered', () => {
-      const { engine, notes } = track(setup());
-      const before = notes();
-
-      for (const id of Object.keys(PITCHED_SAMPLES) as PitchedSampleId[]) engine.playPhrase(id);
-      expect(notes()).toBeGreaterThan(before);
     });
 
     it('plays silenced layers no more', () => {

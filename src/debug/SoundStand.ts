@@ -2,9 +2,6 @@ import { AudioEngine } from '@/audio/AudioEngine';
 import { WHOLE_FORM } from '@/audio/music/Conductor';
 import { LeadVoice, MUSIC_LAYERS, MusicLayer } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
-import { DRUM_SAMPLES } from '@/audio/samples/drums';
-import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
-import { TRANSITION_SAMPLES, TransitionSampleId } from '@/audio/samples/transitions';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 
 // The lead voices the stand can put a melody on, the auditioned ones last
@@ -164,9 +161,6 @@ export class SoundStand {
       this.slider('intensity', (level) => this.audio.music.pinIntensity(level)),
       this.slider('climax', (level) => this.audio.music.pinClimax(level)),
       this.layerRows(),
-      this.sampleButtons(),
-      this.phraseButtons(),
-      this.transitionButtons(),
       this.soundButtons(),
       this.readout,
     );
@@ -319,57 +313,6 @@ export class SoundStand {
     name.textContent = 'glide';
     label.append(box, name);
     return label;
-  }
-
-  /** Every rendered instrument, each press its next variant, to hear them one by one. */
-  private sampleButtons(): HTMLElement {
-    const buttons = this.row(
-      ...Object.keys(DRUM_SAMPLES).map((id) => {
-        const button = this.button(id, () => {
-          this.audio.unlock();
-          this.audio.music.playSample(id);
-        });
-        button.dataset.sample = id;
-        button.style.color = '#ff6ad5';
-        return button;
-      }),
-    );
-    buttons.style.flexWrap = 'wrap';
-    return buttons;
-  }
-
-  /** Every rendered pitched instrument, each press a short phrase in its register. */
-  private phraseButtons(): HTMLElement {
-    const buttons = this.row(
-      ...(Object.keys(PITCHED_SAMPLES) as PitchedSampleId[]).map((id) => {
-        const button = this.button(id, () => {
-          this.audio.unlock();
-          this.audio.music.playPhrase(id);
-        });
-        button.dataset.phrase = id;
-        button.style.color = '#ffd84d';
-        return button;
-      }),
-    );
-    buttons.style.flexWrap = 'wrap';
-    return buttons;
-  }
-
-  /** Every transition: risers, the reverse crash, the downlifter, the boom, the whoosh. */
-  private transitionButtons(): HTMLElement {
-    const buttons = this.row(
-      ...(Object.keys(TRANSITION_SAMPLES) as TransitionSampleId[]).map((id) => {
-        const button = this.button(id, () => {
-          this.audio.unlock();
-          this.audio.music.playTransition(id);
-        });
-        button.dataset.transition = id;
-        button.style.color = '#7cfc8a';
-        return button;
-      }),
-    );
-    buttons.style.flexWrap = 'wrap';
-    return buttons;
   }
 
   /** How many instruments are rendered, the memory they take and how long they took. */

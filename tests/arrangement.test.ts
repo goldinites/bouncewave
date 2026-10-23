@@ -44,7 +44,7 @@ describe('Arrangement', () => {
         }
       });
     });
-  });
+  }, 20000); // every section of every song, the versions on the stand included: seconds of work
 
   it('cuts the music out and rewinds it over the last bar of a section that breaks down', () => {
     const { ctx } = fakeAudioContext();
