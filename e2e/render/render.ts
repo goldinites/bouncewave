@@ -158,6 +158,7 @@ async function renderMusic({
     () => music.getHarmony(),
     () => mixer,
     () => bank,
+    () => music.getHeat(),
   );
 
   // Every action at its render quantum (128 frames), where the context can be suspended

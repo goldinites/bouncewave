@@ -313,6 +313,14 @@ export class MusicEngine {
   }
 
   /** The chord that is sounding right now; null before the music has started. */
+  /**
+   * How hot the music is now, 0-1: the intensity the conductor climbs to the peak by, smoothed
+   * over a second or two — what the action sounds grow louder with.
+   */
+  public getHeat(): number {
+    return this.pinnedIntensity ?? this.intensity;
+  }
+
   public getHarmony(): Harmony | null {
     return this.graph ? this.harmony.at(this.graph.context.currentTime) : null;
   }

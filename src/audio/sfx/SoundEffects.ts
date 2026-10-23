@@ -58,6 +58,26 @@ const HIT_MIX = {
   PAN: 0.6,
 } as const;
 
+// The action sounds grow with the music's heat (MusicEngine.getHeat), dB against a verse's: soft
+// on the serve and in calm moments, louder as the rally heats up and the music climbs to its
+// peak, where they would otherwise sink (the user, 24.10.2026). Straight between the points
+const HEAT_LEVEL = [
+  { heat: 0.25, db: -3 }, // the serve
+  { heat: 0.45, db: 0 }, // a rally under way, the verses
+  { heat: 0.85, db: 4 }, // the peak
+] as const;
+
+/** dB the action sounds play at, at the music's `heat`. */
+export function heatLevel(heat: number): number {
+  const first = HEAT_LEVEL[0];
+  const last = HEAT_LEVEL[HEAT_LEVEL.length - 1];
+  if (heat <= first.heat) return first.db;
+  if (heat >= last.heat) return last.db;
+  const upper = HEAT_LEVEL.findIndex((point) => point.heat >= heat);
+  const [a, b] = [HEAT_LEVEL[upper - 1], HEAT_LEVEL[upper]];
+  return a.db + ((heat - a.heat) / (b.heat - a.heat)) * (b.db - a.db);
+}
+
 /** Where a hit lands and how hard: `pan` from -1 (the left edge) to 1, `force` from 0 to 1. */
 export interface HitFeel {
   pan?: number;
@@ -74,6 +94,7 @@ export class SoundEffects {
   private harmonyGetter: () => Harmony | null;
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
+  private heatGetter: () => number;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -82,6 +103,7 @@ export class SoundEffects {
    *   menus and in the attract-mode demo); `force` beeps ignore it
    * @param getMixer the master the sounds play into; without one they go straight out
    * @param getSamples the rendered layers; until they are ready the sounds play as live synths
+   * @param getHeat how hot the music is, 0-1: the sounds grow louder with it; a verse's if none
    */
   constructor(
     getAudioContext: () => AudioContext | null,
@@ -90,6 +112,7 @@ export class SoundEffects {
     getHarmony: () => Harmony | null = () => null,
     getMixer: () => Mixer | null = () => null,
     getSamples: () => SampleBank | null = () => null,
+    getHeat: () => number = () => HEAT_LEVEL[1].heat,
   ) {
     this.audioContextGetter = getAudioContext;
     this.isMutedGetter = getIsMuted;
@@ -97,6 +120,7 @@ export class SoundEffects {
     this.harmonyGetter = getHarmony;
     this.mixerGetter = getMixer;
     this.samplesGetter = getSamples;
+    this.heatGetter = getHeat;
   }
 
   /** Where a sound on `bus` goes: its bus on the mixer, or the speakers if there is none. */
@@ -200,7 +224,10 @@ export class SoundEffects {
     const hard = clamp(force, 0, 1);
     const strength = isPerfect ? 1 : 0.5 + 0.5 * hard;
     const trim = dbToGain(
-      HIT_MIX.LEVEL + (isCpu ? HIT_MIX.CPU_LEVEL : 0) + (isPerfect ? HIT_MIX.PERFECT_LEVEL : 0),
+      HIT_MIX.LEVEL +
+        (isCpu ? HIT_MIX.CPU_LEVEL : 0) +
+        (isPerfect ? HIT_MIX.PERFECT_LEVEL : 0) +
+        heatLevel(this.heatGetter()),
     );
     const at = { ac, pan: clamp(pan, -1, 1) * HIT_MIX.PAN, trim };
     const unpitched = (id: string, gain: number, rate = 1) => {

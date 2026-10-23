@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createReverbImpulse, dbToGain, gainToDb, softClipCurve } from '@/audio/curves';
 import { Mixer } from '@/audio/Mixer';
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { MINOR_TRIAD } from '@/audio/music/theory';
 import { SampleBank } from '@/audio/samples/SampleBank';
-import { SoundEffects } from '@/audio/sfx/SoundEffects';
+import { heatLevel, SoundEffects } from '@/audio/sfx/SoundEffects';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
 
 const callsOf = (calls: AudioCall[], method: string) => calls.filter((c) => c.method === method);
@@ -265,5 +265,60 @@ describe('the music carved for a hit', () => {
     const [dip, back] = callsOf(calls, 'setTargetAtTime').slice(before);
     expect(dip.args[0]).toBeLessThan(0);
     expect(back.args[0]).toBe(0);
+  });
+});
+
+describe('action sounds with the music’s heat', () => {
+  it('play soft on the serve, as written in a rally, louder at the peak, and evenly between', () => {
+    expect(heatLevel(0)).toBe(-3);
+    expect(heatLevel(0.25)).toBe(-3);
+    expect(heatLevel(0.45)).toBe(0);
+    expect(heatLevel(0.65)).toBeCloseTo(2);
+    expect(heatLevel(1)).toBe(4);
+  });
+
+  it('play a hit louder when the music is hotter', () => {
+    const hitGain = (heat: number) => {
+      const { ctx } = fakeAudioContext(1);
+      const buffer = {} as AudioBuffer;
+      const samples = {
+        pick: () => buffer,
+        pickNote: () => ({ buffer, rate: 1, loop: null }),
+      } as unknown as SampleBank;
+      // Every gain's level as it is set: the layers' are the loudest
+      const gains: number[] = [];
+      const real = ctx.createGain.bind(ctx);
+      ctx.createGain = () => {
+        const gain = real();
+        gains.push(0);
+        const index = gains.length - 1;
+        return new Proxy(gain, {
+          get: (target, key) =>
+            key === 'gain'
+              ? new Proxy(target.gain, {
+                  set: (param, prop, value) => {
+                    if (prop === 'value') gains[index] = value as number;
+                    return Reflect.set(param, prop, value);
+                  },
+                })
+              : Reflect.get(target, key),
+        });
+      };
+      const sfx = new SoundEffects(
+        () => ctx,
+        () => false,
+        () => true,
+        () => ({ root: 33, chord: MINOR_TRIAD }),
+        () => null,
+        () => samples,
+        () => heat,
+      );
+      vi.spyOn(Math, 'random').mockReturnValue(0.5);
+      sfx.playPaddleHit(1);
+      vi.restoreAllMocks();
+      return Math.max(...gains);
+    };
+
+    expect(hitGain(1) / hitGain(0)).toBeCloseTo(dbToGain(7), 2);
   });
 });
