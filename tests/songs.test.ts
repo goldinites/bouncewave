@@ -164,6 +164,12 @@ describe('the soundtrack', () => {
     }
   });
 
+  it('plays every song in a room of its own', () => {
+    const rooms = SONGS.filter((song) => !song.sketch).map((song) => song.room);
+    expect(rooms.every(Boolean)).toBe(true);
+    expect(new Set(rooms).size).toBe(rooms.length);
+  });
+
   it('gives each backdrop one song of its own at most', () => {
     const scenes = SONGS.flatMap((song) => (song.scene ? [song.scene] : []));
     expect(new Set(scenes).size).toBe(scenes.length);

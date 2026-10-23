@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MusicGraph } from '@/audio/music/MusicGraph';
+import { ROOMS } from '@/audio/music/rooms';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
 
 const callsOf = (calls: AudioCall[], method: string) => calls.filter((c) => c.method === method);
@@ -67,5 +68,62 @@ describe('MusicGraph', () => {
     expect(values[0]).toBe(0);
     expect(values[values.length - 1]).toBeCloseTo(0);
     expect(Math.max(...values)).toBeGreaterThan(0.1);
+  });
+
+  describe('rooms', () => {
+    afterEach(() => vi.useRealTimers());
+
+    const returnsTo = (calls: AudioCall[], level: number) =>
+      callsOf(calls, 'setTargetAtTime').filter((c) => c.args[0] === level);
+
+    it('fades the next song’s room in as the last one fades out', () => {
+      const { ctx, calls } = fakeAudioContext();
+      const graph = new MusicGraph(ctx);
+
+      graph.setSongSpace('cathedral', 1, 1);
+      expect(returnsTo(calls, ROOMS.cathedral.return).map((c) => c.args[1])).toEqual([1]);
+      // The same room every step: nothing more is automated
+      for (let i = 2; i < 50; i++) graph.setSongSpace('cathedral', 1, i);
+      expect(callsOf(calls, 'createConvolver')).toHaveLength(1);
+
+      graph.setSongSpace('studio', 0, 60);
+      expect(returnsTo(calls, ROOMS.studio.return).map((c) => c.args[1])).toEqual([60]);
+      expect(returnsTo(calls, 0).at(-1)!.args[1]).toBe(60);
+      expect(callsOf(calls, 'createConvolver')).toHaveLength(2);
+    });
+
+    it('builds a room ahead off the scheduler’s tick, and frees one only once its tail has died', () => {
+      vi.useFakeTimers();
+      const { ctx, calls } = fakeAudioContext(0);
+      const graph = new MusicGraph(ctx);
+      const convolvers = () => callsOf(calls, 'createConvolver').length;
+      const frees = () => callsOf(calls, 'disconnect').length;
+
+      graph.setSongSpace('fog', 1, 0);
+      graph.prepareRoom('valley');
+      expect(convolvers()).toBe(1);
+      vi.runAllTimers();
+      expect(convolvers()).toBe(2);
+
+      // The valley plays; the fog fades out, its long tail still ringing
+      graph.setSongSpace('valley', 1, 10);
+      expect(convolvers()).toBe(2);
+      ctx.currentTime = 11;
+      graph.prepareRoom('valley');
+      expect(frees()).toBe(0);
+      ctx.currentTime = 10 + 2 + ROOMS.fog.decay;
+      graph.prepareRoom('valley');
+      expect(frees()).toBeGreaterThan(0);
+    });
+
+    it('stops building rooms ahead once disposed', () => {
+      vi.useFakeTimers();
+      const { ctx, calls } = fakeAudioContext();
+      const graph = new MusicGraph(ctx);
+      graph.prepareRoom('stone');
+      graph.dispose();
+      vi.runAllTimers();
+      expect(callsOf(calls, 'createConvolver')).toHaveLength(0);
+    });
   });
 });

@@ -12,6 +12,7 @@ import {
 } from '@/audio/music/intensity';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { soundsFor, unneeded, VoiceOverrides } from '@/audio/music/palette';
+import { DEFAULT_ROOM } from '@/audio/music/rooms';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { chordAt, LeadVoice, MusicLayer, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
@@ -225,8 +226,8 @@ export class MusicEngine {
   }
 
   /**
-   * Renders the sounds beyond the core palette a song plays (audio/music/palette.ts), ahead of
-   * it: called while it waits its turn, so they are ready by its first bar. A sound already
+   * Renders the sounds beyond the core palette a song plays (audio/music/palette.ts), and its
+   * room, ahead of it: called while it waits its turn, so they are ready by its first bar. A sound already
    * rendered is skipped.
    */
   private prepare(song: Song): void {
@@ -237,6 +238,7 @@ export class MusicEngine {
     const rate = this.graph.context.sampleRate;
     void this.samples.renderPitched(rate, pitched);
     void this.samples.render(rate, oneShots);
+    this.graph.prepareRoom(song.room ?? DEFAULT_ROOM);
   }
 
   /** The listening stand switches the lead's portamento off and on, to compare. */
@@ -300,6 +302,7 @@ export class MusicEngine {
   public dispose(): void {
     this.scheduler?.dispose();
     this.scheduler = null;
+    this.graph?.dispose();
   }
 
   /** The kind of section the game calls for now. */
@@ -355,6 +358,7 @@ export class MusicEngine {
 
     graph.setToneFilter(TONE_FILTER[gameState], time);
     graph.setSongLevel(song.level ?? 0, time);
+    graph.setSongSpace(song.room ?? DEFAULT_ROOM, song.pump ?? 1, time);
     graph.setEchoTime(stepDuration * ECHO_STEPS, time);
 
     if (!isMuted) {

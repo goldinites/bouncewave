@@ -1,4 +1,5 @@
 import { createReverbImpulse, createSoftClipper, dbToGain } from '@/audio/curves';
+import { RoomName, ROOMS } from '@/audio/music/rooms';
 import { clamp } from '@/shared/math';
 
 // Overall music volume when not muted: the rendered instruments are fuller than the live
@@ -30,16 +31,9 @@ const SIDECHAIN = {
   RELEASE: 0.08, // s, time constant back up
   FULL_KICK: 0.75, // kick volume that ducks by the full depth
 } as const;
-// One shared room for pads, melody and a little of the drums
-const REVERB = {
-  DECAY: 1.8, // s to -60 dB
-  PRE_DELAY: 0.015, // s
-  LOW_CUT: 300, // Hz: no kick or bass in the room, or it turns to mud
-  RETURN: 0.35,
-  PADS_SEND: 0.5,
-  MELODY_SEND: 0.35,
-  DRUMS_SEND: 0.12,
-} as const;
+// Each song's own room (audio/music/rooms.ts): a new one fades in as the last one fades out
+const ROOM_FADE = 0.4; // s, time constant of the crossfade between rooms
+const ROOM_FADE_OUT = 5; // time constants after which a room fading out is silent
 // Pad voices spread across the stereo field
 export const PAD_SPREAD = 0.5;
 // Echo time follows the tempo, which drifts a little every step; smaller changes are skipped
@@ -65,13 +59,14 @@ const GLITCH = {
  * pads → pump ──────────────────────────────┤
  * melody ─┬─────────────────────────────────┤
  *         └─ echo L ⇄ echo R (ping-pong) ───┤
- * drums, pads, melody ─ sends → reverb ─────┤
+ * drums, pads, melody ─ sends → the song's room ┤
  *                                           bus → songLevel → toneFilter → compressor
  *   → dramaFilter → glitchDelay → tapeDelay → glitchGain → duckGain ─┬─ master → output
  *                                                                   └─ analyser
  * ```
  * - each stem is a part of the arrangement: its own saturation, sidechain and sends
- * - the pumps duck the bass and pads under every kick (`pump`)
+ * - the pumps duck the bass and pads under every kick (`pump`), as deep as the song asks
+ * - each song plays in its own room (`setSongSpace`), built ahead of it (`prepareRoom`)
  * - songLevel evens out the songs' loudness (`setSongLevel`)
  * - toneFilter follows the game state (muffled in menus and pause), set per step
  * - dramaFilter muffles on match point; separate so it never fights the tone filter
@@ -84,6 +79,14 @@ const GLITCH = {
  * to the parameter's timeline, and the scheduler would otherwise add dozens per second for as
  * long as the game runs.
  */
+/** A built room: what feeds it, to free it, and its return, to fade it. */
+interface RoomNodes {
+  sends: { source: AudioNode; amount: GainNode }[];
+  ret: GainNode;
+  /** Audio-clock time the room has faded out and its tail died by; freeing it earlier cuts it. */
+  silentAt: number;
+}
+
 export class MusicGraph {
   public readonly context: AudioContext;
   /** Effects outside the stems (risers): straight into the mix. */
@@ -102,6 +105,13 @@ export class MusicGraph {
   private readonly padsPump: GainNode;
   private readonly songLevel: GainNode;
   private songLevelDb: number | null = null;
+  /** Share of the full sidechain the song playing asks for. */
+  private pumpDepth = 1;
+  /** The rooms built: the song playing's, and the next one's or the last one's fading out. */
+  private readonly rooms = new Map<RoomName, RoomNodes>();
+  private room: RoomName | null = null;
+  /** Rooms waiting to be built off the scheduler's tick, by the timer that will build them. */
+  private readonly roomTimers = new Map<RoomName, ReturnType<typeof setTimeout>>();
   private readonly toneFilter: BiquadFilterNode;
   private readonly dramaFilter: BiquadFilterNode;
   private readonly tapeDelay: DelayNode;
@@ -172,7 +182,6 @@ export class MusicGraph {
     this.padsPump.connect(this.bus);
     this.melody.connect(this.bus);
     this.echoes = this.buildEcho(ac);
-    this.buildReverb(ac);
 
     this.bus.connect(this.songLevel);
     this.songLevel.connect(this.toneFilter);
@@ -213,40 +222,108 @@ export class MusicGraph {
     return echoes;
   }
 
-  /** The shared room: pads, melody and a touch of drums are sent in, the low end kept out. */
-  private buildReverb(ac: AudioContext): void {
-    const send = ac.createGain();
+  /**
+   * A room's nodes: each stem's share sent in, the low end kept out, the impulse, the highs a
+   * dark room swallows, and its return, silent until the room is chosen.
+   */
+  private buildRoom(name: RoomName): RoomNodes {
+    const ac = this.context;
+    const room = ROOMS[name];
     const lowCut = ac.createBiquadFilter();
-    const room = ac.createConvolver();
+    const convolver = ac.createConvolver();
+    const highCut = ac.createBiquadFilter();
     const ret = ac.createGain();
     lowCut.type = 'highpass';
-    lowCut.frequency.value = REVERB.LOW_CUT;
-    room.buffer = createReverbImpulse(ac, REVERB.DECAY, REVERB.PRE_DELAY);
-    ret.gain.value = REVERB.RETURN;
+    lowCut.frequency.value = room.lowCut;
+    highCut.frequency.value = room.highCut;
+    convolver.buffer = createReverbImpulse(ac, room.decay, room.preDelay);
+    ret.gain.value = 0;
 
     const sources: [AudioNode, number][] = [
-      [this.padsPump, REVERB.PADS_SEND],
-      [this.melody, REVERB.MELODY_SEND],
-      [this.drums, REVERB.DRUMS_SEND],
+      [this.padsPump, room.sends.pads],
+      [this.melody, room.sends.melody],
+      [this.drums, room.sends.drums],
     ];
-    for (const [source, level] of sources) {
+    const sends = sources.map(([source, level]) => {
       const amount = ac.createGain();
       amount.gain.value = level;
       source.connect(amount);
-      amount.connect(send);
-    }
-    send.connect(lowCut);
-    lowCut.connect(room);
-    room.connect(ret);
+      amount.connect(lowCut);
+      return { source, amount };
+    });
+    lowCut.connect(convolver);
+    convolver.connect(highCut);
+    highCut.connect(ret);
     ret.connect(this.bus);
+    return { sends, ret, silentAt: 0 };
   }
 
   /**
-   * A kick at `time`: the bass and pads dip under it and swell back, deeper the harder the kick.
+   * Builds a song's room ahead of it, off the scheduler's tick: its impulse takes a few
+   * milliseconds to generate, which the tick can't spare. Rooms neither playing nor asked for are
+   * freed once their tails have died, so two impulses are held, three while a crossfade lasts.
+   */
+  public prepareRoom(name: RoomName): void {
+    for (const [built, nodes] of this.rooms) {
+      const isUnused = built !== name && built !== this.room;
+      if (isUnused && this.now >= nodes.silentAt) this.releaseRoom(built, nodes);
+    }
+    if (this.rooms.has(name) || this.roomTimers.has(name)) return;
+    const timer = setTimeout(() => {
+      this.roomTimers.delete(name);
+      if (!this.rooms.has(name)) this.rooms.set(name, this.buildRoom(name));
+    }, 0);
+    this.roomTimers.set(name, timer);
+  }
+
+  private releaseRoom(name: RoomName, { sends, ret }: RoomNodes): void {
+    try {
+      for (const { source, amount } of sends) source.disconnect(amount);
+      ret.disconnect();
+    } catch {
+      // Already gone: nothing to free
+    }
+    this.rooms.delete(name);
+  }
+
+  /**
+   * The song playing's space from `time`: its room fades in as the last one fades out, and the
+   * sidechain takes its depth. Only acts when either changes.
+   */
+  public setSongSpace(room: RoomName, pumpDepth: number, time: number): void {
+    this.pumpDepth = pumpDepth;
+    if (room === this.room) return;
+    const previous = this.room === null ? undefined : this.rooms.get(this.room);
+    if (previous && this.room) {
+      previous.ret.gain.setTargetAtTime(0, time, ROOM_FADE);
+      previous.silentAt = time + ROOM_FADE * ROOM_FADE_OUT + ROOMS[this.room].decay;
+    }
+    // A room not built ahead (the first song, or one picked on the stand) is built now
+    let next = this.rooms.get(room);
+    if (!next) {
+      clearTimeout(this.roomTimers.get(room));
+      this.roomTimers.delete(room);
+      next = this.buildRoom(room);
+      this.rooms.set(room, next);
+    }
+    next.ret.gain.setTargetAtTime(ROOMS[room].return, time, ROOM_FADE);
+    this.room = room;
+  }
+
+  /** Stops building rooms ahead. */
+  public dispose(): void {
+    for (const timer of this.roomTimers.values()) clearTimeout(timer);
+    this.roomTimers.clear();
+  }
+
+  /**
+   * A kick at `time`: the bass and pads dip under it and swell back, deeper the harder the kick
+   * and the more the song pumps.
    * Kicks come in time order, so each one's automation lands after the last one's.
    */
   public pump(time: number, kickVolume: number): void {
-    const strength = clamp(kickVolume / SIDECHAIN.FULL_KICK, 0, 1);
+    const strength = clamp(kickVolume / SIDECHAIN.FULL_KICK, 0, 1) * this.pumpDepth;
+    if (strength === 0) return;
     const duck = (gain: AudioParam, depth: number) => {
       gain.setTargetAtTime(1 - depth * strength, time, SIDECHAIN.ATTACK);
       gain.setTargetAtTime(1, time + SIDECHAIN.HOLD, SIDECHAIN.RELEASE);

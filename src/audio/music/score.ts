@@ -7,6 +7,7 @@ import {
   StabPatternName,
 } from '@/audio/music/patterns';
 import { KitName } from '@/audio/music/kits';
+import { RoomName } from '@/audio/music/rooms';
 import { Chord, parseChord, parseNote } from '@/audio/music/theory';
 import { FxHitId } from '@/audio/samples/percussion';
 import { SceneId } from '@/shared/scenes';
@@ -215,6 +216,13 @@ export interface SongDef {
    * left out.
    */
   transitions?: TransitionStyle;
+  /** The space the song plays in (audio/music/rooms.ts); the plate if left out. */
+  room?: RoomName;
+  /**
+   * How deep the bass and pads dip under the kick, as a share of the full sidechain: 1 for the
+   * pumping of darksynth, 0 for a band that breathes by its own playing. 1 if left out.
+   */
+  pump?: number;
   sections: SectionDef[];
 }
 

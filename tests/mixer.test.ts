@@ -103,6 +103,24 @@ describe('the music’s stems', () => {
     expect(soft[0][0]).toBeGreaterThan(hard[0][0] as number);
   });
 
+  it('pump as deep as the song asks: a band that breathes by its own playing not at all', () => {
+    const { ctx, calls } = fakeAudioContext();
+    const graph = new MusicGraph(ctx);
+    const play = new Instruments(graph);
+    const dip = () => callsOf(calls, 'setTargetAtTime').at(-2)!.args[0] as number;
+
+    play.kick(2, 0.75);
+    const full = dip();
+    graph.setSongSpace('night', 0.5, 3);
+    play.kick(4, 0.75);
+    expect(1 - dip()).toBeCloseTo((1 - full) / 2);
+
+    graph.setSongSpace('studio', 0, 5);
+    const before = callsOf(calls, 'setTargetAtTime').length;
+    play.kick(6, 0.75);
+    expect(callsOf(calls, 'setTargetAtTime').length).toBe(before);
+  });
+
   it('evens the songs out only when the level changes', () => {
     const { ctx, calls } = fakeAudioContext();
     const graph = new MusicGraph(ctx);

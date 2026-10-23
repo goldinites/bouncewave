@@ -356,6 +356,10 @@ const SONG_DEFS: SongDef[] = [
     scene: 'lasers',
     kit: 'dark',
     transitions: 'synth',
+    // The cathedral's long stone tail on the choir and the beams; the bass and pads pump in full
+    // under the kick, the machine the darksynth is
+    room: 'cathedral',
+    pump: 1,
     // A wordless choir holds the chords in place of the synth pad: the cathedral the name promises
     voices: { lead: 'brass', counter: 'saw', arp: 'arpPulse', bass: 'bassReese', pad: 'choir' },
     form: [
@@ -485,6 +489,10 @@ const SONG_DEFS: SongDef[] = [
     level: 1,
     scene: 'outrun',
     transitions: 'drums',
+    // A short plate for the gated snare; the bass breathes with the kick, but less than the
+    // darksynth's, so the drive rolls rather than pumps
+    room: 'night',
+    pump: 0.7,
     // A string section holds the chords, and the crash is the era's electronic one
     kit: 'outrun',
     voices: { lead: 'epiano', counter: 'soft', arp: 'arpPulse', bass: 'bassFm', pad: 'strings' },
@@ -602,6 +610,10 @@ const SONG_DEFS: SongDef[] = [
     scene: 'memphis',
     kit: 'band',
     transitions: 'band',
+    // A band in a small, nearly dry studio, and no sidechain: a slap bass breathes by its own
+    // playing, pumping under the kick would turn the band into a dance track
+    room: 'studio',
+    pump: 0,
     // A slapped bass in place of the FM one; strings for the chords where there are any (the
     // pre-choruses, the choruses, the interlude), as a disco section plays them
     voices: { lead: 'epiano', counter: 'guitar', arp: 'pluck', bass: 'bassSlap', pad: 'strings' },
@@ -775,6 +787,10 @@ const SONG_DEFS: SongDef[] = [
     scene: 'neonCity',
     kit: 'rain',
     transitions: 'synth',
+    // The fog of a rainy street, long and dark; the choir sways lightly with the 808 rather
+    // than ducking under it, the 808 being the kick and the bass at once
+    room: 'fog',
+    pump: 0.4,
     voices: {
       lead: 'musicBox',
       counter: 'shamisen',
@@ -897,6 +913,10 @@ const SONG_DEFS: SongDef[] = [
     scene: 'fuji',
     kit: 'japan',
     transitions: 'drums',
+    // Open air with far slopes answering late; the big pad all but still, the space it paints
+    // not pulsing with the drums
+    room: 'valley',
+    pump: 0.2,
     voices: { lead: 'shakuhachi', counter: 'koto', arp: 'pluck', bass: 'bassFm' },
     form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'valley', 'verse2', 'build', 'chorus'],
     sections: [
@@ -985,6 +1005,10 @@ const SONG_DEFS: SongDef[] = [
     scene: 'jungle',
     kit: 'tribal',
     transitions: 'band',
+    // A stone temple the hand drums and mallets ring in; no sidechain, the groove is the drums'
+    // own
+    room: 'stone',
+    pump: 0,
     voices: { lead: 'gamelan', counter: 'kalimba', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
     form: ['intro', 'verse', 'build', 'chorus', 'verse2', 'break', 'build', 'chorus'],
     sections: [
