@@ -76,12 +76,14 @@ test('renders every action sound’s layers, sounding, dying away, within budget
     const { SampleBank } = (await import(
       /* @vite-ignore */ source('SampleBank.ts')
     )) as typeof import('../src/audio/samples/SampleBank');
-    const { ACTION_PITCHED, ACTION_SAMPLES } = (await import(
+    const { ACTION_PITCHED, ACTION_SAMPLES, POWER_TONE_SKETCHES } = (await import(
       /* @vite-ignore */ source('actions.ts')
     )) as typeof import('../src/audio/samples/actions');
     const bank = new SampleBank();
     await bank.render(48000, ACTION_SAMPLES);
     await bank.renderPitched(48000, ACTION_PITCHED);
+    const renderTime = bank.renderTime;
+    await bank.renderPitched(48000, POWER_TONE_SKETCHES);
     const measure = (buffer: AudioBuffer) => {
       const data = buffer.getChannelData(0);
       const tail = data.subarray(Math.floor(data.length * 0.98));
@@ -90,13 +92,14 @@ test('renders every action sound’s layers, sounding, dying away, within budget
       return { peak, tailPeak: Math.max(...tail.map(Math.abs)) };
     };
     const layers = Object.keys(ACTION_SAMPLES).map((id) => ({ id, ...measure(bank.pick(id)!) }));
-    const bodies = Object.entries(ACTION_PITCHED).flatMap(([id, recipe]) =>
-      recipe.roots.map((root) => ({
-        id: `${id} @${root}`,
-        ...measure(bank.pickNote(id, root)!.buffer),
-      })),
+    const bodies = Object.entries({ ...ACTION_PITCHED, ...POWER_TONE_SKETCHES }).flatMap(
+      ([id, recipe]) =>
+        recipe.roots.map((root) => ({
+          id: `${id} @${root}`,
+          ...measure(bank.pickNote(id, root)!.buffer),
+        })),
     );
-    return { sounds: [...layers, ...bodies], renderTime: bank.renderTime };
+    return { sounds: [...layers, ...bodies], renderTime };
   });
 
   for (const { id, peak, tailPeak } of report.sounds) {

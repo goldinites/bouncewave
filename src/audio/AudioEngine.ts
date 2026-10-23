@@ -6,7 +6,7 @@ import { ACTION_PITCHED, ACTION_SAMPLES } from '@/audio/samples/actions';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { PITCHED_SAMPLES } from '@/audio/samples/pitched';
 import { TRANSITION_SAMPLES } from '@/audio/samples/transitions';
-import { SampleBank } from '@/audio/samples/SampleBank';
+import { PitchedRecipe, SampleBank } from '@/audio/samples/SampleBank';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { Look } from '@/shared/look';
 
@@ -156,6 +156,11 @@ export class AudioEngine {
     }
     this.music.init(ac, this.mixer.music, this.samples);
     this.classicMusic.init(ac, this.mixer.music);
+  }
+
+  /** Renders sounds beyond the game's own, for the listening stand's sketches. */
+  public async renderSketches(recipes: Record<string, PitchedRecipe>): Promise<void> {
+    if (this.audioContext) await this.samples.renderPitched(this.audioContext.sampleRate, recipes);
   }
 
   private playSilence(ac: AudioContext): void {

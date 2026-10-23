@@ -13,6 +13,7 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
+import { POWER_TONE_SKETCHES } from '@/audio/samples/actions';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
 
@@ -34,6 +35,8 @@ interface StandSound {
   times?: number;
   /** Seconds between the sounds of a series. */
   every?: number;
+  /** It plays a sketch rendered only for the stand: rendered first, then played. */
+  sketches?: boolean;
 }
 
 /** Every action sound, alone and in the series it comes in during a match. */
@@ -56,8 +59,17 @@ export const STAND_SOUNDS: readonly StandSound[] = [
     times: 4,
     every: 0.32,
   },
-  { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4, -0.9) },
-  { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
+  // The Overdrive's sustained tone, sketches: the plasma or one in its place; the last one played
+  // stays for the match and for the meter's chime
+  ...(['plasma', 'laser', 'arc', 'tube'] as const).map((tone) => ({
+    name: `overdrive ${tone}`,
+    sketches: true,
+    play: (sfx: SoundEffects) => {
+      sfx.powerTone = tone;
+      sfx.playPowerShot(4, -0.9);
+    },
+  })),
+  { name: 'od ready', sketches: true, play: (sfx) => sfx.playOverdriveReady(-0.9) },
   { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
   {
     // A rally's walls and hits as they come: hit, wall, hit
@@ -433,6 +445,15 @@ export class SoundStand {
   /** Plays a sound, or its series, heard even behind the menus. */
   private playSound(sound: StandSound): void {
     this.audio.unlock();
+    if (sound.sketches) {
+      void this.audio.renderSketches(POWER_TONE_SKETCHES).then(() => this.startSound(sound));
+    } else {
+      this.startSound(sound);
+    }
+  }
+
+  /** Plays a sound now, or its series from now. */
+  private startSound(sound: StandSound): void {
     const play = (index: number) => {
       this.audio.isAuditioning = true;
       try {

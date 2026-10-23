@@ -157,6 +157,91 @@ function burst(
   return chain(noiseSource(ctx, random), filter(ctx, 'bandpass', hz, q), hit(ctx, 1, decay));
 }
 
+/** A cascade of allpass filters at `hz`: what turns a click into a spring's dispersed chirp. */
+function disperse(ctx: OfflineAudioContext, hz: number, stages: number): [AudioNode, AudioNode] {
+  const first = filter(ctx, 'allpass', hz, 0.7);
+  let last: AudioNode = first;
+  for (let i = 1; i < stages; i++) last = chain(last, filter(ctx, 'allpass', hz, 0.7));
+  return [first, last];
+}
+
+/**
+ * Sketches (5.7a) for the Overdrive's sustained tone in place of the plasma, rendered only when
+ * the stand asks: a laser beam, an electric arc, a neon tube lighting.
+ */
+export const POWER_TONE_SKETCHES: Record<string, PitchedRecipe> = {
+  // A laser beam, the blaster's "tsheeew": a click dispersed into a chirp falling onto the note,
+  // which rings on with a quick vibrato
+  laser: {
+    roots: OCTAVE_ROOTS,
+    maxRate: RENDER_RATE.HIGH,
+    duration: 0.7,
+    build: (ctx, random, f) => {
+      const [input, output] = disperse(ctx, f * 6, 48);
+      chain(noiseSource(ctx, random), hit(ctx, 1, 0.002), input);
+      chain(
+        output,
+        filter(ctx, 'highpass', f * 0.8),
+        drive(ctx, 2),
+        level(ctx, 0.8),
+        ctx.destination,
+      );
+      const ring = sweep(ctx, 'sine', f * 2, f, 0.08);
+      chain(osc(ctx, 'sine', 7), level(ctx, f * 0.015)).connect(ring.frequency);
+      chain(ring, hit(ctx, 0.7, 0.55, 0, 0.004), ctx.destination);
+      chain(osc(ctx, 'sine', f * 3), hit(ctx, 0.2, 0.2), ctx.destination);
+    },
+  },
+  // An electric arc, a Tesla coil's: a buzzing square on the note torn into crackles
+  arc: {
+    roots: OCTAVE_ROOTS,
+    maxRate: RENDER_RATE.HIGH,
+    duration: 0.7,
+    build: (ctx, random, f) => {
+      const tear = ctx.createGain();
+      tear.gain.setValueAtTime(0, 0);
+      for (let t = 0; t < 0.6; t += 1 / 70) tear.gain.setValueAtTime(0.3 + 0.7 * random(), t);
+      const sum = level(ctx, 0.5);
+      chain(osc(ctx, 'square', f), sum);
+      chain(osc(ctx, 'sawtooth', cents(f, 14)), level(ctx, 0.6), sum);
+      chain(
+        sum,
+        tear,
+        filter(ctx, 'bandpass', f * 4, 0.8),
+        drive(ctx, 3),
+        hit(ctx, 1, 0.55, 0, 0.002),
+        ctx.destination,
+      );
+      // Sparks off the arc, crackling as it buzzes
+      chain(
+        noiseSource(ctx, random),
+        filter(ctx, 'highpass', 5000),
+        hit(ctx, 0.25, 0.4),
+        ctx.destination,
+      );
+    },
+  },
+  // A neon tube lighting: the strike's spark, a flicker as the gas catches, then its ring
+  tube: {
+    roots: OCTAVE_ROOTS,
+    maxRate: RENDER_RATE.HIGH,
+    duration: 0.7,
+    build: (ctx, random, f) => {
+      const flicker = ctx.createGain();
+      flicker.gain.setValueAtTime(0, 0);
+      for (let t = 0; t < 0.18; t += 1 / 40)
+        flicker.gain.setValueAtTime(random() < 0.6 ? 1 : 0.15, t);
+      flicker.gain.setValueAtTime(1, 0.18);
+      const hum = level(ctx, 0.5);
+      chain(osc(ctx, 'sine', f), hum);
+      chain(osc(ctx, 'sine', f * 2), level(ctx, 0.5), hum);
+      chain(osc(ctx, 'square', f), filter(ctx, 'bandpass', f * 3, 2), level(ctx, 0.3), hum);
+      chain(hum, flicker, hit(ctx, 1, 0.6, 0, 0.003), ctx.destination);
+      chain(burst(ctx, random, 5000, 0.8, 0.004), ctx.destination);
+    },
+  },
+};
+
 export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
   // The instant of contact, in 2-5 kHz where a hit stands out of the music
   'click.steel': {

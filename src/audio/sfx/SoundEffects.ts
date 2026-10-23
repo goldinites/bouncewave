@@ -101,6 +101,9 @@ export interface HitFeel {
   force?: number;
 }
 
+/** The Overdrive's sustained tone: the plasma, or a sketch the stand auditions in its place. */
+export type PowerTone = 'plasma' | 'laser' | 'arc' | 'tube';
+
 /** One rendered layer to play: a tuned body at a note, or a one-shot. */
 type Layer =
   | { tuned: string; note: number; gain: number; cut?: number; delay?: number }
@@ -117,6 +120,8 @@ export class SoundEffects {
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
   private heatGetter: () => number;
+  /** The Overdrive's sustained tone (sketches, on the stand). */
+  public powerTone: PowerTone = 'plasma';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -373,8 +378,8 @@ export class SoundEffects {
       { shot: 'crack', gain: POWER.CRACK },
       { shot: 'whoosh', gain: POWER.WHOOSH },
       { shot: 'zap', gain: POWER.ZAP },
-      { tuned: 'plasma', note, gain: POWER.PLASMA },
-      { tuned: 'plasma', note: note + 12, gain: POWER.HIGH_PLASMA },
+      { tuned: this.powerTone, note, gain: POWER.PLASMA },
+      { tuned: this.powerTone, note: note + 12, gain: POWER.HIGH_PLASMA },
       { shot: 'tail', gain: PERFECT.TAIL },
     ];
     const level = HIT_MIX.LEVEL + HIT_MIX.PERFECT_LEVEL + POWER.LEVEL;
@@ -426,7 +431,7 @@ export class SoundEffects {
         delay: READY.START + step * READY.STEP,
       })),
       {
-        tuned: 'plasma',
+        tuned: this.powerTone,
         note: top,
         gain: READY.PLASMA,
         delay: READY.START + 2 * READY.STEP,
