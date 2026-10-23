@@ -17,6 +17,17 @@ const HIT_DUCK = {
   HOLD: 0.08, // s the dip holds
   RELEASE: 0.07, // s, time constant back up
 } as const;
+// Every paddle hit carves its own place out of the music for a moment: the band the hit's click
+// and body sit in dips, so the hit is heard over a song's loudest part without being louder, and
+// without the whole music pumping on every hit of a long rally
+const HIT_CARVE = {
+  FREQUENCY: 2500, // Hz, the middle of the 1-4 kHz the hits sit in
+  Q: 0.8,
+  DEPTH: -5, // dB at full strength
+  ATTACK: 0.003, // s, time constant into the dip
+  HOLD: 0.04, // s the dip holds
+  RELEASE: 0.05, // s, time constant back up
+} as const;
 // About 0.37 s at 44.1 kHz: long enough for a level that doesn't flicker with every beat
 const METER_FFT_SIZE = 16384;
 // The meter hears roughly as the ear does (the K-weighting of LUFS): the deep lows count less,
@@ -36,9 +47,9 @@ export interface MasterLevels {
  * sounds pile up.
  *
  * ```
- * music → hitDuck ─┐
- * sfx ─────────────┼─ sum → limiter → clipper → destination
- * menu ────────────┘                        └─ K-weighting → meter
+ * music → hitCarve → hitDuck ─┐
+ * sfx ────────────────────────┼─ sum → limiter → clipper → destination
+ * menu ───────────────────────┘                        └─ K-weighting → meter
  * ```
  */
 export class Mixer {
@@ -47,6 +58,7 @@ export class Mixer {
   public readonly sfx: GainNode;
   public readonly menu: GainNode;
   private readonly hitDuck: GainNode;
+  private readonly hitCarve: BiquadFilterNode;
   private readonly meter: AnalyserNode;
   private meterData: Float32Array<ArrayBuffer> | null = null;
 
@@ -58,6 +70,11 @@ export class Mixer {
     this.sfx = ac.createGain();
     this.menu = ac.createGain();
     this.hitDuck = ac.createGain();
+    this.hitCarve = ac.createBiquadFilter();
+    this.hitCarve.type = 'peaking';
+    this.hitCarve.frequency.value = HIT_CARVE.FREQUENCY;
+    this.hitCarve.Q.value = HIT_CARVE.Q;
+    this.hitCarve.gain.value = 0;
     this.meter = ac.createAnalyser();
     this.meter.fftSize = METER_FFT_SIZE;
 
@@ -70,7 +87,8 @@ export class Mixer {
     limiter.release.value = LIMITER.RELEASE;
     const clipper = createSoftClipper(ac, LIMITER.CEILING);
 
-    this.music.connect(this.hitDuck);
+    this.music.connect(this.hitCarve);
+    this.hitCarve.connect(this.hitDuck);
     this.hitDuck.connect(sum);
     this.sfx.connect(sum);
     this.menu.connect(sum);
@@ -103,6 +121,22 @@ export class Mixer {
       gain.setTargetAtTime(1, now + HIT_DUCK.HOLD, HIT_DUCK.RELEASE);
     } catch {
       // Play on undipped rather than break audio
+    }
+  }
+
+  /**
+   * A paddle hit: the band it sits in dips out of the music for a moment, deeper the stronger the
+   * hit, `strength` in [0, 1].
+   */
+  public carveForHit(strength: number): void {
+    const now = this.context.currentTime;
+    try {
+      const gain = this.hitCarve.gain;
+      gain.cancelScheduledValues(now);
+      gain.setTargetAtTime(HIT_CARVE.DEPTH * clamp(strength, 0, 1), now, HIT_CARVE.ATTACK);
+      gain.setTargetAtTime(0, now + HIT_CARVE.HOLD, HIT_CARVE.RELEASE);
+    } catch {
+      // Play on uncarved rather than break audio
     }
   }
 

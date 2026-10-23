@@ -14,7 +14,8 @@
 //   npm run render -- --lead=sax --mute=drums sunset-strip
 //
 // --lead=<voice> plays the melodies on that lead, --bass=<voice> the bass on that bass and
-// --kit=<kit> the drums on that kit (the stand's `?lead=`, `?bass=`, `?kit=`); --mute= silences layers
+// --kit=<kit> the drums on that kit (the stand's `?lead=`, `?bass=`, `?kit=`); --sfx=<style> plays
+// the paddle hits in that character (`?sfx=`); --mute= silences layers
 // in the mix (the melody and arpeggio pictures always have their layer alone).
 
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -29,12 +30,13 @@ const option = (name) =>
   args.find((arg) => arg.startsWith(`--${name}=`))?.slice(`--${name}=`.length) ?? null;
 const lead = option('lead') ?? undefined;
 const bass = option('bass') ?? undefined;
+const sfx = option('sfx') ?? undefined;
 const kit = option('kit') ?? undefined;
 const mute = option('mute')?.split(',') ?? [];
 const songs = args.filter((arg) => !arg.startsWith('--'));
 if (songs.length === 0) {
   console.error(
-    'Usage: npm run render -- [--lead=<voice>] [--bass=<voice>] [--kit=<kit>] [--mute=drums,...] <song-id> ...',
+    'Usage: npm run render -- [--lead=<voice>] [--bass=<voice>] [--kit=<kit>] [--sfx=<hit style>] [--mute=drums,...] <song-id> ...',
   );
   process.exit(1);
 }
@@ -55,6 +57,7 @@ async function render(song) {
     lead,
     bass,
     kit,
+    sfx,
     mute,
   });
   await page.close();

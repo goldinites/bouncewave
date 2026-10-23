@@ -4,6 +4,7 @@ import { Mixer } from '@/audio/Mixer';
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { MINOR_TRIAD } from '@/audio/music/theory';
+import { SampleBank } from '@/audio/samples/SampleBank';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
 
@@ -188,5 +189,82 @@ describe('SoundEffects on the mixer', () => {
 
     sfx.playPowerShot(3);
     expect(ducks).toEqual([]);
+  });
+});
+
+describe('paddle hits from their rendered layers', () => {
+  const setup = ({ rendered = true } = {}) => {
+    const { ctx, calls } = fakeAudioContext(1);
+    const mixer = new Mixer(ctx);
+    const carves: number[] = [];
+    const ducks: number[] = [];
+    mixer.carveForHit = (strength) => void carves.push(strength);
+    mixer.duckMusic = (strength) => void ducks.push(strength);
+    const picked: string[] = [];
+    const buffer = {} as AudioBuffer;
+    const samples = {
+      pick: (id: string) => (rendered ? (picked.push(id), buffer) : null),
+      pickNote: (id: string) =>
+        rendered ? (picked.push(id), { buffer, rate: 1, loop: null }) : null,
+    } as unknown as SampleBank;
+    const sfx = new SoundEffects(
+      () => ctx,
+      () => false,
+      () => true,
+      () => ({ root: 33, chord: MINOR_TRIAD }),
+      () => mixer,
+      () => samples,
+    );
+    return { sfx, calls, carves, ducks, picked };
+  };
+
+  it('layers a click, the tuned body and a thump, the opponent in its own voice', () => {
+    const { sfx, picked } = setup();
+
+    sfx.playPaddleHit(1, false, 0);
+    expect(picked).toEqual(['body.steel', 'click.steel', 'thump']);
+    picked.length = 0;
+    sfx.hitStyle = 'glass';
+    sfx.playPaddleHit(1, false, 1);
+    expect(picked).toEqual(['body.glass.cpu', 'click.glass', 'thump']);
+  });
+
+  it('throws sparks off a hard hit and carves the music deeper', () => {
+    const { sfx, picked, carves } = setup();
+
+    sfx.playPaddleHit(1, false, 0, { force: 0 });
+    expect(picked).not.toContain('spark');
+    sfx.playPaddleHit(1, false, 0, { force: 1 });
+    expect(picked).toContain('spark');
+    expect(carves).toEqual([0.5, 1]);
+  });
+
+  it('drops a boom and a ringing tail under a perfect hit, the music dipping', () => {
+    const { sfx, picked, ducks } = setup();
+
+    sfx.playPaddleHit(3, true, 0);
+    expect(picked).toEqual(expect.arrayContaining(['boom', 'tail', 'spark']));
+    expect(ducks).toEqual([0.6]);
+  });
+
+  it('plays the live synth until the layers are rendered', () => {
+    const { sfx, calls } = setup({ rendered: false });
+
+    sfx.playPaddleHit(1);
+    expect(callsOf(calls, 'createOscillator').length).toBeGreaterThan(0);
+    expect(callsOf(calls, 'createBufferSource')).toEqual([]);
+  });
+});
+
+describe('the music carved for a hit', () => {
+  it('dips the hits’ band out of the music and brings it back', () => {
+    const { ctx, calls } = fakeAudioContext(1);
+    const mixer = new Mixer(ctx);
+    const before = callsOf(calls, 'setTargetAtTime').length;
+
+    mixer.carveForHit(1);
+    const [dip, back] = callsOf(calls, 'setTargetAtTime').slice(before);
+    expect(dip.args[0]).toBeLessThan(0);
+    expect(back.args[0]).toBe(0);
   });
 });

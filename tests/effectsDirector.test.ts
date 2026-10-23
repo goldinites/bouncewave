@@ -189,7 +189,13 @@ describe('EffectsDirector.handle', () => {
     expect(effects.paddleGlow[0]).toBe(0);
     expect(particles.particles.length).toBeGreaterThan(0);
     expect(particles.rings.length).toBeGreaterThan(0);
-    expect(audio.sfx.playPaddleHit).toHaveBeenCalledWith(4, false, 1);
+    // Heard where it was hit, the right paddle on the right
+    expect(audio.sfx.playPaddleHit).toHaveBeenCalledWith(
+      4,
+      false,
+      1,
+      expect.objectContaining({ pan: expect.closeTo(0.9, 5) }),
+    );
   });
 
   it('blasts an Overdrive power shot instead of the usual hit sound', () => {
@@ -232,7 +238,7 @@ describe('EffectsDirector.handle', () => {
     });
 
     expect(audio.sfx.playOverdriveReady).toHaveBeenCalledOnce();
-    expect(audio.sfx.playPaddleHit).toHaveBeenCalledWith(6, true, 0);
+    expect(audio.sfx.playPaddleHit).toHaveBeenCalledWith(6, true, 0, expect.any(Object));
   });
 
   it('adds an extra white burst and a flash on a perfect hit', () => {

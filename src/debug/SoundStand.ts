@@ -13,6 +13,7 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
+import { isHitStyle } from '@/audio/samples/actions';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
 
@@ -38,18 +39,21 @@ interface StandSound {
 
 /** Every action sound, alone and in the series it comes in during a match. */
 export const STAND_SOUNDS: readonly StandSound[] = [
-  { name: 'hit', play: (sfx) => sfx.playPaddleHit(1, false, 0) },
-  { name: 'hit cpu', play: (sfx) => sfx.playPaddleHit(1, false, 1) },
+  { name: 'hit', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9 }) },
+  { name: 'hit hard', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9, force: 1 }) },
+  { name: 'hit cpu', play: (sfx) => sfx.playPaddleHit(1, false, 1, { pan: 0.9 }) },
   {
+    // From side to side, the ball faster with every hit, as a rally heats up
     name: 'rally ×8',
-    play: (sfx, i) => sfx.playPaddleHit(i + 1, false, i % 2),
+    play: (sfx, i) =>
+      sfx.playPaddleHit(i + 1, false, i % 2, { pan: i % 2 ? 0.9 : -0.9, force: i / 7 }),
     times: 8,
     every: 0.32,
   },
-  { name: 'perfect', play: (sfx) => sfx.playPaddleHit(3, true) },
+  { name: 'perfect', play: (sfx) => sfx.playPaddleHit(3, true, 0, { pan: -0.9 }) },
   {
     name: 'perfect ×4',
-    play: (sfx, i) => sfx.playPaddleHit(i + 1, true, i % 2),
+    play: (sfx, i) => sfx.playPaddleHit(i + 1, true, i % 2, { pan: i % 2 ? 0.9 : -0.9 }),
     times: 4,
     every: 0.32,
   },
@@ -204,6 +208,9 @@ export class SoundStand {
     if (pad) overrides.pad = pad as PadVoice;
     if (kit && kit in KITS) overrides.kit = kit as KitName;
     if (Object.keys(overrides).length > 0) this.audio.music.setOverrides(overrides);
+    // The paddle hits' character, in a match too (`&sfx=neon`)
+    const style = params.get('sfx');
+    if (style && isHitStyle(style)) this.audio.sfx.hitStyle = style;
 
     const song = params.get('song');
     if (!song || !SONGS.some((s) => s.id === song)) return;

@@ -1,8 +1,10 @@
 import { Mixer } from '@/audio/Mixer';
 import { Harmony } from '@/audio/music/HarmonyTimeline';
+import { HitStyle } from '@/audio/samples/actions';
+import { SampleBank } from '@/audio/samples/SampleBank';
 import { getRallyNote, getWallNote } from '@/audio/sfx/harmony';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
-import { midiToFrequency } from '@/shared/math';
+import { clamp, midiToFrequency } from '@/shared/math';
 
 const SFX_FREQUENCIES = {
   SCORE: 300,
@@ -30,6 +32,29 @@ const ECHO = { TIME: 0.28, FEEDBACK: 0.35, WET: 0.5 } as const;
 // ordinary hits leave it alone, or a long rally would pump the music on every beat
 const HIT_DUCK = { PERFECT: 0.6, POWER_SHOT: 1 } as const;
 
+// A paddle hit's layers (audio/samples/actions.ts), their gains at full strength: the click of
+// contact, the tuned body, the thump, sparks off a hard hit; the perfect hit adds the body an
+// octave up, a boom and a ringing tail. The harder the hit, the louder the click and the thump
+const HIT_MIX = {
+  CLICK: 0.25,
+  BODY: 0.21,
+  THUMP: 0.18,
+  SPARK: 0.1,
+  PERFECT: { BODY: 0.28, OCTAVE: 0.1, THUMP: 0.28, SPARK: 0.18, BOOM: 0.25, TAIL: 0.08 },
+  // The opponent's click a little darker, so the two sides answer each other
+  CPU_CLICK_RATE: 0.85,
+  // Takes in a row differ: the unpitched layers' pitch and every layer's level, as shares
+  JITTER: { RATE: 0.04, GAIN: 0.1 },
+  // How far across the stereo field a hit at the court's edge sits
+  PAN: 0.6,
+} as const;
+
+/** Where a hit lands and how hard: `pan` from -1 (the left edge) to 1, `force` from 0 to 1. */
+export interface HitFeel {
+  pan?: number;
+  force?: number;
+}
+
 /** Which of the mixer's buses a sound plays on. */
 type Bus = 'sfx' | 'menu';
 
@@ -39,6 +64,9 @@ export class SoundEffects {
   private isGameplayAudibleGetter: () => boolean;
   private harmonyGetter: () => Harmony | null;
   private mixerGetter: () => Mixer | null;
+  private samplesGetter: () => SampleBank | null;
+  /** The paddle hits' character (`?sfx=` on the stand). */
+  public hitStyle: HitStyle = 'steel';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -46,6 +74,7 @@ export class SoundEffects {
    * @param getIsGameplayAudible whether gameplay sounds should play right now (false behind
    *   menus and in the attract-mode demo); `force` beeps ignore it
    * @param getMixer the master the sounds play into; without one they go straight out
+   * @param getSamples the rendered layers; until they are ready the sounds play as live synths
    */
   constructor(
     getAudioContext: () => AudioContext | null,
@@ -53,12 +82,14 @@ export class SoundEffects {
     getIsGameplayAudible: () => boolean,
     getHarmony: () => Harmony | null = () => null,
     getMixer: () => Mixer | null = () => null,
+    getSamples: () => SampleBank | null = () => null,
   ) {
     this.audioContextGetter = getAudioContext;
     this.isMutedGetter = getIsMuted;
     this.isGameplayAudibleGetter = getIsGameplayAudible;
     this.harmonyGetter = getHarmony;
     this.mixerGetter = getMixer;
+    this.samplesGetter = getSamples;
   }
 
   /** Where a sound on `bus` goes: its bus on the mixer, or the speakers if there is none. */
@@ -112,8 +143,15 @@ export class SoundEffects {
    * Each hit plays the next tone of the chord the music is on, so a rally climbs as a melody.
    * The player and the CPU get different timbres, like a call and response.
    */
-  public playPaddleHit(rally: number, isPerfect = false, paddleIndex = 0): void {
-    const freq = midiToFrequency(getRallyNote(this.harmonyGetter(), rally));
+  public playPaddleHit(
+    rally: number,
+    isPerfect = false,
+    paddleIndex = 0,
+    feel: HitFeel = {},
+  ): void {
+    const note = getRallyNote(this.harmonyGetter(), rally);
+    if (this.playLayeredHit(note, isPerfect, paddleIndex, feel)) return;
+    const freq = midiToFrequency(note);
 
     if (isPerfect) {
       this.duckMusic(HIT_DUCK.PERFECT);
@@ -127,6 +165,92 @@ export class SoundEffects {
       this.beep(freq, 0.12, 'square', 0.05);
     } else {
       this.beep(freq, 0.14, 'triangle', 0.08);
+    }
+  }
+
+  /**
+   * The hit from its rendered layers, mixed by how hard it is; false if they aren't rendered
+   * yet, for the live synth to play instead.
+   */
+  private playLayeredHit(
+    note: number,
+    isPerfect: boolean,
+    paddleIndex: number,
+    { pan = 0, force = 0.5 }: HitFeel,
+  ): boolean {
+    const samples = this.samplesGetter();
+    const isCpu = paddleIndex !== 0;
+    const body = samples?.pickNote(`body.${this.hitStyle}${isCpu ? '.cpu' : ''}`, note);
+    if (!samples || !body) return false;
+
+    const ac = this.audioContextGetter();
+    if (!ac || this.isMutedGetter() || !this.isGameplayAudibleGetter()) return true;
+
+    const hard = clamp(force, 0, 1);
+    const strength = isPerfect ? 1 : 0.5 + 0.5 * hard;
+    const at = { ac, pan: clamp(pan, -1, 1) * HIT_MIX.PAN };
+    const unpitched = (id: string, gain: number, rate = 1) => {
+      const buffer = samples.pick(id);
+      if (buffer)
+        this.layer({ ...at, buffer, gain, rate: rate * this.jitter(HIT_MIX.JITTER.RATE) });
+    };
+
+    unpitched(
+      `click.${this.hitStyle}`,
+      HIT_MIX.CLICK * strength,
+      isCpu ? HIT_MIX.CPU_CLICK_RATE : 1,
+    );
+    if (isPerfect) {
+      const { PERFECT } = HIT_MIX;
+      this.layer({ ...at, buffer: body.buffer, rate: body.rate, gain: PERFECT.BODY });
+      const octave = samples.pickNote(`body.${this.hitStyle}`, note + 12);
+      if (octave)
+        this.layer({ ...at, buffer: octave.buffer, rate: octave.rate, gain: PERFECT.OCTAVE });
+      unpitched('thump', PERFECT.THUMP);
+      unpitched('spark', PERFECT.SPARK);
+      unpitched('boom', PERFECT.BOOM);
+      unpitched('tail', PERFECT.TAIL);
+      this.duckMusic(HIT_DUCK.PERFECT);
+    } else {
+      this.layer({ ...at, buffer: body.buffer, rate: body.rate, gain: HIT_MIX.BODY });
+      unpitched('thump', HIT_MIX.THUMP * (0.4 + 0.6 * hard));
+      if (hard > 0.5) unpitched('spark', HIT_MIX.SPARK * (hard - 0.5) * 2);
+    }
+    this.mixerGetter()?.carveForHit(strength);
+    return true;
+  }
+
+  /** A share of 1 either way, for takes in a row that differ a little. */
+  private jitter(share: number): number {
+    return 1 + (Math.random() * 2 - 1) * share;
+  }
+
+  /** One rendered layer, now, at `gain` (jittered), panned, played at `rate`. */
+  private layer({
+    ac,
+    buffer,
+    gain,
+    rate,
+    pan,
+  }: {
+    ac: AudioContext;
+    buffer: AudioBuffer;
+    gain: number;
+    rate: number;
+    pan: number;
+  }): void {
+    try {
+      const source = ac.createBufferSource();
+      source.buffer = buffer;
+      source.playbackRate.value = rate;
+      const level = ac.createGain();
+      level.gain.value = gain * this.jitter(HIT_MIX.JITTER.GAIN);
+      const panner = ac.createStereoPanner();
+      panner.pan.value = pan;
+      source.connect(level).connect(panner).connect(this.output(ac));
+      source.start();
+    } catch {
+      // Audio playback fails silently if browser policy blocks it
     }
   }
 

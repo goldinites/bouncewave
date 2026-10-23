@@ -6,6 +6,8 @@ import { RallyClimax } from '@/fx/RallyClimax';
 import { VictoryFireworks } from '@/fx/VictoryFireworks';
 import { Ball } from '@/match/Ball';
 import { COURT, BALL } from '@/match/config';
+import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
+import { getSpeedHeat } from '@/match/heat';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import { Side } from '@/match/side';
@@ -131,6 +133,8 @@ export class EffectsDirector {
   private readonly paddleFx: PaddleEffects;
   /** Each paddle's meter as the last frame left it, to see a charge go. */
   private meterCharges: (number | null)[] = [];
+  /** The match's top ball speed, for how hard a hit sounds. */
+  private maxBallSpeed: number = DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL].maxSpeed;
   private fireworks: VictoryFireworks | null = null;
 
   private readonly renderer: Renderer;
@@ -217,6 +221,7 @@ export class EffectsDirector {
   /** Runs on the wall clock before the simulation step, which may be slowed by it. */
   public beforeSimulation(realDt: number, flow: MatchFlow): void {
     if (flow.phase === 'finale') return;
+    this.maxBallSpeed = DIFFICULTY_CONFIGS[flow.difficulty].maxSpeed;
 
     const { isMatchActive, scores, rules } = flow;
     // The drama follows whichever ball is about to decide the point
@@ -358,7 +363,10 @@ export class EffectsDirector {
     if (hit.isPowerShot) {
       this.onPowerShot(hit);
     } else {
-      this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, paddle.side);
+      this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, paddle.side, {
+        pan: (hit.x / COURT.WIDTH) * 2 - 1,
+        force: getSpeedHeat(hit.speed, this.maxBallSpeed),
+      });
     }
 
     if (hit.chargedOverdrive) {
