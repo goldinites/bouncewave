@@ -105,5 +105,8 @@ Rules that keep it clean (the first two are enforced by `tests/architecture.test
 - Commit messages: an imperative subject line describing the change for a player or developer, a
   blank line, then a wrapped body on what was wrong and what changed. End with the
   `Co-Authored-By` line from the session's attribution.
-- `gh` is not installed: push the branch and give the user the
+- Claude's shell has no GitHub credentials and `gh` is not installed: ask the user to push
+  (`! git push -u origin <branch>`), then give the
   `https://github.com/goldinites/bouncewave/pull/new/<branch>` link with a PR description.
+- A step that needs the work of an unmerged branch is stacked on it and goes into the same PR
+  (5.2b rides on 5.6b), rather than waiting for the merge.

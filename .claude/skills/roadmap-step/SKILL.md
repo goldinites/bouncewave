@@ -76,7 +76,8 @@ a yes.
 
 ## 6. Pull request
 
-- `git push -u origin <branch>`. `gh` is not installed: give the user
+- The shell has no GitHub credentials: ask the user to push (`! git push -u origin <branch>`).
+  `gh` is not installed: give the user
   `https://github.com/goldinites/bouncewave/pull/new/<branch>` and a ready PR description —
   what changed and why, how it was verified, what is left for later.
 - Say which roadmap step comes next and wait for the user's go-ahead before starting it.
