@@ -42,10 +42,12 @@ const HIT_MIX = {
   THUMP: 0.18,
   SPARK: 0.1,
   PERFECT: { BODY: 0.28, OCTAVE: 0.1, THUMP: 0.28, SPARK: 0.18, BOOM: 0.25, TAIL: 0.08 },
-  // dB the whole hit sits at, and the opponent's against the player's: heard over every peak of
-  // the soundtrack (the render's "heard"), not standing out of the game
-  LEVEL: -6,
+  // dB the whole hit sits at, the opponent's against the player's, and the perfect hit's above an
+  // ordinary one (the user, 24.10.2026): an ordinary hit sits back in the game, at the edge of
+  // being heard over a peak; a perfect one stands out of it, the reward heard
+  LEVEL: -11,
   CPU_LEVEL: -1,
+  PERFECT_LEVEL: 5,
   // The opponent's click a little darker, so the two sides answer each other
   CPU_CLICK_RATE: 0.85,
   // Takes in a row differ: the unpitched layers' pitch and every layer's level, as shares
@@ -197,7 +199,9 @@ export class SoundEffects {
 
     const hard = clamp(force, 0, 1);
     const strength = isPerfect ? 1 : 0.5 + 0.5 * hard;
-    const trim = dbToGain(HIT_MIX.LEVEL + (isCpu ? HIT_MIX.CPU_LEVEL : 0));
+    const trim = dbToGain(
+      HIT_MIX.LEVEL + (isCpu ? HIT_MIX.CPU_LEVEL : 0) + (isPerfect ? HIT_MIX.PERFECT_LEVEL : 0),
+    );
     const at = { ac, pan: clamp(pan, -1, 1) * HIT_MIX.PAN, trim };
     const unpitched = (id: string, gain: number, rate = 1) => {
       const buffer = samples.pick(id);

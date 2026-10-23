@@ -33,8 +33,9 @@ export const HIT_BODIES: readonly { id: string; gain: number; cut?: number }[] =
 /** The click of contact, the blade's. */
 export const HIT_CLICK = 'click.steel';
 
-// The rally's notes run from about E3 to C6 (sfx/harmony.ts): roots three semitones either side
-const BODY_ROOTS = [55, 61, 67, 73, 79];
+// The rally's notes keep to E4-D#5 (sfx/harmony.ts), a perfect hit's octave an octave above:
+// roots three semitones either side
+const BODY_ROOTS = [64, 70, 76, 82, 88];
 // The partials reach about 9 kHz: a rate above twice that keeps them, at two thirds the memory
 const BODY_RATE = RENDER_RATE.HIGH;
 
