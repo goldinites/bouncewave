@@ -35,9 +35,9 @@ describe('SoundStand', () => {
     const part = get<HTMLSelectElement>('select[data-stand="part"]');
 
     expect([...song.options].slice(1).map((o) => o.value)).toEqual(SONGS.map((s) => s.id));
-    song.value = 'night-drive';
+    song.value = 'neon-cathedral';
     song.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith('night-drive', null, 0);
+    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', null, 0);
     expect([...part.options].map((o) => o.value)).toEqual([
       '',
       'whole-form',
@@ -46,8 +46,8 @@ describe('SoundStand', () => {
 
     part.value = 'chorus';
     part.dispatchEvent(new Event('change'));
-    expect(audition).toHaveBeenLastCalledWith('night-drive', 'chorus', 0);
-    expect(params().get('song')).toBe('night-drive');
+    expect(audition).toHaveBeenLastCalledWith('neon-cathedral', 'chorus', 0);
+    expect(params().get('song')).toBe('neon-cathedral');
     expect(params().get('part')).toBe('chorus');
     expect(window.location.search).toMatch(/[?&]debug(&|$)/);
 
@@ -58,9 +58,11 @@ describe('SoundStand', () => {
   });
 
   it('opens on the place a link points at, silenced layers included', () => {
-    const { audition, setLayerMuted, get } = setup('/?song=night-drive&part=chorus&mute=drums,arp');
+    const { audition, setLayerMuted, get } = setup(
+      '/?song=neon-cathedral&part=chorus&mute=drums,arp',
+    );
 
-    expect(audition).toHaveBeenCalledWith('night-drive', 'chorus');
+    expect(audition).toHaveBeenCalledWith('neon-cathedral', 'chorus');
     expect(setLayerMuted).toHaveBeenCalledWith('drums', true);
     expect(setLayerMuted).toHaveBeenCalledWith('bass', false);
     expect(get<HTMLInputElement>('input[data-layer="arp"]').checked).toBe(false);

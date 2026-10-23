@@ -160,6 +160,24 @@ describe('Conductor', () => {
       expect(titles).toEqual(new Set(['One', 'Two', 'City', 'Lasers']));
     });
 
+    it('lets a challenge’s backdrop with no song of its own borrow any other', () => {
+      const owned = [
+        compileSong({ ...def('Lasers'), scene: 'lasers' }),
+        compileSong({ ...def('Outrun'), scene: 'outrun' }),
+      ];
+      const titles = new Set<string>();
+      for (const roll of [0, 0.99]) {
+        const conductor = new Conductor(owned, 0, 'groove', () => roll);
+        conductor.enterScene('dojo');
+        for (let i = 0; i < 3; i++) {
+          conductor.skip('groove');
+          conductor.advance();
+          titles.add(conductor.song.title);
+        }
+      }
+      expect(titles).toEqual(new Set(['Lasers', 'Outrun']));
+    });
+
     it('moves on from the backdrop’s own song to the other quick-match songs', () => {
       const titles = new Set<string>();
       for (const roll of [0, 0.5, 0.99]) {

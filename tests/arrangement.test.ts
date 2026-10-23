@@ -3,7 +3,7 @@ import { Arrangement } from '@/audio/music/Arrangement';
 import { Conductor } from '@/audio/music/Conductor';
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
-import { MUSIC_LAYERS, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import { compileSong, MUSIC_LAYERS, MusicLayer, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
 import { DifficultyLevel } from '@/match/difficulty';
 import { fakeAudioContext } from './helpers/fakeAudioContext';
@@ -52,7 +52,33 @@ describe('Arrangement', () => {
     const cutOut = vi.spyOn(graph, 'cutOut');
     const rewind = vi.spyOn(graph, 'rewind');
     const arrangement = new Arrangement(new Instruments(graph), graph);
-    const song = SONGS.find((s) => s.title === 'No Carrier')!;
+    // A song that breaks down, as a challenge's may: the line drops out, then the tape rewinds
+    const song = compileSong({
+      title: 'Broken',
+      bpm: 104,
+      swing: 0,
+      voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'sawtooth' },
+      sections: [
+        {
+          name: 'intro',
+          tier: 'calm',
+          chords: 'Am',
+          bass: 'long',
+          drums: 'none',
+          pad: 'swell',
+          glitch: 'dropout',
+        },
+        {
+          name: 'build',
+          tier: 'rise',
+          chords: 'Am',
+          bass: 'long',
+          drums: 'four',
+          pad: 'hold',
+          glitch: 'rewind',
+        },
+      ],
+    });
     const step = 60 / song.bpm / 4;
 
     const playLastBar = (name: string, isLastBar = true) => {
@@ -94,7 +120,8 @@ describe('Arrangement', () => {
       const { ctx, calls } = fakeAudioContext();
       const graph = new MusicGraph(ctx);
       const arrangement = new Arrangement(new Instruments(graph), graph, new Set(muted));
-      const song = SONGS[0];
+      // A song with every layer in it, the counter-melody included
+      const song = SONGS.find((s) => s.title === 'Summer Plaza')!;
       const step = 60 / song.bpm / 4;
       for (const section of song.sections) {
         for (let s = 0; s < section.bars * STEPS_PER_BAR; s++) {

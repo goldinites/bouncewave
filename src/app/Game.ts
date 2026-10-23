@@ -200,7 +200,7 @@ export class Game {
     this.modifierMenu = new ModifierMenu(MODIFIER_IDS, this.pinnedModifiers, (modifiers) => {
       this.pinnedModifiers = modifiers.filter(isModifierId);
     });
-    // ?song=night-drive&part=chorus&mute=drums holds the music there (the listening stand)
+    // ?song=neon-cathedral&part=chorus&mute=drums holds the music there (the listening stand)
     this.soundStand = new SoundStand(this.audio);
     this.fpsMeter = new FpsMeter((isVisible) => {
       this.modifierMenu.setVisible(isVisible);

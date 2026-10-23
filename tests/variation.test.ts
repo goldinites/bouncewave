@@ -11,24 +11,24 @@ import { fakeAudioContext } from './helpers/fakeAudioContext';
 
 describe('barVariation', () => {
   it('plays a part as written the first time', () => {
-    const first = barVariation('night-drive', 'verse', 0, 3);
+    const first = barVariation('neon-cathedral', 'verse', 0, 3);
     expect(first.ghostSnares.size + first.bassOctaves.size + first.arpShift).toBe(0);
     expect(first.phraseFill).toBe(false);
   });
 
   it('varies it on every repeat, more on later ones, the same way for the same bar', () => {
     const bars = (pass: number) =>
-      Array.from({ length: 32 }, (_, bar) => barVariation('night-drive', 'verse', pass, bar));
+      Array.from({ length: 32 }, (_, bar) => barVariation('neon-cathedral', 'verse', pass, bar));
     const count = (pass: number) =>
       bars(pass).reduce((sum, v) => sum + v.ghostSnares.size + v.bassOctaves.size, 0);
 
     expect(count(1)).toBeGreaterThan(0);
     expect(count(2)).toBeGreaterThan(count(1));
-    expect(barVariation('night-drive', 'verse', 1, 5)).toEqual(
-      barVariation('night-drive', 'verse', 1, 5),
+    expect(barVariation('neon-cathedral', 'verse', 1, 5)).toEqual(
+      barVariation('neon-cathedral', 'verse', 1, 5),
     );
-    expect(barVariation('night-drive', 'verse', 1, 5)).not.toEqual(
-      barVariation('night-drive', 'verse', 2, 5),
+    expect(barVariation('neon-cathedral', 'verse', 1, 5)).not.toEqual(
+      barVariation('neon-cathedral', 'verse', 2, 5),
     );
   });
 

@@ -19,36 +19,6 @@ const rootsOf = (voice: LeadVoice): number[] | null => {
   return extra ? EXTRA_LEADS[extra].roots : null;
 };
 const STRETCH = 3; // semitones: further, a note played from its root starts to sound stretched
-// Songs written before the rhythm rule below (5.6a, third take), being replaced; every song
-// written since keeps it
-const LOOPING_SONGS = new Set<string>([
-  'Night Drive',
-  'Chrome Heart',
-  'Overdrive',
-  'Sunset Boulevard',
-  'Laser Grid',
-  'Midnight Arcade',
-  'Crystal Skies',
-  'Ghost Signal',
-  'Shinjuku Rain',
-  'Torii Gates',
-  'Jade Temple',
-  'Iron Floor',
-  'Black Belt',
-  'Neon Cathedral',
-  'Sunset Strip',
-  'Pastel Avenue',
-  'Neon Cathedral v2',
-  'Sunset Strip v2',
-  'Summer Plaza',
-  'Memphis P4 F1 Sunrise',
-  'Memphis P4 F2 Staccato',
-  'Neon Cathedral v3',
-  'Sunset Strip v3',
-  'Summer Plaza v2',
-  'Memphis P1 C1 Sparkle',
-  'Memphis P1 C2 Call',
-]);
 
 describe('the soundtrack', () => {
   it('keeps every melody note where its rendered instrument sounds natural', () => {
@@ -107,7 +77,7 @@ describe('the soundtrack', () => {
         .join('');
     const most = (rhythms: string[]) =>
       Math.max(...rhythms.map((r) => rhythms.filter((other) => other === r).length));
-    for (const song of SONGS.filter((s) => !LOOPING_SONGS.has(s.title))) {
+    for (const song of SONGS) {
       for (const { name, lead } of song.sections) {
         if (!lead) continue;
         for (let from = 0; from + 8 * STEPS_PER_BAR <= lead.length; from += 8 * STEPS_PER_BAR) {
@@ -131,7 +101,7 @@ describe('the soundtrack', () => {
   // Every 5.6a melody climbed into a long note by a pickup run, and the tracks sounded like one
   // tune on different sounds: a song may climb that way once in eight bars, no more
   it('climbs into a long note by a pickup run at most once in eight bars', () => {
-    for (const song of SONGS.filter((s) => !LOOPING_SONGS.has(s.title))) {
+    for (const song of SONGS) {
       for (const { name, lead } of song.sections) {
         if (!lead) continue;
         const notes = notesOf(lead);
@@ -154,7 +124,7 @@ describe('the soundtrack', () => {
   // lengths — belongs to one song (its versions aside)
   it('gives no two songs the same five-note figure', () => {
     const owner = new Map<string, string>();
-    for (const song of SONGS.filter((s) => !LOOPING_SONGS.has(s.title))) {
+    for (const song of SONGS) {
       const track = song.title.replace(/ v\d+$/, '');
       for (const { name, lead } of song.sections) {
         if (!lead) continue;

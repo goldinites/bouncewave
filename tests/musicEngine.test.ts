@@ -77,8 +77,8 @@ describe('MusicEngine', () => {
 
   it("opens with the backdrop's own song when it has one", () => {
     const engine = new MusicEngine();
-    engine.enterScene('neonCity');
-    expect(engine.getSongTitle()).toBe('Shinjuku Rain');
+    engine.enterScene('lasers');
+    expect(engine.getSongTitle()).toBe('Neon Cathedral');
   });
 
   it('switches to another song when skipped', () => {
@@ -94,9 +94,9 @@ describe('MusicEngine', () => {
     it('holds the music to a song and a part, named as in a link', () => {
       const { engine, play } = track(setup());
 
-      expect(engine.audition('ghost-signal', 'chorus')).toBe(true);
+      expect(engine.audition('sunset-strip', 'chorus')).toBe(true);
       play(20);
-      expect(engine.getPosition()).toMatchObject({ songId: 'ghost-signal', part: 'chorus' });
+      expect(engine.getPosition()).toMatchObject({ songId: 'sunset-strip', part: 'chorus' });
     });
 
     it('changes nothing for a song or part there is not', () => {
@@ -104,23 +104,23 @@ describe('MusicEngine', () => {
       const before = engine.getPosition();
 
       expect(engine.audition('no-such-song')).toBe(false);
-      expect(engine.audition('night-drive', 'drop')).toBe(false);
+      expect(engine.audition('neon-cathedral', 'drop')).toBe(false);
       expect(engine.getPosition()).toEqual(before);
     });
 
     it('stays on the song when the backdrop changes or the player skips', () => {
       const { engine, play } = track(setup());
-      engine.audition('night-drive');
+      engine.audition('neon-cathedral');
       engine.enterScene('fuji');
       engine.skipSong();
       play(30);
 
-      expect(engine.getPosition().songId).toBe('night-drive');
+      expect(engine.getPosition().songId).toBe('neon-cathedral');
     });
 
     it('plays silenced layers no more', () => {
       const { engine, notes, play } = track(setup());
-      engine.audition('night-drive', 'chorus');
+      engine.audition('neon-cathedral', 'chorus');
       play(1);
       for (const layer of ['drums', 'bass', 'pads', 'arp', 'lead', 'counter', 'fx'] as const) {
         engine.setLayerMuted(layer, true);
@@ -137,7 +137,7 @@ describe('MusicEngine', () => {
 describe('SONGS', () => {
   it('have ids for links, from their titles, each its own', () => {
     const ids = SONGS.map((song) => song.id);
-    expect(ids).toContain('night-drive');
+    expect(ids).toContain('neon-cathedral');
     expect(ids.every((id) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(id))).toBe(true);
     expect(new Set(ids).size).toBe(ids.length);
   });

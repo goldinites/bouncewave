@@ -188,12 +188,12 @@ export interface Section extends Omit<
 export interface Song extends Omit<SongDef, 'sections' | 'form'> {
   /** The form as section indices. */
   form: number[];
-  /** The title in lower case with dashes, for links to it (`?song=night-drive`). */
+  /** The title in lower case with dashes, for links to it (`?song=neon-cathedral`). */
   id: string;
   sections: Section[];
 }
 
-/** A song's id from its title: "Night Drive" → "night-drive". */
+/** A song's id from its title: "Neon Cathedral" → "neon-cathedral". */
 export const songId = (title: string): string =>
   title
     .toLowerCase()

@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SONGS } from '@/audio/music/songs';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { WarehouseBackground } from '@/render/backgrounds/WarehouseBackground';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
@@ -84,11 +83,5 @@ describe('WarehouseBackground', () => {
     still.advance(0.1, 1, 0);
     for (let i = 0; i < 10; i++) still.advance(0.05, 0.2, 0);
     expect(square(still)).toBe(0);
-  });
-
-  it('has its own song, which plays only behind it', () => {
-    expect(SONGS.filter((song) => song.scene === 'warehouse').map((song) => song.title)).toEqual([
-      'Iron Floor',
-    ]);
   });
 });

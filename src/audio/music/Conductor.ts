@@ -414,10 +414,11 @@ export class Conductor {
     const scene = this.scene;
     const isQuickMatch = scene === null || isPickableScene(scene);
     const hasOwn = this.songs.some((song) => song.scene !== undefined && song.scene === scene);
-    // Sketches are for the stand only
+    // Sketches are for the stand only. A challenge's backdrop with no song of its own yet
+    // borrows any other; a quick match's plays the quick-match songs, as it always does
     const fits = (song: Song) => {
       if (song.sketch) return false;
-      if (song.scene === undefined) return true;
+      if (song.scene === undefined || (!isQuickMatch && !hasOwn)) return true;
       return song.scene === scene || (isQuickMatch && isPickableScene(song.scene));
     };
     const candidates = this.songs.flatMap((song, i) =>

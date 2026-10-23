@@ -64,7 +64,7 @@ export const STAND_SOUNDS: readonly StandSound[] = [
  * action sound and its series — so music is composed by ear, not blind (docs/AUDIO.md). A
  * player on top pauses, steps between songs, shows where the music is in the song's form and
  * the time, and jumps to any part of the form with a click. The address keeps the song, the
- * part and the silenced layers (`?song=night-drive&part=chorus&mute=drums`), so a link points at
+ * part and the silenced layers (`?song=neon-cathedral&part=chorus&mute=drums`), so a link points at
  * a place in a song, and `&lead=sax` puts every melody on another lead; it works without
  * `?debug` too.
  */
