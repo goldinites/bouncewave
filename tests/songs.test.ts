@@ -144,6 +144,21 @@ describe('the soundtrack', () => {
     }
   });
 
+  // A track on one four-chord loop, its bridge the same chords from another one, never goes
+  // anywhere (docs/AUDIO.md, "Чего не делать"): some part played over the verse's chords leads
+  // the harmony to chords the verse never plays
+  it('takes the harmony somewhere the verse doesn’t go', () => {
+    const chordsOf = (section: (typeof SONGS)[number]['sections'][number]) =>
+      new Set(section.chords.map((chord) => chord.symbol));
+    for (const song of SONGS.filter((song) => !song.sketch)) {
+      const verse = chordsOf(song.sections.find((section) => section.tier === 'groove')!);
+      const elsewhere = song.sections
+        .filter((section) => section.tier !== 'rise')
+        .some((section) => [...chordsOf(section)].filter((c) => !verse.has(c)).length >= 2);
+      expect(elsewhere, song.title).toBe(true);
+    }
+  });
+
   // Three tracks built on one template sounded like one song (5.6a): each builds its own frame
   it('gives no two songs the same form, intro, beat at the peak or way up to it', () => {
     const frames = SONGS.map((song) => {

@@ -52,6 +52,19 @@ const CATHEDRAL_CELLS: Stretch[] = [
   { cell: ['D4', 'F#4', 'A4', 'D5', 'A4', 'F#4'], bars: 2 },
 ];
 
+/**
+ * The bridge's cells (Em Cmaj7 Fmaj7 Fmaj7 Am7 G D D): the chorus's chords left for the Phrygian
+ * second, F over E, the cathedral's oldest colour.
+ */
+const CRYPT_CELLS: Stretch[] = [
+  { cell: ['E4', 'G4', 'B4', 'E5', 'B4', 'G4'], bars: 1 },
+  { cell: ['E4', 'G4', 'C5', 'E5', 'B4', 'G4'], bars: 1 },
+  { cell: ['E4', 'A4', 'C5', 'F5', 'C5', 'A4'], bars: 2 },
+  { cell: ['E4', 'A4', 'C5', 'E5', 'C5', 'G4'], bars: 1 },
+  { cell: ['D4', 'G4', 'B4', 'D5', 'B4', 'G4'], bars: 1 },
+  { cell: ['D4', 'F#4', 'A4', 'D5', 'A4', 'F#4'], bars: 2 },
+];
+
 /** K1, the verse (Em Em C C Am Am B B): a hammered low note leaping its octave. */
 const K1 = `E4 . E4 . E5 . E4 . D5 - - - B4 - - - | . . E4 . G4 - - - F#4 - - - E4 - - -
           | E4 . E4 . E5 . E4 . C5 - - - G4 - - - | . . G4 . B4 - - - A4 - - - G4 - - -
@@ -80,7 +93,10 @@ const K3_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . . .
                  | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
                  | . . . . . . . . . . . . . . . . | . . . . . . . . A5 - F#5 - D5 - - -`;
 
-/** K4, the bridge: long low notes, each leaning on its neighbour a semitone off. */
+/**
+ * K4, the bridge (Em Cmaj7 Fmaj7 Fmaj7 Am7 G D D): long low notes, each leaning on its neighbour
+ * a semitone off.
+ */
 const K4 = `B4 - - - C5 - - - B4 - - - - - - - | G4 - - - - - - - F#4 - - - E4 - - -
           | C5 - - - B4 - - - C5 - - - - - - - | G4 - - - - - - - . . . . . . . .
           | D5 - - - - - - - B4 - - - C5 - - - | B4 - - - A4 - - - G4 - - - - - - -
@@ -97,15 +113,45 @@ const SUNSET_CELLS: Stretch[] = [
   { cell: ['Bb3', 'Eb4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 2 },
 ];
 
-/** The same cells over the bridge's turn of the chords (Gm Eb Bb F). */
+/** The verse's turnaround into the second pass (Cm7 F7sus4, a bar each), on the same seven notes. */
 const SUNSET_TURN_CELLS: Stretch[] = [
-  { cell: ['Bb3', 'D4', 'G4', 'Bb4', 'D5', 'Bb4', 'G4'], bars: 2 },
-  { cell: ['Bb3', 'Eb4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 2 },
-  { cell: ['Bb3', 'D4', 'F4', 'Bb4', 'D5', 'Bb4', 'F4'], bars: 2 },
-  { cell: ['A3', 'C4', 'F4', 'A4', 'C5', 'A4', 'F4'], bars: 2 },
+  ...SUNSET_CELLS.slice(0, 3),
+  { cell: ['Bb3', 'C4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 1 },
+  { cell: ['Bb3', 'C4', 'F4', 'Bb4', 'Eb5', 'Bb4', 'F4'], bars: 1 },
 ];
 
-/** W1, the verse (Bb Bb F F Gm Gm Eb Eb): wide leaps down from the top, held. */
+/**
+ * The chorus's cells, a chord a bar (Bb Gm7 F Cm7 Ebmaj7 Gm7 Cm7 Fsus4): the harmony quickens,
+ * and comes home round the circle of fifths.
+ */
+const SUNSET_SOAR_CELLS: Stretch[] = [
+  { cell: ['Bb3', 'D4', 'F4', 'Bb4', 'D5', 'Bb4', 'F4'], bars: 1 },
+  { cell: ['Bb3', 'D4', 'F4', 'G4', 'D5', 'Bb4', 'G4'], bars: 1 },
+  { cell: ['A3', 'C4', 'F4', 'A4', 'C5', 'A4', 'F4'], bars: 1 },
+  { cell: ['Bb3', 'C4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 1 },
+  { cell: ['Bb3', 'D4', 'G4', 'Bb4', 'Eb5', 'D5', 'G4'], bars: 1 },
+  { cell: ['Bb3', 'D4', 'F4', 'G4', 'D5', 'Bb4', 'G4'], bars: 1 },
+  { cell: ['Bb3', 'C4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 1 },
+  { cell: ['Bb3', 'C4', 'F4', 'Bb4', 'C5', 'Bb4', 'F4'], bars: 1 },
+];
+
+/**
+ * The bridge's cells (Ebmaj7 Cm7 Cm7 Dm7 Gm7 Gm7 Dm7 D): off the main road, never touching home
+ * or its dominant, and ending on D major, a turn of the wheel back to B flat.
+ */
+const SUNSET_DUSK_CELLS: Stretch[] = [
+  { cell: ['Bb3', 'D4', 'G4', 'Bb4', 'Eb5', 'D5', 'G4'], bars: 1 },
+  { cell: ['Bb3', 'C4', 'G4', 'Bb4', 'Eb5', 'Bb4', 'G4'], bars: 2 },
+  { cell: ['A3', 'C4', 'F4', 'A4', 'D5', 'A4', 'F4'], bars: 1 },
+  { cell: ['Bb3', 'D4', 'F4', 'G4', 'D5', 'Bb4', 'G4'], bars: 2 },
+  { cell: ['A3', 'C4', 'F4', 'A4', 'D5', 'A4', 'F4'], bars: 1 },
+  { cell: ['A3', 'D4', 'F#4', 'A4', 'D5', 'A4', 'F#4'], bars: 1 },
+];
+
+/**
+ * W1, the verse (Bb Bb F F Gm Gm Eb Eb, the second time ending Cm7 F7sus4): wide
+ * leaps down from the top, held.
+ */
 const W1 = `D6 - - - - - F5 - - - Bb5 - - - - - | A5 - - - - - - - F5 - - - - - - -
           | C6 - - - - - F5 - - - A5 - - - - - | G5 - - - - - - - C6 - - - - - - -
           | Bb5 - - Bb5 - - G5 - - - D6 - - - - - | - - - - C6 - - - Bb5 - - - G5 - - -
@@ -118,7 +164,10 @@ const W1 = `D6 - - - - - F5 - - - Bb5 - - - - - | A5 - - - - - - - F5 - - - - - 
 const W1_UNDER = `F4 - - - D5 - - - | C5 - - - - - - - | A4 - - - C5 - - - | G4 - - - A4 - - -
                 | Bb4 - - - D5 - - - | D5 - - - C5 - - - | Bb4 - - - G4 - - - | G4 - - - - - - -`;
 
-/** S3, the chorus hook (soar): by step from D6, then tied over the bar and climbing, a 3+3+2. */
+/**
+ * S3, the chorus hook (soar) over a chord a bar (Bb Gm7 F Cm7 Ebmaj7 Gm7 Cm7 Fsus4): by step from
+ * D6, then tied over the bar and climbing, a 3+3+2.
+ */
 const S3 = `D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 - - - - - - -
              | - - Bb5 - - - D6 - | - - - - C6 - Bb5 - | G5 - - Bb5 - - C6 - | Bb5 - - - - - G5 A5`;
 
@@ -126,7 +175,7 @@ const S3 = `D6 - - - C6 - Bb5 - | A5 - - - Bb5 - - - | C6 - - - A5 - F5 - | G5 -
 const S3_THIRDS = `Bb5 - - - A5 - G5 - | F5 - - - G5 - - - | A5 - - - F5 - D5 - | Eb5 - - - - - - -
                     | D5 - G5 - - - Bb5 - | - - - - A5 - G5 - | Eb5 - - G5 - - G5 - | G5 - - - - - Eb5 F5`;
 
-/** W2, the bridge (Gm Gm Eb Eb Bb Bb F F): falling fifths and sixths, held long. */
+/** W2, the bridge (Ebmaj7 Cm7 Cm7 Dm7 Gm7 Gm7 Dm7 D): falling fifths and sixths, held long. */
 const W2 = `D6 - - - - - - - G5 - - - - - - - | Bb5 - - - A5 - - - G5 - - - - - - -
           | Bb5 - - - - - - - G5 - - - - - - - | F5 - - - - - - - D6 - - - - - - -
           | - - - - C6 - - - Bb5 - - - F5 - - - | D6 - - - - - - - . . . . . . . .
@@ -258,7 +307,19 @@ const RAIN_808 = `F1 - - - - - - - - - F1 - F2 - - - | - - - - C2 - - - - - - - 
                 | Bb1 - - - - - - - - - Bb1 - F2 - - - | - - - - Db2 - - - - - - - C2 - Bb1 -
                 | C2 - - - - - - - - - C2 - G1 - - - | - - - - E2 - - - - - - - C2 - G1 -`;
 
-/** The bridge's koto (Db Db Bbm Bbm Fm Fm C C): an in-scale phrase falling, plucked bare. */
+/**
+ * The 808 under the chorus (Fm Gbmaj7 Db Bbm7 Bbm Gbmaj7 C C): the Neapolitan G flat, the
+ * in-scale's dark semitone, now in the harmony, a chord a bar.
+ */
+const NEON_808 = `F1 - - - - - - - - - F1 - F2 - - - | Gb1 - - - - - - - - - - - Db2 - Gb1 -
+                | Db2 - - - - - - - - - Db2 - Ab1 - - - | Bb1 - - - - - - - - - - - F1 - Ab1 -
+                | Bb1 - - - - - - - - - Bb1 - F2 - - - | Gb1 - - - - - - - - - - - Db2 - Gb1 -
+                | C2 - - - - - - - - - C2 - G1 - - - | - - - - E2 - - - - - - - C2 - G1 -`;
+
+/**
+ * The bridge's koto (Db Gbmaj7 Bbm Ebm7 Ab Fm C C): an in-scale phrase falling, plucked bare,
+ * over the furthest the song strays — to A flat, the relative major, and back.
+ */
 const KOTO_RAIN = `Ab5 - - - F5 - Gb5 F5 | Db5 - - - - - - - | F5 - - - Db5 - Eb5 Db5 | Bb4 - - - - - - -
                  | C5 - - - - - Db5 C5 | Ab4 - - - G4 - F4 - | E5 - - - G5 - - - | C5 - - - - - - -`;
 
@@ -292,7 +353,10 @@ const V1_DAWN = `A5 - - - - - - - - - - - E5 D5 E5 - | F#5 - - - - - - - - - - -
                | D5 - - - - - - - - - - - E5 D5 B4 - | G5 - - - - - - - . . . . . . . .
                | E5 - - - - - - - D5 - - - B4 - A4 - | A4 - - - - - - - . . . . . . . .`;
 
-/** C1, the chorus: a 3+3+2 call climbing the pentatonic to D6, falling home. */
+/**
+ * C1, the chorus (D Asus4 Bm7 Em7 Gmaj7 Em7 Asus4 A): a 3+3+2 call climbing the pentatonic to
+ * D6, falling home.
+ */
 const C1_DAWN = `D5 - - - - - A5 - - - - - F#5 - - - | E5 - - - - - D5 - - - - - . . . .
                | B4 - - - - - F#5 - - - - - D5 - - - | E5 - - - - - D5 - - - - - B4 - A4 -
                | G5 - - - - - D6 - - - - - B5 - - - | A5 - - - - - G5 - - - E5 - D5 - - -
@@ -333,7 +397,10 @@ const KALIMBA_PULSE = pulse(
   1,
 );
 
-/** G1, the temple bells on the gamelan: repeated notes, fourths, a 3+3+2, up to D6 and home. */
+/**
+ * G1, the temple bells on the gamelan (Am7 D Am7 D Cmaj7 G Fmaj7 Am7): repeated notes, fourths,
+ * a 3+3+2, up to D6 and home.
+ */
 const G1_BELLS = `E5 - - - E5 - A5 - | F#5 - - E5 - - D5 - | E5 - - - E5 - C6 - | A5 - - - - - - -
                 | G5 - B5 - D6 - - - | D6 - - B5 - - G5 - | A5 - - - - - E5 G5 | A5 - - - - - - -`;
 
@@ -461,13 +528,14 @@ const SONG_DEFS: SongDef[] = [
         sweep: { arp: [1.2, 0.4] },
       },
       {
-        // The dark beat at half speed: heavy, the hats still running
+        // The dark beat at half speed: heavy, the hats still running, and the harmony going down
+        // into the crypt — the F a semitone over the home E
         name: 'bridge',
         tier: 'groove',
-        chords: 'Em | Em | C | C | G | G | D | D',
+        chords: 'Em | Cmaj7 | Fmaj7 | Fmaj7 | Am7 | G | D | D',
         lead: K4,
         leadVoice: 'sync',
-        arpLine: cycle(octaveUp(CATHEDRAL_CELLS), ARP_RHYTHM.eighths),
+        arpLine: cycle(octaveUp(CRYPT_CELLS), ARP_RHYTHM.eighths),
         bass: 'long',
         drums: 'darkdrive',
         feel: 'half',
@@ -513,11 +581,12 @@ const SONG_DEFS: SongDef[] = [
       {
         name: 'verse',
         tier: 'groove',
-        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb | Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        // The second pass turns round on Cm7 and F7sus4, leaning on into the build
+        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb | Bb | Bb | F | F | Gm | Gm | Cm7 | F7sus4',
         // The electric piano drives alone for eight bars; then the passenger's voice joins it
         lead: W1,
         counter: W1_UNDER,
-        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.nine),
+        arpLine: cycle([...SUNSET_CELLS, ...SUNSET_TURN_CELLS], ARP_RHYTHM.nine),
         bass: 'eighths',
         drums: 'anthem',
         fill: 'toms',
@@ -541,12 +610,13 @@ const SONG_DEFS: SongDef[] = [
       {
         name: 'chorus',
         tier: 'high',
-        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
+        // A chord a bar where the verse holds each for two: the harmony speeds up at the peak
+        chords: 'Bb | Gm7 | F | Cm7 | Ebmaj7 | Gm7 | Cm7 | Fsus4',
         lead: S3,
         leadVoice: 'sax',
         counter: S3_THIRDS,
         enter: { counter: 4 },
-        arpLine: cycle(SUNSET_CELLS),
+        arpLine: cycle(SUNSET_SOAR_CELLS),
         bass: 'drive',
         drums: 'anthem',
         fill: 'toms',
@@ -556,10 +626,10 @@ const SONG_DEFS: SongDef[] = [
       {
         name: 'bridge',
         tier: 'groove',
-        chords: 'Gm | Gm | Eb | Eb | Bb | Bb | F | F',
+        chords: 'Ebmaj7 | Cm7 | Cm7 | Dm7 | Gm7 | Gm7 | Dm7 | D',
         lead: W2,
         leadVoice: 'koto',
-        arpLine: cycle(SUNSET_TURN_CELLS, ARP_RHYTHM.eighths),
+        arpLine: cycle(SUNSET_DUSK_CELLS, ARP_RHYTHM.eighths),
         bass: 'walk',
         drums: 'break',
         fill: 'stop',
@@ -861,15 +931,16 @@ const SONG_DEFS: SongDef[] = [
         riser: true,
       },
       {
-        // The two change places: the shamisen leads, the music box's lullaby above it
+        // The two change places: the shamisen leads, the music box's lullaby above it, and the
+        // harmony finds the G flat the riff keeps leaning on
         name: 'chorus',
         tier: 'high',
-        chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
+        chords: 'Fm | Gbmaj7 | Db | Bbm7 | Bbm | Gbmaj7 | C | C',
         lead: H1,
         leadVoice: 'shamisen',
         counter: L1,
         counterVoice: 'musicBox',
-        bassLine: RAIN_808,
+        bassLine: NEON_808,
         drums: 'witch',
         fill: 'stop',
         pad: 'chop',
@@ -880,7 +951,7 @@ const SONG_DEFS: SongDef[] = [
         // A koto alone over the held choir, the 808 gone: the Japanese insert
         name: 'bridge',
         tier: 'groove',
-        chords: 'Db | Db | Bbm | Bbm | Fm | Fm | C | C',
+        chords: 'Db | Gbmaj7 | Bbm | Ebm7 | Ab | Fm | C | C',
         lead: KOTO_RAIN,
         leadVoice: 'koto',
         bass: 'long',
@@ -971,7 +1042,9 @@ const SONG_DEFS: SongDef[] = [
       {
         name: 'chorus',
         tier: 'high',
-        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
+        // A chord a bar where the verse holds each for two, and up through E minor the verse
+        // never reaches: the sun clearing the peak
+        chords: 'D | Asus4 | Bm7 | Em7 | Gmaj7 | Em7 | Asus4 | A',
         lead: C1_DAWN,
         counter: C1_ANSWER,
         bass: 'drive',
@@ -981,10 +1054,11 @@ const SONG_DEFS: SongDef[] = [
         drop: true,
       },
       {
-        // The drums gone: the shakuhachi alone over the pad, the chorus's opening slowly
+        // The drums gone: the shakuhachi alone over the pad, the chorus's opening slowly, and the
+        // harmony in the valley's shadow, F sharp minor, before it climbs back to the dawn
         name: 'valley',
         tier: 'calm',
-        chords: 'G | G | D | D | Bm7 | Bm7 | Asus4 | A',
+        chords: 'Gmaj7 | Gmaj7 | F#m7 | Bm7 | Em7 | Em7 | Asus4 | A',
         lead: tease(C1_DAWN),
         bass: 'long',
         drums: 'none',
@@ -1046,7 +1120,8 @@ const SONG_DEFS: SongDef[] = [
       {
         name: 'chorus',
         tier: 'high',
-        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
+        // The vamp opens out in its second half: C, G and F, the F a step outside the dorian
+        chords: 'Am7 | D | Am7 | D | Cmaj7 | G | Fmaj7 | Am7',
         lead: G1_BELLS,
         counter: MARIMBA_PULSE,
         counterVoice: 'marimba',
@@ -1073,10 +1148,11 @@ const SONG_DEFS: SongDef[] = [
       },
       {
         // The temple's stillness: no drums, the backward pad swelling, the bells' opening on the
-        // kalimba
+        // kalimba; the dorian's bright F sharp gives way to F, and the harmony steps up from D to
+        // the build's E
         name: 'break',
         tier: 'calm',
-        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
+        chords: 'Am7 | D | Fmaj7 | Fmaj7 | Cmaj7 | Cmaj7 | Dm7 | Dm7',
         lead: tease(G1_BELLS),
         leadVoice: 'kalimba',
         bass: 'long',
