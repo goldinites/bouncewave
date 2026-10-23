@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { additive, cycle, euclid } from '@/audio/music/compose';
+import { additive, cycle, euclid, pulse } from '@/audio/music/compose';
 
 const hits = (rhythm: boolean[]) => rhythm.map((hit) => (hit ? 'x' : '.')).join('');
 
@@ -44,5 +44,17 @@ describe('transpose', () => {
     const { transpose } = await import('@/audio/music/compose');
     expect(transpose('C5 - Eb5 . Bb4 -', 4)).toBe('E5 - G5 . D5 -');
     expect(transpose('G5 - - - | Ab5 . C6 -', -8)).toBe('B4 - - - | C5 . E5 -');
+  });
+
+  it('puts a cell on a pulse that crosses the bar line', () => {
+    const line = pulse([{ cell: ['A4', 'C5'], bars: 2 }], 3, 1);
+    const bars = line.split(' | ').map((bar) => bar.split(' '));
+    // Steps 1, 4, 7, … counted through both bars: the second bar's first note falls on its third
+    expect(bars[0].map((t, i) => (t === '.' ? '' : i)).join(',')).toBe(',1,,,4,,,7,,,10,,,13,,');
+    // Five notes in the first bar, so the second bar opens on the cell's second note
+    expect(bars[1][0]).toBe('C5');
+    expect(bars[1][3]).toBe('A4');
+    expect(bars[0][1]).toBe('A4');
+    expect(bars[0][4]).toBe('C5');
   });
 });

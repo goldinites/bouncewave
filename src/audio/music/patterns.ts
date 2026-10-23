@@ -108,6 +108,20 @@ export const DRUM_PATTERNS = {
     open: '......x.......x.',
     perc: 'oxoxoxoxoxoxoxox',
   },
+  // Witch house in half-time: the snare on the third beat, so 140 feels like 70, under trap hats
+  // rolling into the bar's end
+  witch: {
+    kick: 'X......x..X.....',
+    snare: '........X.......',
+    clap: '........x.......',
+    hat: 'x.x.x.x.x.x.xxxx',
+    open: '......x.........',
+  },
+  // Rain on the window: hats and the shaker ticking, no kick, no snare
+  witchIntro: {
+    hat: 'x...x...x...x...',
+    perc: '..o...o...o...o.',
+  },
   // Euclidean: five kicks spread over the bar, a rim and hats in even spreads of their own
   euclid: {
     kick: 'X..x..x..X..x...',

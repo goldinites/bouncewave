@@ -81,6 +81,19 @@ export const KITS = {
     metal: 'clang',
     perc: 'rim',
   },
+  // Rain (neonCity): the long 808, a dry snare, and a rain stick where a crash would be
+  rain: {
+    kick: 'kick808',
+    snare: 'snare',
+    clap: 'clap',
+    hat: 'hat',
+    open: 'open',
+    crash: 'rainstick',
+    tom: 'tom',
+    taiko: 'taiko',
+    metal: 'clang',
+    perc: 'shaker',
+  },
   // Japan (fuji, dojo): the great odaiko for the taiko, a gong for the crash, wood for the rest
   japan: {
     kick: 'kickPunch',

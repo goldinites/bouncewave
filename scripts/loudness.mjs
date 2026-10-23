@@ -56,9 +56,7 @@ async function measure(song) {
     await page.waitForTimeout(LISTEN_MS);
     const readout = await page.evaluate(
       () =>
-        [...document.querySelectorAll('[aria-label="Sound stand (debug)"] span')]
-          .map((span) => span.textContent)
-          .find((text) => text?.includes('bar ')) ?? '',
+        document.querySelector('[aria-label="Sound stand (debug)"] .dbg-status')?.textContent ?? '',
     );
     const match = /avg (-?[\d.]+)\)/.exec(readout);
     result[part] = match ? Number(match[1]) : NaN;

@@ -1,4 +1,4 @@
-import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
+import { cycle, euclid, pulse, Stretch, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 
 /*
@@ -234,6 +234,108 @@ const Q5 = `. . . . . . . . B5 - - A5 - - F#5 - | E5 - - - - - F5 F#5 - - - - E5
           | A5 - . A5 - . A5 - . C#6 - - - . . . | B5 - - - A5 - F#5 - - - - - . . . .
           | . . G5 . E5 . D5 . E5 - - - G5 - - - | A5 - - - - - G5 - - - E5 - - - D5 -
           | F#5 - - - - - - - C#6 - - - A5 - - - | D6 - - - - - - - . . . . . . . .`;
+
+// ——— Kabukicho Rain (neonCity): witch house in F minor at 140, felt at 70. Rain at night in
+// Tokyo, neon smeared in the puddles: a music-box lullaby — one high note, then a sigh down a
+// semitone, and silence — over a gliding 808 and a chopped choir; a shamisen's ragged riff,
+// the Japanese in-scale's dark semitone in it ———
+
+/** L1, the lullaby (Fm Fm Db Db Bbm Bbm C C): a note, a sigh a semitone down, much silence. */
+const L1 = `. . . . . . . . C6 - - - - - - - | . . Db6 - C6 - - - - - - - . . . .
+          | . . . . . . . . Ab5 - - - - - - - | . . Bb5 - Ab5 - - - - - - - F5 - - -
+          | . . . . . . . . . . . . F5 - - - | . . Gb5 - F5 - - - - - - - Db5 - - -
+          | E5 - - - - - - - . . . . . . . . | . . F5 - E5 - - - C5 - - - - - - -`;
+
+/** H1, the shamisen's riff: a note struck twice and flicked up, then a fall onto the beat. */
+const H1 = `F4 . F4 Ab4 . F4 . C5 . . Bb4 . Ab4 . . . | . . . . . . Gb4 - F4 - - - - - - -
+          | Db5 . Db5 F5 . Db5 . Ab5 . . Gb5 . F5 . . . | . . . . . . C5 - Db5 - - - - - - -
+          | Bb4 . Bb4 Db5 . Bb4 . F5 . . Eb5 . Db5 . . . | C5 - - - Db5 - - - Bb4 - - - - - - -
+          | C5 - - - G4 - - - E5 - - - C5 - - - | . . . . . . . . . . Db5 - C5 - - -`;
+
+/** The 808's line, a chord to two bars, sliding between its notes. */
+const RAIN_808 = `F1 - - - - - - - - - F1 - F2 - - - | - - - - C2 - - - - - - - Eb2 - C2 -
+                | Db2 - - - - - - - - - Db2 - Ab1 - - - | - - - - - - - - F1 - - - Ab1 - Db2 -
+                | Bb1 - - - - - - - - - Bb1 - F2 - - - | - - - - Db2 - - - - - - - C2 - Bb1 -
+                | C2 - - - - - - - - - C2 - G1 - - - | - - - - E2 - - - - - - - C2 - G1 -`;
+
+/** The bridge's koto (Db Db Bbm Bbm Fm Fm C C): an in-scale phrase falling, plucked bare. */
+const KOTO_RAIN = `Ab5 - - - F5 - Gb5 F5 | Db5 - - - - - - - | F5 - - - Db5 - Eb5 Db5 | Bb4 - - - - - - -
+                 | C5 - - - - - Db5 C5 | Ab4 - - - G4 - F4 - | E5 - - - G5 - - - | C5 - - - - - - -`;
+
+// ——— Above the Clouds (fuji): D major on the Japanese yo pentatonic, 96 BPM. Dawn over the
+// mountain, the clouds below: a shakuhachi's long notes, each reached by a quick turn, a koto's
+// ostinato, a big pad, the festival drums at the peak ———
+
+/** The koto's ostinato: four notes of each chord in eighths, two bars each (D Bm7 G Asus4). */
+const KOTO_DAWN = cycle(
+  [
+    { cell: ['D5', 'A4', 'E5', 'A4'], bars: 2 },
+    { cell: ['B4', 'F#4', 'D5', 'F#4'], bars: 2 },
+    { cell: ['G4', 'D5', 'B4', 'D5'], bars: 2 },
+    { cell: ['A4', 'E5', 'D5', 'E5'], bars: 2 },
+  ],
+  euclid(8, 16),
+);
+
+/** The ostinato's last four bars (G Asus4), climbing with the drums into the chorus. */
+const KOTO_CLIMB = cycle(
+  [
+    { cell: ['G4', 'D5', 'B4', 'D5'], bars: 2 },
+    { cell: ['A4', 'E5', 'D5', 'E5'], bars: 2 },
+  ],
+  euclid(8, 16),
+);
+
+/** V1, the verse (D D Bm7 Bm7 G G Asus4 A): long notes, each next one reached by a turn. */
+const V1_DAWN = `A5 - - - - - - - - - - - E5 D5 E5 - | F#5 - - - - - - - - - - - . . . .
+               | B5 - - - - - - - A5 - B5 - . . . . | F#5 - - - - - - - - - - - E5 F#5 E5 -
+               | D5 - - - - - - - - - - - E5 D5 B4 - | G5 - - - - - - - . . . . . . . .
+               | E5 - - - - - - - D5 - - - B4 - A4 - | A4 - - - - - - - . . . . . . . .`;
+
+/** C1, the chorus: a 3+3+2 call climbing the pentatonic to D6, falling home. */
+const C1_DAWN = `D5 - - - - - A5 - - - - - F#5 - - - | E5 - - - - - D5 - - - - - . . . .
+               | B4 - - - - - F#5 - - - - - D5 - - - | E5 - - - - - D5 - - - - - B4 - A4 -
+               | G5 - - - - - D6 - - - - - B5 - - - | A5 - - - - - G5 - - - E5 - D5 - - -
+               | E5 - - - D5 - - - E5 - - - A5 - - - | A5 - - - - - - - . . . . . . . .`;
+
+/** The koto answering C1 in its rests: a pentatonic drop of four notes. */
+const C1_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . A4 F#4 E4 D4
+                 | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
+                 | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
+                 | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . E5 C#5 B4 A4`;
+
+// ——— Firefly Temple (jungle): A dorian, 110 BPM. Night in the jungle, an old temple,
+// fireflies: rhythm at the centre — a marimba on a pulse of three sixteenths across the four
+// beats, a kalimba answering between its notes, hand drums, the temple's gamelan bells ———
+
+/** The marimba: a note every three sixteenths, crossing the bar (Am7 D Am7 D Em7 G Am7 Am7). */
+const MARIMBA_PULSE = pulse(
+  [
+    { cell: ['A5', 'E5', 'G5', 'C6'], bars: 4 },
+    { cell: ['B5', 'E5', 'G5', 'D6'], bars: 2 },
+    { cell: ['A5', 'E5', 'G5', 'C6'], bars: 2 },
+  ],
+  3,
+);
+
+/** The kalimba between the marimba's notes, a sixteenth after each: the two interlock. */
+const KALIMBA_PULSE = pulse(
+  [
+    { cell: ['E5', 'C5', 'D5', 'A4'], bars: 1 },
+    { cell: ['D5', 'A4', 'F#4', 'E5'], bars: 1 },
+    { cell: ['E5', 'C5', 'D5', 'A4'], bars: 1 },
+    { cell: ['D5', 'A4', 'F#4', 'E5'], bars: 1 },
+    { cell: ['B4', 'G4', 'E5', 'D5'], bars: 1 },
+    { cell: ['D5', 'B4', 'G4', 'A4'], bars: 1 },
+    { cell: ['E5', 'C5', 'D5', 'A4'], bars: 2 },
+  ],
+  3,
+  1,
+);
+
+/** G1, the temple bells on the gamelan: repeated notes, fourths, a 3+3+2, up to D6 and home. */
+const G1_BELLS = `E5 - - - E5 - A5 - | F#5 - - E5 - - D5 - | E5 - - - E5 - C6 - | A5 - - - - - - -
+                | G5 - B5 - D6 - - - | D6 - - B5 - - G5 - | A5 - - - - - E5 G5 | A5 - - - - - - -`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -656,6 +758,305 @@ const SONG_DEFS: SongDef[] = [
         pad: 'hold',
         stabs: 'push',
         drop: true,
+      },
+    ],
+  },
+  {
+    // Witch house in half-time: rain at night in Kabukicho. A music box sings the lullaby over a
+    // gliding 808 and a choir chopped into a rhythm; in the second verse a shamisen's riff creeps
+    // in under it, and at the chorus they change places — the shamisen leads, the lullaby above.
+    // The bridge is a koto alone over the choir; rain ticks open and close it, a rain stick for a
+    // crash
+    title: 'Kabukicho Rain',
+    bpm: 140,
+    swing: 0,
+    level: -2.5,
+    scene: 'neonCity',
+    kit: 'rain',
+    transitions: 'synth',
+    voices: {
+      lead: 'musicBox',
+      counter: 'shamisen',
+      arp: 'arpPulse',
+      bass: 'bass808',
+      bassGlide: 0.07,
+      pad: 'choir',
+    },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'build',
+      'chorus',
+      'bridge',
+      'verse2',
+      'build',
+      'chorus',
+      'outro',
+    ],
+    sections: [
+      {
+        // Rain on the window and the choir; the lullaby's opening on the celesta, the 808 under it
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
+        lead: tease(L1),
+        leadVoice: 'celesta',
+        bass: 'long',
+        drums: 'witchIntro',
+        pad: 'swell',
+        enter: { lead: 4, bass: 4 },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
+        lead: L1,
+        bassLine: RAIN_808,
+        drums: 'witch',
+        fill: 'stop',
+        pad: 'chop',
+        layers: { lead: 0.3 },
+      },
+      {
+        // The lullaby on the celesta; the shamisen's riff creeps in under it halfway
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
+        lead: L1,
+        leadVoice: 'celesta',
+        counter: H1,
+        bassLine: RAIN_808,
+        drums: 'witch',
+        fill: 'roll',
+        pad: 'chop',
+        layers: { lead: 0.3, counter: 0.3 },
+        enter: { counter: 4 },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Bbm | C',
+        bass: 'eighths',
+        drums: 'witch',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        // The two change places: the shamisen leads, the music box's lullaby above it
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
+        lead: H1,
+        leadVoice: 'shamisen',
+        counter: L1,
+        counterVoice: 'musicBox',
+        bassLine: RAIN_808,
+        drums: 'witch',
+        fill: 'stop',
+        pad: 'chop',
+        drop: true,
+        enter: { counter: 4 },
+      },
+      {
+        // A koto alone over the held choir, the 808 gone: the Japanese insert
+        name: 'bridge',
+        tier: 'groove',
+        chords: 'Db | Db | Bbm | Bbm | Fm | Fm | C | C',
+        lead: KOTO_RAIN,
+        leadVoice: 'koto',
+        bass: 'long',
+        drums: 'witchIntro',
+        pad: 'swell',
+        layers: { lead: 0.3 },
+      },
+      {
+        name: 'outro',
+        tier: 'calm',
+        chords: 'Fm | Fm | Db | Db | Bbm | Bbm | C | C',
+        lead: tease(L1),
+        leadVoice: 'celesta',
+        bass: 'long',
+        drums: 'witchIntro',
+        pad: 'swell',
+      },
+    ],
+  },
+  {
+    // Dawn over Fuji, the clouds below: the koto's ostinato and a big pad open it, a shakuhachi
+    // sings long notes reached by quick turns, spacious half-time drums in the verse, the festival
+    // beat (matsuri) with the odaiko at the chorus, four bars of drums climbing into it, a gong for
+    // a crash, and a valley where the shakuhachi sings alone. Moving in sixteenths where the match
+    // plays, so 96 BPM never drags a rally
+    title: 'Above the Clouds',
+    bpm: 96,
+    swing: 0,
+    level: -1.5,
+    scene: 'fuji',
+    kit: 'japan',
+    transitions: 'drums',
+    voices: { lead: 'shakuhachi', counter: 'koto', arp: 'pluck', bass: 'bassFm' },
+    form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'valley', 'verse2', 'build', 'chorus'],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
+        lead: tease(V1_DAWN),
+        counter: KOTO_DAWN,
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        enter: { lead: 4 },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
+        lead: V1_DAWN,
+        bass: 'long',
+        drums: 'halftime',
+        fill: 'taiko',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+      },
+      {
+        // The koto's ostinato joins the shakuhachi, the festival beat underneath
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
+        lead: V1_DAWN,
+        counter: KOTO_DAWN,
+        bass: 'sync',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        layers: { lead: 0.3, counter: 0.2 },
+        enter: { counter: 2 },
+      },
+      {
+        // Four bars of drums climbing, a reverse crash into the gong
+        name: 'build',
+        tier: 'rise',
+        chords: 'G | G | Asus4 | A',
+        counter: KOTO_CLIMB,
+        bass: 'drive',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
+        lead: C1_DAWN,
+        counter: C1_ANSWER,
+        bass: 'drive',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        drop: true,
+      },
+      {
+        // The drums gone: the shakuhachi alone over the pad, the chorus's opening slowly
+        name: 'valley',
+        tier: 'calm',
+        chords: 'G | G | D | D | Bm7 | Bm7 | Asus4 | A',
+        lead: tease(C1_DAWN),
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+      },
+    ],
+  },
+  {
+    // Night in the jungle, an old temple, fireflies: hand drums open it, a kalimba joins; the
+    // marimba strikes a note every three sixteenths, three against four, landing somewhere new
+    // each bar; in the second verse the kalimba plays between its notes, the two interlocking; the
+    // temple's gamelan bells carry the chorus over the marimba; a still break with a swelling,
+    // backward pad. The drums mark the turns, no synth swells
+    title: 'Firefly Temple',
+    bpm: 110,
+    swing: 0,
+    level: 1,
+    scene: 'jungle',
+    kit: 'tribal',
+    transitions: 'band',
+    voices: { lead: 'gamelan', counter: 'kalimba', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
+    form: ['intro', 'verse', 'build', 'chorus', 'verse2', 'break', 'build', 'chorus'],
+    sections: [
+      {
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
+        counter: KALIMBA_PULSE,
+        bass: 'long',
+        drums: 'tribal',
+        pad: 'swell',
+        enter: { counter: 4, bass: 4 },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
+        lead: MARIMBA_PULSE,
+        leadVoice: 'marimba',
+        bass: 'sync',
+        drums: 'tribal',
+        fill: 'taiko',
+        pad: 'none',
+        layers: { lead: 0.3 },
+      },
+      {
+        name: 'build',
+        tier: 'rise',
+        chords: 'Em7 | G',
+        bass: 'gallop',
+        drums: 'tribal',
+        fill: 'taiko',
+        pad: 'hold',
+      },
+      {
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
+        lead: G1_BELLS,
+        counter: MARIMBA_PULSE,
+        counterVoice: 'marimba',
+        bass: 'gallop',
+        drums: 'tribal',
+        fill: 'taiko',
+        pad: 'hold',
+        drop: true,
+      },
+      {
+        // The hocket: the kalimba plays between the marimba's notes
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
+        lead: MARIMBA_PULSE,
+        leadVoice: 'marimba',
+        counter: KALIMBA_PULSE,
+        bass: 'sync',
+        drums: 'tribal',
+        fill: 'toms',
+        pad: 'none',
+        layers: { lead: 0.3, counter: 0.2 },
+        enter: { counter: 2 },
+      },
+      {
+        // The temple's stillness: no drums, the backward pad swelling, the bells' opening on the
+        // kalimba
+        name: 'break',
+        tier: 'calm',
+        chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
+        lead: tease(G1_BELLS),
+        leadVoice: 'kalimba',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
       },
     ],
   },
