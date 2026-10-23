@@ -121,6 +121,21 @@ export const KITS = {
     metal: 'clang',
     perc: 'bongo',
   },
+  // The Khmer temple (jungle), after the pinpeat ensemble of Angkor's courts: the chhing's
+  // cups for the hats (struck and pressed, or let ring), the skor's barrel drum for the big one,
+  // the sampho's hand drum for the toms and the small percussion, a temple gong for the crash
+  khmer: {
+    kick: 'kickPunch',
+    snare: 'snare',
+    clap: 'clap',
+    hat: 'chhap',
+    open: 'chhing',
+    crash: 'gong',
+    tom: 'sampho',
+    taiko: 'skor',
+    metal: 'gong',
+    perc: 'sampho',
+  },
   // The factory (warehouse, the boss): a distorted kick, chains for the metal, steam for the clap
   factory: {
     kick: 'kickDistorted',

@@ -324,8 +324,10 @@ const KOTO_RAIN = `Ab5 - - - F5 - Gb5 F5 | Db5 - - - - - - - | F5 - - - Db5 - Eb
                  | C5 - - - - - Db5 C5 | Ab4 - - - G4 - F4 - | E5 - - - G5 - - - | C5 - - - - - - -`;
 
 // ——— Above the Clouds (fuji): D major on the Japanese yo pentatonic, 96 BPM. Dawn over the
-// mountain, the clouds below: a shakuhachi's long notes, each reached by a quick turn, a koto's
-// ostinato, a big pad, the festival drums at the peak ———
+// mountain, the clouds below: a shakuhachi's long notes, each reached by a quick turn it slides
+// through, a koto's ostinato, a big pad on open, suspended chords rather than the West's
+// sevenths, the kabuki's clappers striking faster into the festival drums at the peak, and a
+// valley in the shadow of the in-scale, the darker Japanese mode ———
 
 /** The koto's ostinato: four notes of each chord in eighths, two bars each (D Bm7 G Asus4). */
 const KOTO_DAWN = cycle(
@@ -354,7 +356,7 @@ const V1_DAWN = `A5 - - - - - - - - - - - E5 D5 E5 - | F#5 - - - - - - - - - - -
                | E5 - - - - - - - D5 - - - B4 - A4 - | A4 - - - - - - - . . . . . . . .`;
 
 /**
- * C1, the chorus (D Asus4 Bm7 Em7 Gmaj7 Em7 Asus4 A): a 3+3+2 call climbing the pentatonic to
+ * C1, the chorus (D Asus4 Bm7 Esus4 Gadd9 Em7 Asus4 A): a 3+3+2 call climbing the pentatonic to
  * D6, falling home.
  */
 const C1_DAWN = `D5 - - - - - A5 - - - - - F#5 - - - | E5 - - - - - D5 - - - - - . . . .
@@ -362,15 +364,26 @@ const C1_DAWN = `D5 - - - - - A5 - - - - - F#5 - - - | E5 - - - - - D5 - - - - -
                | G5 - - - - - D6 - - - - - B5 - - - | A5 - - - - - G5 - - - E5 - D5 - - -
                | E5 - - - D5 - - - E5 - - - A5 - - - | A5 - - - - - - - . . . . . . . .`;
 
+/**
+ * The valley (Gsus2 Gsus2 Gm Gm Ebmaj7 Ebmaj7 Dsus4 Asus4): the chorus's opening two bars, then
+ * an answer in the in-scale, falling to the E flat and sighing down its semitone onto D.
+ */
+const VALLEY_SHADOW = `D5 - - - - - A5 - - - - - F#5 - - - | E5 - - - - - D5 - - - - - . . . .
+                     | . . . . Bb5 - - - - - A5 - - - - - | G5 - - - - - - - . . . . . . . .
+                     | G5 - - - - - Eb5 - - - - - D5 - - - | Bb4 - - - - - - - . . . . . . . .
+                     | . . . . A4 - - - - - G4 - - - - - | A4 - - - - - - - . . . . . . . .`;
+
 /** The koto answering C1 in its rests: a pentatonic drop of four notes. */
 const C1_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . A4 F#4 E4 D4
                  | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
                  | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
                  | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . E5 C#5 B4 A4`;
 
-// ——— Firefly Temple (jungle): A dorian, 110 BPM. Night in the jungle, an old temple,
-// fireflies: rhythm at the centre — a marimba on a pulse of three sixteenths across the four
-// beats, a kalimba answering between its notes, hand drums, the temple's gamelan bells ———
+// ——— Firefly Temple (jungle): A dorian, 110 BPM. Night at a Khmer temple in the jungle (Koh
+// Ker), fireflies: a pinpeat ensemble in the game's sound — the roneat's xylophone (the
+// marimba) on a pulse of three sixteenths across the four beats, the kong vong's gong circle
+// (the gamelan) interlocking between its notes, the melody on the pentatonic, the chhing's
+// cymbals keeping time, the skor's barrel drum and the sampho's hand drum ———
 
 /** The marimba: a note every three sixteenths, crossing the bar (Am7 D Am7 D Em7 G Am7 Am7). */
 const MARIMBA_PULSE = pulse(
@@ -382,8 +395,8 @@ const MARIMBA_PULSE = pulse(
   3,
 );
 
-/** The kalimba between the marimba's notes, a sixteenth after each: the two interlock. */
-const KALIMBA_PULSE = pulse(
+/** The gong circle between the marimba's notes, a sixteenth after each: the two interlock. */
+const GONG_PULSE = pulse(
   [
     { cell: ['E5', 'C5', 'D5', 'A4'], bars: 1 },
     { cell: ['D5', 'A4', 'F#4', 'E5'], bars: 1 },
@@ -398,8 +411,18 @@ const KALIMBA_PULSE = pulse(
 );
 
 /**
- * G1, the temple bells on the gamelan (Am7 D Am7 D Cmaj7 G Fmaj7 Am7): repeated notes, fourths,
- * a 3+3+2, up to D6 and home.
+ * F1, the verse's melody (Am7 D Am7 D Em7 G Am7 Am7), below the marimba and on the pentatonic
+ * of the Khmer and their neighbours (A C D E G): a three-note call in 3+3+2, the jungle
+ * answering it from further off — sung on a reedy pulse wave, as the pinpeat's oboe sings.
+ */
+const F1_CALL = `E4 - - G4 - - A4 - . . . . . . . . | . . . . A4 - - E4 - - D4 - - - - -
+               | E4 - - G4 - - C5 - . . . . . . . . | . . . . C5 - - A4 - - E4 - - A4 - -
+               | G4 - - D5 - - E5 - - - - - D5 - A4 - | D5 - - - - - A4 - - G4 - - E4 - - -
+               | . . . . E4 - - G4 - - A4 - - - - - | C5 - - - D5 - - - A4 - - - - - - -`;
+
+/**
+ * G1, the temple bells on the gamelan (Am7 D Am7 D C G Fadd9 Am7): repeated notes, fourths, a
+ * 3+3+2, up to D6 and home.
  */
 const G1_BELLS = `E5 - - - E5 - A5 - | F#5 - - E5 - - D5 - | E5 - - - E5 - C6 - | A5 - - - - - - -
                 | G5 - B5 - D6 - - - | D6 - - B5 - - G5 - | A5 - - - - - E5 G5 | A5 - - - - - - -`;
@@ -974,9 +997,10 @@ const SONG_DEFS: SongDef[] = [
   {
     // Dawn over Fuji, the clouds below: the koto's ostinato and a big pad open it, a shakuhachi
     // sings long notes reached by quick turns, spacious half-time drums in the verse, the festival
-    // beat (matsuri) with the odaiko at the chorus, four bars of drums climbing into it, a gong for
-    // a crash, and a valley where the shakuhachi sings alone. Moving in sixteenths where the match
-    // plays, so 96 BPM never drags a rally
+    // beat (matsuri) — the odaiko's "don", the rim's "ka" — at the chorus, four bars of the
+    // kabuki's clappers striking faster into it, a gong for a crash, and a valley where the
+    // shakuhachi sings alone in the in-scale's shadow. Moving in sixteenths where the match plays,
+    // so 96 BPM never drags a rally
     title: 'Above the Clouds',
     bpm: 96,
     swing: 0,
@@ -988,7 +1012,8 @@ const SONG_DEFS: SongDef[] = [
     // not pulsing with the drums
     room: 'valley',
     pump: 0.2,
-    voices: { lead: 'shakuhachi', counter: 'koto', arp: 'pluck', bass: 'bassFm' },
+    // The shakuhachi slides through its turns, as the flute bends its notes with the breath
+    voices: { lead: 'shakuhachi', counter: 'koto', arp: 'pluck', bass: 'bassFm', glide: 0.04 },
     form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'valley', 'verse2', 'build', 'chorus'],
     sections: [
       {
@@ -1028,13 +1053,14 @@ const SONG_DEFS: SongDef[] = [
         enter: { counter: 2 },
       },
       {
-        // Four bars of drums climbing, a reverse crash into the gong
+        // Four bars of the kabuki's clappers striking faster over the odaiko, a reverse crash into
+        // the gong
         name: 'build',
         tier: 'rise',
         chords: 'G | G | Asus4 | A',
         counter: KOTO_CLIMB,
         bass: 'drive',
-        drums: 'matsuri',
+        drums: 'kabuki',
         fill: 'taiko',
         pad: 'hold',
         riser: true,
@@ -1042,9 +1068,9 @@ const SONG_DEFS: SongDef[] = [
       {
         name: 'chorus',
         tier: 'high',
-        // A chord a bar where the verse holds each for two, and up through E minor the verse
-        // never reaches: the sun clearing the peak
-        chords: 'D | Asus4 | Bm7 | Em7 | Gmaj7 | Em7 | Asus4 | A',
+        // A chord a bar where the verse holds each for two, open and suspended as a koto is tuned,
+        // and up through E the verse never reaches: the sun clearing the peak
+        chords: 'D | Asus4 | Bm7 | Esus4 | Gadd9 | Em7 | Asus4 | A',
         lead: C1_DAWN,
         counter: C1_ANSWER,
         bass: 'drive',
@@ -1055,11 +1081,12 @@ const SONG_DEFS: SongDef[] = [
       },
       {
         // The drums gone: the shakuhachi alone over the pad, the chorus's opening slowly, and the
-        // harmony in the valley's shadow, F sharp minor, before it climbs back to the dawn
+        // valley's shadow — the in-scale on D (D E flat G A B flat), the yo's dark twin: G minor,
+        // E flat, D suspended — before the E of A suspended brings back the dawn
         name: 'valley',
         tier: 'calm',
-        chords: 'Gmaj7 | Gmaj7 | F#m7 | Bm7 | Em7 | Em7 | Asus4 | A',
-        lead: tease(C1_DAWN),
+        chords: 'Gsus2 | Gsus2 | Gm | Gm | Ebmaj7 | Ebmaj7 | Dsus4 | Asus4',
+        lead: VALLEY_SHADOW,
         bass: 'long',
         drums: 'none',
         pad: 'swell',
@@ -1067,41 +1094,46 @@ const SONG_DEFS: SongDef[] = [
     ],
   },
   {
-    // Night in the jungle, an old temple, fireflies: hand drums open it, a kalimba joins; the
-    // marimba strikes a note every three sixteenths, three against four, landing somewhere new
-    // each bar; in the second verse the kalimba plays between its notes, the two interlocking; the
-    // temple's gamelan bells carry the chorus over the marimba; a still break with a swelling,
-    // backward pad. The drums mark the turns, no synth swells
+    // Night at a Khmer temple in the jungle, fireflies: the barrel drum and the hand drum open
+    // it, the gong circle joins; in the verse a reed sings a call and its echo over the marimba,
+    // which strikes a note every three sixteenths, three against four, landing somewhere new each
+    // bar; in the second verse the gongs play between the marimba's notes, the two interlocking
+    // as a pinpeat's do; the temple's bells carry the chorus over the marimba; a still break with
+    // a swelling, backward pad. Every part its own beat, the chhing keeping time in all of them;
+    // the drums mark the turns, no synth swells
     title: 'Firefly Temple',
     bpm: 110,
     swing: 0,
     level: 0.5,
     scene: 'jungle',
-    kit: 'tribal',
+    kit: 'khmer',
     transitions: 'band',
     // A stone temple the hand drums and mallets ring in; no sidechain, the groove is the drums'
     // own
     room: 'stone',
     pump: 0,
-    voices: { lead: 'gamelan', counter: 'kalimba', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
+    voices: { lead: 'gamelan', counter: 'gamelan', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
     form: ['intro', 'verse', 'build', 'chorus', 'verse2', 'break', 'build', 'chorus'],
     sections: [
       {
         name: 'intro',
         tier: 'calm',
         chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
-        counter: KALIMBA_PULSE,
+        counter: GONG_PULSE,
         bass: 'long',
-        drums: 'tribal',
+        drums: 'temple',
         pad: 'swell',
         enter: { counter: 4, bass: 4 },
       },
       {
+        // The call and its echo on the reed, the marimba's pulse under it
         name: 'verse',
         tier: 'groove',
         chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
-        lead: MARIMBA_PULSE,
-        leadVoice: 'marimba',
+        lead: F1_CALL,
+        leadVoice: 'pwm',
+        counter: MARIMBA_PULSE,
+        counterVoice: 'marimba',
         bass: 'sync',
         drums: 'tribal',
         fill: 'taiko',
@@ -1113,7 +1145,7 @@ const SONG_DEFS: SongDef[] = [
         tier: 'rise',
         chords: 'Em7 | G',
         bass: 'gallop',
-        drums: 'tribal',
+        drums: 'stampede',
         fill: 'taiko',
         pad: 'hold',
       },
@@ -1121,26 +1153,26 @@ const SONG_DEFS: SongDef[] = [
         name: 'chorus',
         tier: 'high',
         // The vamp opens out in its second half: C, G and F, the F a step outside the dorian
-        chords: 'Am7 | D | Am7 | D | Cmaj7 | G | Fmaj7 | Am7',
+        chords: 'Am7 | D | Am7 | D | C | G | Fadd9 | Am7',
         lead: G1_BELLS,
         counter: MARIMBA_PULSE,
         counterVoice: 'marimba',
         bass: 'gallop',
-        drums: 'tribal',
+        drums: 'ritual',
         fill: 'taiko',
         pad: 'hold',
         drop: true,
       },
       {
-        // The hocket: the kalimba plays between the marimba's notes
+        // The hocket: the gong circle plays between the marimba's notes
         name: 'verse2',
         tier: 'groove',
         chords: 'Am7 | D | Am7 | D | Em7 | G | Am7 | Am7',
         lead: MARIMBA_PULSE,
         leadVoice: 'marimba',
-        counter: KALIMBA_PULSE,
+        counter: GONG_PULSE,
         bass: 'sync',
-        drums: 'tribal',
+        drums: 'canopy',
         fill: 'toms',
         pad: 'none',
         layers: { lead: 0.3, counter: 0.2 },
@@ -1148,13 +1180,13 @@ const SONG_DEFS: SongDef[] = [
       },
       {
         // The temple's stillness: no drums, the backward pad swelling, the bells' opening on the
-        // kalimba; the dorian's bright F sharp gives way to F, and the harmony steps up from D to
+        // marimba; the dorian's bright F sharp gives way to F, and the harmony steps up from D to
         // the build's E
         name: 'break',
         tier: 'calm',
-        chords: 'Am7 | D | Fmaj7 | Fmaj7 | Cmaj7 | Cmaj7 | Dm7 | Dm7',
+        chords: 'Am7 | D | Fadd9 | Fadd9 | C | C | Dm7 | Dm7',
         lead: tease(G1_BELLS),
-        leadVoice: 'kalimba',
+        leadVoice: 'marimba',
         bass: 'long',
         drums: 'none',
         pad: 'swell',

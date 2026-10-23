@@ -161,7 +161,8 @@ describe('the soundtrack', () => {
 
   // Three tracks built on one template sounded like one song (5.6a): each builds its own frame
   it('gives no two songs the same form, intro, beat at the peak or way up to it', () => {
-    const frames = SONGS.map((song) => {
+    // A sketch has no frame yet, only a hook and its peak
+    const frames = SONGS.filter((song) => !song.sketch).map((song) => {
       const sections = song.form.map((index) => song.sections[index]);
       const intro = sections[0];
       const peak = sections.find((s) => s.tier === 'high')!;
