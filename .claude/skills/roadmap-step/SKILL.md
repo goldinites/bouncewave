@@ -71,6 +71,9 @@ a yes.
 - In `docs/ROADMAP.md` set the step to ✅ with its PR number once known (🔄 while the PR is open).
   Decisions taken during the step go where they live (the roadmap's decisions, `AUDIO.md`,
   `CHALLENGES.md`…), rewritten into the current state; no "done" logs — git and the PR keep them.
+- **Before committing, reread every doc section the step changed** and take out what the new
+  decision replaces: an old number, a rule it overturns, a plan it finished, a line that now
+  contradicts another doc. A section should read as if it had always said what it says now.
 - Commit in the repository's style (see `CLAUDE.md` → Git): one or a few commits that each make
   sense on their own.
 

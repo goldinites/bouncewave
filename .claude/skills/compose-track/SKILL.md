@@ -45,5 +45,10 @@ and a choice, never with a finished track written blind.
   constants.
 - Level it to −25 dB with `npm run loudness -- <id>`; watch it on the stand walk its form and
   reach its chorus on a full climax.
-- Run all checks (`CLAUDE.md`), note the track and the user's choices in `docs/ROADMAP.md` under
-  the 5.6 step, commit (`CLAUDE.md` → Git), and ask for the next one.
+- Write the track into `docs/AUDIO.md` as it now is: its row in the soundtrack table and in
+  "Треки сейчас" (key, melodic gesture and register, beat and kit, room, `pump`, `grit`), so the
+  next track can avoid them; the track's state in `docs/ROADMAP.md`'s "Где сейчас", not a log of
+  how it was chosen.
+- Before committing, reread the doc sections you changed and take out what the new track
+  replaces (the previous track of the backdrop, a rule it overturned, sketches named as pending).
+- Run all checks (`CLAUDE.md`), commit (`CLAUDE.md` → Git), and ask for the next one.
