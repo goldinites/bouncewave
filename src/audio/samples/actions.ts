@@ -328,6 +328,36 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
       );
     },
   },
+  // The Overdrive's small explosion: a dark breath of noise falling from 2.5 kHz, debris crackling
+  // in it, a short room — under the shot, not over it
+  blast: {
+    duration: 0.9,
+    maxRate: RENDER_RATE.MID,
+    variants: 2,
+    build: (ctx, random) => {
+      const fall = filter(ctx, 'lowpass', 2500, 0.7);
+      fall.frequency.setValueAtTime(2500, 0);
+      fall.frequency.exponentialRampToValueAtTime(180, 0.4);
+      const debris = ctx.createGain();
+      debris.gain.setValueAtTime(0, 0);
+      for (let t = 0; t < 0.35; t += 0.008)
+        debris.gain.setValueAtTime(0.5 + 0.5 * random() ** 2, t);
+      chain(
+        noiseSource(ctx, random),
+        fall,
+        debris,
+        hit(ctx, 1, 0.45, 0, 0.01),
+        drive(ctx, 1.5),
+        ctx.destination,
+      );
+      chain(
+        burst(ctx, random, 600, 0.6, 0.06),
+        room(ctx, 0.5, random),
+        level(ctx, 0.4),
+        ctx.destination,
+      );
+    },
+  },
   // The air ringing after a perfect hit: bright noise in a long room
   tail: {
     duration: 1.4,

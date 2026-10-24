@@ -256,11 +256,11 @@ describe('paddle hits from their rendered layers', () => {
     expect(layersOf(picked)).toEqual(['thump', 'wall']);
   });
 
-  it('fires an Overdrive as a crack, a laser shot, an arc and a neon tube, the music dipping', () => {
+  it('fires an Overdrive as a crack, a blast, a laser shot, an arc and a neon tube', () => {
     const { sfx, picked, ducks, carves } = setup();
 
     sfx.playPowerShot(4);
-    expect(picked).toEqual(expect.arrayContaining(['crack', 'pew', 'arc', 'tube']));
+    expect(picked).toEqual(expect.arrayContaining(['crack', 'blast', 'pew', 'arc', 'tube']));
     expect(ducks).toEqual([1]);
     expect(carves).toEqual([1]);
   });

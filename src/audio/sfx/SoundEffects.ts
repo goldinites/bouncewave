@@ -51,9 +51,11 @@ const HIT_MIX = {
   // The Overdrive's power shot, this much louder than a perfect hit: a weapon of neon,
   // electricity and laser (the user, 24.10.2026) — the sound barrier cracking at the contact, a
   // laser shot diving onto the note leading, an electric arc buzzing on under it, a neon tube lit
-  // on the note and an octave above, over a perfect hit
+  // on the note and an octave above, over a perfect hit; a small explosion under it all (the
+  // user: organic, not overdone)
   POWER: {
     LEVEL: 2,
+    BLAST: 0.18,
     CRACK: 0.5,
     BODY: 0.6, // share of a perfect hit's bodies
     PEW: 0.55,
@@ -371,6 +373,7 @@ export class SoundEffects {
       { shot: 'thump', gain: PERFECT.THUMP },
       { shot: 'boom', gain: PERFECT.BOOM },
       { shot: 'spark', gain: PERFECT.SPARK },
+      { shot: 'blast', gain: POWER.BLAST },
       { tuned: 'pew', note, gain: POWER.PEW },
       { tuned: 'arc', note, gain: POWER.ARC, cut: POWER.ARC_CUT },
       { tuned: 'tube', note, gain: POWER.TUBE },
