@@ -57,7 +57,14 @@ export const STAND_SOUNDS: readonly StandSound[] = [
     every: 0.32,
   },
   { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4, -0.9) },
-  { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
+  // The meter's chime, sketches; the last one played stays for the match
+  ...(['charge', 'armed', 'neon', 'lock'] as const).map((style) => ({
+    name: `od ready ${style}`,
+    play: (sfx: SoundEffects) => {
+      sfx.readyStyle = style;
+      sfx.playOverdriveReady(-0.9);
+    },
+  })),
   { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
   {
     // A rally's walls and hits as they come: hit, wall, hit

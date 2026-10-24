@@ -179,6 +179,18 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
       chain(burst(ctx, random, 5000, 0.8, 0.004), ctx.destination);
     },
   },
+  // A laser sight's tone: a pure sine on the note with a quick vibrato, for a lock-on
+  beam: {
+    roots: OCTAVE_ROOTS,
+    maxRate: RENDER_RATE.HIGH,
+    duration: 0.35,
+    build: (ctx, _random, f) => {
+      const tone = osc(ctx, 'sine', f);
+      chain(osc(ctx, 'sine', 9), level(ctx, f * 0.01)).connect(tone.frequency);
+      chain(tone, hit(ctx, 1, 0.3, 0, 0.004), ctx.destination);
+      chain(osc(ctx, 'triangle', f * 2), hit(ctx, 0.2, 0.15), ctx.destination);
+    },
+  },
   // A wall: a muted knock on the chord's fifth, low and short, under the paddles' ring
   wall: {
     roots: [47, 53, 59],
@@ -356,6 +368,30 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
         level(ctx, 0.4),
         ctx.destination,
       );
+    },
+  },
+  // A weapon armed: two mechanical clicks, a latch and its catch, with a knock under each
+  arm: {
+    duration: 0.2,
+    variants: 2,
+    build: (ctx, random) => {
+      for (const [time, hz] of [
+        [0, 2600],
+        [0.07, 3400],
+      ]) {
+        const click = chain(noiseSource(ctx, random), filter(ctx, 'bandpass', hz, 1.2));
+        const gate = ctx.createGain();
+        gate.gain.setValueAtTime(0, 0);
+        gate.gain.setValueAtTime(1, time);
+        gate.gain.exponentialRampToValueAtTime(0.0001, time + 0.008);
+        chain(click, gate, ctx.destination);
+        const knock = osc(ctx, 'sine', jitter(random, 900, 0.05));
+        const knockGate = ctx.createGain();
+        knockGate.gain.setValueAtTime(0, 0);
+        knockGate.gain.setValueAtTime(0.5, time);
+        knockGate.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
+        chain(knock, knockGate, ctx.destination);
+      }
     },
   },
   // The air ringing after a perfect hit: bright noise in a long room

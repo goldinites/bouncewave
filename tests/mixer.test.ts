@@ -273,6 +273,20 @@ describe('paddle hits from their rendered layers', () => {
     expect(picked).toEqual(expect.arrayContaining(['whine', 'tube']));
   });
 
+  it('arms, lights or locks on for the meter’s chime, by its style', () => {
+    const { sfx, picked } = setup();
+    const heard = (style: typeof sfx.readyStyle) => {
+      picked.length = 0;
+      sfx.readyStyle = style;
+      sfx.playOverdriveReady();
+      return picked;
+    };
+
+    expect(heard('armed')).toEqual(expect.arrayContaining(['arm', 'arc', 'tube']));
+    expect(heard('neon').filter((id) => id === 'tube')).toHaveLength(3);
+    expect(heard('lock').filter((id) => id === 'beam')).toHaveLength(2);
+  });
+
   it('plays the live synth until the layers are rendered', () => {
     const { sfx, calls } = setup({ rendered: false });
 
