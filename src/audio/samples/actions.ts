@@ -115,7 +115,7 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
   // The Overdrive's laser shot, its lead voice: a saw and a square diving from far above onto the
   // note, a filter closing over them, a click dispersed into a chirp under them — the blaster's
   pew: {
-    roots: BODY_ROOTS,
+    roots: OCTAVE_ROOTS,
     maxRate: RENDER_RATE.HIGH,
     duration: 0.45,
     build: (ctx, random, f) => {
@@ -125,7 +125,7 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
       close.frequency.exponentialRampToValueAtTime(2000, 0.3);
       chain(sweep(ctx, 'sawtooth', f * 12, f, fall), close);
       chain(sweep(ctx, 'square', f * 8, f / 2, fall), level(ctx, 0.5), close);
-      chain(close, drive(ctx, 2.5), hit(ctx, 1, 0.4, 0, 0.001), ctx.destination);
+      chain(close, drive(ctx, 4), hit(ctx, 1, 0.4, 0, 0.001), ctx.destination);
       const [input, output] = disperse(ctx, f * 5, 40);
       chain(noiseSource(ctx, random), hit(ctx, 1, 0.002), input);
       chain(output, filter(ctx, 'highpass', f), level(ctx, 0.6), ctx.destination);
@@ -174,8 +174,9 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
       const hum = level(ctx, 0.5);
       chain(osc(ctx, 'sine', f), hum);
       chain(osc(ctx, 'sine', f * 2), level(ctx, 0.5), hum);
-      chain(osc(ctx, 'square', f), filter(ctx, 'bandpass', f * 3, 2), level(ctx, 0.3), hum);
-      chain(hum, flicker, hit(ctx, 1, 0.6, 0, 0.003), ctx.destination);
+      chain(osc(ctx, 'square', f), filter(ctx, 'bandpass', f * 3, 2), level(ctx, 0.45), hum);
+      chain(osc(ctx, 'sine', f * 4), level(ctx, 0.15), hum);
+      chain(hum, flicker, drive(ctx, 2), hit(ctx, 1, 0.6, 0, 0.003), ctx.destination);
       chain(burst(ctx, random, 5000, 0.8, 0.004), ctx.destination);
     },
   },

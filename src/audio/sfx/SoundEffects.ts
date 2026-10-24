@@ -54,7 +54,8 @@ const HIT_MIX = {
   // on the note and an octave above, over a perfect hit; a small explosion under it all (the
   // user: organic, not overdone)
   POWER: {
-    LEVEL: 2,
+    LEVEL: 4,
+    HIGH_PEW: 0.25,
     BLAST: 0.28,
     CRACK: 0.5,
     BODY: 0.6, // share of a perfect hit's bodies
@@ -69,7 +70,8 @@ const HIT_MIX = {
   // laser sight's two beeps rising, then the chord lit tone by tone as neon tubes sparking, an arc
   // humming on the root under it all; below a hit, s for the times
   READY: {
-    LEVEL: -2,
+    LEVEL: 0,
+    HIGH_TUBE: 0.2,
     ARM: 0.45,
     HUM: 0.18,
     HUM_FOR: 0.5,
@@ -90,6 +92,9 @@ const HIT_MIX = {
   JITTER: { RATE: 0.04, GAIN: 0.1 },
   // How fast a layer heard only as an attack fades once cut, time constant in s
   CUT_FADE: 0.03,
+  // A wide layer: a copy either side of where it sounds, this far apart, this much out of tune
+  // (a share of its pitch, about 9 cents), each at this share of its gain
+  WIDE: { PAN: 0.7, DETUNE: 0.005, GAIN: 0.75 },
   // How far across the stereo field a hit at the court's edge sits
   PAN: 0.6,
 } as const;
@@ -122,7 +127,7 @@ export interface HitFeel {
 
 /** One rendered layer to play: a tuned body at a note, or a one-shot. */
 type Layer =
-  | { tuned: string; note: number; gain: number; cut?: number; delay?: number }
+  | { tuned: string; note: number; gain: number; cut?: number; delay?: number; wide?: boolean }
   | { shot: string; gain: number; rate?: number; delay?: number };
 
 /** Which of the mixer's buses a sound plays on. */
@@ -317,7 +322,24 @@ export class SoundEffects {
     for (const layer of layers) {
       if ('tuned' in layer) {
         const tuned = samples.pickNote(layer.tuned, layer.note);
-        if (tuned) this.layer({ ...at, ...layer, buffer: tuned.buffer, rate: tuned.rate });
+        if (!tuned) continue;
+        const { buffer, rate } = tuned;
+        if (!layer.wide) {
+          this.layer({ ...at, ...layer, buffer, rate });
+          continue;
+        }
+        // Wide: a copy either side, a hair apart in pitch, so it fills the whole field
+        const { PAN, DETUNE, GAIN } = HIT_MIX.WIDE;
+        for (const side of [-1, 1]) {
+          this.layer({
+            ...at,
+            ...layer,
+            buffer,
+            rate: rate * (1 + side * DETUNE),
+            gain: layer.gain * GAIN,
+            pan: clamp(at.pan + side * PAN, -1, 1),
+          });
+        }
       } else {
         const buffer = samples.pick(layer.shot);
         const rate = (layer.rate ?? 1) * this.jitter(HIT_MIX.JITTER.RATE);
@@ -389,10 +411,11 @@ export class SoundEffects {
       { shot: 'boom', gain: PERFECT.BOOM },
       { shot: 'spark', gain: PERFECT.SPARK },
       { shot: 'blast', gain: POWER.BLAST },
-      { tuned: 'pew', note, gain: POWER.PEW },
-      { tuned: 'arc', note, gain: POWER.ARC, cut: POWER.ARC_CUT },
-      { tuned: 'tube', note, gain: POWER.TUBE },
-      { tuned: 'tube', note: note + 12, gain: POWER.HIGH_TUBE },
+      { tuned: 'pew', note, gain: POWER.PEW, wide: true },
+      { tuned: 'pew', note: note + 12, gain: POWER.HIGH_PEW, wide: true },
+      { tuned: 'arc', note, gain: POWER.ARC, cut: POWER.ARC_CUT, wide: true },
+      { tuned: 'tube', note, gain: POWER.TUBE, wide: true },
+      { tuned: 'tube', note: note + 12, gain: POWER.HIGH_TUBE, wide: true },
       { shot: 'tail', gain: PERFECT.TAIL },
     ];
     const level = HIT_MIX.LEVEL + HIT_MIX.PERFECT_LEVEL + POWER.LEVEL;
@@ -415,7 +438,14 @@ export class SoundEffects {
     const lit = (step: number) => READY.LIGHT + step * READY.STEP;
     return [
       { shot: 'arm', gain: READY.ARM },
-      { tuned: 'arc', note: tone(1) - 12, gain: READY.HUM, delay: READY.LOCK, cut: READY.HUM_FOR },
+      {
+        tuned: 'arc',
+        note: tone(1) - 12,
+        gain: READY.HUM,
+        delay: READY.LOCK,
+        cut: READY.HUM_FOR,
+        wide: true,
+      },
       { tuned: 'beam', note: tone(1), gain: READY.BEAM, delay: READY.LOCK, cut: READY.BEEP },
       {
         tuned: 'beam',
@@ -424,12 +454,21 @@ export class SoundEffects {
         delay: READY.LOCK + READY.LOCK_STEP,
         cut: READY.BEEP,
       },
-      ...[0, 1, 2].map((step) => ({
-        tuned: 'tube',
-        note: tone(step + 1),
-        gain: READY.TUBE,
-        delay: lit(step),
-      })),
+      ...[0, 1, 2].flatMap((step) => [
+        { tuned: 'tube', note: tone(step + 1), gain: READY.TUBE, delay: lit(step), wide: true },
+        // The last tube glows an octave higher too, the chime's peak
+        ...(step === 2
+          ? [
+              {
+                tuned: 'tube',
+                note: tone(3) + 12,
+                gain: READY.HIGH_TUBE,
+                delay: lit(2),
+                wide: true,
+              },
+            ]
+          : []),
+      ]),
       { shot: 'spark', gain: READY.SPARK, delay: lit(0) },
       { shot: 'spark', gain: READY.SPARK, delay: lit(2) },
     ];

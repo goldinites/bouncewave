@@ -270,7 +270,8 @@ describe('paddle hits from their rendered layers', () => {
 
     sfx.playOverdriveReady();
     expect(picked).toEqual(expect.arrayContaining(['arm', 'arc', 'spark']));
-    expect(picked.filter((id) => id === 'tube')).toHaveLength(3);
+    // Three tubes up the chord, the last one an octave higher too
+    expect(picked.filter((id) => id === 'tube')).toHaveLength(4);
     expect(picked.filter((id) => id === 'beam')).toHaveLength(2);
   });
 
