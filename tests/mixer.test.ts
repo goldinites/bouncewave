@@ -265,26 +265,13 @@ describe('paddle hits from their rendered layers', () => {
     expect(carves).toEqual([1]);
   });
 
-  it('charges up the chord when the Overdrive meter fills', () => {
+  it('arms, lights the chord in neon and locks on when the Overdrive meter fills', () => {
     const { sfx, picked } = setup();
 
     sfx.playOverdriveReady();
-    expect(picked.filter((id) => id === 'body.neon')).toHaveLength(4);
-    expect(picked).toEqual(expect.arrayContaining(['whine', 'tube']));
-  });
-
-  it('arms, lights or locks on for the meter’s chime, by its style', () => {
-    const { sfx, picked } = setup();
-    const heard = (style: typeof sfx.readyStyle) => {
-      picked.length = 0;
-      sfx.readyStyle = style;
-      sfx.playOverdriveReady();
-      return picked;
-    };
-
-    expect(heard('armed')).toEqual(expect.arrayContaining(['arm', 'arc', 'tube']));
-    expect(heard('neon').filter((id) => id === 'tube')).toHaveLength(3);
-    expect(heard('lock').filter((id) => id === 'beam')).toHaveLength(2);
+    expect(picked).toEqual(expect.arrayContaining(['arm', 'arc', 'spark']));
+    expect(picked.filter((id) => id === 'tube')).toHaveLength(3);
+    expect(picked.filter((id) => id === 'beam')).toHaveLength(2);
   });
 
   it('plays the live synth until the layers are rendered', () => {

@@ -306,40 +306,6 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
       );
     },
   },
-  // The Overdrive charged: a capacitor's whine rising fast, rippling, crackling as it climbs
-  whine: {
-    duration: 0.4,
-    maxRate: RENDER_RATE.HIGH,
-    variants: 2,
-    build: (ctx, random) => {
-      const ripple = ctx.createGain();
-      ripple.gain.value = 0.6;
-      chain(osc(ctx, 'sine', 32), level(ctx, 0.4)).connect(ripple.gain);
-      const swell = ctx.createGain();
-      swell.gain.setValueAtTime(0.0001, 0);
-      swell.gain.exponentialRampToValueAtTime(1, 0.28);
-      swell.gain.exponentialRampToValueAtTime(0.0001, 0.36);
-      chain(
-        sweep(ctx, 'sine', jitter(random, 500, 0.05), 4500, 0.3),
-        ripple,
-        swell,
-        drive(ctx, 1.6),
-        ctx.destination,
-      );
-      const crackle = ctx.createGain();
-      crackle.gain.setValueAtTime(0, 0);
-      for (let t = 0.05; t < 0.3; t += 0.006)
-        crackle.gain.setValueAtTime(random() ** 3 * (t / 0.3), t);
-      crackle.gain.setValueAtTime(0, 0.3);
-      chain(
-        noiseSource(ctx, random),
-        filter(ctx, 'highpass', 4000),
-        crackle,
-        level(ctx, 0.5),
-        ctx.destination,
-      );
-    },
-  },
   // The Overdrive's small explosion: a dark breath of noise falling from 2.5 kHz, debris crackling
   // in it, a short room — under the shot, not over it
   blast: {

@@ -64,13 +64,22 @@ const HIT_MIX = {
     TUBE: 0.3,
     HIGH_TUBE: 0.15,
   },
-  // The meter filling, the Overdrive's weapon charged: a capacitor's whine rising, three quick
-  // pings climbing the chord as it peaks, a neon tube lighting on the top one; below a hit
-  READY: { LEVEL: -2, WHINE: 0.35, PING: 0.4, TUBE: 0.25, START: 0.2, STEP: 0.05, LOCK: 0.25 },
-  // Sketches of the meter filling (see `ReadyStyle`): the weapon armed, the neon lit, a lock-on
-  ARMED: { ARM: 0.5, HUM: 0.3, HUM_FROM: 0.08, HUM_FOR: 0.4, TUBE: 0.2 },
-  NEON: { TUBE: 0.35, STEP: 0.07, SPARK: 0.12 },
-  LOCK: { BEAM: 0.35, BEEP: 0.09, GAP: 0.12, ARC: 0.15 },
+  // The meter filling, the Overdrive's weapon ready (the user: the armed, neon and lock-on
+  // sketches in one): the weapon cocked in two clicks, an arc humming on the root under it, the
+  // chord lit tone by tone as neon tubes sparking, a laser sight's two beeps rising with the
+  // first tube and the last; below a hit, s for the times
+  READY: {
+    LEVEL: -2,
+    ARM: 0.45,
+    HUM: 0.22,
+    HUM_FOR: 0.4,
+    TUBE: 0.25,
+    SPARK: 0.1,
+    BEAM: 0.25,
+    BEEP: 0.09,
+    LIGHT: 0.1, // the first tube lit, after the clicks
+    STEP: 0.07, // between the tubes
+  },
   // A wall: a muted knock, well under a paddle's hit
   WALL: { LEVEL: -5, KNOCK: 0.5, THUMP: 0.12 },
   // The opponent's click a little darker, so the two sides answer each other
@@ -109,14 +118,6 @@ export interface HitFeel {
   force?: number;
 }
 
-/**
- * The Overdrive meter filling, sketches on the stand: `charge` the capacitor's whine into the
- * chord's pings and the tube; `armed` the weapon cocked, two clicks and an arc humming on the
- * root; `neon` the chord lit tone by tone as neon tubes, sparking; `lock` a laser sight locking on
- * in two rising beeps, the arc crackling under the last.
- */
-export type ReadyStyle = 'charge' | 'armed' | 'neon' | 'lock';
-
 /** One rendered layer to play: a tuned body at a note, or a one-shot. */
 type Layer =
   | { tuned: string; note: number; gain: number; cut?: number; delay?: number }
@@ -133,8 +134,6 @@ export class SoundEffects {
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
   private heatGetter: () => number;
-  /** The meter's chime (sketches, on the stand). */
-  public readyStyle: ReadyStyle = 'charge';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -407,58 +406,25 @@ export class SoundEffects {
     this.beep(freq * 2, 0.4, 'sine', 0.05);
   }
 
-  /** The meter's chime in its style, on the chord the music is on. */
+  /** The meter's chime on the chord the music is on: armed, lit, locked on. */
   private readyLayers(harmony: Harmony | null): Layer[] {
-    const { READY, ARMED, NEON, LOCK } = HIT_MIX;
+    const { READY } = HIT_MIX;
     const tone = (step: number) => getRallyNote(harmony, step) + 12;
-    switch (this.readyStyle) {
-      case 'charge':
-        return [
-          { shot: 'whine', gain: READY.WHINE },
-          ...[0, 1, 2].map((step) => ({
-            tuned: HIT_BODIES[0].id,
-            note: tone(step + 1),
-            gain: READY.PING,
-            delay: READY.START + step * READY.STEP,
-          })),
-          {
-            tuned: 'tube',
-            note: tone(3),
-            gain: READY.TUBE,
-            delay: READY.START + 2 * READY.STEP,
-            cut: READY.LOCK,
-          },
-        ];
-      case 'armed':
-        return [
-          { shot: 'arm', gain: ARMED.ARM },
-          {
-            tuned: 'arc',
-            note: tone(1) - 12,
-            gain: ARMED.HUM,
-            delay: ARMED.HUM_FROM,
-            cut: ARMED.HUM_FOR,
-          },
-          { tuned: 'tube', note: tone(1), gain: ARMED.TUBE, delay: ARMED.HUM_FROM },
-        ];
-      case 'neon':
-        return [
-          ...[0, 1, 2].map((step) => ({
-            tuned: 'tube',
-            note: tone(step + 1),
-            gain: NEON.TUBE,
-            delay: step * NEON.STEP,
-          })),
-          { shot: 'spark', gain: NEON.SPARK },
-          { shot: 'spark', gain: NEON.SPARK, delay: 2 * NEON.STEP },
-        ];
-      case 'lock':
-        return [
-          { tuned: 'beam', note: tone(1), gain: LOCK.BEAM, cut: LOCK.BEEP },
-          { tuned: 'beam', note: tone(3), gain: LOCK.BEAM, delay: LOCK.GAP },
-          { tuned: 'arc', note: tone(3) - 12, gain: LOCK.ARC, delay: LOCK.GAP, cut: 0.2 },
-        ];
-    }
+    const lit = (step: number) => READY.LIGHT + step * READY.STEP;
+    return [
+      { shot: 'arm', gain: READY.ARM },
+      { tuned: 'arc', note: tone(1) - 12, gain: READY.HUM, delay: lit(0), cut: READY.HUM_FOR },
+      ...[0, 1, 2].map((step) => ({
+        tuned: 'tube',
+        note: tone(step + 1),
+        gain: READY.TUBE,
+        delay: lit(step),
+      })),
+      { shot: 'spark', gain: READY.SPARK, delay: lit(0) },
+      { shot: 'spark', gain: READY.SPARK, delay: lit(2) },
+      { tuned: 'beam', note: tone(1), gain: READY.BEAM, delay: lit(0), cut: READY.BEEP },
+      { tuned: 'beam', note: tone(3), gain: READY.BEAM, delay: lit(2) },
+    ];
   }
 
   /** A ball sent off spinning (Arc): a whistle, higher the harder it curves, `strength` in [0, 1]. */
@@ -481,8 +447,8 @@ export class SoundEffects {
   }
 
   /**
-   * The Overdrive meter just filled, its weapon charged: a capacitor's whine rising, three quick
-   * pings climbing the chord the music is on as it peaks, a neon tube lighting on the top one.
+   * The Overdrive meter just filled, its weapon ready: cocked in two clicks, the chord lit as
+   * neon tubes, a laser sight locking on.
    */
   public playOverdriveReady(pan = 0): void {
     const harmony = this.harmonyGetter();
