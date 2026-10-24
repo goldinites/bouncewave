@@ -5,7 +5,9 @@ import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { MINOR_TRIAD } from '@/audio/music/theory';
 import { SampleBank } from '@/audio/samples/SampleBank';
+import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
 import { heatLevel, SoundEffects } from '@/audio/sfx/SoundEffects';
+import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
 
 const callsOf = (calls: AudioCall[], method: string) => calls.filter((c) => c.method === method);
@@ -192,8 +194,8 @@ describe('SoundEffects on the mixer', () => {
   });
 });
 
-describe('paddle hits from their rendered layers', () => {
-  // The sounds a hit picked, each once, sorted: the check that the layers are rendered aside
+describe('the paddle hits and the layered sounds', () => {
+  // The sounds a layered sound picked, each once, sorted: the check that they are rendered aside
   const layersOf = (picked: string[]) => [...new Set(picked.slice(1))].sort();
 
   const setup = ({ rendered = true } = {}) => {
@@ -221,32 +223,46 @@ describe('paddle hits from their rendered layers', () => {
     return { sfx, calls, carves, ducks, picked };
   };
 
-  it('layers a click, the neon body with the steel’s edge and a thump, the opponent its twins', () => {
-    const { sfx, picked } = setup();
-
-    sfx.playPaddleHit(1, false, 0);
-    expect(layersOf(picked)).toEqual(['body.neon', 'body.steel', 'click.steel', 'thump']);
-    picked.length = 0;
-    sfx.playPaddleHit(1, false, 1);
-    expect(layersOf(picked)).toEqual(['body.neon.cpu', 'body.steel.cpu', 'click.steel', 'thump']);
-  });
-
-  it('throws sparks off a hard hit and carves the music deeper', () => {
-    const { sfx, picked, carves } = setup();
+  it('beeps a hit, snapping onto its note, brighter and carving deeper the harder', () => {
+    const { sfx, calls, picked, carves } = setup();
+    // The mixer's own filters aside
+    const filters = callsOf(calls, 'createBiquadFilter').length;
 
     sfx.playPaddleHit(1, false, 0, { force: 0 });
-    expect(picked).not.toContain('spark');
-    sfx.playPaddleHit(1, false, 0, { force: 1 });
-    expect(picked).toContain('spark');
+    sfx.playPaddleHit(1, false, 1, { force: 1 });
+    expect(picked).toEqual([]);
+    expect(callsOf(calls, 'createOscillator')).toHaveLength(2);
+    // Each tone starts above its note and drops onto it
+    const note = midiToFrequency(getRallyNote({ root: 33, chord: MINOR_TRIAD }, 1));
+    const ramps = callsOf(calls, 'exponentialRampToValueAtTime').map((c) => c.args[0]);
+    expect(ramps.filter((value) => value === note)).toHaveLength(2);
+    expect(callsOf(calls, 'createBiquadFilter')).toHaveLength(filters + 2);
     expect(carves).toEqual([0.5, 1]);
   });
 
-  it('drops a boom and a ringing tail under a perfect hit, the music dipping', () => {
-    const { sfx, picked, ducks } = setup();
+  it('rings out a perfect hit with a punch under it, the music dipping', () => {
+    const { sfx, calls, ducks, picked } = setup();
 
     sfx.playPaddleHit(3, true, 0);
-    expect(picked).toEqual(expect.arrayContaining(['boom', 'tail', 'spark']));
+    // The sine, its octave and a glint, and the punch's 8-bit kick; its noise channel's crack
+    expect(callsOf(calls, 'createOscillator')).toHaveLength(4);
+    expect(callsOf(calls, 'createBufferSource')).toHaveLength(1);
     expect(ducks).toEqual([0.6]);
+    expect(picked).toEqual([]);
+    sfx.playPaddleHit(3, true, 0);
+    // Its noise is rendered once
+    expect(callsOf(calls, 'createBuffer')).toHaveLength(1);
+  });
+
+  it('climbs a rally two octaves on the stand’s asking, as the old beeps did', () => {
+    const { sfx, calls } = setup();
+    const harmony = { root: 33, chord: MINOR_TRIAD };
+
+    sfx.setRallyClimbing(true);
+    sfx.playPaddleHit(5);
+    const ramps = callsOf(calls, 'exponentialRampToValueAtTime').map((c) => c.args[0]);
+    expect(ramps).toContain(midiToFrequency(getClimbingRallyNote(harmony, 5)));
+    expect(sfx.isRallyClimbing).toBe(true);
   });
 
   it('knocks a wall in its own muted voice, well under a hit', () => {
@@ -260,7 +276,9 @@ describe('paddle hits from their rendered layers', () => {
     const { sfx, picked, ducks, carves } = setup();
 
     sfx.playPowerShot(4);
-    expect(picked).toEqual(expect.arrayContaining(['crack', 'blast', 'pew', 'arc', 'tube']));
+    expect(picked).toEqual(
+      expect.arrayContaining(['click.steel', 'body.neon', 'crack', 'blast', 'pew', 'arc', 'tube']),
+    );
     expect(ducks).toEqual([1]);
     expect(carves).toEqual([1]);
   });
@@ -278,66 +296,29 @@ describe('paddle hits from their rendered layers', () => {
   it('plays the live synth until the layers are rendered', () => {
     const { sfx, calls } = setup({ rendered: false });
 
-    sfx.playPaddleHit(1);
+    sfx.playWallBounce();
     expect(callsOf(calls, 'createOscillator').length).toBeGreaterThan(0);
     expect(callsOf(calls, 'createBufferSource')).toEqual([]);
   });
 
-  it('plays a beep sketch in place of the layers once one is chosen', () => {
-    const { sfx, calls, picked, carves } = setup();
-
-    for (const hit of ['clean', 'snap', 'chip'] as const) {
-      sfx.setHitSketches({ hit });
-      sfx.playPaddleHit(1, false, 0, { force: 1 });
-    }
-    expect(picked).toEqual([]);
-    expect(callsOf(calls, 'createOscillator')).toHaveLength(3);
-    // Only the chip's player plays a pulse; its opponent keeps the triangle
-    expect(callsOf(calls, 'setPeriodicWave')).toHaveLength(1);
-    sfx.playPaddleHit(1, false, 1);
-    expect(callsOf(calls, 'setPeriodicWave')).toHaveLength(1);
-    expect(carves).toEqual([1, 1, 1, 0.75]);
-
-    // The perfect hit stays layered until a perfect sketch is chosen
-    sfx.playPaddleHit(1, true, 0);
-    expect(picked).not.toEqual([]);
-  });
-
-  it('shines or flicks an arpeggio up on a perfect hit, the music dipping', () => {
-    const { sfx, calls, ducks } = setup();
-
-    sfx.setHitSketches({ perfect: 'shine' });
-    sfx.playPaddleHit(1, true, 0);
-    expect(callsOf(calls, 'createOscillator')).toHaveLength(3);
-    sfx.setHitSketches({ perfect: 'arp' });
-    sfx.playPaddleHit(1, true, 0);
-    expect(callsOf(calls, 'createOscillator')).toHaveLength(7);
-    expect(ducks).toEqual([0.6, 0.6]);
-
-    // The punch lands under it: an 8-bit kick and the noise channel's crack
-    sfx.setHitSketches({ punch: true });
-    sfx.playPaddleHit(1, true, 0);
-    expect(callsOf(calls, 'createOscillator')).toHaveLength(12);
-    expect(callsOf(calls, 'createBufferSource')).toHaveLength(1);
-    sfx.playPaddleHit(1, true, 0);
-    // Its noise is rendered once
-    expect(callsOf(calls, 'createBuffer')).toHaveLength(1);
-  });
-
-  it('plays the old live synth on the stand’s asking, the layers rendered or not', () => {
+  it('plays the old sounds on the stand’s asking, the layers rendered or not', () => {
     const { sfx, calls, picked } = setup();
+    const filters = callsOf(calls, 'createBiquadFilter').length;
 
     sfx.playAsSynth(() => {
       sfx.playPaddleHit(1);
+      sfx.playPaddleHit(1, true);
       sfx.playPowerShot(1);
       sfx.playOverdriveReady();
       sfx.playWallBounce();
     });
     expect(picked).toEqual([]);
+    // The old hits were plain beeps: no lowpass, no punch
+    expect(callsOf(calls, 'createBiquadFilter')).toHaveLength(filters);
     expect(callsOf(calls, 'createBufferSource')).toEqual([]);
     expect(callsOf(calls, 'createOscillator').length).toBeGreaterThan(0);
 
-    sfx.playPaddleHit(1);
+    sfx.playWallBounce();
     expect(picked).not.toEqual([]);
   });
 });
@@ -382,7 +363,7 @@ describe('action sounds with the music’s heat', () => {
     expect(heatLevel(1)).toBe(4);
   });
 
-  it('play a hit louder when the music is hotter', () => {
+  it('play a layered sound louder when the music is hotter', () => {
     const hitGain = (heat: number) => {
       const { ctx } = fakeAudioContext(1);
       const buffer = {} as AudioBuffer;
@@ -419,11 +400,37 @@ describe('action sounds with the music’s heat', () => {
         () => heat,
       );
       vi.spyOn(Math, 'random').mockReturnValue(0.5);
-      sfx.playPaddleHit(1);
+      sfx.playWallBounce();
       vi.restoreAllMocks();
       return Math.max(...gains);
     };
 
     expect(hitGain(1) / hitGain(0)).toBeCloseTo(dbToGain(7), 2);
+  });
+
+  it('play a paddle hit louder when the music is hotter', () => {
+    const hitVolume = (heat: number) => {
+      const { ctx, calls } = fakeAudioContext(1);
+      const sfx = new SoundEffects(
+        () => ctx,
+        () => false,
+        () => true,
+        () => ({ root: 33, chord: MINOR_TRIAD }),
+        () => null,
+        () => null,
+        () => heat,
+      );
+      vi.spyOn(Math, 'random').mockReturnValue(0.5);
+      sfx.playPaddleHit(1);
+      vi.restoreAllMocks();
+      // The levels the tone is struck at, under the frequencies it is set to
+      return Math.max(
+        ...callsOf(calls, 'setValueAtTime')
+          .map((c) => c.args[0] as number)
+          .filter((value) => value < 1),
+      );
+    };
+
+    expect(hitVolume(1) / hitVolume(0)).toBeCloseTo(dbToGain(7), 2);
   });
 });

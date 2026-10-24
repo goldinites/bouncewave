@@ -50,7 +50,7 @@ those modifiers (ids in `src/match/modifiers/Modifier.ts`), also switched in the
 (`part=whole-form` plays the whole form in order, peaks included; `&lead=sax`, `&bass=bassSlap`,
 `&pad=strings`, `&kit=japan` swap the lead, bass, pad and kit on any song (the wider palette,
 `src/audio/music/palette.ts`); the debug overlay's sound stand, which also plays every action sound; song ids are titles in kebab case);
-`?hits=snap&perfect=shine&punch&climb` plays the paddle hits' sketches, in a match too (`HIT_SKETCHES` in `src/audio/sfx/SoundEffects.ts`);
+`&climb` lets a rally climb two octaves, in a match too;
 `?tutorial=perfect` starts the tutorial at that step (ids in `src/match/tutorial.ts`).
 
 ## Architecture

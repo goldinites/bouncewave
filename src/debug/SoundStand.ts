@@ -13,13 +13,7 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
-import {
-  HIT_SKETCHES,
-  HitSketch,
-  PERFECT_SKETCHES,
-  PerfectSketch,
-  SoundEffects,
-} from '@/audio/sfx/SoundEffects';
+import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -32,7 +26,7 @@ const TIER_COLOURS: Record<Tier, string> = {
 };
 const BEATS_PER_BAR = STEPS_PER_BAR / 4;
 // The address's flags, kept bare (`?debug&climb`) rather than `debug=`
-const BARE_PARAMS = /([?&])(debug|climb|punch)=(?=&|$)/g;
+const BARE_PARAMS = /([?&])(debug|climb)=(?=&|$)/g;
 
 /** A sound of the game's, or a series of it, as the stand plays it. */
 interface StandSound {
@@ -132,12 +126,7 @@ export class SoundStand {
   /** The playing song's form, one segment a step, wide as its bars. */
   private readonly timeline: HTMLElement;
   private timelineSong: string | null = null;
-  private hitSketchControls: {
-    hit: HTMLSelectElement;
-    perfect: HTMLSelectElement;
-    climb: HTMLInputElement;
-    punch: HTMLInputElement;
-  } | null = null;
+  private climbBox: HTMLInputElement | null = null;
   private readonly layerBoxes = new Map<MusicLayer, HTMLInputElement>();
   private readonly listeners = new AbortController();
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
@@ -200,7 +189,7 @@ export class SoundStand {
       debugHeading('Layers'),
       this.layerRows(),
       debugHeading('Game sounds'),
-      this.hitSketchRow(),
+      this.climbSwitch(),
       this.soundButtons(),
       debugHeading('Status'),
       this.readout,
@@ -253,18 +242,9 @@ export class SoundStand {
     if (kit && kit in KITS) overrides.kit = kit as KitName;
     if (Object.keys(overrides).length > 0) this.audio.music.setOverrides(overrides);
 
-    // The paddle hits' sketches, kept in the address so a match plays them too
-    const hit = params.get('hits');
-    const perfect = params.get('perfect');
-    this.audio.sfx.setHitSketches({
-      ...(HIT_SKETCHES.includes(hit as HitSketch) && { hit: hit as HitSketch }),
-      ...(PERFECT_SKETCHES.includes(perfect as PerfectSketch) && {
-        perfect: perfect as PerfectSketch,
-      }),
-      climb: params.has('climb'),
-      punch: params.has('punch'),
-    });
-    this.syncHitSketchRow();
+    // The old two-octave rally, kept in the address so a match plays it too
+    this.audio.sfx.setRallyClimbing(params.has('climb'));
+    if (this.climbBox) this.climbBox.checked = params.has('climb');
 
     const song = params.get('song');
     if (!song || !SONGS.some((s) => s.id === song)) return;
@@ -467,62 +447,23 @@ export class SoundStand {
   }
 
   /**
-   * The paddle hits' sketches to choose from by ear (the hit, the perfect hit and its punch, the old climb),
-   * heard on the buttons below and in a match; kept in the address (`?hits=snap&perfect=shine&punch`).
+   * Whether a rally climbs two octaves as the old beeps did, heard on the buttons below and in a
+   * match; kept in the address (`&climb`).
    */
-  private hitSketchRow(): HTMLElement {
-    const hit = this.select(
-      'hits',
-      HIT_SKETCHES.map((sketch): [string, string] => [sketch, `hit: ${sketch}`]),
-    );
-    const perfect = this.select(
-      'perfect',
-      PERFECT_SKETCHES.map((sketch): [string, string] => [sketch, `perfect: ${sketch}`]),
-    );
-    const [climb, climbLabel] = this.checkbox('climb');
-    const [punch, punchLabel] = this.checkbox('punch');
-    const apply = () => {
-      this.audio.sfx.setHitSketches({
-        hit: hit.value as HitSketch,
-        perfect: perfect.value as PerfectSketch,
-        climb: climb.checked,
-        punch: punch.checked,
-      });
-      this.saveToAddress({
-        hits: hit.value === 'layers' ? null : hit.value,
-        perfect: perfect.value === 'layers' ? null : perfect.value,
-      });
-      this.saveFlagToAddress('climb', climb.checked);
-      this.saveFlagToAddress('punch', punch.checked);
-    };
-    for (const control of [hit, perfect, climb, punch]) this.on(control, 'change', apply);
-    this.hitSketchControls = { hit, perfect, climb, punch };
-    const row = this.row(hit, perfect, climbLabel, punchLabel);
-    row.style.flexWrap = 'wrap';
-    return row;
-  }
-
-  /** A labelled checkbox, `data-stand` its name. */
-  private checkbox(name: string): [HTMLInputElement, HTMLLabelElement] {
+  private climbSwitch(): HTMLLabelElement {
     const box = document.createElement('input');
     box.type = 'checkbox';
-    box.dataset.stand = name;
+    box.dataset.stand = 'climb';
+    this.on(box, 'change', () => {
+      this.audio.sfx.setRallyClimbing(box.checked);
+      this.saveFlagToAddress('climb', box.checked);
+    });
+    this.climbBox = box;
     const label = document.createElement('label');
-    const text = document.createElement('span');
-    text.textContent = name;
-    label.append(box, text);
-    return [box, label];
-  }
-
-  /** Shows the sketches the hits play. */
-  private syncHitSketchRow(): void {
-    const { hit, perfect, climb, punch } = this.audio.sfx.hitSketches;
-    const controls = this.hitSketchControls;
-    if (!controls) return;
-    controls.hit.value = hit;
-    controls.perfect.value = perfect;
-    controls.climb.checked = climb;
-    controls.punch.checked = punch;
+    const name = document.createElement('span');
+    name.textContent = 'rally climbs two octaves';
+    label.append(box, name);
+    return label;
   }
 
   private soundButtons(): HTMLElement {

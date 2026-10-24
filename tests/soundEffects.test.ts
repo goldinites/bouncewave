@@ -30,7 +30,10 @@ describe('SoundEffects', () => {
     const { sfx, calls, harmony } = setup();
 
     sfx.playPaddleHit(3);
-    expect(frequencies(calls)[0]).toBeCloseTo(midiToFrequency(getRallyNote(harmony, 3)));
+    // It snaps onto the note from a little above
+    const target = calls.find((c) => c.method === 'exponentialRampToValueAtTime')!;
+    expect(target.args[0]).toBeCloseTo(midiToFrequency(getRallyNote(harmony, 3)));
+    expect(frequencies(calls)[0]).toBeGreaterThan(target.args[0] as number);
   });
 
   it('climbs the chord the music is on as the channels flick past', () => {
