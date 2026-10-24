@@ -48,21 +48,22 @@ const HIT_MIX = {
   LEVEL: -11,
   CPU_LEVEL: -1,
   PERFECT_LEVEL: 5,
-  // The Overdrive's power shot, this much louder than a perfect hit: the hit with the blade
-  // ringing out whole, the boom and a flash; the sound barrier cracking and something whooshing
-  // past, a discharge tearing upward, the plasma humming on the note and an octave above
+  // The Overdrive's power shot, this much louder than a perfect hit: a weapon of neon,
+  // electricity and laser (the user, 24.10.2026) — the sound barrier cracking at the contact, a
+  // laser shot diving onto the note, an electric arc buzzing, a neon tube lit on the note and an
+  // octave above, over a perfect hit; each mix leads with its own voice (see `PowerShotMix`)
   POWER: {
     LEVEL: 2,
-    FLASH: 0.3,
-    CRACK: 0.55,
-    WHOOSH: 0.4,
-    ZAP: 0.35,
-    PLASMA: 0.4,
-    HIGH_PLASMA: 0.2,
+    CRACK: 0.5,
+    BODY: 0.6, // share of a perfect hit's bodies
+    MIX: {
+      laser: { PEW: 0.6, ARC: 0.25, ARC_CUT: 0.15, TUBE: 0.3, HIGH_TUBE: 0.15 },
+      electric: { PEW: 0.4, ARC: 0.8, ARC_CUT: 0.3, TUBE: 0.3, HIGH_TUBE: 0.15 },
+    },
   },
   // The meter filling, the Overdrive's weapon charged: a capacitor's whine rising, three quick
-  // pings climbing the chord as it peaks, the plasma catching on the top one; below a hit
-  READY: { LEVEL: -2, WHINE: 0.35, PING: 0.4, PLASMA: 0.2, START: 0.2, STEP: 0.05, LOCK: 0.15 },
+  // pings climbing the chord as it peaks, a neon tube lighting on the top one; below a hit
+  READY: { LEVEL: -2, WHINE: 0.35, PING: 0.4, TUBE: 0.25, START: 0.2, STEP: 0.05, LOCK: 0.25 },
   // A wall: a muted knock, well under a paddle's hit
   WALL: { LEVEL: -5, KNOCK: 0.5, THUMP: 0.12 },
   // The opponent's click a little darker, so the two sides answer each other
@@ -101,8 +102,11 @@ export interface HitFeel {
   force?: number;
 }
 
-/** The Overdrive's sustained tone: the plasma, or a sketch the stand auditions in its place. */
-export type PowerTone = 'plasma' | 'laser' | 'arc' | 'tube';
+/**
+ * The Overdrive's lead voice, sketches on the stand: `laser` the laser shot over the arc, or
+ * `electric` the arc buzzing longer over the laser.
+ */
+export type PowerShotMix = 'laser' | 'electric';
 
 /** One rendered layer to play: a tuned body at a note, or a one-shot. */
 type Layer =
@@ -120,8 +124,8 @@ export class SoundEffects {
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
   private heatGetter: () => number;
-  /** The Overdrive's sustained tone (sketches, on the stand). */
-  public powerTone: PowerTone = 'plasma';
+  /** The Overdrive's lead voice (sketches, on the stand). */
+  public powerShotMix: PowerShotMix = 'laser';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -360,26 +364,25 @@ export class SoundEffects {
   }
 
   /**
-   * The Overdrive's power shot, power as a flash, a weapon past the speed of sound (the user,
-   * 24.10.2026): a perfect hit with the blade ringing out whole, the sound barrier cracking, a
-   * plasma discharge; heard where it was struck (`pan`), the music dipping fully under it.
+   * The Overdrive's power shot, a weapon of neon, electricity and laser (the user, 24.10.2026):
+   * the sound barrier cracking, a laser shot, an arc, a neon tube lit on the note; heard where
+   * it was struck (`pan`), the music dipping fully under it.
    */
   public playPowerShot(rally: number, pan = 0): void {
     const note = getRallyNote(this.harmonyGetter(), rally);
     const { PERFECT, POWER } = HIT_MIX;
+    const mix = POWER.MIX[this.powerShotMix];
     const layers: Layer[] = [
       { shot: HIT_CLICK, gain: HIT_MIX.CLICK },
-      ...this.bodies(note, PERFECT.BODY, false, true),
-      { tuned: HIT_BODIES[0].id, note: note + 12, gain: PERFECT.OCTAVE },
-      { shot: 'thump', gain: PERFECT.THUMP },
-      { shot: 'spark', gain: PERFECT.SPARK },
-      { shot: 'boom', gain: PERFECT.BOOM },
-      { shot: 'flash', gain: POWER.FLASH },
       { shot: 'crack', gain: POWER.CRACK },
-      { shot: 'whoosh', gain: POWER.WHOOSH },
-      { shot: 'zap', gain: POWER.ZAP },
-      { tuned: this.powerTone, note, gain: POWER.PLASMA },
-      { tuned: this.powerTone, note: note + 12, gain: POWER.HIGH_PLASMA },
+      ...this.bodies(note, PERFECT.BODY * POWER.BODY),
+      { shot: 'thump', gain: PERFECT.THUMP },
+      { shot: 'boom', gain: PERFECT.BOOM },
+      { shot: 'spark', gain: PERFECT.SPARK },
+      { tuned: 'pew', note, gain: mix.PEW },
+      { tuned: 'arc', note, gain: mix.ARC, cut: mix.ARC_CUT },
+      { tuned: 'tube', note, gain: mix.TUBE },
+      { tuned: 'tube', note: note + 12, gain: mix.HIGH_TUBE },
       { shot: 'tail', gain: PERFECT.TAIL },
     ];
     const level = HIT_MIX.LEVEL + HIT_MIX.PERFECT_LEVEL + POWER.LEVEL;
@@ -416,7 +419,7 @@ export class SoundEffects {
 
   /**
    * The Overdrive meter just filled, its weapon charged: a capacitor's whine rising, three quick
-   * pings climbing the chord the music is on as it peaks, the plasma catching on the top one.
+   * pings climbing the chord the music is on as it peaks, a neon tube lighting on the top one.
    */
   public playOverdriveReady(pan = 0): void {
     const harmony = this.harmonyGetter();
@@ -431,9 +434,9 @@ export class SoundEffects {
         delay: READY.START + step * READY.STEP,
       })),
       {
-        tuned: this.powerTone,
+        tuned: 'tube',
         note: top,
-        gain: READY.PLASMA,
+        gain: READY.TUBE,
         delay: READY.START + 2 * READY.STEP,
         cut: READY.LOCK,
       },

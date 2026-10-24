@@ -35,7 +35,7 @@ export const HIT_BODIES: readonly { id: string; gain: number; cut?: number }[] =
 export const HIT_CLICK = 'click.steel';
 
 // The rally's notes keep to E4-D#5 (sfx/harmony.ts), roots three semitones either side; what also
-// plays an octave up (the neon's perfect hit, the meter's chime, the plasma) reaches C6 and past
+// plays an octave up (the neon's perfect hit, the meter's chime, the neon tube) reaches C6 and past
 const BODY_ROOTS = [64, 70, 76];
 const OCTAVE_ROOTS = [64, 70, 76, 82, 88];
 // The partials reach about 9 kHz: a rate above twice that keeps them, at two thirds the memory
@@ -112,89 +112,28 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
       chain(carrier, hit(ctx, 1, 0.5), drive(ctx, 1.6), ctx.destination);
     },
   },
-  // The Overdrive's plasma: a wall of detuned saws on the note, its fifth and octave, driven hot,
-  // a resonant filter slamming shut over it — neon gas lit and let go
-  plasma: {
-    roots: OCTAVE_ROOTS,
-    maxRate: BODY_RATE,
-    duration: 0.7,
-    build: (ctx, _random, f) => {
-      const shut = filter(ctx, 'lowpass', 9000, 7);
-      shut.frequency.setValueAtTime(9000, 0);
-      shut.frequency.exponentialRampToValueAtTime(700, 0.5);
-      const sum = level(ctx, 0.12);
-      for (const detune of [-25, -12, 0, 12, 25]) {
-        chain(osc(ctx, 'sawtooth', cents(f, detune)), sum);
-      }
-      chain(osc(ctx, 'sawtooth', f * 1.5), level(ctx, 0.6), sum);
-      chain(osc(ctx, 'sawtooth', f * 2), level(ctx, 0.5), sum);
-      chain(sum, shut, drive(ctx, 3), hit(ctx, 1, 0.6, 0, 0.002), ctx.destination);
-    },
-  },
-  // A wall: a muted knock on the chord's fifth, low and short, under the paddles' ring
-  wall: {
-    roots: [47, 53, 59],
-    maxRate: RENDER_RATE.MID,
-    duration: 0.4,
-    build: (ctx, random, f) => {
-      const out = filter(ctx, 'lowpass', 1800);
-      out.connect(ctx.destination);
-      chain(osc(ctx, 'sine', f), hit(ctx, 1, 0.18), out);
-      chain(osc(ctx, 'triangle', f * 2), hit(ctx, 0.35, 0.08), out);
-      chain(burst(ctx, random, 900, 0.8, 0.012), level(ctx, 0.5), out);
-    },
-  },
-};
-
-/** The noise a click is cut from, `decay` seconds, through a band at `hz`. */
-function burst(
-  ctx: OfflineAudioContext,
-  random: () => number,
-  hz: number,
-  q: number,
-  decay: number,
-) {
-  return chain(noiseSource(ctx, random), filter(ctx, 'bandpass', hz, q), hit(ctx, 1, decay));
-}
-
-/** A cascade of allpass filters at `hz`: what turns a click into a spring's dispersed chirp. */
-function disperse(ctx: OfflineAudioContext, hz: number, stages: number): [AudioNode, AudioNode] {
-  const first = filter(ctx, 'allpass', hz, 0.7);
-  let last: AudioNode = first;
-  for (let i = 1; i < stages; i++) last = chain(last, filter(ctx, 'allpass', hz, 0.7));
-  return [first, last];
-}
-
-/**
- * Sketches (5.7a) for the Overdrive's sustained tone in place of the plasma, rendered only when
- * the stand asks: a laser beam, an electric arc, a neon tube lighting.
- */
-export const POWER_TONE_SKETCHES: Record<string, PitchedRecipe> = {
-  // A laser beam, the blaster's "tsheeew": a click dispersed into a chirp falling onto the note,
-  // which rings on with a quick vibrato
-  laser: {
-    roots: OCTAVE_ROOTS,
+  // The Overdrive's laser shot, its lead voice: a saw and a square diving from far above onto the
+  // note, a filter closing over them, a click dispersed into a chirp under them — the blaster's
+  pew: {
+    roots: BODY_ROOTS,
     maxRate: RENDER_RATE.HIGH,
-    duration: 0.7,
+    duration: 0.45,
     build: (ctx, random, f) => {
-      const [input, output] = disperse(ctx, f * 6, 48);
+      const fall = 0.16; // s, from far above onto the note
+      const close = filter(ctx, 'lowpass', 12000, 4);
+      close.frequency.setValueAtTime(12000, 0);
+      close.frequency.exponentialRampToValueAtTime(2000, 0.3);
+      chain(sweep(ctx, 'sawtooth', f * 12, f, fall), close);
+      chain(sweep(ctx, 'square', f * 8, f / 2, fall), level(ctx, 0.5), close);
+      chain(close, drive(ctx, 2.5), hit(ctx, 1, 0.4, 0, 0.001), ctx.destination);
+      const [input, output] = disperse(ctx, f * 5, 40);
       chain(noiseSource(ctx, random), hit(ctx, 1, 0.002), input);
-      chain(
-        output,
-        filter(ctx, 'highpass', f * 0.8),
-        drive(ctx, 2),
-        level(ctx, 0.8),
-        ctx.destination,
-      );
-      const ring = sweep(ctx, 'sine', f * 2, f, 0.08);
-      chain(osc(ctx, 'sine', 7), level(ctx, f * 0.015)).connect(ring.frequency);
-      chain(ring, hit(ctx, 0.7, 0.55, 0, 0.004), ctx.destination);
-      chain(osc(ctx, 'sine', f * 3), hit(ctx, 0.2, 0.2), ctx.destination);
+      chain(output, filter(ctx, 'highpass', f), level(ctx, 0.6), ctx.destination);
     },
   },
   // An electric arc, a Tesla coil's: a buzzing square on the note torn into crackles
   arc: {
-    roots: OCTAVE_ROOTS,
+    roots: BODY_ROOTS,
     maxRate: RENDER_RATE.HIGH,
     duration: 0.7,
     build: (ctx, random, f) => {
@@ -240,7 +179,39 @@ export const POWER_TONE_SKETCHES: Record<string, PitchedRecipe> = {
       chain(burst(ctx, random, 5000, 0.8, 0.004), ctx.destination);
     },
   },
+  // A wall: a muted knock on the chord's fifth, low and short, under the paddles' ring
+  wall: {
+    roots: [47, 53, 59],
+    maxRate: RENDER_RATE.MID,
+    duration: 0.4,
+    build: (ctx, random, f) => {
+      const out = filter(ctx, 'lowpass', 1800);
+      out.connect(ctx.destination);
+      chain(osc(ctx, 'sine', f), hit(ctx, 1, 0.18), out);
+      chain(osc(ctx, 'triangle', f * 2), hit(ctx, 0.35, 0.08), out);
+      chain(burst(ctx, random, 900, 0.8, 0.012), level(ctx, 0.5), out);
+    },
+  },
 };
+
+/** The noise a click is cut from, `decay` seconds, through a band at `hz`. */
+function burst(
+  ctx: OfflineAudioContext,
+  random: () => number,
+  hz: number,
+  q: number,
+  decay: number,
+) {
+  return chain(noiseSource(ctx, random), filter(ctx, 'bandpass', hz, q), hit(ctx, 1, decay));
+}
+
+/** A cascade of allpass filters at `hz`: what turns a click into a spring's dispersed chirp. */
+function disperse(ctx: OfflineAudioContext, hz: number, stages: number): [AudioNode, AudioNode] {
+  const first = filter(ctx, 'allpass', hz, 0.7);
+  let last: AudioNode = first;
+  for (let i = 1; i < stages; i++) last = chain(last, filter(ctx, 'allpass', hz, 0.7));
+  return [first, last];
+}
 
 export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
   // The instant of contact, in 2-5 kHz where a hit stands out of the music
@@ -319,64 +290,6 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
         filter(ctx, 'highpass', 2000),
         hit(ctx, 0.7, 0.05),
         drive(ctx, 2),
-        ctx.destination,
-      );
-    },
-  },
-  // Something passing faster than sound: noise in a narrow band diving from 9 kHz
-  whoosh: {
-    duration: 0.45,
-    maxRate: RENDER_RATE.HIGH,
-    variants: 2,
-    build: (ctx, random) => {
-      const dive = filter(ctx, 'bandpass', 9000, 3);
-      dive.frequency.setValueAtTime(9000, 0);
-      dive.frequency.exponentialRampToValueAtTime(300, 0.3);
-      const swell = ctx.createGain();
-      swell.gain.setValueAtTime(0.0001, 0);
-      swell.gain.exponentialRampToValueAtTime(1, 0.04);
-      swell.gain.exponentialRampToValueAtTime(0.0001, 0.4);
-      chain(noiseSource(ctx, random), dive, swell, drive(ctx, 1.5), ctx.destination);
-    },
-  },
-  // The flash: white light as sound, a bright burst shimmering off in a room
-  flash: {
-    duration: 0.8,
-    maxRate: RENDER_RATE.HIGH,
-    variants: 2,
-    build: (ctx, random) => {
-      chain(
-        noiseSource(ctx, random),
-        filter(ctx, 'highpass', 6000),
-        hit(ctx, 1, 0.12),
-        ctx.destination,
-      );
-      chain(
-        burst(ctx, random, 8000, 0.6, 0.02),
-        room(ctx, 0.6, random),
-        filter(ctx, 'highpass', 5000),
-        level(ctx, 0.5),
-        ctx.destination,
-      );
-    },
-  },
-  // The railgun's discharge: an FM sweep tearing upward through crackling arcs
-  zap: {
-    duration: 0.45,
-    maxRate: RENDER_RATE.HIGH,
-    variants: 3,
-    build: (ctx, random) => {
-      const carrier = sweep(ctx, 'sine', jitter(random, 220, 0.05), 1800, 0.25);
-      const index = ctx.createGain();
-      index.gain.setValueAtTime(900, 0);
-      index.gain.exponentialRampToValueAtTime(60, 0.3);
-      chain(sweep(ctx, 'sine', 330, 2700, 0.25), index);
-      index.connect(carrier.frequency);
-      chain(
-        carrier,
-        hit(ctx, 1, 0.35, 0, 0.003),
-        drive(ctx, 2.5),
-        filter(ctx, 'lowpass', 9000),
         ctx.destination,
       );
     },
