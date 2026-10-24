@@ -13,7 +13,7 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
-import { SKETCHED_SOUNDS, Sketch, SoundEffects } from '@/audio/sfx/SoundEffects';
+import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -235,7 +235,6 @@ export class SoundStand {
       debugHeading('Layers'),
       this.layerRows(),
       debugHeading('Game sounds'),
-      this.sketchRow(),
       this.soundButtons(),
       debugHeading('Status'),
       this.readout,
@@ -486,23 +485,6 @@ export class SoundStand {
     if (count === 0) return '';
     const megabytes = (samples.bytes / 1024 / 1024).toFixed(1);
     return `\nsamples ${count} · ${megabytes} MB · ${samples.renderTime.toFixed(0)} ms`;
-  }
-
-  /** 5.7c's sounds' sketches to choose from by ear, heard on the buttons below and in a match. */
-  private sketchRow(): HTMLElement {
-    const row = this.row(
-      ...SKETCHED_SOUNDS.map((sound) => {
-        const select = this.select(`sketch-${sound}`, [
-          ['a', `${sound}: a`],
-          ['b', `${sound}: b`],
-        ]);
-        select.value = this.audio.sfx.sketchOf(sound);
-        this.on(select, 'change', () => this.audio.sfx.setSketch(sound, select.value as Sketch));
-        return select;
-      }),
-    );
-    row.style.flexWrap = 'wrap';
-    return row;
   }
 
   private soundButtons(): HTMLElement {

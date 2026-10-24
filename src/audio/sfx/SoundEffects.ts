@@ -151,52 +151,53 @@ const HIT = {
 } as const;
 
 // A paddle's size in its hit (5.7c, Goliath's paddle half as long again): a share of the standard
-// height over which the hit is fully heavy; how much longer and darker it then rings; the octave
-// below, its share of the hit's volume (a: a square, weightier; b: a triangle, rounder) and its
+// height over which the hit is fully heavy; how much longer and darker it then rings; under it a
+// triangle an octave down, round rather than buzzing, its share of the hit's volume and its
 // lowpass, Hz
-const SIZE = {
-  FULL_AT: 0.5,
-  LONGER: 0.6,
-  DARKER: 0.8,
-  SUB_SQUARE: 0.7,
-  SUB_TRIANGLE: 1.2,
-  SUB_CUTOFF: 1200,
-} as const;
+const SIZE = { FULL_AT: 0.5, LONGER: 0.6, DARKER: 0.8, SUB: 1.2, SUB_CUTOFF: 1200 } as const;
 
-// 5.7c's sounds: peaks and lengths in s, notes as offsets over the chord's root (MIDI 28-39)
+// 5.7c's sounds (chosen by ear with the user, 24.10.2026), in the hits' beep idiom: peaks and
+// lengths in s, notes as offsets over the chord's root (MIDI 28-39). The skills say their branch:
+// mastery's clean and alive, the implants' digital. The modifiers sound only where the sound
+// tells the player something; the clock ticks its last seconds; the menus answer softly
 const MOMENT = {
-  // Arc, mastery's: a: a sine whistling up onto the fifth, further the harder it curves; b: a
-  // flute's, a triangle with a breath of noise
-  ARC: { OFFSET: 48, VOLUME: 0.07, LENGTH: 0.3, RISE: 12, GLIDE: 0.22, BREATH: 0.03 },
-  // Analyzer, an implant's: a: a radar ping and the chord read out in quick square blips; b: a
-  // stream of data, the chord's tones scrambled high
-  ANALYZER: { OFFSET: 60, PING: 0.05, PING_LENGTH: 0.18, BLIP: 0.035, STEP: 0.03, LENGTH: 0.025 },
-  // Reflex, an implant's: time braking like a tape — a click, then a tone sinking an octave under
-  // a closing filter; a: a saw, b: two squares a fifth apart
-  REFLEX: { OFFSET: 36, VOLUME: 0.07, LENGTH: 0.55, CLICK: 0.08 },
-  // The wind turning: a gust of noise sweeping up or down as it now blows, b with a low horn
-  WIND: { VOLUME: 0.12, LENGTH: 0.6, LOW: 300, HIGH: 2400, HORN: 0.05, HORN_OFFSET: 24 },
-  // The middle post rising: a: a square climbing an octave, filtered; b: a ratchet of clicks
+  // Arc, mastery's: a flute's whistle — a triangle with a breath of noise — rising onto the fifth,
+  // further the harder it curves
+  ARC: { OFFSET: 48, VOLUME: 0.07, LENGTH: 0.3, RISE: 12, GLIDE: 0.22, BREATH: 0.03, CUTOFF: 3000 },
+  // Analyzer, an implant's: a radar ping, then the chord read out in quick square blips
+  ANALYZER: {
+    OFFSET: 60,
+    PING: 0.05,
+    PING_LENGTH: 0.18,
+    BLIP: 0.035,
+    READ_AFTER: 0.05,
+    STEP: 0.03,
+    LENGTH: 0.025,
+  },
+  // Reflex, an implant's: time braking like a tape — a click, then two squares a fifth apart
+  // sinking an octave under a closed filter
+  REFLEX: { OFFSET: 36, VOLUME: 0.07, LENGTH: 0.55, CLICK: 0.08, CUTOFF: 1800 },
+  // The wind turning: a gust of noise sweeping down or up as it now blows, Hz
+  WIND: { VOLUME: 0.12, LENGTH: 0.6, LOW: 300, HIGH: 2400 },
+  // The middle post rising: a square climbing an octave, filtered, under a ratchet of clicks
   POST_RISE: { OFFSET: 24, VOLUME: 0.06, LENGTH: 0.4, CLICKS: 4, CLICK: 0.06, STEP: 0.08 },
-  // A post's bounce, a pinball bumper's: a: a square bonk dropping onto the note; b: a ding, a
-  // fifth over it
-  POST: { OFFSET: 48, VOLUME: 0.07, LENGTH: 0.08, DING: 0.06, DING_LENGTH: 0.18 },
-  // A brick breaking: a: a crack and glassy shards; b: a crunch, darker
-  BRICK: { CRACK: 0.1, SHARD: 0.03, SHARDS: 3, CRUNCH: 0.12, CRUNCH_LENGTH: 0.12 },
-  // A paddle shrinking, lower the smaller it gets: a: a blip stepping down; b: a sigh sliding down
-  SHRINK: { OFFSET: 48, VOLUME: 0.05, LENGTH: 0.08, DROP: 3, SIGH: 5, SIGH_LENGTH: 0.14 },
-  // Ice: a skate's scrape while a paddle slides, as loud as it is fast (a: hiss, b: a duller
-  // grind); and a tink on a hit (a: a high ping, b: two glassy tones)
-  ICE: { SCRAPE: 0.05, GRAIN: 0.07, TINK: 0.025, TINK_LENGTH: 0.08 },
-  // The ball's sonar in the dark: a ping where it is, panned across, higher the higher it flies
-  // (a: a sine, b: a submarine's, longer and darker)
-  SONAR: { VOLUME: 0.12, LENGTH: 0.06, LOW: 72, HIGH: 96, DEEP: 0.09, DEEP_LENGTH: 0.22 },
-  // The clock's last seconds: a tick and a tock (a: a woodblock, b: a clock's metal tick)
+  // A post's bounce, a pinball bumper's: a ding, the note and its fifth
+  POST: { OFFSET: 48, VOLUME: 0.06, LENGTH: 0.18 },
+  // A brick breaking: the noise channel's crack and glassy shards of the chord
+  BRICK: { CRACK: 0.1, SHARD: 0.03, SHARDS: 3, SHARD_STEP: 0.025 },
+  // A paddle shrinking: a sigh sliding down onto a note a semitone lower for each tenth lost
+  SHRINK: { OFFSET: 48, VOLUME: 0.07, SIGH: 5, LENGTH: 0.14 },
+  // Ice: a skate's dull grind while a paddle coasts, as loud as it is fast; on a hit, two glassy
+  // tones over it
+  ICE: { SCRAPE: 0.125, GRAIN: 0.07, HZ: 1500, TINK: 0.025, TINK_LENGTH: 0.08 },
+  // The ball's sonar in the dark, a submarine's: a ping where it is, panned across, higher the
+  // higher it flies (MIDI notes)
+  SONAR: { VOLUME: 0.09, LENGTH: 0.22, LOW: 60, HIGH: 84 },
+  // The clock's last seconds: a woodblock's tick and tock, Hz
   CLOCK: { VOLUME: 0.06, LENGTH: 0.03, TICK: 1300, TOCK: 950 },
-  // The menus: soft, quiet, on the chord the music is on
-  // (a: sines, b: squares filtered soft — the move's sketch picks it for all of them); one at a
-  // time, the next within ONE_AT_A_TIME s kept quiet
-  MENU: { OFFSET: 48, VOLUME: 0.04, LENGTH: 0.05, STEP: 0.04, CUTOFF: 2000, ONE_AT_A_TIME: 0.03 },
+  // The menus: soft sines on the chord the music is on; one at a time, the next within
+  // ONE_AT_A_TIME s kept quiet
+  MENU: { OFFSET: 48, VOLUME: 0.056, LENGTH: 0.05, STEP: 0.04, ONE_AT_A_TIME: 0.03 },
 } as const;
 
 // The point's sounds (5.7b; chosen by ear with the user, 24.10.2026), in the hits' beep idiom
@@ -216,35 +217,6 @@ const POINT = {
   LOST: { OFFSET: 24, VOLUME: 0.07, STEP: 0.1, LENGTH: 0.12, CUTOFF: 1500, SAG: 0.2 },
   DECIDER: { OFFSET: 12, VOLUME: 0.07, LENGTH: 1.2, CUTOFF: 900 },
 } as const;
-
-// The sounds of 5.7c, each in two sketches to choose from by ear (`setSketch`, the sound stand),
-// in the hits' beep idiom. The skills say their branch: mastery (Arc) clean and alive, implants
-// (Analyzer, Reflex) digital. The modifiers sound only where the sound tells the player something
-// (the user, 24.10.2026): the wind turning, the middle post rising, a post's bounce, a brick
-// breaking, a paddle shrinking, a paddle sliding on ice and a hit on it, the ball's sonar in the
-// dark; the clock ticks its last seconds, faster at the end; the menus answer softly; a paddle's
-// hit is heavier the bigger it is
-export const SKETCHED_SOUNDS = [
-  'size',
-  'arc',
-  'analyzer',
-  'reflex',
-  'windTurn',
-  'postRise',
-  'post',
-  'brick',
-  'shrink',
-  'iceSlide',
-  'iceHit',
-  'sonar',
-  'clock',
-  'menuMove',
-  'menuSelect',
-  'menuBack',
-  'menuToggle',
-] as const;
-export type SketchedSound = (typeof SKETCHED_SOUNDS)[number];
-export type Sketch = 'a' | 'b';
 
 /** One filtered burst of the console noise. */
 interface NoiseBurst {
@@ -313,10 +285,6 @@ export class SoundEffects {
   private heatGetter: () => number;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
-  private sketches = Object.fromEntries(SKETCHED_SOUNDS.map((id) => [id, 'a'])) as Record<
-    SketchedSound,
-    Sketch
-  >;
   private lastMenuSoundAt = -Infinity;
   /** The punch's console noise, rendered once for `noiseContext`. */
   private noise: AudioBuffer | null = null;
@@ -345,15 +313,6 @@ export class SoundEffects {
     this.mixerGetter = getMixer;
     this.samplesGetter = getSamples;
     this.heatGetter = getHeat;
-  }
-
-  /** Which sketch each of 5.7c's sounds plays (the sound stand's). */
-  public sketchOf(sound: SketchedSound): Sketch {
-    return this.sketches[sound];
-  }
-
-  public setSketch(sound: SketchedSound, sketch: Sketch): void {
-    this.sketches[sound] = sketch;
   }
 
   /** Where a sound on `bus` goes: its bus on the mixer, or the speakers if there is none. */
@@ -463,7 +422,6 @@ export class SoundEffects {
     const cutoff = HIT.BRIGHT.SOFT + (HIT.BRIGHT.HARD - HIT.BRIGHT.SOFT) * hard;
     // A bigger paddle rings longer and darker over a voice an octave down; a smaller one shorter
     const big = clamp((size - 1) / SIZE.FULL_AT, 0, 1);
-    const isHeavy = this.sketches.size === 'a';
     this.hitTone(ac, {
       frequency,
       wave: voice.WAVE,
@@ -476,8 +434,8 @@ export class SoundEffects {
     if (big > 0) {
       this.hitTone(ac, {
         frequency: frequency / 2,
-        wave: isHeavy ? 'square' : 'triangle',
-        volume: volume * big * (isHeavy ? SIZE.SUB_SQUARE : SIZE.SUB_TRIANGLE),
+        wave: 'triangle',
+        volume: volume * big * SIZE.SUB,
         length: voice.LENGTH * (1 + SIZE.LONGER),
         pan: at,
         cutoff: SIZE.SUB_CUTOFF,
@@ -917,65 +875,56 @@ export class SoundEffects {
     ];
   }
 
-  /** A ball sent off curving (Arc, mastery's): whistled up, further the harder it curves. */
+  /** A ball sent off curving (Arc, mastery's): a flute's whistle, higher the harder it curves. */
   public playSpin(strength: number): void {
     const at = this.pointContext();
     if (!at) return;
     const { ac, trim, root, chord } = at;
     const { ARC } = MOMENT;
     const frequency = midiToFrequency(root + ARC.OFFSET + chord[chord.length - 1]);
-    const tone = {
+    this.hitTone(ac, {
       frequency,
+      wave: 'triangle',
       volume: ARC.VOLUME * trim,
       length: ARC.LENGTH,
       pan: 0,
+      cutoff: ARC.CUTOFF,
       from: -ARC.RISE * (0.4 + 0.6 * clamp(strength, 0, 1)),
       glide: ARC.GLIDE,
-    };
-    if (this.sketches.arc === 'a') {
-      this.hitTone(ac, { ...tone, wave: 'sine' });
-    } else {
-      this.hitTone(ac, { ...tone, wave: 'triangle', cutoff: 3000 });
-      this.noiseBurst(ac, {
-        volume: ARC.BREATH * trim,
-        length: ARC.LENGTH,
-        pan: 0,
-        filter: 'bandpass',
-        from: frequency * 2,
-        q: 2,
-      });
-    }
+    });
+    this.noiseBurst(ac, {
+      volume: ARC.BREATH * trim,
+      length: ARC.LENGTH,
+      pan: 0,
+      filter: 'bandpass',
+      from: frequency * 2,
+      q: 2,
+    });
   }
 
-  /** A shot read ahead (Analyzer, an implant's): a machine reading the chord out. */
+  /** A shot read ahead (Analyzer, an implant's): a radar ping, the chord read out in blips. */
   public playScan(): void {
     const at = this.pointContext();
     if (!at) return;
     const { ac, trim, root, chord } = at;
     const { ANALYZER } = MOMENT;
     const base = root + ANALYZER.OFFSET;
-    const notes =
-      this.sketches.analyzer === 'a'
-        ? [...chord, 12].map((step) => base + step)
-        : [7, 0, 12, 3, 19, 7].map((step, i) => base + ((chord[i % chord.length] + step) % 24));
-    if (this.sketches.analyzer === 'a') {
+    this.hitTone(ac, {
+      frequency: midiToFrequency(base + 12),
+      wave: 'sine',
+      volume: ANALYZER.PING * trim,
+      length: ANALYZER.PING_LENGTH,
+      pan: 0,
+    });
+    [...chord, 12].forEach((step, i) =>
       this.hitTone(ac, {
-        frequency: midiToFrequency(base + 12),
-        wave: 'sine',
-        volume: ANALYZER.PING * trim,
-        length: ANALYZER.PING_LENGTH,
-        pan: 0,
-      });
-    }
-    notes.forEach((note, i) =>
-      this.hitTone(ac, {
-        frequency: midiToFrequency(note),
+        frequency: midiToFrequency(base + step),
         wave: 'square',
         volume: ANALYZER.BLIP * trim,
         length: ANALYZER.LENGTH,
         pan: 0,
         cutoff: 6000,
-        delay: (this.sketches.analyzer === 'a' ? 0.05 : 0) + i * ANALYZER.STEP,
+        delay: ANALYZER.READ_AFTER + i * ANALYZER.STEP,
       }),
     );
   }
@@ -987,16 +936,15 @@ export class SoundEffects {
     const { ac, trim, root, chord } = at;
     const { REFLEX } = MOMENT;
     this.crack(ac, REFLEX.CLICK * trim, 0.02, 0);
-    const base = root + REFLEX.OFFSET;
-    const notes = this.sketches.reflex === 'a' ? [base] : [base, base + chord[chord.length - 1]];
-    for (const note of notes) {
+    const base = root + REFLEX.OFFSET - 12;
+    for (const note of [base, base + chord[chord.length - 1]]) {
       this.hitTone(ac, {
-        frequency: midiToFrequency(note - 12),
-        wave: this.sketches.reflex === 'a' ? 'sawtooth' : 'square',
-        volume: (REFLEX.VOLUME * trim) / notes.length,
+        frequency: midiToFrequency(note),
+        wave: 'square',
+        volume: (REFLEX.VOLUME * trim) / 2,
         length: REFLEX.LENGTH,
         pan: 0,
-        cutoff: 1800,
+        cutoff: REFLEX.CUTOFF,
         from: 12,
         glide: REFLEX.LENGTH,
       });
@@ -1007,7 +955,7 @@ export class SoundEffects {
   public playWindTurn(direction: number): void {
     const at = this.pointContext();
     if (!at) return;
-    const { ac, trim, root } = at;
+    const { ac, trim } = at;
     const { WIND } = MOMENT;
     const [from, to] = direction > 0 ? [WIND.HIGH, WIND.LOW] : [WIND.LOW, WIND.HIGH];
     this.noiseBurst(ac, {
@@ -1019,128 +967,77 @@ export class SoundEffects {
       to,
       q: 1.5,
     });
-    if (this.sketches.windTurn === 'b') {
-      [0, direction > 0 ? -5 : 7].forEach((step, i) =>
-        this.hitTone(ac, {
-          frequency: midiToFrequency(root + WIND.HORN_OFFSET + step),
-          wave: 'square',
-          volume: WIND.HORN * trim,
-          length: 0.18,
-          pan: 0,
-          cutoff: 900,
-          delay: i * 0.16,
-        }),
-      );
-    }
   }
 
-  /** The middle post starts rising (Bumpers). */
+  /** The middle post starts rising (Bumpers): a square climbing under a ratchet. */
   public playPostRise(): void {
     const at = this.pointContext();
     if (!at) return;
     const { ac, trim, root } = at;
     const { POST_RISE } = MOMENT;
     const frequency = midiToFrequency(root + POST_RISE.OFFSET + 12);
-    if (this.sketches.postRise === 'a') {
+    this.hitTone(ac, {
+      frequency,
+      wave: 'square',
+      volume: POST_RISE.VOLUME * trim,
+      length: POST_RISE.LENGTH,
+      pan: 0,
+      cutoff: 1500,
+      from: -12,
+      glide: POST_RISE.LENGTH,
+    });
+    // The ratchet climbs with it, a minor third a click
+    for (let i = 0; i < POST_RISE.CLICKS; i++) {
       this.hitTone(ac, {
-        frequency,
-        wave: 'square',
-        volume: POST_RISE.VOLUME * trim,
-        length: POST_RISE.LENGTH,
+        frequency: frequency * 2 ** ((i * 3 - 9) / 12),
+        wave: 'triangle',
+        volume: POST_RISE.CLICK * trim,
+        length: 0.03,
         pan: 0,
-        cutoff: 1500,
-        from: -12,
-        glide: POST_RISE.LENGTH,
+        delay: i * POST_RISE.STEP,
       });
-    } else {
-      for (let i = 0; i < POST_RISE.CLICKS; i++) {
-        this.hitTone(ac, {
-          frequency: frequency * 2 ** ((i * 3 - 9) / 12),
-          wave: 'triangle',
-          volume: POST_RISE.CLICK * trim,
-          length: 0.03,
-          pan: 0,
-          delay: i * POST_RISE.STEP,
-        });
-      }
     }
   }
 
-  /** The ball off a post (Bumpers), a pinball bumper's, where it bounced (`pan`). */
+  /** The ball off a post (Bumpers), a pinball bumper's ding, where it bounced (`pan`). */
   public playPostBounce(pan = 0): void {
     const at = this.pointContext();
     if (!at) return;
     const { ac, trim, root, chord } = at;
     const { POST } = MOMENT;
-    const side = clamp(pan, -1, 1) * COURT_PAN;
-    const frequency = midiToFrequency(root + POST.OFFSET);
-    if (this.sketches.post === 'a') {
+    for (const step of [0, chord[chord.length - 1]]) {
       this.hitTone(ac, {
-        frequency,
-        wave: 'square',
+        frequency: midiToFrequency(root + POST.OFFSET + step),
+        wave: 'sine',
         volume: POST.VOLUME * trim,
         length: POST.LENGTH,
-        pan: side,
-        cutoff: 3000,
-        from: 12,
-        glide: 0.03,
+        pan: clamp(pan, -1, 1) * COURT_PAN,
       });
-    } else {
-      for (const step of [0, chord[chord.length - 1]]) {
-        this.hitTone(ac, {
-          frequency: frequency * 2 ** (step / 12),
-          wave: 'sine',
-          volume: POST.DING * trim,
-          length: POST.DING_LENGTH,
-          pan: side,
-        });
-      }
     }
   }
 
-  /** A brick broken (Bricks), where it broke (`pan`). */
+  /** A brick broken (Bricks), where it broke (`pan`): a crack and glassy shards. */
   public playBrickBreak(pan = 0): void {
     const at = this.pointContext();
     if (!at) return;
     const { ac, trim, root, chord } = at;
     const { BRICK } = MOMENT;
     const side = clamp(pan, -1, 1) * COURT_PAN;
-    if (this.sketches.brick === 'a') {
-      this.crack(ac, BRICK.CRACK * trim, 0.04, side);
-      for (let i = 0; i < BRICK.SHARDS; i++) {
-        const note = root + 72 + chord[Math.floor(Math.random() * chord.length)];
-        this.hitTone(ac, {
-          frequency: midiToFrequency(note),
-          wave: 'triangle',
-          volume: BRICK.SHARD * trim,
-          length: 0.06,
-          pan: side,
-          delay: 0.015 + i * 0.025,
-        });
-      }
-    } else {
-      this.noiseBurst(ac, {
-        volume: BRICK.CRUNCH * trim,
-        length: BRICK.CRUNCH_LENGTH,
-        pan: side,
-        filter: 'lowpass',
-        from: 2500,
-        to: 400,
-      });
+    this.crack(ac, BRICK.CRACK * trim, 0.04, side);
+    for (let i = 0; i < BRICK.SHARDS; i++) {
+      const note = root + 72 + chord[Math.floor(Math.random() * chord.length)];
       this.hitTone(ac, {
-        frequency: midiToFrequency(root + 24),
-        wave: 'square',
-        volume: 0.05 * trim,
-        length: 0.08,
+        frequency: midiToFrequency(note),
+        wave: 'triangle',
+        volume: BRICK.SHARD * trim,
+        length: 0.06,
         pan: side,
-        cutoff: 900,
-        from: 7,
-        glide: 0.06,
+        delay: 0.015 + i * BRICK.SHARD_STEP,
       });
     }
   }
 
-  /** A paddle shrank (Shrinking paddle) to `share` of its height: lower the smaller it is. */
+  /** A paddle shrank (Shrinking paddle) to `share` of its height: a sigh, lower the smaller. */
   public playShrink(share: number, pan = 0): void {
     const at = this.pointContext();
     if (!at) return;
@@ -1148,63 +1045,46 @@ export class SoundEffects {
     const { SHRINK } = MOMENT;
     // Down a semitone for each tenth it has lost
     const note = root + SHRINK.OFFSET - Math.round((1 - share) * 10);
-    const side = clamp(pan, -1, 1) * COURT_PAN;
-    if (this.sketches.shrink === 'a') {
-      this.hitTone(ac, {
-        frequency: midiToFrequency(note),
-        wave: 'square',
-        volume: SHRINK.VOLUME * trim,
-        length: SHRINK.LENGTH,
-        pan: side,
-        cutoff: 2500,
-        from: SHRINK.DROP,
-        glide: 0.04,
-      });
-    } else {
-      this.hitTone(ac, {
-        frequency: midiToFrequency(note),
-        wave: 'triangle',
-        volume: SHRINK.VOLUME * 1.4 * trim,
-        length: SHRINK.SIGH_LENGTH,
-        pan: side,
-        from: SHRINK.SIGH,
-        glide: SHRINK.SIGH_LENGTH,
-      });
-    }
+    this.hitTone(ac, {
+      frequency: midiToFrequency(note),
+      wave: 'triangle',
+      volume: SHRINK.VOLUME * trim,
+      length: SHRINK.LENGTH,
+      pan: clamp(pan, -1, 1) * COURT_PAN,
+      from: SHRINK.SIGH,
+      glide: SHRINK.LENGTH,
+    });
   }
 
-  /** A grain of a paddle's scrape on ice, `speed` 0-1 of its top: played while it slides. */
+  /** A grain of a paddle's grind on ice, `speed` 0-1 of its top: played while it coasts. */
   public playIceScrape(speed: number, pan = 0): void {
     const at = this.pointContext();
     if (!at) return;
     const { ac, trim } = at;
     const { ICE } = MOMENT;
-    const isHiss = this.sketches.iceSlide === 'a';
     this.noiseBurst(ac, {
-      volume: ICE.SCRAPE * (isHiss ? 1 : 2.5) * clamp(speed, 0, 1) * trim,
+      volume: ICE.SCRAPE * clamp(speed, 0, 1) * trim,
       length: ICE.GRAIN,
       pan: clamp(pan, -1, 1) * COURT_PAN,
-      filter: isHiss ? 'highpass' : 'bandpass',
-      from: isHiss ? 4000 : 1500,
-      q: isHiss ? 0.7 : 3,
+      filter: 'bandpass',
+      from: ICE.HZ,
+      q: 3,
     });
   }
 
-  /** A hit on ice: a tink over it. */
+  /** A hit on ice: two glassy tones over it. */
   public playIceTink(pan = 0): void {
     const at = this.pointContext();
     if (!at) return;
     const { ac, trim, root, chord } = at;
     const { ICE } = MOMENT;
-    const side = clamp(pan, -1, 1) * COURT_PAN;
-    const notes = this.sketches.iceHit === 'a' ? [root + 84] : [root + 79, root + 79 + chord[1]];
-    for (const note of notes) {
+    for (const note of [root + 79, root + 79 + chord[1]]) {
       this.hitTone(ac, {
         frequency: midiToFrequency(note),
-        wave: this.sketches.iceHit === 'a' ? 'sine' : 'triangle',
+        wave: 'triangle',
         volume: ICE.TINK * trim,
         length: ICE.TINK_LENGTH,
-        pan: side,
+        pan: clamp(pan, -1, 1) * COURT_PAN,
       });
     }
   }
@@ -1215,44 +1095,30 @@ export class SoundEffects {
     if (!at) return;
     const { ac, trim } = at;
     const { SONAR } = MOMENT;
-    const note = SONAR.LOW + (SONAR.HIGH - SONAR.LOW) * clamp(height, 0, 1);
-    const isSine = this.sketches.sonar === 'a';
     this.hitTone(ac, {
-      frequency: midiToFrequency(isSine ? note : note - 12),
+      frequency: midiToFrequency(SONAR.LOW + (SONAR.HIGH - SONAR.LOW) * clamp(height, 0, 1)),
       wave: 'sine',
-      volume: (isSine ? SONAR.VOLUME : SONAR.DEEP) * trim,
-      length: isSine ? SONAR.LENGTH : SONAR.DEEP_LENGTH,
+      volume: SONAR.VOLUME * trim,
+      length: SONAR.LENGTH,
       pan: clamp(x, -1, 1) * COURT_PAN,
     });
   }
 
-  /** A tick of the clock's last seconds; every other one a tock. */
+  /** A tick of the clock's last seconds, a woodblock's; every other one a tock. */
   public playClockTick(isTock = false): void {
     const at = this.pointContext();
     if (!at) return;
     const { ac, trim } = at;
     const { CLOCK } = MOMENT;
-    const frequency = isTock ? CLOCK.TOCK : CLOCK.TICK;
-    if (this.sketches.clock === 'a') {
-      this.hitTone(ac, {
-        frequency,
-        wave: 'triangle',
-        volume: CLOCK.VOLUME * trim,
-        length: CLOCK.LENGTH,
-        pan: 0,
-        from: 5,
-        glide: 0.01,
-      });
-    } else {
-      this.noiseBurst(ac, {
-        volume: CLOCK.VOLUME * 5 * trim,
-        length: 0.02,
-        pan: 0,
-        filter: 'bandpass',
-        from: frequency * 3,
-        q: 8,
-      });
-    }
+    this.hitTone(ac, {
+      frequency: isTock ? CLOCK.TOCK : CLOCK.TICK,
+      wave: 'triangle',
+      volume: CLOCK.VOLUME * trim,
+      length: CLOCK.LENGTH,
+      pan: 0,
+      from: 5,
+      glide: 0.01,
+    });
   }
 
   /**
@@ -1266,15 +1132,13 @@ export class SoundEffects {
     this.lastMenuSoundAt = ac.currentTime;
     const { root } = this.harmonyGetter() ?? { root: 33 };
     const { MENU } = MOMENT;
-    const isSine = this.sketches.menuMove === 'a';
     notes.forEach((step, i) =>
       this.hitTone(ac, {
         frequency: midiToFrequency(root + MENU.OFFSET + step),
-        wave: isSine ? 'sine' : 'square',
-        volume: MENU.VOLUME * (isSine ? 1.4 : 1),
+        wave: 'sine',
+        volume: MENU.VOLUME,
         length: MENU.LENGTH,
         pan: 0,
-        cutoff: isSine ? undefined : MENU.CUTOFF,
         delay: i * MENU.STEP,
         bus: 'menu',
       }),
@@ -1286,14 +1150,14 @@ export class SoundEffects {
     this.menuTone([12]);
   }
 
-  /** A menu choice made. */
+  /** A menu choice made: up the chord. */
   public playMenuSelect(): void {
-    this.menuTone(this.sketches.menuSelect === 'a' ? [7, 12] : [0, 7, 12]);
+    this.menuTone([0, 7, 12]);
   }
 
-  /** Back out of a menu. */
+  /** Back out of a menu: down an octave. */
   public playMenuBack(): void {
-    this.menuTone(this.sketches.menuBack === 'a' ? [12, 7] : [12, 0]);
+    this.menuTone([12, 0]);
   }
 
   /**
@@ -1528,6 +1392,6 @@ export class SoundEffects {
   /** UI feedback: settings are only reachable from menus, so it must bypass the gameplay gate. */
   /** A setting switched: a soft click. */
   public playSettingsClick(): void {
-    this.menuTone(this.sketches.menuToggle === 'a' ? [19] : [12, 19]);
+    this.menuTone([19]);
   }
 }

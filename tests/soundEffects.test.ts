@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MINOR_TRIAD } from '@/audio/music/theory';
 import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
-import { SKETCHED_SOUNDS, SoundEffects } from '@/audio/sfx/SoundEffects';
+import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
 
@@ -110,7 +110,7 @@ describe('SoundEffects', () => {
     expect(oscillators()).toBe(0);
   });
 
-  it('plays 5.7c’s sounds in either sketch, and keeps them out of the menus but the menus’ own', () => {
+  it('plays 5.7c’s sounds, and keeps them out of the menus but the menus’ own', () => {
     const play = (sfx: SoundEffects) => {
       sfx.playSpin(0.5);
       sfx.playScan();
@@ -126,9 +126,8 @@ describe('SoundEffects', () => {
       sfx.playClockTick();
       sfx.playPaddleHit(1, false, 0, { size: 1.5 });
     };
-    for (const sketch of ['a', 'b'] as const) {
+    {
       const { sfx, calls } = setup();
-      for (const sound of SKETCHED_SOUNDS) sfx.setSketch(sound, sketch);
       play(sfx);
       const sounds = calls.filter(
         (c) => c.method === 'createOscillator' || c.method === 'createBufferSource',
