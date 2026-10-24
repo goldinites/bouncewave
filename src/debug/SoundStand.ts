@@ -56,14 +56,7 @@ export const STAND_SOUNDS: readonly StandSound[] = [
     times: 4,
     every: 0.32,
   },
-  // The Overdrive's lead voice, sketches; the last one played stays for the match
-  ...(['laser', 'electric'] as const).map((mix) => ({
-    name: `overdrive ${mix}`,
-    play: (sfx: SoundEffects) => {
-      sfx.powerShotMix = mix;
-      sfx.playPowerShot(4, -0.9);
-    },
-  })),
+  { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4, -0.9) },
   { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
   { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
   {

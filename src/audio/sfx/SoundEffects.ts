@@ -50,16 +50,17 @@ const HIT_MIX = {
   PERFECT_LEVEL: 5,
   // The Overdrive's power shot, this much louder than a perfect hit: a weapon of neon,
   // electricity and laser (the user, 24.10.2026) — the sound barrier cracking at the contact, a
-  // laser shot diving onto the note, an electric arc buzzing, a neon tube lit on the note and an
-  // octave above, over a perfect hit; each mix leads with its own voice (see `PowerShotMix`)
+  // laser shot diving onto the note leading, an electric arc buzzing on under it, a neon tube lit
+  // on the note and an octave above, over a perfect hit
   POWER: {
     LEVEL: 2,
     CRACK: 0.5,
     BODY: 0.6, // share of a perfect hit's bodies
-    MIX: {
-      laser: { PEW: 0.6, ARC: 0.25, ARC_CUT: 0.15, TUBE: 0.3, HIGH_TUBE: 0.15 },
-      electric: { PEW: 0.4, ARC: 0.8, ARC_CUT: 0.3, TUBE: 0.3, HIGH_TUBE: 0.15 },
-    },
+    PEW: 0.55,
+    ARC: 0.65,
+    ARC_CUT: 0.3, // s the arc buzzes
+    TUBE: 0.3,
+    HIGH_TUBE: 0.15,
   },
   // The meter filling, the Overdrive's weapon charged: a capacitor's whine rising, three quick
   // pings climbing the chord as it peaks, a neon tube lighting on the top one; below a hit
@@ -102,12 +103,6 @@ export interface HitFeel {
   force?: number;
 }
 
-/**
- * The Overdrive's lead voice, sketches on the stand: `laser` the laser shot over the arc, or
- * `electric` the arc buzzing longer over the laser.
- */
-export type PowerShotMix = 'laser' | 'electric';
-
 /** One rendered layer to play: a tuned body at a note, or a one-shot. */
 type Layer =
   | { tuned: string; note: number; gain: number; cut?: number; delay?: number }
@@ -124,8 +119,6 @@ export class SoundEffects {
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
   private heatGetter: () => number;
-  /** The Overdrive's lead voice (sketches, on the stand). */
-  public powerShotMix: PowerShotMix = 'laser';
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -371,7 +364,6 @@ export class SoundEffects {
   public playPowerShot(rally: number, pan = 0): void {
     const note = getRallyNote(this.harmonyGetter(), rally);
     const { PERFECT, POWER } = HIT_MIX;
-    const mix = POWER.MIX[this.powerShotMix];
     const layers: Layer[] = [
       { shot: HIT_CLICK, gain: HIT_MIX.CLICK },
       { shot: 'crack', gain: POWER.CRACK },
@@ -379,10 +371,10 @@ export class SoundEffects {
       { shot: 'thump', gain: PERFECT.THUMP },
       { shot: 'boom', gain: PERFECT.BOOM },
       { shot: 'spark', gain: PERFECT.SPARK },
-      { tuned: 'pew', note, gain: mix.PEW },
-      { tuned: 'arc', note, gain: mix.ARC, cut: mix.ARC_CUT },
-      { tuned: 'tube', note, gain: mix.TUBE },
-      { tuned: 'tube', note: note + 12, gain: mix.HIGH_TUBE },
+      { tuned: 'pew', note, gain: POWER.PEW },
+      { tuned: 'arc', note, gain: POWER.ARC, cut: POWER.ARC_CUT },
+      { tuned: 'tube', note, gain: POWER.TUBE },
+      { tuned: 'tube', note: note + 12, gain: POWER.HIGH_TUBE },
       { shot: 'tail', gain: PERFECT.TAIL },
     ];
     const level = HIT_MIX.LEVEL + HIT_MIX.PERFECT_LEVEL + POWER.LEVEL;
