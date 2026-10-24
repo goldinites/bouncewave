@@ -178,6 +178,9 @@ describe('the balls on court', () => {
       balls: [left, right],
       overdriveCharges: [null, null],
       implantCores: [false, false],
+      serveTime: 0,
+      timeLeft: null,
+      activeModifiers: [],
     };
     effects.afterSimulation(0.1, flow as unknown as MatchFlow);
 

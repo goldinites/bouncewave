@@ -3,6 +3,7 @@ import type { AudioEngine } from '@/audio/AudioEngine';
 import { EffectsDirector, EffectsDirectorDeps } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { Ball } from '@/match/Ball';
 import { Paddle } from '@/match/Paddle';
 import type { Renderer } from '@/render/Renderer';
 import { COLORS } from '@/shared/palette';
@@ -30,6 +31,18 @@ const makeAudio = () => ({
     playServeTick: vi.fn(),
     playServeGo: vi.fn(),
     playDeciderSting: vi.fn(),
+    playPostBounce: vi.fn(),
+    playBrickBreak: vi.fn(),
+    playWindTurn: vi.fn(),
+    playPostRise: vi.fn(),
+    playShrink: vi.fn(),
+    playIceScrape: vi.fn(),
+    playIceTink: vi.fn(),
+    playSonar: vi.fn(),
+    playClockTick: vi.fn(),
+    playSpin: vi.fn(),
+    playScan: vi.fn(),
+    playTimeWarp: vi.fn(),
     playVictory: vi.fn(),
     playDefeat: vi.fn(),
     playHeartbeat: vi.fn(),
@@ -57,6 +70,8 @@ const fakeFlow = (overrides: Partial<MatchFlow> = {}): MatchFlow =>
     rally: 0,
     serveTime: 0,
     isDecidingPoint: false,
+    timeLeft: null,
+    activeModifiers: [],
     isBallLive: false,
     overdriveCharges: [null, null],
     implantCores: [false, false],
@@ -328,6 +343,104 @@ describe('EffectsDirector.handle', () => {
     }
     expect(audio.sfx.playServeTick).not.toHaveBeenCalled();
     expect(audio.sfx.playServeGo).not.toHaveBeenCalled();
+  });
+
+  it('hears a modifier’s moments: the wind turning, a post rising and bouncing, a paddle shrinking', () => {
+    const { effects, audio } = makeDirector();
+
+    handle(effects, { type: 'modifier', moment: 'windTurn', direction: -1 });
+    expect(audio.sfx.playWindTurn).toHaveBeenCalledWith(-1);
+    handle(effects, { type: 'modifier', moment: 'postRise' });
+    expect(audio.sfx.playPostRise).toHaveBeenCalledOnce();
+    handle(effects, { type: 'modifier', moment: 'paddleShrink', paddleIndex: 0, share: 0.8 });
+    expect(audio.sfx.playShrink).toHaveBeenCalledWith(0.8, expect.any(Number));
+    handle(effects, { type: 'wallBounce', x: 400, y: 100, isPost: true });
+    expect(audio.sfx.playPostBounce).toHaveBeenCalledOnce();
+    expect(audio.sfx.playWallBounce).not.toHaveBeenCalled();
+  });
+
+  it('ticks the clock’s last seconds from ten, four a second in the last three', () => {
+    const { effects, audio } = makeDirector();
+    const at = (timeLeft: number) =>
+      effects.afterSimulation(0.05, fakeFlow({ phase: 'rally', timeLeft } as Partial<MatchFlow>));
+
+    for (let t = 20; t > 10.5; t -= 0.05) at(t);
+    expect(audio.sfx.playClockTick).not.toHaveBeenCalled();
+    for (let t = 10.5; t > 3; t -= 0.05) at(t);
+    expect(audio.sfx.playClockTick).toHaveBeenCalledTimes(7);
+    for (let t = 3; t > 0; t -= 0.05) at(t);
+    expect(audio.sfx.playClockTick).toHaveBeenCalledTimes(7 + 12);
+  });
+
+  it('pings the ball in the dark, quicker as it closes on the player’s goal', () => {
+    const pings = (vx: number, x: number) => {
+      const { effects, audio } = makeDirector();
+      const ball = Object.assign(new Ball(), { x, drawX: x, drawY: 250, vx });
+      const flow = fakeFlow({
+        phase: 'rally',
+        isBallLive: true,
+        leadBall: ball,
+        balls: [ball],
+        activeModifiers: ['darkness'],
+      } as Partial<MatchFlow>);
+      for (let t = 0; t < 2; t += 0.02) effects.afterSimulation(0.02, flow);
+      return vi.mocked(audio.sfx.playSonar).mock.calls.length;
+    };
+
+    expect(pings(-300, 100)).toBeGreaterThan(pings(-300, 700));
+    expect(pings(300, 700)).toBe(pings(300, 100));
+  });
+
+  it('scrapes a player’s paddle coasting on ice, and tinks its hits', () => {
+    const { effects, audio, paddles } = makeDirector();
+    const flow = fakeFlow({
+      phase: 'rally',
+      activeModifiers: ['ice'],
+      isPlayerPaddle: (index: number) => index === 0,
+    } as Partial<MatchFlow>);
+
+    for (const speed of [500, 400, 300, 200]) {
+      paddles[0].velocity = speed;
+      effects.afterSimulation(0.1, flow);
+    }
+    expect(audio.sfx.playIceScrape).toHaveBeenCalled();
+    handle(effects, {
+      type: 'paddleHit',
+      paddleIndex: 0,
+      isPerfect: false,
+      x: 40,
+      y: 250,
+      speed: 400,
+      angle: 0,
+      rally: 1,
+      isPowerShot: false,
+      chargedOverdrive: false,
+    });
+    expect(audio.sfx.playIceTink).toHaveBeenCalledOnce();
+  });
+
+  it('weighs a hit by its paddle’s size', () => {
+    const { effects, audio, paddles } = makeDirector();
+
+    paddles[1].useSpec({ ...paddles[1].spec, height: paddles[1].spec.height * 1.5 });
+    handle(effects, {
+      type: 'paddleHit',
+      paddleIndex: 1,
+      isPerfect: false,
+      x: 750,
+      y: 250,
+      speed: 400,
+      angle: 0,
+      rally: 1,
+      isPowerShot: false,
+      chargedOverdrive: false,
+    });
+    expect(audio.sfx.playPaddleHit).toHaveBeenCalledWith(
+      1,
+      false,
+      1,
+      expect.objectContaining({ size: 1.5 }),
+    );
   });
 
   it('shows the final score, fireworks and a victory sting when the player wins', () => {

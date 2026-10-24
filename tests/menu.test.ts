@@ -27,7 +27,12 @@ const setup = (more: Partial<GameMenuActions> = {}) => {
     save: () => {},
   });
   const i18n = new I18nManager('en');
-  const sfx = { playSettingsClick: vi.fn() } as unknown as SoundEffects;
+  const sfx = {
+    playSettingsClick: vi.fn(),
+    playMenuBack: vi.fn(),
+    playMenuMove: vi.fn(),
+    playMenuSelect: vi.fn(),
+  } as unknown as SoundEffects;
   const actions = {
     onStartGame: vi.fn(),
     onStartQuickMatch: vi.fn(),
@@ -45,7 +50,7 @@ const setup = (more: Partial<GameMenuActions> = {}) => {
         '#gameScreen button, #gameScreen [data-menu-item]',
       ),
     ].filter((item) => item.tabIndex >= 0);
-  return { menu, buttons, store, actions };
+  return { menu, buttons, store, actions, sfx };
 };
 
 describe('settings menu', () => {
@@ -80,6 +85,21 @@ describe('settings menu', () => {
     buttons()[0].click(); // music back on
     expect(buttons()[0].getAttribute('aria-pressed')).toBe('true');
     expect(buttons()[0].textContent).toBe('MUSIC: ON');
+  });
+
+  it('answers the menu keys with a tick, a press with a blip, and going back with its own', async () => {
+    const { menu, buttons, sfx } = setup();
+    menu.showMainMenu();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown' }));
+    expect(sfx.playMenuMove).toHaveBeenCalledOnce();
+
+    menu.showSettingsMenu();
+    buttons()[0].click();
+    await Promise.resolve();
+    expect(sfx.playMenuSelect).toHaveBeenCalled();
+    menu.goBack();
+    expect(sfx.playMenuBack).toHaveBeenCalledOnce();
   });
 
   it('colors each button by what it does', () => {
