@@ -36,14 +36,14 @@ const HIT_DUCK = { PERFECT: 0.6, POWER_SHOT: 1 } as const;
 // dB they sit at, an ordinary hit's level in a verse, each sound's own on top
 const LAYER_MIX = {
   LEVEL: -11,
-  // The Overdrive's power shot, this much louder: a weapon of neon, electricity and laser (the
-  // user, 24.10.2026), one whole sound that evolves rather than a string of them: everything
+  // The Overdrive's power shot, this much louder — heard over any peak, +15 dB over a chorus, but
+  // not cutting (the user, 24.10.2026): a weapon of neon, electricity and laser, one whole sound that evolves rather than a string of them: everything
   // starts with the hit, and what comes later blooms out of it (`SWELL`, s to rise) as the
   // earlier voices fade — the crack and the hit (a click, the tuned bodies, a thump, a boom,
   // sparks), the laser shot diving onto the note, the electric arc buzzing up, a small explosion
   // (organic, not overdone), the neon tube on the note and an octave above, ringing out last
   POWER: {
-    LEVEL: 9,
+    LEVEL: 3,
     CLICK: 0.25,
     CRACK: 0.5,
     BODY: 0.168,
@@ -51,8 +51,9 @@ const LAYER_MIX = {
     BOOM: 0.25,
     SPARK: 0.18,
     TAIL: 0.08,
-    PEW: 0.55,
-    HIGH_PEW: 0.25,
+    // The laser shot carries most of what the shot has in 2-6 kHz, where it would cut
+    PEW: 0.3,
+    HIGH_PEW: 0.15,
     ARC: 0.65,
     ARC_FOR: 0.45, // s the arc buzzes
     BLAST: 0.28,
@@ -131,6 +132,9 @@ const HIT = {
   // Semitones above the note a hit starts, s it takes to drop onto it
   SNAP: { FROM: 2, TIME: 0.015 },
   PERFECT: {
+    // dB the whole perfect hit, its punch with it, sits under its peaks below: heard over any
+    // peak, +13 dB over a chorus, but not a blow to the ears (the user, 24.10.2026)
+    LEVEL: -4.5,
     VOLUME: 0.18,
     LENGTH: 0.22,
     OCTAVE: 0.06,
@@ -334,8 +338,9 @@ export class SoundEffects {
           pan: at,
         },
       ];
-      for (const tone of tones) this.hitTone(ac, { ...tone, volume: tone.volume * trim });
-      this.punch(ac, note, at, trim);
+      const level = trim * dbToGain(PERFECT.LEVEL);
+      for (const tone of tones) this.hitTone(ac, { ...tone, volume: tone.volume * level });
+      this.punch(ac, note, at, level);
       this.duckMusic(HIT_DUCK.PERFECT);
       this.mixerGetter()?.carveForHit(1);
       return;
