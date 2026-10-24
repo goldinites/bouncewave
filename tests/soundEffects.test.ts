@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MINOR_TRIAD } from '@/audio/music/theory';
 import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
-import { SoundEffects } from '@/audio/sfx/SoundEffects';
+import { SKETCHED_SOUNDS, SoundEffects } from '@/audio/sfx/SoundEffects';
 import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
 
@@ -108,6 +108,48 @@ describe('SoundEffects', () => {
     sfx.playPointLost();
     sfx.playDeciderSting();
     expect(oscillators()).toBe(0);
+  });
+
+  it('plays 5.7c’s sounds in either sketch, and keeps them out of the menus but the menus’ own', () => {
+    const play = (sfx: SoundEffects) => {
+      sfx.playSpin(0.5);
+      sfx.playScan();
+      sfx.playTimeWarp();
+      sfx.playWindTurn(1);
+      sfx.playPostRise();
+      sfx.playPostBounce();
+      sfx.playBrickBreak();
+      sfx.playShrink(0.7);
+      sfx.playIceScrape(0.5);
+      sfx.playIceTink();
+      sfx.playSonar(0, 0.5);
+      sfx.playClockTick();
+      sfx.playPaddleHit(1, false, 0, { size: 1.5 });
+    };
+    for (const sketch of ['a', 'b'] as const) {
+      const { sfx, calls } = setup();
+      for (const sound of SKETCHED_SOUNDS) sfx.setSketch(sound, sketch);
+      play(sfx);
+      const sounds = calls.filter(
+        (c) => c.method === 'createOscillator' || c.method === 'createBufferSource',
+      );
+      expect(sounds.length).toBeGreaterThan(15);
+    }
+
+    const { sfx, oscillators } = setup({ audible: false });
+    play(sfx);
+    expect(oscillators()).toBe(0);
+    sfx.playMenuMove();
+    expect(oscillators()).toBe(1);
+  });
+
+  it('plays one menu sound at a time: a press already answered stays quiet', () => {
+    const { sfx, oscillators } = setup();
+
+    sfx.playMenuBack();
+    const back = oscillators();
+    sfx.playMenuSelect();
+    expect(oscillators()).toBe(back);
   });
 
   it('builds the victory echo once and reuses it', () => {

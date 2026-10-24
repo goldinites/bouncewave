@@ -1,7 +1,6 @@
 import { signal } from '@preact/signals-core';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { Ball } from '@/match/Ball';
 import { COURT, PADDLE } from '@/match/config';
@@ -18,6 +17,7 @@ import { getDefaultSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
+import { fakeMenuSounds } from './helpers/fakeMenuSounds';
 
 const match = (overrides: Partial<MatchRecord> = {}): MatchRecord => ({
   difficulty: DifficultyLevel.NORMAL,
@@ -211,7 +211,7 @@ describe('the statistics screen', () => {
     const menu = new MenuController(
       ui,
       i18n,
-      {} as SoundEffects,
+      fakeMenuSounds(),
       new SettingsStore({ load: getDefaultSettings, save: () => {} }),
       {
         onStartGame: vi.fn(),
@@ -284,7 +284,7 @@ describe('the statistics screen', () => {
     const menu = new MenuController(
       ui,
       i18n,
-      {} as SoundEffects,
+      fakeMenuSounds(),
       new SettingsStore(profile.settings),
       {
         onStartGame: vi.fn(),

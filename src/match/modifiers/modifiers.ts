@@ -105,6 +105,7 @@ class Wind implements Modifier {
     if (this.turnsIn <= 0) {
       this.direction = -this.direction;
       this.turnsIn += WIND.PERIOD;
+      this.host.report({ moment: 'windTurn', direction: this.direction });
     }
     this.nextGustIn -= dt;
     if (this.nextGustIn <= 0) {
@@ -191,6 +192,7 @@ class Bumpers implements Modifier {
       if (this.isRising || isClear) {
         this.isRising = !this.isRising;
         this.holdFor = this.isRising ? BUMPERS.UP : BUMPERS.DOWN;
+        if (this.isRising) this.host.report({ moment: 'postRise' });
       }
     }
     const toward = this.isRising ? 1 : 0;
@@ -270,7 +272,9 @@ class ShrinkingPaddle implements Modifier {
     const hits = (this.hits.get(paddleIndex) ?? 0) + 1;
     this.hits.set(paddleIndex, hits);
     const share = Math.max(SHRINK.FLOOR, 1 - SHRINK.PER_HIT * hits);
+    const was = this.host.paddles[paddleIndex].spec.height;
     this.host.paddles[paddleIndex].useSpec({ ...spec, height: spec.height * share });
+    if (spec.height * share < was) this.host.report({ moment: 'paddleShrink', paddleIndex, share });
   }
 
   public onServe(): void {

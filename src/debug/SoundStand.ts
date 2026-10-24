@@ -13,7 +13,7 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
-import { SoundEffects } from '@/audio/sfx/SoundEffects';
+import { SKETCHED_SOUNDS, Sketch, SoundEffects } from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -100,6 +100,54 @@ export const STAND_SOUNDS: readonly StandSound[] = [
   { name: 'victory', play: (sfx) => sfx.playVictory() },
   { name: 'defeat', play: (sfx) => sfx.playDefeat() },
   { name: 'fireworks ×6', play: (sfx) => sfx.playFireworkPop(), times: 6, every: 0.25 },
+  // 5.7c: a paddle's size, the modifiers' moments, the clock and the menus
+  {
+    name: 'goliath hit',
+    play: (sfx) => sfx.playPaddleHit(2, false, 1, { pan: 0.9, size: 1.5 }),
+  },
+  {
+    name: 'shrunk hit',
+    play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9, size: 0.6 }),
+  },
+  { name: 'wind turn ↓', play: (sfx) => sfx.playWindTurn(1) },
+  { name: 'wind turn ↑', play: (sfx) => sfx.playWindTurn(-1) },
+  { name: 'post rise', play: (sfx) => sfx.playPostRise() },
+  { name: 'post', play: (sfx) => sfx.playPostBounce(0) },
+  { name: 'brick', play: (sfx) => sfx.playBrickBreak(0.2) },
+  {
+    // Shrinking hit by hit, as it does in a rally
+    name: 'shrink ×4',
+    play: (sfx, i) => sfx.playShrink(1 - 0.12 * (i + 1), -0.9),
+    times: 4,
+    every: 0.4,
+  },
+  {
+    // A paddle let go on ice, coasting to a stop
+    name: 'ice slide',
+    play: (sfx, i) => sfx.playIceScrape(1 - i / 10, -0.9),
+    times: 10,
+    every: 0.06,
+  },
+  { name: 'ice hit', play: (sfx) => sfx.playIceTink(-0.9) },
+  {
+    // The ball crossing the dark at the player, from the far side, rising
+    name: 'sonar',
+    play: (sfx, i) => sfx.playSonar(1 - i / 6, i / 12),
+    times: 13,
+    every: 0.15,
+  },
+  {
+    // The clock's last seconds: two once a second, then the last ones four a second
+    name: 'clock',
+    play: (sfx, i) => {
+      if (i < 8 ? i % 4 === 0 : true) sfx.playClockTick(Math.floor(i < 8 ? i / 4 : i) % 2 === 1);
+    },
+    times: 16,
+    every: 0.25,
+  },
+  { name: 'menu move', play: (sfx) => sfx.playMenuMove() },
+  { name: 'menu select', play: (sfx) => sfx.playMenuSelect() },
+  { name: 'menu back', play: (sfx) => sfx.playMenuBack() },
   { name: 'click', play: (sfx) => sfx.playSettingsClick() },
 ];
 
@@ -187,6 +235,7 @@ export class SoundStand {
       debugHeading('Layers'),
       this.layerRows(),
       debugHeading('Game sounds'),
+      this.sketchRow(),
       this.soundButtons(),
       debugHeading('Status'),
       this.readout,
@@ -437,6 +486,23 @@ export class SoundStand {
     if (count === 0) return '';
     const megabytes = (samples.bytes / 1024 / 1024).toFixed(1);
     return `\nsamples ${count} · ${megabytes} MB · ${samples.renderTime.toFixed(0)} ms`;
+  }
+
+  /** 5.7c's sounds' sketches to choose from by ear, heard on the buttons below and in a match. */
+  private sketchRow(): HTMLElement {
+    const row = this.row(
+      ...SKETCHED_SOUNDS.map((sound) => {
+        const select = this.select(`sketch-${sound}`, [
+          ['a', `${sound}: a`],
+          ['b', `${sound}: b`],
+        ]);
+        select.value = this.audio.sfx.sketchOf(sound);
+        this.on(select, 'change', () => this.audio.sfx.setSketch(sound, select.value as Sketch));
+        return select;
+      }),
+    );
+    row.style.flexWrap = 'wrap';
+    return row;
   }
 
   private soundButtons(): HTMLElement {
