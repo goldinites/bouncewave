@@ -76,12 +76,19 @@ const OLD_SOUNDS = ['hit', 'hit cpu', 'rally ×8', 'perfect', 'overdrive', 'od r
 
 /** Every action sound, alone and in the series it comes in during a match. */
 export const STAND_SOUNDS: readonly StandSound[] = [
-  ...LAYERED_SOUNDS,
-  ...LAYERED_SOUNDS.filter((sound) => OLD_SOUNDS.includes(sound.name)).map((sound): StandSound => ({
-    ...sound,
-    name: `old ${sound.name}`,
-    play: (sfx, index) => sfx.playAsSynth(() => sound.play(sfx, index)),
-  })),
+  // Each old sound beside its new one
+  ...LAYERED_SOUNDS.flatMap((sound): StandSound[] =>
+    OLD_SOUNDS.includes(sound.name)
+      ? [
+          sound,
+          {
+            ...sound,
+            name: `old ${sound.name}`,
+            play: (sfx, index) => sfx.playAsSynth(() => sound.play(sfx, index)),
+          },
+        ]
+      : [sound],
+  ),
   { name: 'arc', play: (sfx) => sfx.playSpin(0.4) },
   { name: 'arc max', play: (sfx) => sfx.playSpin(1) },
   { name: 'analyzer', play: (sfx) => sfx.playScan() },
