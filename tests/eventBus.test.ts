@@ -130,7 +130,12 @@ describe('listening to the match', () => {
     const menu = new MenuController(
       ui,
       i18n,
-      {} as SoundEffects,
+      {
+        playSettingsClick: vi.fn(),
+        playMenuBack: vi.fn(),
+        playMenuMove: vi.fn(),
+        playMenuSelect: vi.fn(),
+      } as unknown as SoundEffects,
       new SettingsStore({ load: getDefaultSettings, save: () => {} }),
       {
         onStartGame: vi.fn(),
