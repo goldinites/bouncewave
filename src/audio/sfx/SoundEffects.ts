@@ -158,6 +158,8 @@ export class SoundEffects {
   private heatGetter: () => number;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
+  /** While set, the layered sounds play as their live synths (`playAsSynth`). */
+  private isSynthOnly = false;
 
   /**
    * @param getIsGameplayAudible whether gameplay sounds should play right now (false behind
@@ -182,6 +184,19 @@ export class SoundEffects {
     this.mixerGetter = getMixer;
     this.samplesGetter = getSamples;
     this.heatGetter = getHeat;
+  }
+
+  /**
+   * Plays whatever `play` plays with the layered sounds as their live synths, the game's sounds
+   * before they were rendered in layers — for the sound stand to compare the old with the new.
+   */
+  public playAsSynth(play: () => void): void {
+    this.isSynthOnly = true;
+    try {
+      play();
+    } finally {
+      this.isSynthOnly = false;
+    }
   }
 
   /** Where a sound on `bus` goes: its bus on the mixer, or the speakers if there is none. */
@@ -326,6 +341,7 @@ export class SoundEffects {
    * can't be heard).
    */
   private playLayers(layers: Layer[], levelDb: number, pan: number): boolean {
+    if (this.isSynthOnly) return false;
     const samples = this.samplesGetter();
     // The layers are rendered all at once, the bodies last
     if (!samples?.pickNote(HIT_BODIES[0].id, MELODY_LOW)) return false;

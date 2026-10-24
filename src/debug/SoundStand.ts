@@ -36,8 +36,8 @@ interface StandSound {
   every?: number;
 }
 
-/** Every action sound, alone and in the series it comes in during a match. */
-export const STAND_SOUNDS: readonly StandSound[] = [
+/** The sounds rendered in layers (5.7), alone and in the series they come in during a match. */
+const LAYERED_SOUNDS: readonly StandSound[] = [
   { name: 'hit', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9 }) },
   { name: 'hit hard', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9, force: 1 }) },
   { name: 'hit cpu', play: (sfx) => sfx.playPaddleHit(1, false, 1, { pan: 0.9 }) },
@@ -69,6 +69,19 @@ export const STAND_SOUNDS: readonly StandSound[] = [
     times: 3,
     every: 0.25,
   },
+];
+
+// Those of them heard again as they were before the layers, as live synths, to compare
+const OLD_SOUNDS = ['hit', 'hit cpu', 'rally ×8', 'perfect', 'overdrive', 'od ready', 'wall'];
+
+/** Every action sound, alone and in the series it comes in during a match. */
+export const STAND_SOUNDS: readonly StandSound[] = [
+  ...LAYERED_SOUNDS,
+  ...LAYERED_SOUNDS.filter((sound) => OLD_SOUNDS.includes(sound.name)).map((sound): StandSound => ({
+    ...sound,
+    name: `old ${sound.name}`,
+    play: (sfx, index) => sfx.playAsSynth(() => sound.play(sfx, index)),
+  })),
   { name: 'arc', play: (sfx) => sfx.playSpin(0.4) },
   { name: 'arc max', play: (sfx) => sfx.playSpin(1) },
   { name: 'analyzer', play: (sfx) => sfx.playScan() },

@@ -282,6 +282,23 @@ describe('paddle hits from their rendered layers', () => {
     expect(callsOf(calls, 'createOscillator').length).toBeGreaterThan(0);
     expect(callsOf(calls, 'createBufferSource')).toEqual([]);
   });
+
+  it('plays the old live synth on the stand’s asking, the layers rendered or not', () => {
+    const { sfx, calls, picked } = setup();
+
+    sfx.playAsSynth(() => {
+      sfx.playPaddleHit(1);
+      sfx.playPowerShot(1);
+      sfx.playOverdriveReady();
+      sfx.playWallBounce();
+    });
+    expect(picked).toEqual([]);
+    expect(callsOf(calls, 'createBufferSource')).toEqual([]);
+    expect(callsOf(calls, 'createOscillator').length).toBeGreaterThan(0);
+
+    sfx.playPaddleHit(1);
+    expect(picked).not.toEqual([]);
+  });
 });
 
 describe('the music dipped under an Overdrive', () => {
