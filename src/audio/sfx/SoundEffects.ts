@@ -49,10 +49,11 @@ const HIT_MIX = {
   CPU_LEVEL: -1,
   PERFECT_LEVEL: 5,
   // The Overdrive's power shot, this much louder than a perfect hit: a weapon of neon,
-  // electricity and laser (the user, 24.10.2026), unfolding over most of a second so each of its
-  // sounds is heard (`AT`, s): the sound barrier cracking with the hit, the laser shot diving onto
-  // the note, the electric arc buzzing, a small explosion blooming (organic, not overdone), the
-  // neon tube lit on the note and an octave above, ringing out
+  // electricity and laser (the user, 24.10.2026), one whole sound that evolves rather than a
+  // string of them: everything starts with the hit, and what comes later blooms out of it
+  // (`SWELL`, s to rise) as the earlier voices fade — the crack and the hit, the laser shot
+  // diving onto the note, the electric arc buzzing up, a small explosion (organic, not
+  // overdone), the neon tube on the note and an octave above, ringing out last
   POWER: {
     LEVEL: 4,
     CRACK: 0.5,
@@ -60,33 +61,33 @@ const HIT_MIX = {
     PEW: 0.55,
     HIGH_PEW: 0.25,
     ARC: 0.65,
-    ARC_FOR: 0.4, // s the arc buzzes
+    ARC_FOR: 0.45, // s the arc buzzes
     BLAST: 0.28,
     TUBE: 0.3,
     HIGH_TUBE: 0.15,
-    AT: { PEW: 0.04, ARC: 0.12, BLAST: 0.22, TUBE: 0.3 },
-    // The echo sketch: the laser repeating on the music's eighths, softer each time, side to side
-    ECHO: [0.45, 0.28, 0.16],
-    ECHO_PAN: 0.6,
+    SWELL: { ARC: 0.1, BLAST: 0.08, TUBE: 0.22 },
   },
   // The meter filling, the Overdrive's weapon ready (the user: the armed, neon and lock-on
-  // sketches in one), one after another so each is heard: the weapon cocked in two clicks, a
-  // laser sight's two beeps rising, then the chord lit tone by tone as neon tubes sparking, an arc
-  // humming on the root under it all; below a hit, s for the times
+  // sketches in one), one gesture of a third of a second, each part in its turn so it is heard:
+  // the weapon cocked in two clicks, a laser sight's two beeps rising, the chord glowing up tone
+  // by tone as neon tubes sparking, an arc humming up on the root under it all; s for the times
   READY: {
     LEVEL: 0,
     HIGH_TUBE: 0.2,
     ARM: 0.45,
     HUM: 0.18,
-    HUM_FOR: 0.5,
+    HUM_FOR: 0.45,
+    HUM_SWELL: 0.08,
     BEAM: 0.2,
-    BEEP: 0.07,
-    LOCK: 0.08, // the first beep, after the clicks
-    LOCK_STEP: 0.1, // between the beeps
+    BEEP: 0.05,
+    LOCK: 0.05, // the first beep, after the clicks
+    LOCK_STEP: 0.06, // between the beeps
     TUBE: 0.45,
+    TUBE_SWELL: 0.03, // the tubes glow up rather than click on
+    HIGH_SWELL: 0.1,
     SPARK: 0.1,
-    LIGHT: 0.28, // the first tube lit, after the beeps
-    STEP: 0.07, // between the tubes
+    LIGHT: 0.16, // the first tube lit, as the beeps end
+    STEP: 0.05, // between the tubes
   },
   // A wall: a muted knock, well under a paddle's hit
   WALL: { LEVEL: -5, KNOCK: 0.5, THUMP: 0.12 },
@@ -140,8 +141,9 @@ type Layer =
       wide?: boolean;
       /** Where it sounds, in place of the action's own place. */
       pan?: number;
+      swell?: number;
     }
-  | { shot: string; gain: number; rate?: number; delay?: number };
+  | { shot: string; gain: number; rate?: number; delay?: number; swell?: number };
 
 /** Which of the mixer's buses a sound plays on. */
 type Bus = 'sfx' | 'menu';
@@ -154,9 +156,6 @@ export class SoundEffects {
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
   private heatGetter: () => number;
-  private eighthGetter: () => number;
-  /** The Overdrive's laser echoing in time with the music (a sketch, on the stand). */
-  public isPowerEcho = false;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -166,7 +165,6 @@ export class SoundEffects {
    * @param getMixer the master the sounds play into; without one they go straight out
    * @param getSamples the rendered layers; until they are ready the sounds play as live synths
    * @param getHeat how hot the music is, 0-1: the sounds grow louder with it; a verse's if none
-   * @param getEighth an eighth note of the music, s, for what echoes in time with it
    */
   constructor(
     getAudioContext: () => AudioContext | null,
@@ -176,7 +174,6 @@ export class SoundEffects {
     getMixer: () => Mixer | null = () => null,
     getSamples: () => SampleBank | null = () => null,
     getHeat: () => number = () => HEAT_LEVEL[1].heat,
-    getEighth: () => number = () => 0.25,
   ) {
     this.audioContextGetter = getAudioContext;
     this.isMutedGetter = getIsMuted;
@@ -185,7 +182,6 @@ export class SoundEffects {
     this.mixerGetter = getMixer;
     this.samplesGetter = getSamples;
     this.heatGetter = getHeat;
-    this.eighthGetter = getEighth;
   }
 
   /** Where a sound on `bus` goes: its bus on the mixer, or the speakers if there is none. */
@@ -375,8 +371,8 @@ export class SoundEffects {
 
   /**
    * One rendered layer, `delay` seconds from now, at `gain` (jittered) times the sound's `trim`,
-   * panned, played at `rate`; faded out after `cut` seconds, if given, for a layer heard only as
-   * an attack.
+   * panned, played at `rate`; rising over `swell` seconds, if given, for a layer that blooms out
+   * of the others; faded out after `cut` seconds, if given, for one heard only as an attack.
    */
   private layer({
     ac,
@@ -386,6 +382,7 @@ export class SoundEffects {
     pan,
     trim,
     cut,
+    swell,
     delay = 0,
   }: {
     ac: AudioContext;
@@ -395,6 +392,7 @@ export class SoundEffects {
     pan: number;
     trim: number;
     cut?: number;
+    swell?: number;
     delay?: number;
   }): void {
     try {
@@ -403,7 +401,12 @@ export class SoundEffects {
       source.buffer = buffer;
       source.playbackRate.value = rate;
       const level = ac.createGain();
-      level.gain.value = gain * trim * this.jitter(HIT_MIX.JITTER.GAIN);
+      const peak = gain * trim * this.jitter(HIT_MIX.JITTER.GAIN);
+      level.gain.value = peak;
+      if (swell !== undefined) {
+        level.gain.setValueAtTime(0.0001, start);
+        level.gain.exponentialRampToValueAtTime(peak, start + swell);
+      }
       if (cut !== undefined) level.gain.setTargetAtTime(0, start + cut, HIT_MIX.CUT_FADE);
       const panner = ac.createStereoPanner();
       panner.pan.value = pan;
@@ -422,7 +425,7 @@ export class SoundEffects {
   public playPowerShot(rally: number, pan = 0): void {
     const note = getRallyNote(this.harmonyGetter(), rally);
     const { PERFECT, POWER } = HIT_MIX;
-    const { AT } = POWER;
+    const { SWELL } = POWER;
     const layers: Layer[] = [
       { shot: HIT_CLICK, gain: HIT_MIX.CLICK },
       { shot: 'crack', gain: POWER.CRACK },
@@ -430,22 +433,13 @@ export class SoundEffects {
       { shot: 'thump', gain: PERFECT.THUMP },
       { shot: 'boom', gain: PERFECT.BOOM },
       { shot: 'spark', gain: PERFECT.SPARK },
-      { tuned: 'pew', note, gain: POWER.PEW, delay: AT.PEW, wide: true },
-      { tuned: 'pew', note: note + 12, gain: POWER.HIGH_PEW, delay: AT.PEW, wide: true },
-      ...(this.isPowerEcho
-        ? POWER.ECHO.map((gain, i) => ({
-            tuned: 'pew',
-            note,
-            gain: POWER.PEW * gain,
-            delay: AT.PEW + (i + 1) * this.eighthGetter(),
-            pan: (i % 2 ? 1 : -1) * POWER.ECHO_PAN,
-          }))
-        : []),
-      { tuned: 'arc', note, gain: POWER.ARC, delay: AT.ARC, cut: POWER.ARC_FOR, wide: true },
-      { shot: 'blast', gain: POWER.BLAST, delay: AT.BLAST },
-      { tuned: 'tube', note, gain: POWER.TUBE, delay: AT.TUBE, wide: true },
-      { tuned: 'tube', note: note + 12, gain: POWER.HIGH_TUBE, delay: AT.TUBE, wide: true },
-      { shot: 'tail', gain: PERFECT.TAIL, delay: AT.TUBE },
+      { tuned: 'pew', note, gain: POWER.PEW, wide: true },
+      { tuned: 'pew', note: note + 12, gain: POWER.HIGH_PEW, wide: true },
+      { tuned: 'arc', note, gain: POWER.ARC, swell: SWELL.ARC, cut: POWER.ARC_FOR, wide: true },
+      { shot: 'blast', gain: POWER.BLAST, swell: SWELL.BLAST },
+      { tuned: 'tube', note, gain: POWER.TUBE, swell: SWELL.TUBE, wide: true },
+      { tuned: 'tube', note: note + 12, gain: POWER.HIGH_TUBE, swell: SWELL.TUBE, wide: true },
+      { shot: 'tail', gain: PERFECT.TAIL },
     ];
     const level = HIT_MIX.LEVEL + HIT_MIX.PERFECT_LEVEL + POWER.LEVEL;
     const played = this.playLayers(layers, level, pan);
@@ -471,7 +465,7 @@ export class SoundEffects {
         tuned: 'arc',
         note: tone(1) - 12,
         gain: READY.HUM,
-        delay: READY.LOCK,
+        swell: READY.HUM_SWELL,
         cut: READY.HUM_FOR,
         wide: true,
       },
@@ -484,7 +478,14 @@ export class SoundEffects {
         cut: READY.BEEP,
       },
       ...[0, 1, 2].flatMap((step) => [
-        { tuned: 'tube', note: tone(step + 1), gain: READY.TUBE, delay: lit(step), wide: true },
+        {
+          tuned: 'tube',
+          note: tone(step + 1),
+          gain: READY.TUBE,
+          delay: lit(step),
+          swell: READY.TUBE_SWELL,
+          wide: true,
+        },
         // The last tube glows an octave higher too, the chime's peak
         ...(step === 2
           ? [
@@ -493,6 +494,7 @@ export class SoundEffects {
                 note: tone(3) + 12,
                 gain: READY.HIGH_TUBE,
                 delay: lit(2),
+                swell: READY.HIGH_SWELL,
                 wide: true,
               },
             ]

@@ -56,14 +56,7 @@ export const STAND_SOUNDS: readonly StandSound[] = [
     times: 4,
     every: 0.32,
   },
-  // With and without its echo, a sketch; the last one played stays for the match
-  ...[false, true].map((isEcho) => ({
-    name: isEcho ? 'overdrive echo' : 'overdrive',
-    play: (sfx: SoundEffects) => {
-      sfx.isPowerEcho = isEcho;
-      sfx.playPowerShot(4, -0.9);
-    },
-  })),
+  { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4, -0.9) },
   { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
   { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
   {

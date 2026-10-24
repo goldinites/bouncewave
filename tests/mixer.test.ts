@@ -265,17 +265,6 @@ describe('paddle hits from their rendered layers', () => {
     expect(carves).toEqual([1]);
   });
 
-  it('echoes the Overdrive’s laser in time with the music, as a sketch', () => {
-    const { sfx, picked } = setup();
-
-    sfx.playPowerShot(4);
-    const without = picked.filter((id) => id === 'pew').length;
-    picked.length = 0;
-    sfx.isPowerEcho = true;
-    sfx.playPowerShot(4);
-    expect(picked.filter((id) => id === 'pew').length - without).toBe(3);
-  });
-
   it('arms, lights the chord in neon and locks on when the Overdrive meter fills', () => {
     const { sfx, picked } = setup();
 
