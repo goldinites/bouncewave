@@ -25,8 +25,6 @@ const TIER_COLOURS: Record<Tier, string> = {
   high: '#ff6ad5',
 };
 const BEATS_PER_BAR = STEPS_PER_BAR / 4;
-// The address's flags, kept bare (`?debug&climb`) rather than `debug=`
-const BARE_PARAMS = /([?&])(debug|climb)=(?=&|$)/g;
 
 /** A sound of the game's, or a series of it, as the stand plays it. */
 interface StandSound {
@@ -38,8 +36,8 @@ interface StandSound {
   every?: number;
 }
 
-/** The sounds rendered in layers (5.7), alone and in the series they come in during a match. */
-const LAYERED_SOUNDS: readonly StandSound[] = [
+/** The hits, the Overdrive and the wall (5.7), alone and in the series they come in. */
+const ACTION_SOUNDS: readonly StandSound[] = [
   { name: 'hit', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9 }) },
   { name: 'hit hard', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9, force: 1 }) },
   { name: 'hit cpu', play: (sfx) => sfx.playPaddleHit(1, false, 1, { pan: 0.9 }) },
@@ -73,24 +71,9 @@ const LAYERED_SOUNDS: readonly StandSound[] = [
   },
 ];
 
-// Those of them heard again as they were before the layers, as live synths, to compare
-const OLD_SOUNDS = ['hit', 'hit cpu', 'rally ×8', 'perfect', 'overdrive', 'od ready', 'wall'];
-
 /** Every action sound, alone and in the series it comes in during a match. */
 export const STAND_SOUNDS: readonly StandSound[] = [
-  // Each old sound beside its new one
-  ...LAYERED_SOUNDS.flatMap((sound): StandSound[] =>
-    OLD_SOUNDS.includes(sound.name)
-      ? [
-          sound,
-          {
-            ...sound,
-            name: `old ${sound.name}`,
-            play: (sfx, index) => sfx.playAsSynth(() => sound.play(sfx, index)),
-          },
-        ]
-      : [sound],
-  ),
+  ...ACTION_SOUNDS,
   { name: 'arc', play: (sfx) => sfx.playSpin(0.4) },
   { name: 'arc max', play: (sfx) => sfx.playSpin(1) },
   { name: 'analyzer', play: (sfx) => sfx.playScan() },
@@ -126,7 +109,6 @@ export class SoundStand {
   /** The playing song's form, one segment a step, wide as its bars. */
   private readonly timeline: HTMLElement;
   private timelineSong: string | null = null;
-  private climbBox: HTMLInputElement | null = null;
   private readonly layerBoxes = new Map<MusicLayer, HTMLInputElement>();
   private readonly listeners = new AbortController();
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
@@ -189,7 +171,6 @@ export class SoundStand {
       debugHeading('Layers'),
       this.layerRows(),
       debugHeading('Game sounds'),
-      this.climbSwitch(),
       this.soundButtons(),
       debugHeading('Status'),
       this.readout,
@@ -241,10 +222,6 @@ export class SoundStand {
     if (pad) overrides.pad = pad as PadVoice;
     if (kit && kit in KITS) overrides.kit = kit as KitName;
     if (Object.keys(overrides).length > 0) this.audio.music.setOverrides(overrides);
-
-    // The old two-octave rally, kept in the address so a match plays it too
-    this.audio.sfx.setRallyClimbing(params.has('climb'));
-    if (this.climbBox) this.climbBox.checked = params.has('climb');
 
     const song = params.get('song');
     if (!song || !SONGS.some((s) => s.id === song)) return;
@@ -446,26 +423,6 @@ export class SoundStand {
     return `\nsamples ${count} · ${megabytes} MB · ${samples.renderTime.toFixed(0)} ms`;
   }
 
-  /**
-   * Whether a rally climbs two octaves as the old beeps did, heard on the buttons below and in a
-   * match; kept in the address (`&climb`).
-   */
-  private climbSwitch(): HTMLLabelElement {
-    const box = document.createElement('input');
-    box.type = 'checkbox';
-    box.dataset.stand = 'climb';
-    this.on(box, 'change', () => {
-      this.audio.sfx.setRallyClimbing(box.checked);
-      this.saveFlagToAddress('climb', box.checked);
-    });
-    this.climbBox = box;
-    const label = document.createElement('label');
-    const name = document.createElement('span');
-    name.textContent = 'rally climbs two octaves';
-    label.append(box, name);
-    return label;
-  }
-
   private soundButtons(): HTMLElement {
     const buttons = this.row(
       ...STAND_SOUNDS.map((sound) => {
@@ -576,21 +533,13 @@ export class SoundStand {
     );
   }
 
-  /** Writes a bare flag into the address (`&climb`), or removes it. */
-  private saveFlagToAddress(key: string, isSet: boolean): void {
-    const url = new URL(window.location.href);
-    if (isSet) url.searchParams.set(key, '');
-    else url.searchParams.delete(key);
-    history.replaceState(null, '', url.toString().replace(BARE_PARAMS, '$1$2'));
-  }
-
-  /** Writes the given parameters into the address (null removes one), keeping the flags bare. */
+  /** Writes the given parameters into the address (null removes one), keeping `?debug` bare. */
   private saveToAddress(params: Record<string, string | null>): void {
     const url = new URL(window.location.href);
     for (const [key, value] of Object.entries(params)) {
       if (value) url.searchParams.set(key, value);
       else url.searchParams.delete(key);
     }
-    history.replaceState(null, '', url.toString().replace(BARE_PARAMS, '$1$2'));
+    history.replaceState(null, '', url.toString().replace(/([?&])debug=(&|$)/, '$1debug$2'));
   }
 }

@@ -29,22 +29,6 @@ describe('SoundStand', () => {
     vi.useRealTimers();
   });
 
-  it('climbs a rally two octaves when a link asks, and keeps the switch in the address', () => {
-    const { audio, get } = setup('/?debug&climb');
-    const climb = get<HTMLInputElement>('input[data-stand="climb"]');
-    expect(audio.sfx.isRallyClimbing).toBe(true);
-    expect(climb.checked).toBe(true);
-
-    climb.checked = false;
-    climb.dispatchEvent(new Event('change'));
-    expect(audio.sfx.isRallyClimbing).toBe(false);
-    expect(params().has('climb')).toBe(false);
-    climb.checked = true;
-    climb.dispatchEvent(new Event('change'));
-    expect(window.location.search).toMatch(/[?&]climb(&|$)/);
-    expect(window.location.search).toMatch(/[?&]debug(&|$)/);
-  });
-
   it('auditions the song and part picked, and keeps them in the address', () => {
     const { audition, get } = setup();
     const song = get<HTMLSelectElement>('select[data-stand="song"]');

@@ -193,9 +193,6 @@ export class SoundEffects {
   private heatGetter: () => number;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
-  /** While set, the sounds play as the game's old ones (`playAsSynth`). */
-  private isSynthOnly = false;
-  private isClimbing = false;
   /** The punch's console noise, rendered once for `noiseContext`. */
   private noise: AudioBuffer | null = null;
   private noiseContext: AudioContext | null = null;
@@ -223,28 +220,6 @@ export class SoundEffects {
     this.mixerGetter = getMixer;
     this.samplesGetter = getSamples;
     this.heatGetter = getHeat;
-  }
-
-  /** Whether a rally climbs two octaves as the old beeps did (the sound stand's `?climb`). */
-  public get isRallyClimbing(): boolean {
-    return this.isClimbing;
-  }
-
-  public setRallyClimbing(isClimbing: boolean): void {
-    this.isClimbing = isClimbing;
-  }
-
-  /**
-   * Plays whatever `play` plays as the game's old sounds — the paddle hits' beeps, the layered
-   * sounds' live synths — for the sound stand to compare the old with the new.
-   */
-  public playAsSynth(play: () => void): void {
-    this.isSynthOnly = true;
-    try {
-      play();
-    } finally {
-      this.isSynthOnly = false;
-    }
   }
 
   /** Where a sound on `bus` goes: its bus on the mixer, or the speakers if there is none. */
@@ -302,7 +277,7 @@ export class SoundEffects {
   }
 
   /**
-   * Each hit plays the next tone of the chord the music is on, so a rally steps through it as a
+   * Each hit plays the next tone of the chord the music is on, so a rally climbs it as a
    * melody; the player and the CPU get different timbres, like a call and response. Heard where
    * it was struck (`feel.pan`), brighter and louder the harder (`feel.force`); a perfect hit
    * rings out over it as the reward, landing with a punch, the music dipping under it.
@@ -313,14 +288,7 @@ export class SoundEffects {
     paddleIndex = 0,
     { pan = 0, force = 0.5 }: HitFeel = {},
   ): void {
-    const harmony = this.harmonyGetter();
-    const note = this.isClimbing
-      ? getClimbingRallyNote(harmony, rally)
-      : getRallyNote(harmony, rally);
-    if (this.isSynthOnly) {
-      this.playOldHit(note, isPerfect, paddleIndex);
-      return;
-    }
+    const note = getClimbingRallyNote(this.harmonyGetter(), rally);
     const ac = this.audioContextGetter();
     if (!ac || this.isMutedGetter() || !this.isGameplayAudibleGetter()) return;
 
@@ -366,20 +334,6 @@ export class SoundEffects {
       from: HIT.SNAP.FROM,
     });
     this.mixerGetter()?.carveForHit(0.5 + 0.5 * hard);
-  }
-
-  /** The paddle hit as the game first had it, a plain beep, for the sound stand's comparison. */
-  private playOldHit(note: number, isPerfect: boolean, paddleIndex: number): void {
-    const freq = midiToFrequency(note);
-    if (isPerfect) {
-      this.duckMusic(HIT_DUCK.PERFECT);
-      this.beep(freq, 0.22, 'sine', 0.09);
-      this.beep(freq * 2, 0.16, 'sine', 0.03);
-    } else if (paddleIndex === 0) {
-      this.beep(freq, 0.12, 'square', 0.05);
-    } else {
-      this.beep(freq, 0.14, 'triangle', 0.08);
-    }
   }
 
   /** The perfect hit's punch under its tone: the noise channel's crack and an 8-bit kick. */
@@ -478,7 +432,6 @@ export class SoundEffects {
    * can't be heard).
    */
   private playLayers(layers: Layer[], levelDb: number, pan: number): boolean {
-    if (this.isSynthOnly) return false;
     const samples = this.samplesGetter();
     // The layers are rendered all at once, the bodies last
     if (!samples?.pickNote(HIT_BODIES[0].id, MELODY_LOW)) return false;

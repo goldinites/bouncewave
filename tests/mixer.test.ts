@@ -5,7 +5,7 @@ import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { MINOR_TRIAD } from '@/audio/music/theory';
 import { SampleBank } from '@/audio/samples/SampleBank';
-import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
+import { getClimbingRallyNote } from '@/audio/sfx/harmony';
 import { heatLevel, SoundEffects } from '@/audio/sfx/SoundEffects';
 import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
@@ -233,7 +233,7 @@ describe('the paddle hits and the layered sounds', () => {
     expect(picked).toEqual([]);
     expect(callsOf(calls, 'createOscillator')).toHaveLength(2);
     // Each tone starts above its note and drops onto it
-    const note = midiToFrequency(getRallyNote({ root: 33, chord: MINOR_TRIAD }, 1));
+    const note = midiToFrequency(getClimbingRallyNote({ root: 33, chord: MINOR_TRIAD }, 1));
     const ramps = callsOf(calls, 'exponentialRampToValueAtTime').map((c) => c.args[0]);
     expect(ramps.filter((value) => value === note)).toHaveLength(2);
     expect(callsOf(calls, 'createBiquadFilter')).toHaveLength(filters + 2);
@@ -254,15 +254,13 @@ describe('the paddle hits and the layered sounds', () => {
     expect(callsOf(calls, 'createBuffer')).toHaveLength(1);
   });
 
-  it('climbs a rally two octaves on the stand’s asking, as the old beeps did', () => {
+  it('climbs a rally two octaves as the old beeps did', () => {
     const { sfx, calls } = setup();
     const harmony = { root: 33, chord: MINOR_TRIAD };
 
-    sfx.setRallyClimbing(true);
     sfx.playPaddleHit(5);
     const ramps = callsOf(calls, 'exponentialRampToValueAtTime').map((c) => c.args[0]);
     expect(ramps).toContain(midiToFrequency(getClimbingRallyNote(harmony, 5)));
-    expect(sfx.isRallyClimbing).toBe(true);
   });
 
   it('knocks a wall in its own muted voice, well under a hit', () => {
@@ -299,27 +297,6 @@ describe('the paddle hits and the layered sounds', () => {
     sfx.playWallBounce();
     expect(callsOf(calls, 'createOscillator').length).toBeGreaterThan(0);
     expect(callsOf(calls, 'createBufferSource')).toEqual([]);
-  });
-
-  it('plays the old sounds on the stand’s asking, the layers rendered or not', () => {
-    const { sfx, calls, picked } = setup();
-    const filters = callsOf(calls, 'createBiquadFilter').length;
-
-    sfx.playAsSynth(() => {
-      sfx.playPaddleHit(1);
-      sfx.playPaddleHit(1, true);
-      sfx.playPowerShot(1);
-      sfx.playOverdriveReady();
-      sfx.playWallBounce();
-    });
-    expect(picked).toEqual([]);
-    // The old hits were plain beeps: no lowpass, no punch
-    expect(callsOf(calls, 'createBiquadFilter')).toHaveLength(filters);
-    expect(callsOf(calls, 'createBufferSource')).toEqual([]);
-    expect(callsOf(calls, 'createOscillator').length).toBeGreaterThan(0);
-
-    sfx.playWallBounce();
-    expect(picked).not.toEqual([]);
   });
 });
 

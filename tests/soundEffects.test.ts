@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MINOR_TRIAD } from '@/audio/music/theory';
-import { getRallyNote } from '@/audio/sfx/harmony';
+import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
@@ -32,7 +32,7 @@ describe('SoundEffects', () => {
     sfx.playPaddleHit(3);
     // It snaps onto the note from a little above
     const target = calls.find((c) => c.method === 'exponentialRampToValueAtTime')!;
-    expect(target.args[0]).toBeCloseTo(midiToFrequency(getRallyNote(harmony, 3)));
+    expect(target.args[0]).toBeCloseTo(midiToFrequency(getClimbingRallyNote(harmony, 3)));
     expect(frequencies(calls)[0]).toBeGreaterThan(target.args[0] as number);
   });
 

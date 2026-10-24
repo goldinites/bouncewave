@@ -3,15 +3,14 @@ import { MINOR_TRIAD } from '@/audio/music/theory';
 // Paddle and wall sounds are drawn from the chord the music is playing
 // (chord roots sit at MIDI 28–39, so offsets lift them into melody / mid registers)
 const DEFAULT_HARMONY: Harmony = { root: 33, chord: MINOR_TRIAD }; // A minor, before music starts
-// The rally's notes keep to one octave, E4 up to D#5 (the user, 24.10.2026: hits two and a half
-// octaves apart sounded like different sounds)
+// The layered sounds' notes (the Overdrive, its chime) keep to one octave, E4 up to D#5, where
+// their bodies are rendered and every one sounds alike
 export const MELODY_LOW = 64;
 const WALL_NOTE_OCTAVE_OFFSET = 12;
 
 /**
- * Note for the n-th hit of a rally: walks up the current chord's tones within one octave from
- * `MELODY_LOW`, then starts again from the lowest, so a rally steps through the chord the music
- * is on while every hit stays the same sound.
+ * Note for the n-th step of a rally within one octave from `MELODY_LOW`: up the current chord's
+ * tones, then again from the lowest — for the layered sounds, which change if pitched further.
  */
 export function getRallyNote(harmony: Harmony | null, rally: number): number {
   const { root, chord } = harmony ?? DEFAULT_HARMONY;
@@ -21,13 +20,13 @@ export function getRallyNote(harmony: Harmony | null, rally: number): number {
   return tones[Math.max(0, rally - 1) % tones.length];
 }
 
-// The old climb, for the beep sketches (SoundEffects.HIT_SKETCHES): two octaves of the chord from
-// two octaves over its root, the top folded under C6
+// The paddle hits climb two octaves of the chord from two octaves over its root, as the old beeps
+// did (the user, 24.10.2026), the top folded under C6
 const CLIMB = { OFFSET: 24, OCTAVES: 2, MAX_NOTE: 84 } as const;
 
 /**
- * Note for the n-th hit of a rally as the old beeps climbed: up the chord's tones (root, third,
- * fifth, then the next octave), cycling through the top octave once there.
+ * Note for the n-th paddle hit of a rally: up the chord's tones (root, third, fifth, then the next
+ * octave), so a long rally climbs as a melody, cycling through the top octave once there.
  */
 export function getClimbingRallyNote(harmony: Harmony | null, rally: number): number {
   const { root, chord } = harmony ?? DEFAULT_HARMONY;
