@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MINOR_TRIAD } from '@/audio/music/theory';
-import { getRallyNote } from '@/audio/sfx/harmony';
+import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
@@ -30,7 +30,10 @@ describe('SoundEffects', () => {
     const { sfx, calls, harmony } = setup();
 
     sfx.playPaddleHit(3);
-    expect(frequencies(calls)[0]).toBeCloseTo(midiToFrequency(getRallyNote(harmony, 3)));
+    // It snaps onto the note from a little above
+    const target = calls.find((c) => c.method === 'exponentialRampToValueAtTime')!;
+    expect(target.args[0]).toBeCloseTo(midiToFrequency(getClimbingRallyNote(harmony, 3)));
+    expect(frequencies(calls)[0]).toBeGreaterThan(target.args[0] as number);
   });
 
   it('climbs the chord the music is on as the channels flick past', () => {
@@ -79,6 +82,32 @@ describe('SoundEffects', () => {
       sfx.playVictory();
       sfx.playDefeat();
     }).not.toThrow();
+  });
+
+  it('plays the point’s sounds, up the chord on a point won', () => {
+    const { sfx, calls, harmony, oscillators } = setup();
+
+    sfx.playServeTick();
+    sfx.playServeGo();
+    sfx.playPointWon(1);
+    sfx.playPointLost(-1);
+    sfx.playDeciderSting();
+    // A tick, the go's two notes, three and the octave and its glint, two, the sting's chord
+    expect(oscillators()).toBe(1 + 2 + 5 + 2 + 3);
+    // The point won climbs the chord the music is on
+    const won = midiToFrequency(harmony.root + 36 + harmony.chord[2]);
+    expect(frequencies(calls)).toContainEqual(won);
+  });
+
+  it('keeps the point’s sounds out of the menus', () => {
+    const { sfx, oscillators } = setup({ audible: false });
+
+    sfx.playServeTick();
+    sfx.playServeGo();
+    sfx.playPointWon();
+    sfx.playPointLost();
+    sfx.playDeciderSting();
+    expect(oscillators()).toBe(0);
   });
 
   it('builds the victory echo once and reuses it', () => {

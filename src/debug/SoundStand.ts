@@ -36,31 +36,65 @@ interface StandSound {
   every?: number;
 }
 
-/** Every action sound, alone and in the series it comes in during a match. */
-export const STAND_SOUNDS: readonly StandSound[] = [
-  { name: 'hit', play: (sfx) => sfx.playPaddleHit(1, false, 0) },
-  { name: 'hit cpu', play: (sfx) => sfx.playPaddleHit(1, false, 1) },
+/** The hits, the Overdrive and the wall (5.7), alone and in the series they come in. */
+const ACTION_SOUNDS: readonly StandSound[] = [
+  { name: 'hit', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9 }) },
+  { name: 'hit hard', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9, force: 1 }) },
+  { name: 'hit cpu', play: (sfx) => sfx.playPaddleHit(1, false, 1, { pan: 0.9 }) },
   {
+    // From side to side, the ball faster with every hit, as a rally heats up
     name: 'rally ×8',
-    play: (sfx, i) => sfx.playPaddleHit(i + 1, false, i % 2),
+    play: (sfx, i) =>
+      sfx.playPaddleHit(i + 1, false, i % 2, { pan: i % 2 ? 0.9 : -0.9, force: i / 7 }),
     times: 8,
     every: 0.32,
   },
-  { name: 'perfect', play: (sfx) => sfx.playPaddleHit(3, true) },
+  { name: 'perfect', play: (sfx) => sfx.playPaddleHit(3, true, 0, { pan: -0.9 }) },
   {
     name: 'perfect ×4',
-    play: (sfx, i) => sfx.playPaddleHit(i + 1, true, i % 2),
+    play: (sfx, i) => sfx.playPaddleHit(i + 1, true, i % 2, { pan: i % 2 ? 0.9 : -0.9 }),
     times: 4,
     every: 0.32,
   },
-  { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4) },
-  { name: 'od ready', play: (sfx) => sfx.playOverdriveReady() },
-  { name: 'wall', play: (sfx) => sfx.playWallBounce() },
+  { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4, -0.9) },
+  { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
+  { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
+  {
+    // A rally's walls and hits as they come: hit, wall, hit
+    name: 'hit wall hit',
+    play: (sfx, i) =>
+      i === 1
+        ? sfx.playWallBounce(0)
+        : sfx.playPaddleHit(i + 1, false, i / 2, { pan: i ? 0.9 : -0.9 }),
+    times: 3,
+    every: 0.25,
+  },
+];
+
+/** Every action sound, alone and in the series it comes in during a match. */
+export const STAND_SOUNDS: readonly StandSound[] = [
+  ...ACTION_SOUNDS,
   { name: 'arc', play: (sfx) => sfx.playSpin(0.4) },
   { name: 'arc max', play: (sfx) => sfx.playSpin(1) },
   { name: 'analyzer', play: (sfx) => sfx.playScan() },
   { name: 'reflex', play: (sfx) => sfx.playTimeWarp() },
-  { name: 'score', play: (sfx) => sfx.playScore() },
+  {
+    // The serve's countdown: two ticks, then the pip as the ball leaves
+    name: 'serve',
+    play: (sfx, i) => (i < 2 ? sfx.playServeTick() : sfx.playServeGo()),
+    times: 3,
+    every: 0.4,
+  },
+  {
+    // The deciding point served: its sting, then the pip as the ball leaves
+    name: 'decider serve',
+    play: (sfx, i) => (i === 0 ? sfx.playDeciderSting() : sfx.playServeGo()),
+    times: 2,
+    every: 1.2,
+  },
+  // The player's point goes in on the right, the opponent's on the left
+  { name: 'point won', play: (sfx) => sfx.playPointWon(1) },
+  { name: 'point lost', play: (sfx) => sfx.playPointLost(-1) },
   { name: 'heartbeat ×4', play: (sfx) => sfx.playHeartbeat(), times: 4, every: 0.9 },
   { name: 'channel surf', play: (sfx) => sfx.playChannelSurf() },
   { name: 'victory', play: (sfx) => sfx.playVictory() },

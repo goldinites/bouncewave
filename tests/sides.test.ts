@@ -174,6 +174,6 @@ describe('a side with more than one paddle', () => {
     });
 
     expect(effects.paddleGlow).toEqual([0, 0, 1]);
-    expect(playPaddleHit).toHaveBeenCalledWith(1, false, 1);
+    expect(playPaddleHit).toHaveBeenCalledWith(1, false, 1, expect.any(Object));
   });
 });

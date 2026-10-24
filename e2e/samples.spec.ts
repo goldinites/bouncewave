@@ -10,6 +10,9 @@ import { expect, test } from '@playwright/test';
 // so the drums, rendered first, take a share of it
 const DRUMS_MEMORY = 5 * 1024 * 1024; // bytes
 const DRUMS_RENDER_MS = 1500; // on a CI runner, slower than a phone's best
+// The action sounds' budget is 300 ms on a phone (docs/AUDIO.md, "Бюджеты"), scaled as the
+// drums' is for a CI runner
+const ACTIONS_RENDER_MS = 1500;
 // The last 2% of a sound may be no louder than this share of its peak
 const TAIL_SHARE = 0.02;
 
@@ -61,6 +64,49 @@ test('renders every drum sound, sounding, dying away, within budget', async ({ p
   test.info().annotations.push({
     type: 'samples',
     description: `${(report.bytes / 1048576).toFixed(2)} MB, ${report.renderTime.toFixed(0)} ms`,
+  });
+});
+
+test('renders every action sound’s layers, sounding, dying away, within budget', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const report = await page.evaluate(async () => {
+    const source = (path: string) => `/bouncewave/src/audio/samples/${path}`;
+    const { SampleBank } = (await import(
+      /* @vite-ignore */ source('SampleBank.ts')
+    )) as typeof import('../src/audio/samples/SampleBank');
+    const { ACTION_PITCHED, ACTION_SAMPLES } = (await import(
+      /* @vite-ignore */ source('actions.ts')
+    )) as typeof import('../src/audio/samples/actions');
+    const bank = new SampleBank();
+    await bank.render(48000, ACTION_SAMPLES);
+    await bank.renderPitched(48000, ACTION_PITCHED);
+    const measure = (buffer: AudioBuffer) => {
+      const data = buffer.getChannelData(0);
+      const tail = data.subarray(Math.floor(data.length * 0.98));
+      let peak = 0;
+      for (const sample of data) peak = Math.max(peak, Math.abs(sample));
+      return { peak, tailPeak: Math.max(...tail.map(Math.abs)) };
+    };
+    const layers = Object.keys(ACTION_SAMPLES).map((id) => ({ id, ...measure(bank.pick(id)!) }));
+    const bodies = Object.entries(ACTION_PITCHED).flatMap(([id, recipe]) =>
+      recipe.roots.map((root) => ({
+        id: `${id} @${root}`,
+        ...measure(bank.pickNote(id, root)!.buffer),
+      })),
+    );
+    return { sounds: [...layers, ...bodies], renderTime: bank.renderTime };
+  });
+
+  for (const { id, peak, tailPeak } of report.sounds) {
+    expect(peak, id).toBeGreaterThan(0.3);
+    expect(tailPeak / peak, `${id} dies away`).toBeLessThan(TAIL_SHARE);
+  }
+  expect(report.renderTime).toBeLessThan(ACTIONS_RENDER_MS);
+  test.info().annotations.push({
+    type: 'actions',
+    description: `${report.renderTime.toFixed(0)} ms`,
   });
 });
 
@@ -268,6 +314,8 @@ test('keeps every rendered sound within budget through a session of every song',
       await load<typeof import('../src/audio/samples/pitched')>('samples/pitched.ts');
     const { TRANSITION_SAMPLES } =
       await load<typeof import('../src/audio/samples/transitions')>('samples/transitions.ts');
+    const { ACTION_PITCHED, ACTION_SAMPLES } =
+      await load<typeof import('../src/audio/samples/actions')>('samples/actions.ts');
     const { SONGS } = await load<typeof import('../src/audio/music/songs')>('music/songs.ts');
     const { soundsFor, unneeded } =
       await load<typeof import('../src/audio/music/palette')>('music/palette.ts');
@@ -276,6 +324,8 @@ test('keeps every rendered sound within budget through a session of every song',
     await bank.render(rate, DRUM_SAMPLES);
     await bank.renderPitched(rate, PITCHED_SAMPLES);
     await bank.render(rate, TRANSITION_SAMPLES);
+    await bank.render(rate, ACTION_SAMPLES);
+    await bank.renderPitched(rate, ACTION_PITCHED);
     const core = bank.bytes;
     let peak = core;
     let peakAt = '';

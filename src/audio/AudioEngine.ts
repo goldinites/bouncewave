@@ -2,6 +2,7 @@ import { MasterLevels, Mixer } from '@/audio/Mixer';
 import { MusicState } from '@/audio/music/intensity';
 import { MusicEngine } from '@/audio/music/MusicEngine';
 import { Ps1MusicEngine } from '@/audio/music/Ps1MusicEngine';
+import { ACTION_PITCHED, ACTION_SAMPLES } from '@/audio/samples/actions';
 import { DRUM_SAMPLES } from '@/audio/samples/drums';
 import { PITCHED_SAMPLES } from '@/audio/samples/pitched';
 import { TRANSITION_SAMPLES } from '@/audio/samples/transitions';
@@ -44,6 +45,9 @@ export class AudioEngine {
       // Hits are tuned to whatever chord the music is playing right now
       () => this.music.getHarmony(),
       () => this.mixer,
+      () => this.samples,
+      // and grow louder as the music heats up
+      () => this.music.getHeat(),
     );
 
     // Silence the whole audio graph while the tab is hidden (the game pauses itself separately)
@@ -140,10 +144,13 @@ export class AudioEngine {
     if (!this.mixer) {
       this.mixer = new Mixer(ac);
       // Rendered off the frame, in the background; the live synths play until they are ready.
-      // The drums first: they are small, and every song needs them from its first bar
+      // The action sounds first, the first hit comes within seconds; then the drums: they are
+      // small, and every song needs them from its first bar
       const rate = ac.sampleRate;
       void this.samples
-        .render(rate, DRUM_SAMPLES)
+        .render(rate, ACTION_SAMPLES)
+        .then(() => this.samples.renderPitched(rate, ACTION_PITCHED))
+        .then(() => this.samples.render(rate, DRUM_SAMPLES))
         .then(() => this.samples.renderPitched(rate, PITCHED_SAMPLES))
         .then(() => this.samples.render(rate, TRANSITION_SAMPLES));
     }
