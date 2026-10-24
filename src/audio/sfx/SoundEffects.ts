@@ -84,6 +84,7 @@ const HIT_MIX = {
     LOCK_STEP: 0.06, // between the beeps
     TUBE: 0.45,
     TUBE_SWELL: 0.03, // the tubes glow up rather than click on
+    RING: 0.6, // how long each tube rings once lit, well short of the Overdrive's
     HIGH_SWELL: 0.1,
     SPARK: 0.1,
     LIGHT: 0.16, // the first tube lit, as the beeps end
@@ -500,6 +501,7 @@ export class SoundEffects {
           gain: READY.TUBE,
           delay: lit(step),
           swell: READY.TUBE_SWELL,
+          cut: READY.RING,
           wide: true,
         },
         // The last tube glows an octave higher too, the chime's peak
@@ -511,6 +513,7 @@ export class SoundEffects {
                 gain: READY.HIGH_TUBE,
                 delay: lit(2),
                 swell: READY.HIGH_SWELL,
+                cut: READY.RING,
                 wide: true,
               },
             ]
