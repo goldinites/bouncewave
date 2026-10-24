@@ -84,7 +84,7 @@ const HIT_MIX = {
     LOCK_STEP: 0.06, // between the beeps
     TUBE: 0.45,
     TUBE_SWELL: 0.03, // the tubes glow up rather than click on
-    RING: 0.45, // how long each tube rings once lit, well short of the Overdrive's
+    RING: 0.35, // how long each tube rings once lit, well short of the Overdrive's
     HIGH_SWELL: 0.1,
     SPARK: 0.1,
     LIGHT: 0.16, // the first tube lit, as the beeps end
