@@ -130,7 +130,8 @@ export function heatLevel(heat: number): number {
 export const HIT_SKETCHES = ['layers', 'clean', 'snap', 'chip'] as const;
 export type HitSketch = (typeof HIT_SKETCHES)[number];
 // The perfect hit's: `shine` is the old sine and its octave with a glint two octaves up, `arp`
-// the chord's tones flicked upwards
+// the chord's tones flicked upwards; either may land with a `punch` under it (the user: a reward
+// with impact, short of the layers it replaces), a console's noise crack and a kick dropping
 export const PERFECT_SKETCHES = ['layers', 'shine', 'arp'] as const;
 export type PerfectSketch = (typeof PERFECT_SKETCHES)[number];
 
@@ -139,6 +140,7 @@ export interface HitSketches {
   hit: HitSketch;
   perfect: PerfectSketch;
   climb: boolean;
+  punch: boolean;
 }
 
 // The beep sketches' tones: peak levels and lengths in s as the old beeps had them, the player's
@@ -164,6 +166,10 @@ const BEEP = {
     ARP_STEP: 0.03, // s between the tones
     ARP_LENGTH: 0.18,
   },
+  // The perfect hit's punch: a console's noise channel cracking, and a square dropping from an
+  // octave under the note two octaves further, as an 8-bit kick; peaks and lengths in s
+  PUNCH: { NOISE: 0.14, NOISE_LENGTH: 0.05, KICK: 0.2, KICK_LENGTH: 0.1, GLIDE: 0.08 },
+  NOISE_HOLD: 4, // samples each noise value is held, for a console's grit
   JITTER: 0.1, // share either way the volume differs from hit to hit
 } as const;
 
@@ -180,6 +186,8 @@ interface Tone {
   cutoff?: number;
   /** Semitones above `frequency` it starts at, dropping onto it. */
   from?: number;
+  /** s it takes to drop from `from` onto the note; a snap's if not given. */
+  glide?: number;
   delay?: number;
 }
 
@@ -219,10 +227,11 @@ export class SoundEffects {
   private echoContext: AudioContext | null = null;
   /** While set, the layered sounds play as their live synths (`playAsSynth`). */
   private isSynthOnly = false;
-  private sketches: HitSketches = { hit: 'layers', perfect: 'layers', climb: false };
-  /** The chip sketch's pulse waves by duty, built once for the context they belong to. */
+  private sketches: HitSketches = { hit: 'layers', perfect: 'layers', climb: false, punch: false };
+  /** The chip sketch's pulse waves by duty, and the punch's noise, built once for `sketchContext`. */
   private pulses = new Map<number, PeriodicWave>();
-  private pulseContext: AudioContext | null = null;
+  private noise: AudioBuffer | null = null;
+  private sketchContext: AudioContext | null = null;
 
   /**
    * @param getIsGameplayAudible whether gameplay sounds should play right now (false behind
@@ -414,6 +423,7 @@ export class SoundEffects {
               },
             ];
       for (const tone of tones) this.beepTone(ac, tone);
+      if (this.sketches.punch) this.punch(ac, note, at, trim);
       this.duckMusic(HIT_DUCK.PERFECT);
       this.mixerGetter()?.carveForHit(1);
       return true;
@@ -438,6 +448,58 @@ export class SoundEffects {
     return true;
   }
 
+  /** The perfect hit's punch under its tone: the noise channel's crack and an 8-bit kick. */
+  private punch(ac: AudioContext, note: number, pan: number, trim: number): void {
+    const { PUNCH } = BEEP;
+    this.beepTone(ac, {
+      frequency: midiToFrequency(note - 36),
+      wave: 'square',
+      volume: PUNCH.KICK * trim,
+      length: PUNCH.KICK_LENGTH,
+      pan,
+      from: 24,
+      glide: PUNCH.GLIDE,
+    });
+    try {
+      const source = ac.createBufferSource();
+      source.buffer = this.consoleNoise(ac);
+      const start = ac.currentTime;
+      const gain = ac.createGain();
+      gain.gain.setValueAtTime(PUNCH.NOISE * trim, start);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + PUNCH.NOISE_LENGTH);
+      const panner = ac.createStereoPanner();
+      panner.pan.value = pan;
+      source.connect(gain).connect(panner).connect(this.output(ac));
+      source.start(start, Math.random() * 0.5);
+      source.stop(start + PUNCH.NOISE_LENGTH);
+    } catch {
+      // Audio playback fails silently if browser policy blocks it
+    }
+  }
+
+  /** A second of noise held in steps, a console's noise channel, rendered once per context. */
+  private consoleNoise(ac: AudioContext): AudioBuffer {
+    this.claimSketchContext(ac);
+    if (this.noise) return this.noise;
+    const buffer = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    let value = 0;
+    for (let i = 0; i < data.length; i++) {
+      if (i % BEEP.NOISE_HOLD === 0) value = Math.random() * 2 - 1;
+      data[i] = value;
+    }
+    this.noise = buffer;
+    return buffer;
+  }
+
+  /** Drops what the sketches built for another context. */
+  private claimSketchContext(ac: AudioContext): void {
+    if (this.sketchContext === ac) return;
+    this.pulses.clear();
+    this.noise = null;
+    this.sketchContext = ac;
+  }
+
   /** The perfect hit's arpeggio: the note, the chord's next two tones above it, its octave. */
   private arpeggio(note: number, rally: number): number[] {
     const harmony = this.harmonyGetter();
@@ -452,10 +514,7 @@ export class SoundEffects {
 
   /** A pulse wave of `duty`, built once per context. */
   private pulse(ac: AudioContext, duty: number): PeriodicWave {
-    if (this.pulseContext !== ac) {
-      this.pulses.clear();
-      this.pulseContext = ac;
-    }
+    this.claimSketchContext(ac);
     let wave = this.pulses.get(duty);
     if (!wave) {
       const harmonics = 32;
@@ -478,7 +537,10 @@ export class SoundEffects {
       else osc.type = tone.wave;
       if (tone.from) {
         osc.frequency.setValueAtTime(tone.frequency * 2 ** (tone.from / 12), start);
-        osc.frequency.exponentialRampToValueAtTime(tone.frequency, start + BEEP.SNAP.TIME);
+        osc.frequency.exponentialRampToValueAtTime(
+          tone.frequency,
+          start + (tone.glide ?? BEEP.SNAP.TIME),
+        );
       } else {
         osc.frequency.setValueAtTime(tone.frequency, start);
       }

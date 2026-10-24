@@ -30,8 +30,13 @@ describe('SoundStand', () => {
   });
 
   it('plays the hit sketches a link names, and keeps those picked in the address', () => {
-    const { audio, get } = setup('/?debug&hits=chip&perfect=arp&climb');
-    expect(audio.sfx.hitSketches).toEqual({ hit: 'chip', perfect: 'arp', climb: true });
+    const { audio, get } = setup('/?debug&hits=chip&perfect=arp&climb&punch');
+    expect(audio.sfx.hitSketches).toEqual({
+      hit: 'chip',
+      perfect: 'arp',
+      climb: true,
+      punch: true,
+    });
     const hit = get<HTMLSelectElement>('select[data-stand="hits"]');
     expect(hit.value).toBe('chip');
     expect(get<HTMLInputElement>('input[data-stand="climb"]').checked).toBe(true);
@@ -41,7 +46,14 @@ describe('SoundStand', () => {
     const climb = get<HTMLInputElement>('input[data-stand="climb"]');
     climb.checked = false;
     climb.dispatchEvent(new Event('change'));
-    expect(audio.sfx.hitSketches).toEqual({ hit: 'snap', perfect: 'arp', climb: false });
+    expect(audio.sfx.hitSketches).toEqual({
+      hit: 'snap',
+      perfect: 'arp',
+      climb: false,
+      punch: true,
+    });
+    expect(params().has('punch')).toBe(true);
+    expect(window.location.search).toMatch(/[?&]punch(&|$)/);
     expect(params().get('hits')).toBe('snap');
     expect(params().has('climb')).toBe(false);
     expect(window.location.search).toMatch(/[?&]debug(&|$)/);

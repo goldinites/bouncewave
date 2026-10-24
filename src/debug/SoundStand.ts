@@ -32,7 +32,7 @@ const TIER_COLOURS: Record<Tier, string> = {
 };
 const BEATS_PER_BAR = STEPS_PER_BAR / 4;
 // The address's flags, kept bare (`?debug&climb`) rather than `debug=`
-const BARE_PARAMS = /([?&])(debug|climb)=(?=&|$)/g;
+const BARE_PARAMS = /([?&])(debug|climb|punch)=(?=&|$)/g;
 
 /** A sound of the game's, or a series of it, as the stand plays it. */
 interface StandSound {
@@ -136,6 +136,7 @@ export class SoundStand {
     hit: HTMLSelectElement;
     perfect: HTMLSelectElement;
     climb: HTMLInputElement;
+    punch: HTMLInputElement;
   } | null = null;
   private readonly layerBoxes = new Map<MusicLayer, HTMLInputElement>();
   private readonly listeners = new AbortController();
@@ -261,6 +262,7 @@ export class SoundStand {
         perfect: perfect as PerfectSketch,
       }),
       climb: params.has('climb'),
+      punch: params.has('punch'),
     });
     this.syncHitSketchRow();
 
@@ -465,8 +467,8 @@ export class SoundStand {
   }
 
   /**
-   * The paddle hits' sketches to choose from by ear (the hit, the perfect hit, the old climb),
-   * heard on the buttons below and in a match; kept in the address (`?hits=snap&perfect=shine`).
+   * The paddle hits' sketches to choose from by ear (the hit, the perfect hit and its punch, the old climb),
+   * heard on the buttons below and in a match; kept in the address (`?hits=snap&perfect=shine&punch`).
    */
   private hitSketchRow(): HTMLElement {
     const hit = this.select(
@@ -477,38 +479,50 @@ export class SoundStand {
       'perfect',
       PERFECT_SKETCHES.map((sketch): [string, string] => [sketch, `perfect: ${sketch}`]),
     );
-    const climb = document.createElement('input');
-    climb.type = 'checkbox';
-    climb.dataset.stand = 'climb';
-    const label = document.createElement('label');
-    const name = document.createElement('span');
-    name.textContent = 'climb';
-    label.append(climb, name);
+    const [climb, climbLabel] = this.checkbox('climb');
+    const [punch, punchLabel] = this.checkbox('punch');
     const apply = () => {
       this.audio.sfx.setHitSketches({
         hit: hit.value as HitSketch,
         perfect: perfect.value as PerfectSketch,
         climb: climb.checked,
+        punch: punch.checked,
       });
       this.saveToAddress({
         hits: hit.value === 'layers' ? null : hit.value,
         perfect: perfect.value === 'layers' ? null : perfect.value,
       });
       this.saveFlagToAddress('climb', climb.checked);
+      this.saveFlagToAddress('punch', punch.checked);
     };
-    for (const control of [hit, perfect, climb]) this.on(control, 'change', apply);
-    this.hitSketchControls = { hit, perfect, climb };
-    return this.row(hit, perfect, label);
+    for (const control of [hit, perfect, climb, punch]) this.on(control, 'change', apply);
+    this.hitSketchControls = { hit, perfect, climb, punch };
+    const row = this.row(hit, perfect, climbLabel, punchLabel);
+    row.style.flexWrap = 'wrap';
+    return row;
+  }
+
+  /** A labelled checkbox, `data-stand` its name. */
+  private checkbox(name: string): [HTMLInputElement, HTMLLabelElement] {
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.dataset.stand = name;
+    const label = document.createElement('label');
+    const text = document.createElement('span');
+    text.textContent = name;
+    label.append(box, text);
+    return [box, label];
   }
 
   /** Shows the sketches the hits play. */
   private syncHitSketchRow(): void {
-    const { hit, perfect, climb } = this.audio.sfx.hitSketches;
+    const { hit, perfect, climb, punch } = this.audio.sfx.hitSketches;
     const controls = this.hitSketchControls;
     if (!controls) return;
     controls.hit.value = hit;
     controls.perfect.value = perfect;
     controls.climb.checked = climb;
+    controls.punch.checked = punch;
   }
 
   private soundButtons(): HTMLElement {

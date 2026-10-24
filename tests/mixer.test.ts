@@ -313,6 +313,15 @@ describe('paddle hits from their rendered layers', () => {
     sfx.playPaddleHit(1, true, 0);
     expect(callsOf(calls, 'createOscillator')).toHaveLength(7);
     expect(ducks).toEqual([0.6, 0.6]);
+
+    // The punch lands under it: an 8-bit kick and the noise channel's crack
+    sfx.setHitSketches({ punch: true });
+    sfx.playPaddleHit(1, true, 0);
+    expect(callsOf(calls, 'createOscillator')).toHaveLength(12);
+    expect(callsOf(calls, 'createBufferSource')).toHaveLength(1);
+    sfx.playPaddleHit(1, true, 0);
+    // Its noise is rendered once
+    expect(callsOf(calls, 'createBuffer')).toHaveLength(1);
   });
 
   it('plays the old live synth on the stand’s asking, the layers rendered or not', () => {
