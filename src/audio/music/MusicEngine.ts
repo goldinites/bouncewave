@@ -321,6 +321,11 @@ export class MusicEngine {
     return this.pinnedIntensity ?? this.intensity;
   }
 
+  /** An eighth note of the song playing, in seconds. */
+  public getEighth(): number {
+    return 30 / this.conductor.song.bpm;
+  }
+
   public getHarmony(): Harmony | null {
     return this.graph ? this.harmony.at(this.graph.context.currentTime) : null;
   }

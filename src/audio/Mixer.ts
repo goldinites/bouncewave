@@ -28,6 +28,8 @@ const HIT_CARVE = {
   HOLD: 0.04, // s the dip holds
   RELEASE: 0.05, // s, time constant back up
 } as const;
+// Under an Overdrive the dip holds longer and comes back slowly, leaving its tail room to ring
+const LONG_DUCK = { HOLD: 0.3, RELEASE: 0.4 } as const; // s
 // About 0.37 s at 44.1 kHz: long enough for a level that doesn't flicker with every beat
 const METER_FFT_SIZE = 16384;
 // The meter hears roughly as the ear does (the K-weighting of LUFS): the deep lows count less,
@@ -109,8 +111,12 @@ export class Mixer {
     presence.connect(this.meter);
   }
 
-  /** A strong hit: the music dips for a moment under it, deeper the stronger, `strength` in [0, 1]. */
-  public duckMusic(strength: number): void {
+  /**
+   * A strong hit: the music dips for a moment under it, deeper the stronger, `strength` in [0, 1];
+   * `isLong` for one with a tail to ring out, held and released slowly.
+   */
+  public duckMusic(strength: number, isLong = false): void {
+    const { HOLD, RELEASE } = isLong ? LONG_DUCK : HIT_DUCK;
     const now = this.context.currentTime;
     const level = dbToGain(HIT_DUCK.DEPTH * clamp(strength, 0, 1));
     try {
@@ -118,7 +124,7 @@ export class Mixer {
       // A dip already running is cut short where it stands, so a new one never waits for it
       gain.cancelScheduledValues(now);
       gain.setTargetAtTime(level, now, HIT_DUCK.ATTACK);
-      gain.setTargetAtTime(1, now + HIT_DUCK.HOLD, HIT_DUCK.RELEASE);
+      gain.setTargetAtTime(1, now + HOLD, RELEASE);
     } catch {
       // Play on undipped rather than break audio
     }

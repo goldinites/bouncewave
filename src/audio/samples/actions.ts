@@ -117,15 +117,15 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
   pew: {
     roots: OCTAVE_ROOTS,
     maxRate: RENDER_RATE.HIGH,
-    duration: 0.45,
+    duration: 0.75,
     build: (ctx, random, f) => {
-      const fall = 0.16; // s, from far above onto the note
+      const fall = 0.3; // s, from far above onto the note
       const close = filter(ctx, 'lowpass', 12000, 4);
       close.frequency.setValueAtTime(12000, 0);
-      close.frequency.exponentialRampToValueAtTime(2000, 0.3);
+      close.frequency.exponentialRampToValueAtTime(2000, 0.5);
       chain(sweep(ctx, 'sawtooth', f * 12, f, fall), close);
       chain(sweep(ctx, 'square', f * 8, f / 2, fall), level(ctx, 0.5), close);
-      chain(close, drive(ctx, 4), hit(ctx, 1, 0.4, 0, 0.001), ctx.destination);
+      chain(close, drive(ctx, 4), hit(ctx, 1, 0.7, 0, 0.001), ctx.destination);
       const [input, output] = disperse(ctx, f * 5, 40);
       chain(noiseSource(ctx, random), hit(ctx, 1, 0.002), input);
       chain(output, filter(ctx, 'highpass', f), level(ctx, 0.6), ctx.destination);
@@ -163,8 +163,8 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
   // A neon tube lighting: the strike's spark, a flicker as the gas catches, then its ring
   tube: {
     roots: OCTAVE_ROOTS,
-    maxRate: RENDER_RATE.HIGH,
-    duration: 0.7,
+    maxRate: RENDER_RATE.MID,
+    duration: 1.3,
     build: (ctx, random, f) => {
       const flicker = ctx.createGain();
       flicker.gain.setValueAtTime(0, 0);
@@ -176,7 +176,7 @@ export const ACTION_PITCHED: Record<string, PitchedRecipe> = {
       chain(osc(ctx, 'sine', f * 2), level(ctx, 0.5), hum);
       chain(osc(ctx, 'square', f), filter(ctx, 'bandpass', f * 3, 2), level(ctx, 0.45), hum);
       chain(osc(ctx, 'sine', f * 4), level(ctx, 0.15), hum);
-      chain(hum, flicker, drive(ctx, 2), hit(ctx, 1, 0.6, 0, 0.003), ctx.destination);
+      chain(hum, flicker, drive(ctx, 2), hit(ctx, 1, 1.2, 0, 0.003), ctx.destination);
       chain(burst(ctx, random, 5000, 0.8, 0.004), ctx.destination);
     },
   },
@@ -363,13 +363,13 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
   },
   // The air ringing after a perfect hit: bright noise in a long room
   tail: {
-    duration: 1.4,
+    duration: 2,
     maxRate: RENDER_RATE.MID,
-    variants: 2,
+    variants: 1,
     build: (ctx, random) => {
       chain(
         burst(ctx, random, 7000, 0.5, 0.02),
-        room(ctx, 1.2, random),
+        room(ctx, 1.8, random),
         filter(ctx, 'highpass', 2500),
         ctx.destination,
       );

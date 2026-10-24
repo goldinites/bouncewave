@@ -48,6 +48,7 @@ export class AudioEngine {
       () => this.samples,
       // and grow louder as the music heats up
       () => this.music.getHeat(),
+      () => this.music.getEighth(),
     );
 
     // Silence the whole audio graph while the tab is hidden (the game pauses itself separately)

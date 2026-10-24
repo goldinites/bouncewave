@@ -49,21 +49,25 @@ const HIT_MIX = {
   CPU_LEVEL: -1,
   PERFECT_LEVEL: 5,
   // The Overdrive's power shot, this much louder than a perfect hit: a weapon of neon,
-  // electricity and laser (the user, 24.10.2026) — the sound barrier cracking at the contact, a
-  // laser shot diving onto the note leading, an electric arc buzzing on under it, a neon tube lit
-  // on the note and an octave above, over a perfect hit; a small explosion under it all (the
-  // user: organic, not overdone)
+  // electricity and laser (the user, 24.10.2026), unfolding over most of a second so each of its
+  // sounds is heard (`AT`, s): the sound barrier cracking with the hit, the laser shot diving onto
+  // the note, the electric arc buzzing, a small explosion blooming (organic, not overdone), the
+  // neon tube lit on the note and an octave above, ringing out
   POWER: {
     LEVEL: 4,
-    HIGH_PEW: 0.25,
-    BLAST: 0.28,
     CRACK: 0.5,
     BODY: 0.6, // share of a perfect hit's bodies
     PEW: 0.55,
+    HIGH_PEW: 0.25,
     ARC: 0.65,
-    ARC_CUT: 0.3, // s the arc buzzes
+    ARC_FOR: 0.4, // s the arc buzzes
+    BLAST: 0.28,
     TUBE: 0.3,
     HIGH_TUBE: 0.15,
+    AT: { PEW: 0.04, ARC: 0.12, BLAST: 0.22, TUBE: 0.3 },
+    // The echo sketch: the laser repeating on the music's eighths, softer each time, side to side
+    ECHO: [0.45, 0.28, 0.16],
+    ECHO_PAN: 0.6,
   },
   // The meter filling, the Overdrive's weapon ready (the user: the armed, neon and lock-on
   // sketches in one), one after another so each is heard: the weapon cocked in two clicks, a
@@ -127,7 +131,16 @@ export interface HitFeel {
 
 /** One rendered layer to play: a tuned body at a note, or a one-shot. */
 type Layer =
-  | { tuned: string; note: number; gain: number; cut?: number; delay?: number; wide?: boolean }
+  | {
+      tuned: string;
+      note: number;
+      gain: number;
+      cut?: number;
+      delay?: number;
+      wide?: boolean;
+      /** Where it sounds, in place of the action's own place. */
+      pan?: number;
+    }
   | { shot: string; gain: number; rate?: number; delay?: number };
 
 /** Which of the mixer's buses a sound plays on. */
@@ -141,6 +154,9 @@ export class SoundEffects {
   private mixerGetter: () => Mixer | null;
   private samplesGetter: () => SampleBank | null;
   private heatGetter: () => number;
+  private eighthGetter: () => number;
+  /** The Overdrive's laser echoing in time with the music (a sketch, on the stand). */
+  public isPowerEcho = false;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
 
@@ -150,6 +166,7 @@ export class SoundEffects {
    * @param getMixer the master the sounds play into; without one they go straight out
    * @param getSamples the rendered layers; until they are ready the sounds play as live synths
    * @param getHeat how hot the music is, 0-1: the sounds grow louder with it; a verse's if none
+   * @param getEighth an eighth note of the music, s, for what echoes in time with it
    */
   constructor(
     getAudioContext: () => AudioContext | null,
@@ -159,6 +176,7 @@ export class SoundEffects {
     getMixer: () => Mixer | null = () => null,
     getSamples: () => SampleBank | null = () => null,
     getHeat: () => number = () => HEAT_LEVEL[1].heat,
+    getEighth: () => number = () => 0.25,
   ) {
     this.audioContextGetter = getAudioContext;
     this.isMutedGetter = getIsMuted;
@@ -167,6 +185,7 @@ export class SoundEffects {
     this.mixerGetter = getMixer;
     this.samplesGetter = getSamples;
     this.heatGetter = getHeat;
+    this.eighthGetter = getEighth;
   }
 
   /** Where a sound on `bus` goes: its bus on the mixer, or the speakers if there is none. */
@@ -325,7 +344,7 @@ export class SoundEffects {
         if (!tuned) continue;
         const { buffer, rate } = tuned;
         if (!layer.wide) {
-          this.layer({ ...at, ...layer, buffer, rate });
+          this.layer({ ...at, ...layer, pan: layer.pan ?? at.pan, buffer, rate });
           continue;
         }
         // Wide: a copy either side, a hair apart in pitch, so it fills the whole field
@@ -403,6 +422,7 @@ export class SoundEffects {
   public playPowerShot(rally: number, pan = 0): void {
     const note = getRallyNote(this.harmonyGetter(), rally);
     const { PERFECT, POWER } = HIT_MIX;
+    const { AT } = POWER;
     const layers: Layer[] = [
       { shot: HIT_CLICK, gain: HIT_MIX.CLICK },
       { shot: 'crack', gain: POWER.CRACK },
@@ -410,17 +430,26 @@ export class SoundEffects {
       { shot: 'thump', gain: PERFECT.THUMP },
       { shot: 'boom', gain: PERFECT.BOOM },
       { shot: 'spark', gain: PERFECT.SPARK },
-      { shot: 'blast', gain: POWER.BLAST },
-      { tuned: 'pew', note, gain: POWER.PEW, wide: true },
-      { tuned: 'pew', note: note + 12, gain: POWER.HIGH_PEW, wide: true },
-      { tuned: 'arc', note, gain: POWER.ARC, cut: POWER.ARC_CUT, wide: true },
-      { tuned: 'tube', note, gain: POWER.TUBE, wide: true },
-      { tuned: 'tube', note: note + 12, gain: POWER.HIGH_TUBE, wide: true },
-      { shot: 'tail', gain: PERFECT.TAIL },
+      { tuned: 'pew', note, gain: POWER.PEW, delay: AT.PEW, wide: true },
+      { tuned: 'pew', note: note + 12, gain: POWER.HIGH_PEW, delay: AT.PEW, wide: true },
+      ...(this.isPowerEcho
+        ? POWER.ECHO.map((gain, i) => ({
+            tuned: 'pew',
+            note,
+            gain: POWER.PEW * gain,
+            delay: AT.PEW + (i + 1) * this.eighthGetter(),
+            pan: (i % 2 ? 1 : -1) * POWER.ECHO_PAN,
+          }))
+        : []),
+      { tuned: 'arc', note, gain: POWER.ARC, delay: AT.ARC, cut: POWER.ARC_FOR, wide: true },
+      { shot: 'blast', gain: POWER.BLAST, delay: AT.BLAST },
+      { tuned: 'tube', note, gain: POWER.TUBE, delay: AT.TUBE, wide: true },
+      { tuned: 'tube', note: note + 12, gain: POWER.HIGH_TUBE, delay: AT.TUBE, wide: true },
+      { shot: 'tail', gain: PERFECT.TAIL, delay: AT.TUBE },
     ];
     const level = HIT_MIX.LEVEL + HIT_MIX.PERFECT_LEVEL + POWER.LEVEL;
     const played = this.playLayers(layers, level, pan);
-    this.duckMusic(HIT_DUCK.POWER_SHOT);
+    this.duckMusic(HIT_DUCK.POWER_SHOT, true);
     if (played) {
       this.mixerGetter()?.carveForHit(1);
       return;
@@ -601,9 +630,9 @@ export class SoundEffects {
   }
 
   /** The music dips for a moment under a strong hit, if the hit is heard at all. */
-  private duckMusic(strength: number): void {
+  private duckMusic(strength: number, isLong = false): void {
     if (this.isMutedGetter() || !this.isGameplayAudibleGetter()) return;
-    this.mixerGetter()?.duckMusic(strength);
+    this.mixerGetter()?.duckMusic(strength, isLong);
   }
 
   private getUnmutedContext(): AudioContext | null {

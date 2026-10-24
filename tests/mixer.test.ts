@@ -265,6 +265,17 @@ describe('paddle hits from their rendered layers', () => {
     expect(carves).toEqual([1]);
   });
 
+  it('echoes the Overdrive’s laser in time with the music, as a sketch', () => {
+    const { sfx, picked } = setup();
+
+    sfx.playPowerShot(4);
+    const without = picked.filter((id) => id === 'pew').length;
+    picked.length = 0;
+    sfx.isPowerEcho = true;
+    sfx.playPowerShot(4);
+    expect(picked.filter((id) => id === 'pew').length - without).toBe(3);
+  });
+
   it('arms, lights the chord in neon and locks on when the Overdrive meter fills', () => {
     const { sfx, picked } = setup();
 
@@ -281,6 +292,24 @@ describe('paddle hits from their rendered layers', () => {
     sfx.playPaddleHit(1);
     expect(callsOf(calls, 'createOscillator').length).toBeGreaterThan(0);
     expect(callsOf(calls, 'createBufferSource')).toEqual([]);
+  });
+});
+
+describe('the music dipped under an Overdrive', () => {
+  it('holds the dip longer and lets it back slowly, its tail ringing in it', () => {
+    const times = (isLong: boolean) => {
+      const { ctx, calls } = fakeAudioContext(1);
+      const mixer = new Mixer(ctx);
+      const before = callsOf(calls, 'setTargetAtTime').length;
+      mixer.duckMusic(1, isLong);
+      const [, back] = callsOf(calls, 'setTargetAtTime').slice(before);
+      return back.args as number[];
+    };
+
+    const [, shortFrom, shortRelease] = times(false);
+    const [, longFrom, longRelease] = times(true);
+    expect(longFrom).toBeGreaterThan(shortFrom);
+    expect(longRelease).toBeGreaterThan(shortRelease);
   });
 });
 
