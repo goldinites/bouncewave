@@ -1,7 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact';
 import { h } from 'preact';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { TRANSLATIONS } from '@/i18n/translations';
 import { MATCH_POINTS, MODE_IDS, quickMatchRules } from '@/match/modes';
@@ -13,6 +12,7 @@ import { MenuController } from '@/ui/MenuController';
 import { PlayMenu } from '@/ui/screens/PlayMenu';
 import { QuickMatchSetup } from '@/ui/screens/QuickMatchSetup';
 import { UIManager } from '@/ui/UIManager';
+import { fakeMenuSounds } from './helpers/fakeMenuSounds';
 
 describe('modes', () => {
   it('names every mode and every background in every language', () => {
@@ -171,7 +171,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
       onUnlockAudio: vi.fn(() => calls.push('unlock')),
     };
     const store = new SettingsStore({ load: getDefaultSettings, save: () => {} });
-    const menu = new MenuController(ui, i18n, {} as SoundEffects, store, actions);
+    const menu = new MenuController(ui, i18n, fakeMenuSounds(), store, actions);
     const screenButtons = () => [
       ...document.querySelectorAll<HTMLButtonElement>('#gameScreen button'),
     ];
@@ -392,7 +392,7 @@ describe('telling the game the quick match setup is on screen', () => {
     const ui = new UIManager(new I18nManager('en'));
     const onQuickMatchSetup = vi.fn();
     const store = new SettingsStore({ load: getDefaultSettings, save: () => {} });
-    const menu = new MenuController(ui, new I18nManager('en'), {} as SoundEffects, store, {
+    const menu = new MenuController(ui, new I18nManager('en'), fakeMenuSounds(), store, {
       onStartGame: vi.fn(),
       onStartQuickMatch: vi.fn(),
       onStartChallenge: vi.fn(),

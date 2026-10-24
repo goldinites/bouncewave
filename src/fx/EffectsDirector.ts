@@ -10,6 +10,7 @@ import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { getSpeedHeat } from '@/match/heat';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
+import { STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Side } from '@/match/side';
 import { REFLEX } from '@/match/skills/Reflex';
 import { finalScoreText } from '@/render/FinalScoreRenderer';
@@ -128,6 +129,14 @@ const courtPan = (x: number) => (x / COURT.WIDTH) * 2 - 1;
 // The serve's countdown (5.7b): s before the ball leaves at which a tick sounds; a pip as it leaves
 const SERVE_TICKS = [0.8, 0.4] as const;
 
+// 5.7c's moments heard over time. Ice: a scrape grain every GRAIN s while a player's paddle coasts
+// faster than MIN px/s, as loud as its speed against FULL px/s. Darkness: the ball's sonar pings
+// every FAR s, quickening to NEAR s as it closes on a person's goal. The clock: ticks once a second
+// in its last URGENT s (as the condition line turns urgent), every FAST_STEP s in its last FAST s
+const ICE_SCRAPE = { GRAIN: 0.06, MIN: 40, FULL: 700 } as const;
+const SONAR = { FAR: 0.45, NEAR: 0.1 } as const;
+const CLOCK = { URGENT: 10, FAST: 3, FAST_STEP: 0.25 } as const;
+
 /**
  * Everything the player sees and hears in response to the match: hit sounds, sparks and glow,
  * screen shake, deciding-point drama, the rally climax and the end-of-match finale.
@@ -153,6 +162,15 @@ export class EffectsDirector {
   private readonly isTwoPlayer: () => boolean;
   /** The serve's wait as the last step left it, to hear its countdown cross each tick. */
   private lastServeTime = 0;
+  /** Each paddle's speed as the last step left it, and the time to the next scrape on ice. */
+  private lastPaddleSpeeds: number[] = [];
+  /** Whether the match is being played on ice, as the last step left it: its hits tink. */
+  private isOnIce = false;
+  private nextScrapeIn = 0;
+  private nextPingIn = 0;
+  /** The match clock as the last step left it, and whether the next tick is a tock. */
+  private lastTimeLeft: number | null = null;
+  private isTock = false;
   private readonly challengeFinale: NonNullable<EffectsDirectorDeps['challengeFinale']>;
   private readonly isRestart: () => boolean;
 
@@ -250,6 +268,9 @@ export class EffectsDirector {
   public afterSimulation(dt: number, flow: MatchFlow): void {
     this.followMeters(flow);
     this.followServe(flow);
+    this.followIce(dt, flow);
+    this.followSonar(dt, flow);
+    this.followClock(flow);
     const sparkRally = flow.phase === 'finale' ? 0 : flow.rally;
     this.paddleFx.update(dt, this.paddles, this.particles, sparkRally);
 
@@ -306,14 +327,15 @@ export class EffectsDirector {
 
       case 'wallBounce':
         this.renderer.addShake(SHAKE.WALL_BOUNCE);
-        this.audio.sfx.playWallBounce(courtPan(event.x));
+        if (event.isPost) this.audio.sfx.playPostBounce(courtPan(event.x));
+        else this.audio.sfx.playWallBounce(courtPan(event.x));
         break;
 
       case 'brickBreak': {
         // It bounces like a wall and shatters in its own colour
         const { brick } = event;
         this.renderer.addShake(SHAKE.WALL_BOUNCE);
-        this.audio.sfx.playWallBounce(courtPan(event.x));
+        this.audio.sfx.playBrickBreak(courtPan(event.x));
         this.particles.burst(
           brick.x + brick.width / 2,
           brick.y + brick.height / 2,
@@ -330,6 +352,10 @@ export class EffectsDirector {
 
       case 'score':
         this.onScore(event);
+        break;
+
+      case 'modifier':
+        this.onModifierMoment(event);
         break;
 
       case 'skill':
@@ -375,8 +401,10 @@ export class EffectsDirector {
       this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, paddle.side, {
         pan: courtPan(hit.x),
         force: getSpeedHeat(hit.speed, this.maxBallSpeed),
+        size: paddle.spec.height / STANDARD_PADDLE.height,
       });
     }
+    if (this.isOnIce) this.audio.sfx.playIceTink(courtPan(hit.x));
 
     if (hit.chargedOverdrive) {
       this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, OVERDRIVE_FX.READY_RING_SPEED);
@@ -432,6 +460,75 @@ export class EffectsDirector {
       const pan = score.scoringPlayerIndex === 0 ? 1 : -1;
       if (this.isTwoPlayer() || score.scoringPlayerIndex === 0) this.audio.sfx.playPointWon(pan);
       else this.audio.sfx.playPointLost(pan);
+    }
+  }
+
+  /** A modifier's moment, heard: the wind turning, the middle post rising, a paddle shrinking. */
+  private onModifierMoment(moment: Extract<MatchEvent, { type: 'modifier' }>): void {
+    switch (moment.moment) {
+      case 'windTurn':
+        this.audio.sfx.playWindTurn(moment.direction);
+        break;
+      case 'postRise':
+        this.audio.sfx.playPostRise();
+        break;
+      case 'paddleShrink': {
+        const paddle = this.paddles[moment.paddleIndex];
+        this.audio.sfx.playShrink(moment.share, courtPan(paddle.x));
+        break;
+      }
+    }
+  }
+
+  /** On ice a person's paddle scrapes while it coasts, as loud as it is fast. */
+  private followIce(dt: number, flow: MatchFlow): void {
+    const speeds = this.paddles.map((paddle) => Math.abs(paddle.velocity));
+    const last = this.lastPaddleSpeeds;
+    this.lastPaddleSpeeds = speeds;
+    this.isOnIce = flow.activeModifiers.includes('ice');
+    if (!this.isOnIce || flow.phase === 'paused') return;
+    this.nextScrapeIn -= dt;
+    if (this.nextScrapeIn > 0) return;
+    this.nextScrapeIn = ICE_SCRAPE.GRAIN;
+    speeds.forEach((speed, i) => {
+      // Coasting: moving, and no faster than a step ago
+      const isCoasting = speed > ICE_SCRAPE.MIN && speed <= (last[i] ?? 0);
+      if (isCoasting && flow.isPlayerPaddle(i)) {
+        this.audio.sfx.playIceScrape(speed / ICE_SCRAPE.FULL, courtPan(this.paddles[i].x));
+      }
+    });
+  }
+
+  /**
+   * In the dark the ball pings where it is, quicker the nearer it is to a person's goal: heard
+   * where it cannot be seen.
+   */
+  private followSonar(dt: number, flow: MatchFlow): void {
+    if (!flow.activeModifiers.includes('darkness') || !flow.isBallLive) return;
+    this.nextPingIn -= dt;
+    if (this.nextPingIn > 0) return;
+    const ball = flow.leadBall;
+    const goal = ball.vx < 0 ? 0 : COURT.WIDTH;
+    const side: Side = ball.vx < 0 ? 0 : 1;
+    const isComingAtPlayer = this.isTwoPlayer() || side === 0;
+    const distance = Math.abs(ball.x - goal) / COURT.WIDTH;
+    this.nextPingIn = isComingAtPlayer
+      ? SONAR.NEAR + (SONAR.FAR - SONAR.NEAR) * Math.min(1, distance)
+      : SONAR.FAR;
+    this.audio.sfx.playSonar(courtPan(ball.drawX), 1 - ball.drawY / COURT.HEIGHT);
+  }
+
+  /** The match clock's last seconds tick, faster at the very end. */
+  private followClock(flow: MatchFlow): void {
+    const time = flow.timeLeft;
+    const last = this.lastTimeLeft;
+    this.lastTimeLeft = time;
+    if (time === null || last === null || time >= last || time > CLOCK.URGENT) return;
+    if (flow.phase !== 'serving' && flow.phase !== 'rally') return;
+    const step = time <= CLOCK.FAST ? CLOCK.FAST_STEP : 1;
+    if (Math.ceil(last / step) !== Math.ceil(time / step)) {
+      this.audio.sfx.playClockTick(this.isTock);
+      this.isTock = !this.isTock;
     }
   }
 

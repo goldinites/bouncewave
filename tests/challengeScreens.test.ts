@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
 import { ChallengeVerdict } from '@/match/ChallengeJudge';
 import { CHALLENGE_IDS, ChallengeId, CHALLENGES } from '@/match/challenges';
@@ -18,6 +17,7 @@ import { EventBus } from '@/shared/EventBus';
 import { describeFinale, describeShortfall } from '@/ui/challengeTexts';
 import { MenuController } from '@/ui/MenuController';
 import { UIManager } from '@/ui/UIManager';
+import { fakeMenuSounds } from './helpers/fakeMenuSounds';
 
 const progressOf = (...passed: ChallengeId[]): ChallengeProgress => ({ passed });
 
@@ -143,7 +143,7 @@ describe('the challenges in the menus', () => {
       isChallengeMatch: () => isChallengeMatch,
     };
     const store = new SettingsStore({ load: getDefaultSettings, save: () => {} });
-    const menu = new MenuController(ui, i18n, {} as SoundEffects, store, actions, undefined, {
+    const menu = new MenuController(ui, i18n, fakeMenuSounds(), store, actions, undefined, {
       get: () => ({ passed }),
     });
     const screenButtons = () => [

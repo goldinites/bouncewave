@@ -33,8 +33,8 @@ export const PERFECT_HIT = {
 
 /** Something that happened to the ball during a physics step, in the order it happened. */
 export type PhysicsEvent =
-  /** Off a wall, or off one of the court's posts (Bumpers). */
-  | { type: 'wallBounce'; x: number; y: number }
+  /** Off a wall, or off one of the court's posts (Bumpers): `isPost`. */
+  | { type: 'wallBounce'; x: number; y: number; isPost?: boolean }
   | {
       type: 'paddleHit';
       /** Which of the paddles hit it (an index into the list `step` was given). */
@@ -226,7 +226,7 @@ export class Physics {
       if (!Physics.reflect(ball, nx, ny)) continue; // already leaving it
       ball.x = bumper.x + nx * reach;
       ball.y = bumper.y + ny * reach;
-      events.push({ type: 'wallBounce', x: ball.x, y: ball.y });
+      events.push({ type: 'wallBounce', x: ball.x, y: ball.y, isPost: true });
     }
     return events;
   }

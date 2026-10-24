@@ -32,6 +32,8 @@ export class UIManager {
   private screenId: string | null = null;
   /** Runs before any click on the screen on show (it unlocks the audio). */
   private onScreenClick: (() => void) | null = null;
+  /** Answers the menu keys' moves and the buttons pressed with their sounds. */
+  public onMenuSound: ((sound: 'move' | 'select') => void) | null = null;
   private pauseButton: HTMLButtonElement;
   private i18n: I18nManager;
   /** The main menu's title, as index.html shows it before any script runs. */
@@ -54,10 +56,18 @@ export class UIManager {
       signal: this.listeners.signal,
     });
     // Captured, so it runs before the button's own action (which may start a match)
-    this.screenElement.addEventListener('click', () => this.onScreenClick?.(), {
-      capture: true,
-      signal: this.listeners.signal,
-    });
+    this.screenElement.addEventListener(
+      'click',
+      (e) => {
+        this.onScreenClick?.();
+        // After the button's own action, which may have answered with a sound of its own (back,
+        // a setting switched): a press says so only if nothing else did
+        if ((e.target as Element | null)?.closest('button')) {
+          queueMicrotask(() => this.onMenuSound?.('select'));
+        }
+      },
+      { capture: true, signal: this.listeners.signal },
+    );
   }
 
   /**
@@ -98,6 +108,7 @@ export class UIManager {
       last,
     }[move];
     buttons[target].focus();
+    if (move !== 'first' || e.code !== 'Enter') this.onMenuSound?.('move');
   }
 
   /**
