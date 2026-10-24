@@ -13,7 +13,7 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
-import { POINT_SKETCHES, POINT_SOUNDS, PointSketch, SoundEffects } from '@/audio/sfx/SoundEffects';
+import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -187,7 +187,6 @@ export class SoundStand {
       debugHeading('Layers'),
       this.layerRows(),
       debugHeading('Game sounds'),
-      this.pointSketchRow(),
       this.soundButtons(),
       debugHeading('Status'),
       this.readout,
@@ -438,25 +437,6 @@ export class SoundStand {
     if (count === 0) return '';
     const megabytes = (samples.bytes / 1024 / 1024).toFixed(1);
     return `\nsamples ${count} · ${megabytes} MB · ${samples.renderTime.toFixed(0)} ms`;
-  }
-
-  /** The point's sounds' sketches to choose from by ear (5.7b), heard below and in a match. */
-  private pointSketchRow(): HTMLElement {
-    const row = this.row(
-      ...POINT_SOUNDS.map((sound) => {
-        const select = this.select(
-          `point-${sound}`,
-          POINT_SKETCHES.map((sketch): [string, string] => [sketch, `${sound}: ${sketch}`]),
-        );
-        select.value = this.audio.sfx.pointSketch[sound];
-        this.on(select, 'change', () =>
-          this.audio.sfx.setPointSketch(sound, select.value as PointSketch),
-        );
-        return select;
-      }),
-    );
-    row.style.flexWrap = 'wrap';
-    return row;
   }
 
   private soundButtons(): HTMLElement {

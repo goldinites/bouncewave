@@ -143,52 +143,22 @@ const HIT = {
   JITTER: 0.1, // share either way the volume differs from hit to hit
 } as const;
 
-// The point's sounds (5.7b), in the hits' beep idiom and on the chord the music is on; two
-// sketches of each to choose from by ear (`setPointSketches`, the sound stand). Peaks and
-// lengths in s, notes as offsets over the chord's root (MIDI 28-39).
-// - The serve: a quiet countdown — two ticks, then a pip as the ball leaves — so the player can
-//   time it by ear; on the deciding point a sting announces it in place of the ticks.
-// - A point won rises up the chord, a reward; a point lost falls two notes, darker and shorter,
-//   never a buzzer: losing one of many points must not sting. Both from the goal it went in
-export const POINT_SKETCHES = ['a', 'b'] as const;
-export type PointSketch = (typeof POINT_SKETCHES)[number];
-export const POINT_SOUNDS = ['serve', 'won', 'lost', 'decider'] as const;
-export type PointSound = (typeof POINT_SOUNDS)[number];
-export type PointSketches = Record<PointSound, PointSketch>;
-
+// The point's sounds (5.7b; chosen by ear with the user, 24.10.2026), in the hits' beep idiom
+// and on the chord the music is on. Peaks and lengths in s, notes as offsets over the chord's
+// root (MIDI 28-39).
+// - The serve counts down quietly, so the player can time it by ear: two triangle ticks snapping
+//   onto the fifth, then the root and its fifth flicked up as the ball leaves.
+// - The deciding point is announced as it is served, in place of the ticks: a low chord, root,
+//   fifth and octave, in squares through a closed filter.
+// - A point won rises up the chord in sines, a reward, its top ringing with a glint; a point lost
+//   falls from the third to the root in a muffled square, the root sagging onto its note — never
+//   a buzzer: losing one of many points must not sting. Both from the goal the ball went in
 const POINT = {
-  // a: a sine blip on the root; b: a triangle snapping onto the fifth
-  TICK: { OFFSET: 36, VOLUME: 0.035, LENGTH: 0.04, SNAP_VOLUME: 0.05, SNAP_LENGTH: 0.05 },
-  // a: a square pip an octave over the tick, snapping; b: the root and its fifth flicked up
-  GO: { OFFSET: 48, VOLUME: 0.06, LENGTH: 0.09, CUTOFF: 4000, STEP: 0.05, FLICK_LENGTH: 0.07 },
-  // a: a square arpeggio with the noise channel's crack; b: a sine one, the top ringing with a glint
-  WON: {
-    OFFSET: 36,
-    VOLUME: 0.09,
-    STEP: 0.05,
-    LENGTH: 0.12,
-    CUTOFF: 6000,
-    CRACK: 0.1,
-    CRACK_LENGTH: 0.05,
-    RING: 0.35,
-    SINE_VOLUME: 0.12,
-    GLINT: 0.04,
-  },
-  // a: a triangle falling fifth to root; b: a muffled square third to root, sagging a semitone
-  LOST: { OFFSET: 24, VOLUME: 0.12, STEP: 0.1, LENGTH: 0.12, SQUARE: 0.07, CUTOFF: 1500, SAG: 0.2 },
-  // a: a low chord through a closed filter; b: a gong, a struck bar's inharmonic partials
-  DECIDER: {
-    OFFSET: 12,
-    VOLUME: 0.07,
-    LENGTH: 1.2,
-    CUTOFF: 900,
-    GONG_OFFSET: 24,
-    GONG: [
-      { ratio: 1, volume: 0.15, length: 1.6 },
-      { ratio: 2.76, volume: 0.06, length: 0.9 },
-      { ratio: 5.4, volume: 0.03, length: 0.5 },
-    ],
-  },
+  TICK: { OFFSET: 36, VOLUME: 0.05, LENGTH: 0.05 },
+  GO: { OFFSET: 36, VOLUME: 0.06, LENGTH: 0.07, STEP: 0.05, CUTOFF: 4000 },
+  WON: { OFFSET: 36, VOLUME: 0.12, STEP: 0.05, LENGTH: 0.12, RING: 0.35, GLINT: 0.04 },
+  LOST: { OFFSET: 24, VOLUME: 0.07, STEP: 0.1, LENGTH: 0.12, CUTOFF: 1500, SAG: 0.2 },
+  DECIDER: { OFFSET: 12, VOLUME: 0.07, LENGTH: 1.2, CUTOFF: 900 },
 } as const;
 
 /** One tone of a hit. */
@@ -242,7 +212,6 @@ export class SoundEffects {
   private heatGetter: () => number;
   private echoInput: AudioNode | null = null;
   private echoContext: AudioContext | null = null;
-  private pointSketches: PointSketches = { serve: 'a', won: 'a', lost: 'a', decider: 'a' };
   /** The punch's console noise, rendered once for `noiseContext`. */
   private noise: AudioBuffer | null = null;
   private noiseContext: AudioContext | null = null;
@@ -270,15 +239,6 @@ export class SoundEffects {
     this.mixerGetter = getMixer;
     this.samplesGetter = getSamples;
     this.heatGetter = getHeat;
-  }
-
-  /** Which sketch each of the point's sounds plays (the sound stand's). */
-  public get pointSketch(): Readonly<PointSketches> {
-    return this.pointSketches;
-  }
-
-  public setPointSketch(sound: PointSound, sketch: PointSketch): void {
-    this.pointSketches = { ...this.pointSketches, [sound]: sketch };
   }
 
   /** Where a sound on `bus` goes: its bus on the mixer, or the speakers if there is none. */
@@ -414,61 +374,37 @@ export class SoundEffects {
     if (!at) return;
     const { ac, trim, root, chord } = at;
     const { TICK } = POINT;
-    if (this.pointSketches.serve === 'a') {
-      const frequency = midiToFrequency(root + TICK.OFFSET);
-      this.hitTone(ac, {
-        frequency,
-        wave: 'sine',
-        volume: TICK.VOLUME * trim,
-        length: TICK.LENGTH,
-        pan: 0,
-      });
-    } else {
-      const frequency = midiToFrequency(root + TICK.OFFSET + chord[chord.length - 1]);
-      this.hitTone(ac, {
-        frequency,
-        wave: 'triangle',
-        volume: TICK.SNAP_VOLUME * trim,
-        length: TICK.SNAP_LENGTH,
-        pan: 0,
-        from: HIT.SNAP.FROM,
-      });
-    }
+    this.hitTone(ac, {
+      frequency: midiToFrequency(root + TICK.OFFSET + chord[chord.length - 1]),
+      wave: 'triangle',
+      volume: TICK.VOLUME * trim,
+      length: TICK.LENGTH,
+      pan: 0,
+      from: HIT.SNAP.FROM,
+    });
   }
 
-  /** The serve's last beat: the ball leaves. */
+  /** The serve's last beat, as the ball leaves: the root and its fifth flicked up. */
   public playServeGo(): void {
     const at = this.pointContext();
     if (!at) return;
     const { ac, trim, root, chord } = at;
     const { GO } = POINT;
     const base = root + GO.OFFSET;
-    if (this.pointSketches.serve === 'a') {
+    [base, base + chord[chord.length - 1]].forEach((note, i) =>
       this.hitTone(ac, {
-        frequency: midiToFrequency(base),
+        frequency: midiToFrequency(note),
         wave: 'square',
         volume: GO.VOLUME * trim,
         length: GO.LENGTH,
         pan: 0,
         cutoff: GO.CUTOFF,
-        from: HIT.SNAP.FROM,
-      });
-    } else {
-      [base - 12, base - 12 + chord[chord.length - 1]].forEach((note, i) =>
-        this.hitTone(ac, {
-          frequency: midiToFrequency(note),
-          wave: 'square',
-          volume: GO.VOLUME * trim,
-          length: GO.FLICK_LENGTH,
-          pan: 0,
-          cutoff: GO.CUTOFF,
-          delay: i * GO.STEP,
-        }),
-      );
-    }
+        delay: i * GO.STEP,
+      }),
+    );
   }
 
-  /** A point won, heard from the goal it went in (`pan`). */
+  /** A point won, heard from the goal it went in (`pan`): up the chord, its top ringing. */
   public playPointWon(pan = 0): void {
     const at = this.pointContext();
     if (!at) return;
@@ -476,42 +412,26 @@ export class SoundEffects {
     const { WON } = POINT;
     const side = clamp(pan, -1, 1) * COURT_PAN;
     const notes = [...chord, 12].map((step) => root + WON.OFFSET + step);
-    if (this.pointSketches.won === 'a') {
-      notes.forEach((note, i) =>
-        this.hitTone(ac, {
-          frequency: midiToFrequency(note),
-          wave: 'square',
-          volume: WON.VOLUME * trim,
-          length: WON.LENGTH,
-          pan: side,
-          cutoff: WON.CUTOFF,
-          delay: i * WON.STEP,
-        }),
-      );
-      this.crack(ac, WON.CRACK * trim, WON.CRACK_LENGTH, side);
-    } else {
-      notes.forEach((note, i) => {
-        const isTop = i === notes.length - 1;
-        this.hitTone(ac, {
-          frequency: midiToFrequency(note),
-          wave: 'sine',
-          volume: WON.SINE_VOLUME * trim,
-          length: isTop ? WON.RING : WON.LENGTH,
-          pan: side,
-          delay: i * WON.STEP,
-        });
-        if (isTop) {
-          this.hitTone(ac, {
-            frequency: midiToFrequency(note + 24),
-            wave: 'triangle',
-            volume: WON.GLINT * trim,
-            length: WON.LENGTH,
-            pan: side,
-            delay: i * WON.STEP,
-          });
-        }
+    notes.forEach((note, i) => {
+      const isTop = i === notes.length - 1;
+      const tone = { pan: side, delay: i * WON.STEP };
+      this.hitTone(ac, {
+        ...tone,
+        frequency: midiToFrequency(note),
+        wave: 'sine',
+        volume: WON.VOLUME * trim,
+        length: isTop ? WON.RING : WON.LENGTH,
       });
-    }
+      if (isTop) {
+        this.hitTone(ac, {
+          ...tone,
+          frequency: midiToFrequency(note + 24),
+          wave: 'triangle',
+          volume: WON.GLINT * trim,
+          length: WON.LENGTH,
+        });
+      }
+    });
   }
 
   /** A point lost, heard from the goal it went in (`pan`): falling, but no buzzer. */
@@ -520,38 +440,24 @@ export class SoundEffects {
     if (!at) return;
     const { ac, trim, root, chord } = at;
     const { LOST } = POINT;
-    const side = clamp(pan, -1, 1) * COURT_PAN;
     const base = root + LOST.OFFSET;
-    if (this.pointSketches.lost === 'a') {
-      [base + chord[chord.length - 1], base].forEach((note, i) =>
-        this.hitTone(ac, {
-          frequency: midiToFrequency(note),
-          wave: 'triangle',
-          volume: LOST.VOLUME * trim,
-          length: LOST.LENGTH,
-          pan: side,
-          delay: i * LOST.STEP,
-        }),
-      );
-    } else {
-      // The root reached from a semitone above, sagging onto it
-      [
-        { note: base + chord[1], from: 0, length: LOST.LENGTH },
-        { note: base, from: 1, length: LOST.SAG + LOST.LENGTH },
-      ].forEach(({ note, from, length }, i) =>
-        this.hitTone(ac, {
-          frequency: midiToFrequency(note),
-          wave: 'square',
-          volume: LOST.SQUARE * trim,
-          length,
-          pan: side,
-          cutoff: LOST.CUTOFF,
-          from: from || undefined,
-          glide: LOST.SAG,
-          delay: i * LOST.STEP,
-        }),
-      );
-    }
+    // The third, then the root reached from a semitone above, sagging onto it
+    [
+      { note: base + chord[1], length: LOST.LENGTH },
+      { note: base, from: 1, length: LOST.SAG + LOST.LENGTH },
+    ].forEach(({ note, from, length }, i) =>
+      this.hitTone(ac, {
+        frequency: midiToFrequency(note),
+        wave: 'square',
+        volume: LOST.VOLUME * trim,
+        length,
+        pan: clamp(pan, -1, 1) * COURT_PAN,
+        cutoff: LOST.CUTOFF,
+        from,
+        glide: LOST.SAG,
+        delay: i * LOST.STEP,
+      }),
+    );
   }
 
   /** The deciding point announced as it is served, in place of the countdown's ticks. */
@@ -560,29 +466,16 @@ export class SoundEffects {
     if (!at) return;
     const { ac, trim, root, chord } = at;
     const { DECIDER } = POINT;
-    if (this.pointSketches.decider === 'a') {
-      const base = root + DECIDER.OFFSET;
-      [base, base + chord[chord.length - 1], base + 12].forEach((note) =>
-        this.hitTone(ac, {
-          frequency: midiToFrequency(note),
-          wave: 'square',
-          volume: DECIDER.VOLUME * trim,
-          length: DECIDER.LENGTH,
-          pan: 0,
-          cutoff: DECIDER.CUTOFF,
-        }),
-      );
-    } else {
-      const frequency = midiToFrequency(root + DECIDER.GONG_OFFSET);
-      for (const partial of DECIDER.GONG) {
-        this.hitTone(ac, {
-          frequency: frequency * partial.ratio,
-          wave: 'sine',
-          volume: partial.volume * trim,
-          length: partial.length,
-          pan: 0,
-        });
-      }
+    const base = root + DECIDER.OFFSET;
+    for (const note of [base, base + chord[chord.length - 1], base + 12]) {
+      this.hitTone(ac, {
+        frequency: midiToFrequency(note),
+        wave: 'square',
+        volume: DECIDER.VOLUME * trim,
+        length: DECIDER.LENGTH,
+        pan: 0,
+        cutoff: DECIDER.CUTOFF,
+      });
     }
   }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MINOR_TRIAD } from '@/audio/music/theory';
 import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
-import { POINT_SOUNDS, SoundEffects } from '@/audio/sfx/SoundEffects';
+import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
 
@@ -84,25 +84,19 @@ describe('SoundEffects', () => {
     }).not.toThrow();
   });
 
-  it('plays the point’s sounds in either sketch, up the chord on a point won', () => {
+  it('plays the point’s sounds, up the chord on a point won', () => {
     const { sfx, calls, harmony, oscillators } = setup();
-    const play = () => {
-      sfx.playServeTick();
-      sfx.playServeGo();
-      sfx.playPointWon(1);
-      sfx.playPointLost(-1);
-      sfx.playDeciderSting();
-    };
 
-    play();
-    const first = oscillators();
-    expect(first).toBeGreaterThan(5);
-    // The point won climbs the chord the music is on, an octave over
+    sfx.playServeTick();
+    sfx.playServeGo();
+    sfx.playPointWon(1);
+    sfx.playPointLost(-1);
+    sfx.playDeciderSting();
+    // A tick, the go's two notes, three and the octave and its glint, two, the sting's chord
+    expect(oscillators()).toBe(1 + 2 + 5 + 2 + 3);
+    // The point won climbs the chord the music is on
     const won = midiToFrequency(harmony.root + 36 + harmony.chord[2]);
     expect(frequencies(calls)).toContainEqual(won);
-    for (const sound of POINT_SOUNDS) sfx.setPointSketch(sound, 'b');
-    play();
-    expect(oscillators()).toBeGreaterThan(first + 5);
   });
 
   it('keeps the point’s sounds out of the menus', () => {
