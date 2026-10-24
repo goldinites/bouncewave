@@ -21,6 +21,10 @@ const HEARTBEAT = [
   { delay: 0, volume: 0.16 },
   { delay: 0.17, volume: 0.11 },
 ];
+// The beat's knock, what a phone's speaker plays of it: the 110 Hz thump under it is below what
+// a phone can (the user, 24.10.2026). Hz it starts at, s it takes to fall an octave, its share of
+// the beat's volume
+const HEARTBEAT_KNOCK = { HZ: 330, LENGTH: 0.06, SHARE: 1 } as const;
 
 // The channel surf's last channel starts this far flat and glides up onto its note
 const TUNE_IN_FLAT = 0.94;
@@ -881,6 +885,8 @@ export class SoundEffects {
         const start = now + delay;
         this.tone(ac, 110, start, 0.18, 'sine', volume, 0.005, null, 0.5);
         this.tone(ac, 220, start, 0.08, 'triangle', volume * 0.25, 0.005, null, 0.5);
+        const { HZ, LENGTH, SHARE } = HEARTBEAT_KNOCK;
+        this.tone(ac, HZ, start, LENGTH, 'triangle', volume * SHARE, 0.003, null, 0.5);
       });
     } catch {
       // Audio playback fails silently if browser policy blocks it
