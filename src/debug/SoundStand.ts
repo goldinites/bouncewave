@@ -13,7 +13,7 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
-import { SoundEffects } from '@/audio/sfx/SoundEffects';
+import { POINT_SKETCHES, POINT_SOUNDS, PointSketch, SoundEffects } from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -78,7 +78,23 @@ export const STAND_SOUNDS: readonly StandSound[] = [
   { name: 'arc max', play: (sfx) => sfx.playSpin(1) },
   { name: 'analyzer', play: (sfx) => sfx.playScan() },
   { name: 'reflex', play: (sfx) => sfx.playTimeWarp() },
-  { name: 'score', play: (sfx) => sfx.playScore() },
+  {
+    // The serve's countdown: two ticks, then the pip as the ball leaves
+    name: 'serve',
+    play: (sfx, i) => (i < 2 ? sfx.playServeTick() : sfx.playServeGo()),
+    times: 3,
+    every: 0.4,
+  },
+  {
+    // The deciding point served: its sting, then the pip as the ball leaves
+    name: 'decider serve',
+    play: (sfx, i) => (i === 0 ? sfx.playDeciderSting() : sfx.playServeGo()),
+    times: 2,
+    every: 1.2,
+  },
+  // The player's point goes in on the right, the opponent's on the left
+  { name: 'point won', play: (sfx) => sfx.playPointWon(1) },
+  { name: 'point lost', play: (sfx) => sfx.playPointLost(-1) },
   { name: 'heartbeat ×4', play: (sfx) => sfx.playHeartbeat(), times: 4, every: 0.9 },
   { name: 'channel surf', play: (sfx) => sfx.playChannelSurf() },
   { name: 'victory', play: (sfx) => sfx.playVictory() },
@@ -171,6 +187,7 @@ export class SoundStand {
       debugHeading('Layers'),
       this.layerRows(),
       debugHeading('Game sounds'),
+      this.pointSketchRow(),
       this.soundButtons(),
       debugHeading('Status'),
       this.readout,
@@ -421,6 +438,25 @@ export class SoundStand {
     if (count === 0) return '';
     const megabytes = (samples.bytes / 1024 / 1024).toFixed(1);
     return `\nsamples ${count} · ${megabytes} MB · ${samples.renderTime.toFixed(0)} ms`;
+  }
+
+  /** The point's sounds' sketches to choose from by ear (5.7b), heard below and in a match. */
+  private pointSketchRow(): HTMLElement {
+    const row = this.row(
+      ...POINT_SOUNDS.map((sound) => {
+        const select = this.select(
+          `point-${sound}`,
+          POINT_SKETCHES.map((sketch): [string, string] => [sketch, `${sound}: ${sketch}`]),
+        );
+        select.value = this.audio.sfx.pointSketch[sound];
+        this.on(select, 'change', () =>
+          this.audio.sfx.setPointSketch(sound, select.value as PointSketch),
+        );
+        return select;
+      }),
+    );
+    row.style.flexWrap = 'wrap';
+    return row;
   }
 
   private soundButtons(): HTMLElement {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MINOR_TRIAD } from '@/audio/music/theory';
 import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
-import { SoundEffects } from '@/audio/sfx/SoundEffects';
+import { POINT_SOUNDS, SoundEffects } from '@/audio/sfx/SoundEffects';
 import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
 
@@ -82,6 +82,38 @@ describe('SoundEffects', () => {
       sfx.playVictory();
       sfx.playDefeat();
     }).not.toThrow();
+  });
+
+  it('plays the point’s sounds in either sketch, up the chord on a point won', () => {
+    const { sfx, calls, harmony, oscillators } = setup();
+    const play = () => {
+      sfx.playServeTick();
+      sfx.playServeGo();
+      sfx.playPointWon(1);
+      sfx.playPointLost(-1);
+      sfx.playDeciderSting();
+    };
+
+    play();
+    const first = oscillators();
+    expect(first).toBeGreaterThan(5);
+    // The point won climbs the chord the music is on, an octave over
+    const won = midiToFrequency(harmony.root + 36 + harmony.chord[2]);
+    expect(frequencies(calls)).toContainEqual(won);
+    for (const sound of POINT_SOUNDS) sfx.setPointSketch(sound, 'b');
+    play();
+    expect(oscillators()).toBeGreaterThan(first + 5);
+  });
+
+  it('keeps the point’s sounds out of the menus', () => {
+    const { sfx, oscillators } = setup({ audible: false });
+
+    sfx.playServeTick();
+    sfx.playServeGo();
+    sfx.playPointWon();
+    sfx.playPointLost();
+    sfx.playDeciderSting();
+    expect(oscillators()).toBe(0);
   });
 
   it('builds the victory echo once and reuses it', () => {

@@ -125,6 +125,9 @@ export interface ChallengeFinale {
 /** Where across the court `x` is, as a sound's pan: -1 the left edge, 1 the right. */
 const courtPan = (x: number) => (x / COURT.WIDTH) * 2 - 1;
 
+// The serve's countdown (5.7b): s before the ball leaves at which a tick sounds; a pip as it leaves
+const SERVE_TICKS = [0.8, 0.4] as const;
+
 /**
  * Everything the player sees and hears in response to the match: hit sounds, sparks and glow,
  * screen shake, deciding-point drama, the rally climax and the end-of-match finale.
@@ -148,6 +151,8 @@ export class EffectsDirector {
   private readonly matchScene: () => SceneId | null;
 
   private readonly isTwoPlayer: () => boolean;
+  /** The serve's wait as the last step left it, to hear its countdown cross each tick. */
+  private lastServeTime = 0;
   private readonly challengeFinale: NonNullable<EffectsDirectorDeps['challengeFinale']>;
   private readonly isRestart: () => boolean;
 
@@ -244,6 +249,7 @@ export class EffectsDirector {
   /** Continuous effects after the simulation step, on the same (possibly slowed) clock. */
   public afterSimulation(dt: number, flow: MatchFlow): void {
     this.followMeters(flow);
+    this.followServe(flow);
     const sparkRally = flow.phase === 'finale' ? 0 : flow.rally;
     this.paddleFx.update(dt, this.paddles, this.particles, sparkRally);
 
@@ -421,8 +427,34 @@ export class EffectsDirector {
     this.renderer.addFlash(FLASH.SCORE);
 
     if (!score.isDemo) {
-      this.audio.sfx.playScore();
+      // Heard from the goal it went in, the scorer's opponent's. In a match of two every point
+      // is someone's win; otherwise the left side is the player
+      const pan = score.scoringPlayerIndex === 0 ? 1 : -1;
+      if (this.isTwoPlayer() || score.scoringPlayerIndex === 0) this.audio.sfx.playPointWon(pan);
+      else this.audio.sfx.playPointLost(pan);
     }
+  }
+
+  /**
+   * The serve's countdown, heard as the wait runs out: two ticks, a pip as the ball leaves; on
+   * the deciding point a sting as it is served, in place of the ticks.
+   */
+  private followServe(flow: MatchFlow): void {
+    const time = flow.serveTime;
+    const last = this.lastServeTime;
+    this.lastServeTime = time;
+    if (flow.phase !== 'serving' && flow.phase !== 'rally') return;
+
+    const isDeciding = flow.isDecidingPoint;
+    // A new serve: the wait starts again
+    if (time > last) {
+      if (isDeciding) this.audio.sfx.playDeciderSting();
+      return;
+    }
+    if (!isDeciding && SERVE_TICKS.some((tick) => last > tick && time <= tick)) {
+      this.audio.sfx.playServeTick();
+    }
+    if (last > 0 && time <= 0) this.audio.sfx.playServeGo();
   }
 
   /**

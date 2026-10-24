@@ -25,7 +25,11 @@ const makeAudio = () => ({
   sfx: {
     playWallBounce: vi.fn(),
     playPaddleHit: vi.fn(),
-    playScore: vi.fn(),
+    playPointWon: vi.fn(),
+    playPointLost: vi.fn(),
+    playServeTick: vi.fn(),
+    playServeGo: vi.fn(),
+    playDeciderSting: vi.fn(),
     playVictory: vi.fn(),
     playDefeat: vi.fn(),
     playHeartbeat: vi.fn(),
@@ -51,6 +55,8 @@ const fakeFlow = (overrides: Partial<MatchFlow> = {}): MatchFlow =>
   ({
     phase: 'finale',
     rally: 0,
+    serveTime: 0,
+    isDecidingPoint: false,
     isBallLive: false,
     overdriveCharges: [null, null],
     implantCores: [false, false],
@@ -262,14 +268,66 @@ describe('EffectsDirector.handle', () => {
     expect(renderer.addFlash).toHaveBeenCalled();
   });
 
-  it('plays the score sound for a real point but not for the attract-mode demo', () => {
+  it('rises on a point won, falls on one lost, from the goal it went in; not in the demo', () => {
     const { effects, audio } = makeDirector();
 
     handle(effects, { type: 'score', scoringPlayerIndex: 0, y: 250, isDemo: true });
-    expect(audio.sfx.playScore).not.toHaveBeenCalled();
+    expect(audio.sfx.playPointWon).not.toHaveBeenCalled();
 
     handle(effects, { type: 'score', scoringPlayerIndex: 0, y: 250, isDemo: false });
-    expect(audio.sfx.playScore).toHaveBeenCalledOnce();
+    expect(audio.sfx.playPointWon).toHaveBeenCalledWith(1);
+    handle(effects, { type: 'score', scoringPlayerIndex: 1, y: 250, isDemo: false });
+    expect(audio.sfx.playPointLost).toHaveBeenCalledWith(-1);
+  });
+
+  it('hears every point of a match of two as its scorer’s win', () => {
+    const { effects, audio } = makeDirector(undefined, () => true);
+
+    handle(effects, { type: 'score', scoringPlayerIndex: 1, y: 250, isDemo: false });
+    expect(audio.sfx.playPointWon).toHaveBeenCalledWith(-1);
+    expect(audio.sfx.playPointLost).not.toHaveBeenCalled();
+  });
+
+  it('counts the serve down in two ticks and a pip as the ball leaves', () => {
+    const { effects, audio } = makeDirector();
+    const serve = (serveTime: number, phase = 'serving') =>
+      effects.afterSimulation(0.1, fakeFlow({ phase, serveTime } as Partial<MatchFlow>));
+
+    serve(1.2);
+    for (const time of [1.0, 0.85, 0.75, 0.5, 0.35, 0.1]) serve(time);
+    expect(audio.sfx.playServeTick).toHaveBeenCalledTimes(2);
+    expect(audio.sfx.playServeGo).not.toHaveBeenCalled();
+    serve(0, 'rally');
+    expect(audio.sfx.playServeGo).toHaveBeenCalledOnce();
+    serve(0, 'rally');
+    expect(audio.sfx.playServeGo).toHaveBeenCalledOnce();
+    expect(audio.sfx.playDeciderSting).not.toHaveBeenCalled();
+  });
+
+  it('announces the deciding point with a sting in place of the ticks', () => {
+    const { effects, audio } = makeDirector();
+    const serve = (serveTime: number, phase = 'serving') =>
+      effects.afterSimulation(
+        0.1,
+        fakeFlow({ phase, serveTime, isDecidingPoint: true } as Partial<MatchFlow>),
+      );
+
+    serve(1.2);
+    expect(audio.sfx.playDeciderSting).toHaveBeenCalledOnce();
+    for (const time of [0.7, 0.3]) serve(time);
+    serve(0, 'rally');
+    expect(audio.sfx.playServeTick).not.toHaveBeenCalled();
+    expect(audio.sfx.playServeGo).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the attract-mode demo’s serves silent', () => {
+    const { effects, audio } = makeDirector();
+
+    for (const time of [0.5, 0.3, 0]) {
+      effects.afterSimulation(0.1, fakeFlow({ phase: 'attract', serveTime: time }));
+    }
+    expect(audio.sfx.playServeTick).not.toHaveBeenCalled();
+    expect(audio.sfx.playServeGo).not.toHaveBeenCalled();
   });
 
   it('shows the final score, fireworks and a victory sting when the player wins', () => {
