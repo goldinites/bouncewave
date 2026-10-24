@@ -337,30 +337,6 @@ export const ACTION_SAMPLES: Record<string, SampleRecipe> = {
       );
     },
   },
-  // A weapon armed: two mechanical clicks, a latch and its catch, with a knock under each
-  arm: {
-    duration: 0.2,
-    variants: 2,
-    build: (ctx, random) => {
-      for (const [time, hz] of [
-        [0, 2600],
-        [0.07, 3400],
-      ]) {
-        const click = chain(noiseSource(ctx, random), filter(ctx, 'bandpass', hz, 1.2));
-        const gate = ctx.createGain();
-        gate.gain.setValueAtTime(0, 0);
-        gate.gain.setValueAtTime(1, time);
-        gate.gain.exponentialRampToValueAtTime(0.0001, time + 0.008);
-        chain(click, gate, ctx.destination);
-        const knock = osc(ctx, 'sine', jitter(random, 900, 0.05));
-        const knockGate = ctx.createGain();
-        knockGate.gain.setValueAtTime(0, 0);
-        knockGate.gain.setValueAtTime(0.5, time);
-        knockGate.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
-        chain(knock, knockGate, ctx.destination);
-      }
-    },
-  },
   // The air ringing after a perfect hit: bright noise in a long room
   tail: {
     duration: 2,

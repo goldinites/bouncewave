@@ -67,27 +67,25 @@ const HIT_MIX = {
     HIGH_TUBE: 0.15,
     SWELL: { ARC: 0.1, BLAST: 0.08, TUBE: 0.22 },
   },
-  // The meter filling, the Overdrive's weapon ready (the user: the armed, neon and lock-on
-  // sketches in one), one gesture of a third of a second, each part in its turn so it is heard:
-  // the weapon cocked in two clicks, a laser sight's two beeps rising, the chord glowing up tone
-  // by tone as neon tubes sparking, an arc humming up on the root under it all; s for the times
+  // The meter filling, the Overdrive's weapon ready (the user: the lock-on and neon sketches in
+  // one), one short gesture, each part in its turn so it is heard: a laser sight's two beeps
+  // rising, the chord glowing up tone by tone as neon tubes sparking, an arc humming up on the
+  // root under it all; s for the times
   READY: {
     LEVEL: 0,
     HIGH_TUBE: 0.2,
-    ARM: 0.45,
     HUM: 0.18,
     HUM_FOR: 0.45,
     HUM_SWELL: 0.08,
     BEAM: 0.2,
     BEEP: 0.05,
-    LOCK: 0.05, // the first beep, after the clicks
     LOCK_STEP: 0.06, // between the beeps
     TUBE: 0.45,
     TUBE_SWELL: 0.03, // the tubes glow up rather than click on
     RING: 0.35, // how long each tube rings once lit, well short of the Overdrive's
     HIGH_SWELL: 0.1,
     SPARK: 0.1,
-    LIGHT: 0.16, // the first tube lit, as the beeps end
+    LIGHT: 0.11, // the first tube lit, as the beeps end
     STEP: 0.05, // between the tubes
   },
   // A wall: a muted knock, well under a paddle's hit
@@ -471,13 +469,12 @@ export class SoundEffects {
     this.beep(freq * 2, 0.4, 'sine', 0.05);
   }
 
-  /** The meter's chime on the chord the music is on: armed, locked on, lit. */
+  /** The meter's chime on the chord the music is on: locked on, lit. */
   private readyLayers(harmony: Harmony | null): Layer[] {
     const { READY } = HIT_MIX;
     const tone = (step: number) => getRallyNote(harmony, step) + 12;
     const lit = (step: number) => READY.LIGHT + step * READY.STEP;
     return [
-      { shot: 'arm', gain: READY.ARM },
       {
         tuned: 'arc',
         note: tone(1) - 12,
@@ -486,12 +483,12 @@ export class SoundEffects {
         cut: READY.HUM_FOR,
         wide: true,
       },
-      { tuned: 'beam', note: tone(1), gain: READY.BEAM, delay: READY.LOCK, cut: READY.BEEP },
+      { tuned: 'beam', note: tone(1), gain: READY.BEAM, cut: READY.BEEP },
       {
         tuned: 'beam',
         note: tone(3),
         gain: READY.BEAM,
-        delay: READY.LOCK + READY.LOCK_STEP,
+        delay: READY.LOCK_STEP,
         cut: READY.BEEP,
       },
       ...[0, 1, 2].flatMap((step) => [
@@ -544,8 +541,8 @@ export class SoundEffects {
   }
 
   /**
-   * The Overdrive meter just filled, its weapon ready: cocked in two clicks, a laser sight
-   * locking on, the chord lit as neon tubes.
+   * The Overdrive meter just filled, its weapon ready: a laser sight locking on, the chord lit
+   * as neon tubes.
    */
   public playOverdriveReady(pan = 0): void {
     const harmony = this.harmonyGetter();

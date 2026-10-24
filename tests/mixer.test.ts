@@ -265,11 +265,11 @@ describe('paddle hits from their rendered layers', () => {
     expect(carves).toEqual([1]);
   });
 
-  it('arms, lights the chord in neon and locks on when the Overdrive meter fills', () => {
+  it('locks on and lights the chord in neon when the Overdrive meter fills', () => {
     const { sfx, picked } = setup();
 
     sfx.playOverdriveReady();
-    expect(picked).toEqual(expect.arrayContaining(['arm', 'arc', 'spark']));
+    expect(picked).toEqual(expect.arrayContaining(['arc', 'spark']));
     // Three tubes up the chord, the last one an octave higher too
     expect(picked.filter((id) => id === 'tube')).toHaveLength(4);
     expect(picked.filter((id) => id === 'beam')).toHaveLength(2);
