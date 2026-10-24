@@ -283,6 +283,38 @@ describe('paddle hits from their rendered layers', () => {
     expect(callsOf(calls, 'createBufferSource')).toEqual([]);
   });
 
+  it('plays a beep sketch in place of the layers once one is chosen', () => {
+    const { sfx, calls, picked, carves } = setup();
+
+    for (const hit of ['clean', 'snap', 'chip'] as const) {
+      sfx.setHitSketches({ hit });
+      sfx.playPaddleHit(1, false, 0, { force: 1 });
+    }
+    expect(picked).toEqual([]);
+    expect(callsOf(calls, 'createOscillator')).toHaveLength(3);
+    // Only the chip's player plays a pulse; its opponent keeps the triangle
+    expect(callsOf(calls, 'setPeriodicWave')).toHaveLength(1);
+    sfx.playPaddleHit(1, false, 1);
+    expect(callsOf(calls, 'setPeriodicWave')).toHaveLength(1);
+    expect(carves).toEqual([1, 1, 1, 0.75]);
+
+    // The perfect hit stays layered until a perfect sketch is chosen
+    sfx.playPaddleHit(1, true, 0);
+    expect(picked).not.toEqual([]);
+  });
+
+  it('shines or flicks an arpeggio up on a perfect hit, the music dipping', () => {
+    const { sfx, calls, ducks } = setup();
+
+    sfx.setHitSketches({ perfect: 'shine' });
+    sfx.playPaddleHit(1, true, 0);
+    expect(callsOf(calls, 'createOscillator')).toHaveLength(3);
+    sfx.setHitSketches({ perfect: 'arp' });
+    sfx.playPaddleHit(1, true, 0);
+    expect(callsOf(calls, 'createOscillator')).toHaveLength(7);
+    expect(ducks).toEqual([0.6, 0.6]);
+  });
+
   it('plays the old live synth on the stand’s asking, the layers rendered or not', () => {
     const { sfx, calls, picked } = setup();
 

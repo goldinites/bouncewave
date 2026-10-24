@@ -13,7 +13,13 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
-import { SoundEffects } from '@/audio/sfx/SoundEffects';
+import {
+  HIT_SKETCHES,
+  HitSketch,
+  PERFECT_SKETCHES,
+  PerfectSketch,
+  SoundEffects,
+} from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
@@ -25,6 +31,8 @@ const TIER_COLOURS: Record<Tier, string> = {
   high: '#ff6ad5',
 };
 const BEATS_PER_BAR = STEPS_PER_BAR / 4;
+// The address's flags, kept bare (`?debug&climb`) rather than `debug=`
+const BARE_PARAMS = /([?&])(debug|climb)=(?=&|$)/g;
 
 /** A sound of the game's, or a series of it, as the stand plays it. */
 interface StandSound {
@@ -124,6 +132,11 @@ export class SoundStand {
   /** The playing song's form, one segment a step, wide as its bars. */
   private readonly timeline: HTMLElement;
   private timelineSong: string | null = null;
+  private hitSketchControls: {
+    hit: HTMLSelectElement;
+    perfect: HTMLSelectElement;
+    climb: HTMLInputElement;
+  } | null = null;
   private readonly layerBoxes = new Map<MusicLayer, HTMLInputElement>();
   private readonly listeners = new AbortController();
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
@@ -186,6 +199,7 @@ export class SoundStand {
       debugHeading('Layers'),
       this.layerRows(),
       debugHeading('Game sounds'),
+      this.hitSketchRow(),
       this.soundButtons(),
       debugHeading('Status'),
       this.readout,
@@ -237,6 +251,18 @@ export class SoundStand {
     if (pad) overrides.pad = pad as PadVoice;
     if (kit && kit in KITS) overrides.kit = kit as KitName;
     if (Object.keys(overrides).length > 0) this.audio.music.setOverrides(overrides);
+
+    // The paddle hits' sketches, kept in the address so a match plays them too
+    const hit = params.get('hits');
+    const perfect = params.get('perfect');
+    this.audio.sfx.setHitSketches({
+      ...(HIT_SKETCHES.includes(hit as HitSketch) && { hit: hit as HitSketch }),
+      ...(PERFECT_SKETCHES.includes(perfect as PerfectSketch) && {
+        perfect: perfect as PerfectSketch,
+      }),
+      climb: params.has('climb'),
+    });
+    this.syncHitSketchRow();
 
     const song = params.get('song');
     if (!song || !SONGS.some((s) => s.id === song)) return;
@@ -438,6 +464,53 @@ export class SoundStand {
     return `\nsamples ${count} · ${megabytes} MB · ${samples.renderTime.toFixed(0)} ms`;
   }
 
+  /**
+   * The paddle hits' sketches to choose from by ear (the hit, the perfect hit, the old climb),
+   * heard on the buttons below and in a match; kept in the address (`?hits=snap&perfect=shine`).
+   */
+  private hitSketchRow(): HTMLElement {
+    const hit = this.select(
+      'hits',
+      HIT_SKETCHES.map((sketch): [string, string] => [sketch, `hit: ${sketch}`]),
+    );
+    const perfect = this.select(
+      'perfect',
+      PERFECT_SKETCHES.map((sketch): [string, string] => [sketch, `perfect: ${sketch}`]),
+    );
+    const climb = document.createElement('input');
+    climb.type = 'checkbox';
+    climb.dataset.stand = 'climb';
+    const label = document.createElement('label');
+    const name = document.createElement('span');
+    name.textContent = 'climb';
+    label.append(climb, name);
+    const apply = () => {
+      this.audio.sfx.setHitSketches({
+        hit: hit.value as HitSketch,
+        perfect: perfect.value as PerfectSketch,
+        climb: climb.checked,
+      });
+      this.saveToAddress({
+        hits: hit.value === 'layers' ? null : hit.value,
+        perfect: perfect.value === 'layers' ? null : perfect.value,
+      });
+      this.saveFlagToAddress('climb', climb.checked);
+    };
+    for (const control of [hit, perfect, climb]) this.on(control, 'change', apply);
+    this.hitSketchControls = { hit, perfect, climb };
+    return this.row(hit, perfect, label);
+  }
+
+  /** Shows the sketches the hits play. */
+  private syncHitSketchRow(): void {
+    const { hit, perfect, climb } = this.audio.sfx.hitSketches;
+    const controls = this.hitSketchControls;
+    if (!controls) return;
+    controls.hit.value = hit;
+    controls.perfect.value = perfect;
+    controls.climb.checked = climb;
+  }
+
   private soundButtons(): HTMLElement {
     const buttons = this.row(
       ...STAND_SOUNDS.map((sound) => {
@@ -548,13 +621,21 @@ export class SoundStand {
     );
   }
 
-  /** Writes the given parameters into the address (null removes one), keeping `?debug` bare. */
+  /** Writes a bare flag into the address (`&climb`), or removes it. */
+  private saveFlagToAddress(key: string, isSet: boolean): void {
+    const url = new URL(window.location.href);
+    if (isSet) url.searchParams.set(key, '');
+    else url.searchParams.delete(key);
+    history.replaceState(null, '', url.toString().replace(BARE_PARAMS, '$1$2'));
+  }
+
+  /** Writes the given parameters into the address (null removes one), keeping the flags bare. */
   private saveToAddress(params: Record<string, string | null>): void {
     const url = new URL(window.location.href);
     for (const [key, value] of Object.entries(params)) {
       if (value) url.searchParams.set(key, value);
       else url.searchParams.delete(key);
     }
-    history.replaceState(null, '', url.toString().replace(/([?&])debug=(&|$)/, '$1debug$2'));
+    history.replaceState(null, '', url.toString().replace(BARE_PARAMS, '$1$2'));
   }
 }

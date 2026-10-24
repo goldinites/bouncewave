@@ -29,6 +29,28 @@ describe('SoundStand', () => {
     vi.useRealTimers();
   });
 
+  it('plays the hit sketches a link names, and keeps those picked in the address', () => {
+    const { audio, get } = setup('/?debug&hits=chip&perfect=arp&climb');
+    expect(audio.sfx.hitSketches).toEqual({ hit: 'chip', perfect: 'arp', climb: true });
+    const hit = get<HTMLSelectElement>('select[data-stand="hits"]');
+    expect(hit.value).toBe('chip');
+    expect(get<HTMLInputElement>('input[data-stand="climb"]').checked).toBe(true);
+
+    hit.value = 'snap';
+    hit.dispatchEvent(new Event('change'));
+    const climb = get<HTMLInputElement>('input[data-stand="climb"]');
+    climb.checked = false;
+    climb.dispatchEvent(new Event('change'));
+    expect(audio.sfx.hitSketches).toEqual({ hit: 'snap', perfect: 'arp', climb: false });
+    expect(params().get('hits')).toBe('snap');
+    expect(params().has('climb')).toBe(false);
+    expect(window.location.search).toMatch(/[?&]debug(&|$)/);
+
+    hit.value = 'layers';
+    hit.dispatchEvent(new Event('change'));
+    expect(params().has('hits')).toBe(false);
+  });
+
   it('auditions the song and part picked, and keeps them in the address', () => {
     const { audition, get } = setup();
     const song = get<HTMLSelectElement>('select[data-stand="song"]');

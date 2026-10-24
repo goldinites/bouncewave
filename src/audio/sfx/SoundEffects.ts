@@ -3,7 +3,7 @@ import { Mixer } from '@/audio/Mixer';
 import { Harmony } from '@/audio/music/HarmonyTimeline';
 import { HIT_BODIES, HIT_CLICK } from '@/audio/samples/actions';
 import { SampleBank } from '@/audio/samples/SampleBank';
-import { getRallyNote, getWallNote, MELODY_LOW } from '@/audio/sfx/harmony';
+import { getClimbingRallyNote, getRallyNote, getWallNote, MELODY_LOW } from '@/audio/sfx/harmony';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp, midiToFrequency } from '@/shared/math';
 
@@ -123,6 +123,66 @@ export function heatLevel(heat: number): number {
   return a.db + ((heat - a.heat) / (b.heat - a.heat)) * (b.db - a.db);
 }
 
+// The paddle hit's sketches after the playtest (the user, 24.10.2026: the old beeps suited the
+// game better than the layers), to choose from by ear in a match: the old beep, refined. `clean`
+// is the old timbres; `snap` drops each onto its note, so it clicks rather than beeps; `chip` is a
+// console's pulse wave, narrower the harder the hit. `layers` is the layered hit they may replace
+export const HIT_SKETCHES = ['layers', 'clean', 'snap', 'chip'] as const;
+export type HitSketch = (typeof HIT_SKETCHES)[number];
+// The perfect hit's: `shine` is the old sine and its octave with a glint two octaves up, `arp`
+// the chord's tones flicked upwards
+export const PERFECT_SKETCHES = ['layers', 'shine', 'arp'] as const;
+export type PerfectSketch = (typeof PERFECT_SKETCHES)[number];
+
+/** Which sketches the hits play, and whether a rally climbs two octaves as the old beeps did. */
+export interface HitSketches {
+  hit: HitSketch;
+  perfect: PerfectSketch;
+  climb: boolean;
+}
+
+// The beep sketches' tones: peak levels and lengths in s as the old beeps had them, the player's
+// square and the opponent's triangle answering each other
+const BEEP = {
+  PLAYER: { WAVE: 'square', VOLUME: 0.1, LENGTH: 0.12 },
+  CPU: { WAVE: 'triangle', VOLUME: 0.16, LENGTH: 0.14 },
+  // Hz a lowpass opens to from the softest hit to the hardest, and the softest's share of volume
+  BRIGHT: { SOFT: 2500, HARD: 9000 },
+  SOFT_VOLUME: 0.8,
+  // `snap`: semitones above the note it starts, s it takes to drop onto it
+  SNAP: { FROM: 2, TIME: 0.015 },
+  // `chip`: the pulse's duty from a soft hit to a hard one, a console's three widths
+  DUTIES: [0.5, 0.25, 0.125],
+  PERFECT: {
+    VOLUME: 0.18,
+    LENGTH: 0.22,
+    OCTAVE: 0.06,
+    OCTAVE_LENGTH: 0.16,
+    GLINT: 0.05,
+    GLINT_LENGTH: 0.12,
+    ARP: 0.12, // each tone's peak
+    ARP_STEP: 0.03, // s between the tones
+    ARP_LENGTH: 0.18,
+  },
+  JITTER: 0.1, // share either way the volume differs from hit to hit
+} as const;
+
+/** One tone of a beep sketch. */
+interface Tone {
+  frequency: number;
+  wave: OscillatorType;
+  /** A custom wave in place of `wave`. */
+  periodic?: PeriodicWave;
+  volume: number;
+  length: number;
+  pan: number;
+  /** Hz of a lowpass over it, if any. */
+  cutoff?: number;
+  /** Semitones above `frequency` it starts at, dropping onto it. */
+  from?: number;
+  delay?: number;
+}
+
 /** Where a hit lands and how hard: `pan` from -1 (the left edge) to 1, `force` from 0 to 1. */
 export interface HitFeel {
   pan?: number;
@@ -159,6 +219,10 @@ export class SoundEffects {
   private echoContext: AudioContext | null = null;
   /** While set, the layered sounds play as their live synths (`playAsSynth`). */
   private isSynthOnly = false;
+  private sketches: HitSketches = { hit: 'layers', perfect: 'layers', climb: false };
+  /** The chip sketch's pulse waves by duty, built once for the context they belong to. */
+  private pulses = new Map<number, PeriodicWave>();
+  private pulseContext: AudioContext | null = null;
 
   /**
    * @param getIsGameplayAudible whether gameplay sounds should play right now (false behind
@@ -183,6 +247,15 @@ export class SoundEffects {
     this.mixerGetter = getMixer;
     this.samplesGetter = getSamples;
     this.heatGetter = getHeat;
+  }
+
+  /** Which sketches the paddle hits play (the sound stand's, `?hits=`, `?perfect=`, `?climb`). */
+  public get hitSketches(): HitSketches {
+    return this.sketches;
+  }
+
+  public setHitSketches(sketches: Partial<HitSketches>): void {
+    this.sketches = { ...this.sketches, ...sketches };
   }
 
   /**
@@ -262,7 +335,11 @@ export class SoundEffects {
     paddleIndex = 0,
     feel: HitFeel = {},
   ): void {
-    const note = getRallyNote(this.harmonyGetter(), rally);
+    const harmony = this.harmonyGetter();
+    const note = this.sketches.climb
+      ? getClimbingRallyNote(harmony, rally)
+      : getRallyNote(harmony, rally);
+    if (!this.isSynthOnly && this.playBeepHit(note, rally, isPerfect, paddleIndex, feel)) return;
     if (this.playLayeredHit(note, isPerfect, paddleIndex, feel)) return;
     const freq = midiToFrequency(note);
 
@@ -278,6 +355,150 @@ export class SoundEffects {
       this.beep(freq, 0.12, 'square', 0.05);
     } else {
       this.beep(freq, 0.14, 'triangle', 0.08);
+    }
+  }
+
+  /**
+   * The hit as one of the beep sketches, if one is chosen for it; false for the layered hit to
+   * play instead.
+   */
+  private playBeepHit(
+    note: number,
+    rally: number,
+    isPerfect: boolean,
+    paddleIndex: number,
+    { pan = 0, force = 0.5 }: HitFeel,
+  ): boolean {
+    const sketch = isPerfect ? this.sketches.perfect : this.sketches.hit;
+    if (sketch === 'layers') return false;
+    const ac = this.audioContextGetter();
+    if (!ac || this.isMutedGetter() || !this.isGameplayAudibleGetter()) return true;
+
+    const hard = clamp(force, 0, 1);
+    const trim = dbToGain(heatLevel(this.heatGetter()));
+    const at = clamp(pan, -1, 1) * HIT_MIX.PAN;
+    const frequency = midiToFrequency(note);
+    if (isPerfect) {
+      const { PERFECT } = BEEP;
+      const tones: Tone[] =
+        sketch === 'arp'
+          ? this.arpeggio(note, rally).map((tone, i) => ({
+              frequency: midiToFrequency(tone),
+              wave: 'sine',
+              volume: PERFECT.ARP * trim,
+              length: PERFECT.ARP_LENGTH,
+              pan: at,
+              delay: i * PERFECT.ARP_STEP,
+            }))
+          : [
+              {
+                frequency,
+                wave: 'sine',
+                volume: PERFECT.VOLUME * trim,
+                length: PERFECT.LENGTH,
+                pan: at,
+              },
+              {
+                frequency: frequency * 2,
+                wave: 'sine',
+                volume: PERFECT.OCTAVE * trim,
+                length: PERFECT.OCTAVE_LENGTH,
+                pan: at,
+              },
+              {
+                frequency: frequency * 4,
+                wave: 'triangle',
+                volume: PERFECT.GLINT * trim,
+                length: PERFECT.GLINT_LENGTH,
+                pan: at,
+              },
+            ];
+      for (const tone of tones) this.beepTone(ac, tone);
+      this.duckMusic(HIT_DUCK.PERFECT);
+      this.mixerGetter()?.carveForHit(1);
+      return true;
+    }
+
+    const voice = paddleIndex === 0 ? BEEP.PLAYER : BEEP.CPU;
+    const strength = BEEP.SOFT_VOLUME + (1 - BEEP.SOFT_VOLUME) * hard;
+    const duty =
+      BEEP.DUTIES[Math.min(BEEP.DUTIES.length - 1, Math.floor(hard * BEEP.DUTIES.length))];
+    this.beepTone(ac, {
+      frequency,
+      wave: voice.WAVE,
+      // The opponent keeps its triangle: a console's pulse and triangle channels answering
+      periodic: sketch === 'chip' && paddleIndex === 0 ? this.pulse(ac, duty) : undefined,
+      volume: voice.VOLUME * strength * trim * this.jitter(BEEP.JITTER),
+      length: voice.LENGTH,
+      pan: at,
+      cutoff: BEEP.BRIGHT.SOFT + (BEEP.BRIGHT.HARD - BEEP.BRIGHT.SOFT) * hard,
+      from: sketch === 'snap' ? BEEP.SNAP.FROM : undefined,
+    });
+    this.mixerGetter()?.carveForHit(0.5 + 0.5 * hard);
+    return true;
+  }
+
+  /** The perfect hit's arpeggio: the note, the chord's next two tones above it, its octave. */
+  private arpeggio(note: number, rally: number): number[] {
+    const harmony = this.harmonyGetter();
+    const tones = [note];
+    for (const step of [1, 2]) {
+      let tone = getRallyNote(harmony, rally + step);
+      while (tone <= tones[tones.length - 1]) tone += 12;
+      tones.push(tone);
+    }
+    return [...tones, note + 12];
+  }
+
+  /** A pulse wave of `duty`, built once per context. */
+  private pulse(ac: AudioContext, duty: number): PeriodicWave {
+    if (this.pulseContext !== ac) {
+      this.pulses.clear();
+      this.pulseContext = ac;
+    }
+    let wave = this.pulses.get(duty);
+    if (!wave) {
+      const harmonics = 32;
+      const real = new Float32Array(harmonics);
+      const imag = new Float32Array(harmonics);
+      for (let n = 1; n < harmonics; n++)
+        real[n] = (2 * Math.sin(n * Math.PI * duty)) / (n * Math.PI);
+      wave = ac.createPeriodicWave(real, imag);
+      this.pulses.set(duty, wave);
+    }
+    return wave;
+  }
+
+  /** One tone of a beep sketch: struck at `volume` and dying away over its `length`. */
+  private beepTone(ac: AudioContext, tone: Tone): void {
+    try {
+      const start = ac.currentTime + (tone.delay ?? 0);
+      const osc = ac.createOscillator();
+      if (tone.periodic) osc.setPeriodicWave(tone.periodic);
+      else osc.type = tone.wave;
+      if (tone.from) {
+        osc.frequency.setValueAtTime(tone.frequency * 2 ** (tone.from / 12), start);
+        osc.frequency.exponentialRampToValueAtTime(tone.frequency, start + BEEP.SNAP.TIME);
+      } else {
+        osc.frequency.setValueAtTime(tone.frequency, start);
+      }
+      const gain = ac.createGain();
+      gain.gain.setValueAtTime(tone.volume, start);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + tone.length);
+      const panner = ac.createStereoPanner();
+      panner.pan.value = tone.pan;
+      let chainEnd: AudioNode = osc;
+      if (tone.cutoff) {
+        const lowpass = ac.createBiquadFilter();
+        lowpass.type = 'lowpass';
+        lowpass.frequency.value = tone.cutoff;
+        chainEnd = chainEnd.connect(lowpass);
+      }
+      chainEnd.connect(gain).connect(panner).connect(this.output(ac));
+      osc.start(start);
+      osc.stop(start + tone.length);
+    } catch {
+      // Audio playback fails silently if browser policy blocks it
     }
   }
 

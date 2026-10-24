@@ -3,10 +3,26 @@ import { Harmony } from '@/audio/music/HarmonyTimeline';
 import { BASS_LOW } from '@/audio/music/Arrangement';
 import { SONGS } from '@/audio/music/songs';
 import { MINOR_TRIAD, placeAbove } from '@/audio/music/theory';
-import { getRallyNote, getWallNote, MELODY_LOW } from '@/audio/sfx/harmony';
+import { getClimbingRallyNote, getRallyNote, getWallNote, MELODY_LOW } from '@/audio/sfx/harmony';
 
 const A_MINOR: Harmony = { root: 33, chord: MINOR_TRIAD };
 const pitchClass = (note: number) => ((note % 12) + 12) % 12;
+
+describe('getClimbingRallyNote', () => {
+  it('climbs the chord two octaves as the old beeps did, then cycles the top one', () => {
+    const notes = [1, 2, 3, 4, 5, 6, 7, 8].map((rally) => getClimbingRallyNote(A_MINOR, rally));
+
+    // A minor from A3: A C E, A C E an octave up, then that octave again
+    expect(notes).toEqual([57, 60, 64, 69, 72, 76, 69, 72]);
+  });
+
+  it('folds anything past C6 down an octave', () => {
+    const high: Harmony = { root: 39, chord: MINOR_TRIAD };
+    for (let rally = 0; rally < 20; rally++) {
+      expect(getClimbingRallyNote(high, rally)).toBeLessThanOrEqual(84);
+    }
+  });
+});
 
 describe('getRallyNote', () => {
   it('climbs the chord tones within one octave as the rally grows, then again', () => {

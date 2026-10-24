@@ -21,6 +21,23 @@ export function getRallyNote(harmony: Harmony | null, rally: number): number {
   return tones[Math.max(0, rally - 1) % tones.length];
 }
 
+// The old climb, for the beep sketches (SoundEffects.HIT_SKETCHES): two octaves of the chord from
+// two octaves over its root, the top folded under C6
+const CLIMB = { OFFSET: 24, OCTAVES: 2, MAX_NOTE: 84 } as const;
+
+/**
+ * Note for the n-th hit of a rally as the old beeps climbed: up the chord's tones (root, third,
+ * fifth, then the next octave), cycling through the top octave once there.
+ */
+export function getClimbingRallyNote(harmony: Harmony | null, rally: number): number {
+  const { root, chord } = harmony ?? DEFAULT_HARMONY;
+  const index = Math.max(0, rally - 1);
+  const octave = Math.min(Math.floor(index / chord.length), CLIMB.OCTAVES - 1);
+  let note = root + CLIMB.OFFSET + chord[index % chord.length] + 12 * octave;
+  while (note > CLIMB.MAX_NOTE) note -= 12;
+  return note;
+}
+
 /** Wall bounces sit on the chord's fifth, low and soft, under the melody. */
 export function getWallNote(harmony: Harmony | null): number {
   const { root, chord } = harmony ?? DEFAULT_HARMONY;
