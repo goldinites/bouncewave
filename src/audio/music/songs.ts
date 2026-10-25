@@ -356,25 +356,35 @@ const C1_YO = `D5 - - - - - A5 - - - - - E5 - - - | E5 - - - - - D5 - - - - - - 
              | G5 - - - - - D6 - - - - - B5 - - - | A5 - - - - - G5 A5 G5 E5 D5 - - - - -
              | E5 - - - D5 - - - E5 - - - A5 - - - | A5 - - - - - - - - - - - - - - -`;
 
-/** The koto's shimmer over the chorus, above its melody: five-note cells turning in sixteenths. */
-const C1_SHIMMER = cycle(
-  [
-    { cell: ['A5', 'D6', 'E6', 'D6', 'B5'], bars: 2 },
-    { cell: ['B5', 'D6', 'E6', 'D6', 'A5'], bars: 1 },
-    { cell: ['A5', 'B5', 'E6', 'B5', 'E6'], bars: 1 },
-    { cell: ['B5', 'D6', 'G6', 'D6', 'A5'], bars: 1 },
-    { cell: ['B5', 'D6', 'G6', 'E6', 'D6'], bars: 1 },
-    { cell: ['A5', 'D6', 'E6', 'D6', 'B5'], bars: 1 },
-    { cell: ['A5', 'B5', 'E6', 'B5', 'E6'], bars: 1 },
-  ],
-  euclid(11, 16),
-);
+/**
+ * The koto answering the shakuhachi (kakeai, the dialogue of Japan's chamber trio): silent while
+ * it sings, a phrase of three to five notes in its rests and under its long notes. The first
+ * half answers V1's question; the second half each version's answer.
+ */
+const KAKEAI_QUESTION = `. . . . . . D5 E5 A4 - . . . . . . | . . . . . . . . . . . . B4 A4 E4 -
+                       | . . . . . . . . . . . . E5 - D5 B4 | . . . . A4 B4 D5 - . . . . . . . .`;
+const KAKEAI_RISE = `${KAKEAI_QUESTION}
+                   | . . . . G4 A4 B4 - . . . . . . . . | . . . . . . . . . . . . . . . .
+                   | . . . . . . E5 D5 A4 - . . . . . . | . . . . . . . . E5 - D5 - B4 - A4 -`;
+const KAKEAI_LOW = `${KAKEAI_QUESTION}
+                  | B4 A4 G4 - . . . . . . . . . . . . | . . . . . . . . D5 E5 G5 - . . . .
+                  | . . . . A4 B4 D5 - . . . . . . . . | . . . . . . . . . . . . E5 D5 B4 A4`;
 
-/** The build's koto: the climb's first three bars, then a glissando up the yo scale into the ma. */
-const KOTO_GLISS = [
-  ...KOTO_CLIMB.split('|').slice(0, 3),
-  ' . G4 A4 B4 D5 E5 G5 A5 B5 . . . . . . . ',
-].join('|');
+/**
+ * The koto under the chorus: on each chord a fifth or a fourth plucked as two strings in quick
+ * succession, left to ring; a glissando at the phrases' ends.
+ */
+const KOTO_PLUCKS = `D4 A4 - - - - - - - - - - - - - - | E4 A4 - - - - - - - - - - - - - -
+                   | D4 B4 - - - - - - - - - - - - - - | E4 B4 - - - - - - - - - - D5 B4 A4 E4
+                   | G4 D5 - - - - - - - - - - - - - - | E4 B4 - - - - - - - - - - - - - -
+                   | A4 E5 - - - - - - - - - - - - - - | E4 A4 - - - - - - . A4 B4 D5 E5 G5 A5 -`;
+
+/**
+ * The build's koto: struck on the strong beats under the clappers, then a glissando up the yo
+ * scale into the ma.
+ */
+const KOTO_GLISS = `G4 - - - . . . . D5 - - - . . . . | G4 - - - . . . . B4 - - - . . D5 -
+                  | A4 - - - . . . . E5 - - - . . . . | . G4 A4 B4 D5 E5 G5 A5 B5 . . . . . . .`;
 
 /** Wind chimes at dawn (D D Bm7 Bm7 G G Asus4 A): a high bell now and then, never on the beat. */
 const FURIN_DAWN = `. . . D6 - - - - - - - - - A5 - - | - - - - - B5 - - - - - - - - - -
@@ -960,26 +970,24 @@ const SONG_DEFS: SongDef[] = [
         tier: 'groove',
         chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
         lead: V2_RISE,
-        counter: KOTO_DAWN,
+        counter: KAKEAI_RISE,
         bass: 'sync',
         drums: 'matsuri',
         fill: 'taiko',
         pad: 'hold',
         layers: { lead: 0.3, counter: 0.2 },
-        enter: { counter: 2 },
       },
       {
         name: 'verse2-b',
         tier: 'groove',
         chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
         lead: V2_LOW,
-        counter: KOTO_DAWN,
+        counter: KAKEAI_LOW,
         bass: 'sync',
         drums: 'matsuri',
         fill: 'taiko',
         pad: 'hold',
         layers: { lead: 0.3, counter: 0.2 },
-        enter: { counter: 2 },
       },
       {
         // The clappers, the koto's glissando, then ma: six steps of silence before the gong
@@ -994,14 +1002,15 @@ const SONG_DEFS: SongDef[] = [
         silence: 6,
       },
       {
-        // The shakuhachi and the strings in unison, its ends held; the koto shimmering above
+        // The shakuhachi and the strings in unison, its ends held; the koto plucking under them
         name: 'chorus',
         tier: 'high',
         chords: 'D | Asus4 | Bm7 | Esus4 | Gadd9 | Em7 | Asus4 | A',
         lead: C1_YO,
         counter: C1_YO,
         counterVoice: 'strings',
-        arpLine: C1_SHIMMER,
+        arpLine: KOTO_PLUCKS,
+        arpVoice: 'koto',
         bass: 'drive',
         drums: 'matsuri',
         fill: 'taiko',

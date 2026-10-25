@@ -121,6 +121,8 @@ const LEAD_VOLUME: Record<LeadVoice, number> = {
   crush: 0.058,
 };
 const COUNTER_SHARE = 0.55;
+// A written arpeggio on a lead's voice (`arpVoice`), against that voice's melody level
+const ARP_LEAD_SHARE = 0.6;
 const ARP_VOLUME = 0.045;
 // Under a melody the arpeggio steps back, quieter and darker, so the ear doesn't knit its notes
 // into the tune's
@@ -557,6 +559,20 @@ export class Arrangement {
       // A written ostinato plays as written
       const written = section.arpLine[context.bar * STEPS_PER_BAR + s];
       if (!written) return;
+      if (section.arpVoice) {
+        // On a lead's voice, each note as long as it is written, under the melody's level
+        const voice = section.arpVoice;
+        this.play.lead(
+          voice,
+          written.note,
+          time,
+          written.steps * stepDuration * 0.95,
+          LEAD_VOLUME[voice] * ARP_LEAD_SHARE * (0.65 + 0.35 * I),
+          this.melody,
+          (1800 + I * 2200) * DIFFICULTY_SIGNATURES[difficulty].leadBrightness,
+        );
+        return;
+      }
       note = written.note;
     } else {
       // On a repeat the pattern is read a little ahead on every second bar

@@ -127,6 +127,11 @@ export interface SectionDef {
   arp?: ArpPatternName;
   /** The arpeggio written out, in the melody notation: an ostinato of its own. Takes the place of `arp`. */
   arpLine?: string;
+  /**
+   * A lead voice the written arpeggio plays on, each note as long as written: a koto plucking
+   * where a synth's arpeggio would run. The song's arpeggio voice if left out.
+   */
+  arpVoice?: LeadVoice;
   drums: DrumPatternName;
   /** Played in the second half of the section's last bar. */
   fill?: DrumFillName;
