@@ -515,11 +515,11 @@ const MENU_HAZE = `. . A3 - - - - - C4 - - - - - . . | F4 - - - - - - - E4 - - -
                   | . . D4 - - - - - F4 - - - A4 - C5 - | A4 - - - - - - - - - - - - - . .
                   | . . . . . . . . . . G4 F4 C4 - . . | . . E4 - - - - - - - - - - - . .`;
 
-// ——— The tutorial's track (5.12): light major synthwave at 100, few layers; Stretch chosen of
-// three bases — E major, a relaxed half-time, the pad chopped in the 80s' rhythm — and melodies
-// over it to choose from ———
+// ——— The tutorial's track (5.12): light major synthwave at 100, few layers, chosen of three
+// bases and three melodies — E major, a relaxed half-time, the pad chopped in the 80s' rhythm,
+// and a melody bouncing like the ball on an 8-bit lead ———
 
-/** Stretch's arpeggio in a rally: the chord in quarters, an octave over the melody. */
+/** The arpeggio in a rally: the chord in quarters, an octave over the melody. */
 const WARMUP_QUARTERS = cycle(
   [
     { cell: ['E5', 'G#5', 'B5', 'G#5'], bars: 2 },
@@ -530,7 +530,7 @@ const WARMUP_QUARTERS = cycle(
   ARP_RHYTHM.quarters,
 );
 
-/** Stretch's arpeggio at the peak: the chord broken in sixteenths, up and back, as high. */
+/** The arpeggio at the peak: the chord broken in sixteenths, up and back, as high. */
 const WARMUP_BROKEN = cycle([
   { cell: ['E5', 'G#5', 'B5', 'E6', 'B5', 'G#5'], bars: 2 },
   { cell: ['E5', 'G#5', 'C#6', 'E6', 'C#6', 'G#5'], bars: 2 },
@@ -538,70 +538,23 @@ const WARMUP_BROKEN = cycle([
   { cell: ['F#5', 'B5', 'D#6', 'F#6', 'D#6', 'B5'], bars: 2 },
 ]);
 
-/**
- * The tutorial's base, chosen: Stretch — E major, a relaxed half-time with a clap, the pad
- * chopped in the 80s' rhythm, the bass syncopated; the peak goes straight, the pad held.
- */
-const WARMUP_STRETCH: SongDef = {
-  title: 'Warm-up Stretch',
-  sketch: true,
-  level: 1,
-  bpm: 100,
-  swing: 0,
-  kit: 'synthwave',
-  room: 'plate',
-  pump: 0.4,
-  voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
-  sections: [
-    {
-      name: 'hook',
-      tier: 'groove',
-      chords: 'E | E | C#m | C#m | A | A | B | B',
-      arpLine: WARMUP_QUARTERS,
-      bass: 'sync',
-      drums: 'halftime',
-      pad: 'chop',
-    },
-    {
-      name: 'hot',
-      tier: 'high',
-      chords: 'E | E | C#m | C#m | A | A | B | B',
-      arpLine: WARMUP_BROKEN,
-      bass: 'sync',
-      drums: 'four',
-      // Held, not chopped, under the straight beat: the peak's only so many voices
-      pad: 'hold',
-      stabs: 'comp',
-      drop: true,
-    },
-  ],
-};
-
-/** Bounce: the line hopping between a low note and a high one and back, as the ball does. */
+/** The bounce, the verses' melody: hopping between a low note and a high one and back, as the ball does. */
 const WARMUP_BOUNCE = `B3 - G#4 - B3 - G#4 - E4 - - - - - . . | B4 - - - - - - - G#4 - - - - - . .
                       | C#4 - G#4 - C#4 - G#4 - E4 - - - - - . . | C#5 - - - - - - - B4 - - - - - . .
                       | E4 - C#5 - E4 - C#5 - B4 - A4 - - - . . | C#5 - - - - - - - - - - - - - . .
                       | F#4 - B4 - F#4 - B4 - D#5 - - - C#5 - B4 - | B4 - - - - - - - - - - - . . . .`;
 
-/** Count: three notes up the scale, a set of reps, each set a step higher than the last. */
-const WARMUP_COUNT = `B3 - C#4 - D#4 - - - - - - - . . . . | . . . . . . . . G#4 - - - E4 - - -
-                     | C#4 - D#4 - E4 - - - - - - - . . . . | . . . . . . . . B4 - G#4 - E4 - - -
-                     | D#4 - E4 - F#4 - - - - - - - . . . . | . . . . . . . . C#5 - B4 A4 E4 - - -
-                     | F#4 - - - G#4 - - - B4 - - - - - . . | D#4 - - - - - - - - - - - . . . .`;
+/** The rally, the chorus: the bounce's leaps widening from a sixth to an octave, let out in long notes. */
+const WARMUP_RALLY = `B3 - G#4 - B3 - B4 - G#4 - - - - - . . | E4 - - - - - - - - - - - B4 A4 G#4 -
+                     | C#4 - G#4 - C#4 - C#5 - B4 - - - - - . . | G#4 - - - - - - - - - - - . . . .
+                     | E4 - C#5 - E4 - E5 - C#5 - - - - - . . | B4 - - - - - - - A4 - - - - - . .
+                     | F#4 - D#5 - B3 - - - D#5 - - - C#5 - B4 - | C#5 - - - - - - - B4 - - - - - . .`;
 
-/** Whistle: a cheerful pentatonic tune off the beat, called and answered, as a coach whistles. */
-const WARMUP_WHISTLE = `. . G#4 - B4 - . . G#4 - - - E4 - - - | F#4 - - - E4 - - - - - - - . . . .
-                       | . . G#4 - B4 - . . C#5 - - - B4 - - - | G#4 - - - - - - - - - - - . . . .
-                       | . . C#5 - B4 - . . A4 - - - F#4 - E4 - | E4 - - - - - - - C#4 - - - - - . .
-                       | . . F#4 - G#4 - . . B4 - C#5 B4 G#4 - - - | F#4 - - - - - - - - - - - . . . .`;
-
-/** Stretch with a melody over it, for the stand: an ordinary rally (hook) and the peak (hot). */
-const stretchSketch = (title: string, lead: string): SongDef => ({
-  ...WARMUP_STRETCH,
-  title,
-  voices: { ...WARMUP_STRETCH.voices, lead: 'brass' },
-  sections: WARMUP_STRETCH.sections.map((section) => ({ ...section, lead })),
-});
+/** The cooldown: the rally's first leaps, slow and soft, over chords the verses never reach. */
+const WARMUP_COOLDOWN = `C#4 - A4 - C#4 - - - - - - - . . . . | E4 - - - - - - - - - - - . . . .
+                        | D#4 - B4 - D#4 - - - - - - - . . . . | F#4 - - - - - - - - - - - . . . .
+                        | E4 - - - C#5 - - - - - - - . . . . | G#4 - - - - - - - - - - - . . . .
+                        | F#4 - - - D#5 - - - - - - - . . . . | . . . . . . . . . . . . . . . .`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -1535,11 +1488,99 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // The tutorial's melodies over Stretch (5.12), for the stand
-  WARMUP_STRETCH,
-  stretchSketch('Warm-up Stretch v2', WARMUP_BOUNCE),
-  stretchSketch('Warm-up Stretch v3', WARMUP_COUNT),
-  stretchSketch('Warm-up Stretch v4', WARMUP_WHISTLE),
+  {
+    // A warm-up on the Range in the morning: the learner's first rallies. The pad chopped in the
+    // 80s' rhythm and a soft pulse, the arpeggio, then the bass; the bounce hops like the ball on
+    // an 8-bit lead over a relaxed half-time, then over a straight beat; a short climb, and the
+    // chorus is the rally, the leaps widening to an octave, a modest peak; the cooldown takes
+    // its first leaps softly to chords the verses never reach. Few layers all through
+    title: 'Warm-up',
+    bpm: 100,
+    level: 1.5,
+    swing: 0,
+    place: 'tutorial',
+    kit: 'synthwave',
+    transitions: 'drums',
+    // A small dry room: nothing blurs what the learner hears
+    room: 'studio',
+    pump: 0.4,
+    voices: { lead: 'chip', counter: 'soft', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
+    form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'cooldown', 'verse', 'build', 'chorus'],
+    sections: [
+      {
+        // The pad chopped and a soft pulse, the arpeggio, then the bass
+        name: 'intro',
+        tier: 'calm',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        arpLine: WARMUP_QUARTERS,
+        bass: 'long',
+        drums: 'pulse',
+        pad: 'chop',
+        enter: { arp: 2, bass: 4 },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        lead: WARMUP_BOUNCE,
+        arpLine: WARMUP_QUARTERS,
+        bass: 'sync',
+        drums: 'halftime',
+        pad: 'chop',
+        layers: { lead: 0.3 },
+      },
+      {
+        // The beat goes straight, the pad held under it
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        lead: WARMUP_BOUNCE,
+        arpLine: WARMUP_QUARTERS,
+        bass: 'octave',
+        drums: 'four',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+      },
+      {
+        // A short climb into the chorus
+        name: 'build',
+        tier: 'rise',
+        chords: 'A | A | B | B',
+        bass: 'eighths',
+        drums: 'four',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        // The rally on the 8-bit lead, the arpeggio broken in sixteenths over a straight drive
+        name: 'chorus',
+        tier: 'high',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        lead: WARMUP_RALLY,
+        arpLine: WARMUP_BROKEN,
+        bass: 'sync',
+        drums: 'drive',
+        // Held, not chopped, under the straight beat: the peak's only so many voices
+        pad: 'hold',
+        drop: true,
+      },
+      {
+        // The cooldown: no beat, the rally's first leaps on a soft lead
+        name: 'cooldown',
+        tier: 'calm',
+        chords: 'F#m7 | F#m7 | G#m7 | G#m7 | Amaj7 | Amaj7 | B | B',
+        lead: WARMUP_COOLDOWN,
+        leadVoice: 'soft',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        // The long bass alone would fill the sub and stand as loud as the verses: held back
+        mix: { bass: -4 },
+        level: -2,
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);
