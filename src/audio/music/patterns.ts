@@ -193,37 +193,6 @@ export const DRUM_PATTERNS = {
     metal: 'x.x.x.x.x.x.x.x.',
     open: '..............x.',
   },
-  // A bout's exchange: the kick and snare call in the bar's first half, the taiko answers in
-  // its second
-  kumite: {
-    kick: 'X.....x.X.......',
-    snare: '....X.......X...',
-    taiko: '.........x.x.xX.',
-    hat: 'x.x.x.x.x.x.x.x.',
-  },
-  kumiteHot: {
-    kick: 'X...X...X...X...',
-    snare: '....X.......X...',
-    clap: '....X.......X...',
-    taiko: '..x.....x.x.x.xX',
-    hat: 'xxxxxxxxxxxxxxxx',
-    open: '..x...x...x...x.',
-  },
-  // The odaiko's oroshi under a sensei's count: the big drum and long silences, the sticks
-  // ticking the beats, the nagado striking late
-  oroshi: {
-    taiko: 'X.......x.......',
-    kick: '......x.....x...',
-    perc: 'x...x...x...x...',
-    metal: '..o...o...o...o.',
-  },
-  oroshiHot: {
-    taiko: 'X.......X.......',
-    kick: 'X..x..x.X..x..x.',
-    snare: 'oooooooxoooooooX',
-    perc: '.x.x.x.x.x.x.x.x',
-    metal: 'x.x.x.x.x.x.x.x.',
-  },
   // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
   foundry: {
     kick: 'X...X...X...X.x.',

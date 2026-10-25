@@ -1,4 +1,4 @@
-import { cycle, euclid, pulse, Stretch, transpose } from '@/audio/music/compose';
+import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 
 /*
@@ -394,8 +394,8 @@ const CONVEYOR_HOLD = `G4 - - - - - - - - - - - - - - - | Eb4 - - - - - - - - - 
                      | Ab4 - - - - - - - - - - - - - - - | C5 - - - - - - - - - - - - - - -
                      | B4 - - - - - - - - - - - - - - - | D5 - - - - - - - - - - - - - - -`;
 
-// ——— The dojo's track, 5.11's bases to choose from (no melody yet): a taiko ensemble leading a
-// darksynth, no koto, shakuhachi or shamisen ———
+// ——— The dojo's track, 5.11: the kata's base (a taiko ensemble leading a darksynth, no koto,
+// shakuhachi or shamisen) and three melodies over it to choose from ———
 
 /** The kata's reese: a five-note cell turning over a ten-pulse rhythm, never landing alike. */
 const KATA_BASS = cycle(
@@ -407,22 +407,23 @@ const KATA_BASS = cycle(
   euclid(10, 16),
 );
 
-/** The bout's arpeggio: four chord tones struck every third sixteenth, three against four. */
-const KUMITE_ARP = pulse(
-  [
-    { cell: ['G4', 'Bb4', 'D5', 'G5'], bars: 2 },
-    { cell: ['Eb4', 'G4', 'Bb4', 'Eb5'], bars: 2 },
-    { cell: ['C4', 'Eb4', 'G4', 'C5'], bars: 2 },
-    { cell: ['D4', 'F#4', 'A4', 'D5'], bars: 2 },
-  ],
-  3,
-);
+/** Strikes: two quick blows landing on a held note, then a stop, as a kata's moves are. */
+const KATA_STRIKES = `A4 - - . . . E4 E4 A4 - - - - - . . | . . . C5 - - B4 A4 E4 - - - - - - -
+                    | A4 - - . D5 - - . E5 - - - - - . . | . . . . E5 D5 C5 D5 B4 - - - - - - -
+                    | C5 - - . . . F5 F5 A5 - - - - - . . | . . . G5 - - F5 E5 C5 - - - - - - -
+                    | B4 - - . . . E5 E5 G#4 - - - - - . . | . . . . G#4 A4 B4 - E4 - - - - - - -`;
 
-/** The oroshi on the bass: strikes coming ever closer over eight bars, then one long again. */
-const OROSHI_BASS = `B1 - - - - - - - - - - - - - - - | B1 - - - - - - - B1 - - - - - - -
-                   | C2 - - - - - C2 - - - - - C2 - - - | C2 - - - C2 - - - C2 - - - C2 - - -
-                   | B1 - - B1 - - B1 - - B1 - - B1 - - B1 | B1 - B1 - B1 - B1 - B1 - B1 - B1 - B1 -
-                   | A1 - A2 - A1 - A2 - A1 - A2 - A1 - A2 - | F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1`;
+/** Chain: a line walking in dotted eighths, three against the bar's four, then holding. */
+const KATA_CHAIN = `A4 - - C5 - - D5 - - E5 - - - - - - | . . . . G5 - - E5 - - D5 - - C5 D5 C5
+                  | A4 - - - - - - - . . . E5 - - D5 - | E5 - - G5 - - A5 - - G5 - - E5 - - -
+                  | C6 - - - - - A5 - - F5 - - G5 A5 C6 - | - - - - A5 - - F5 - - C5 - - - - -
+                  | B4 - - D5 - - E5 - - G#5 - - - - - - | . . E5 D5 B4 - - - G#4 - - - - - . .`;
+
+/** Ma: long notes and silence, each drawn like a sword by a quick leap of fourths up into it. */
+const KATA_MA = `A4 - - - - - - - - - - - . E5 A5 - | - - - - - - - - G5 - - - E5 - - -
+               | E5 - - - - - - - . . . . . . . . | . . . . A4 D5 G5 - - - - - E5 - - -
+               | F5 - - - - - - - . . . . C5 F5 Bb5 - | - - - - . . F5 Bb5 D6 - - - - - - -
+               | B5 - - - - - - - G#5 - - - - - . . | E5 - - - D5 C5 B4 C5 B4 - - - - - - -`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -1059,11 +1060,10 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // The dojo's bases (5.11), for the stand: a groove (hook) and its peak (hot) each
+  // The dojo's melodies over the kata (5.11), for the stand: a groove (hook) and its peak (hot) each
   {
-    // A taiko kata after Kodo's "Monochrome", a reese under it after Perturbator: the ensemble
-    // leads, the bass turning a cell over it in A minor
-    title: 'Dojo Kata',
+    // Strikes: two quick blows onto a held note and a stop, as in a kata
+    title: 'Kata Strikes',
     sketch: true,
     level: -3.5,
     bpm: 118,
@@ -1077,6 +1077,7 @@ const SONG_DEFS: SongDef[] = [
         name: 'hook',
         tier: 'groove',
         chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_STRIKES,
         bassLine: KATA_BASS,
         drums: 'kata',
         pad: 'none',
@@ -1085,8 +1086,8 @@ const SONG_DEFS: SongDef[] = [
         name: 'hot',
         tier: 'high',
         chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_STRIKES,
         bassLine: KATA_BASS,
-        arp: 'pulse',
         drums: 'kataHot',
         fill: 'taiko',
         pad: 'hold',
@@ -1096,71 +1097,71 @@ const SONG_DEFS: SongDef[] = [
     ],
   },
   {
-    // A bout after Carpenter Brut's drive: the synth calls, the taiko answers, an arpeggio
-    // struck three against four in G minor
-    title: 'Dojo Kumite',
+    // Chain: dotted eighths walking three against four, its summit C6 in bar 5
+    title: 'Kata Chain',
     sketch: true,
-    level: -2.5,
-    bpm: 120,
+    level: -3.5,
+    bpm: 118,
     swing: 0,
-    kit: 'dark',
+    kit: 'dojo',
     room: 'plate',
-    grit: 4,
-    voices: { lead: 'brass', counter: 'square', arp: 'pluck', bass: 'bassSaw' },
+    grit: 6,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
     sections: [
       {
         name: 'hook',
         tier: 'groove',
-        chords: 'Gm | Gm | Eb | Eb | Cm | Cm | D | D',
-        arpLine: KUMITE_ARP,
-        bass: 'eighths',
-        drums: 'kumite',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_CHAIN,
+        bassLine: KATA_BASS,
+        drums: 'kata',
         pad: 'none',
       },
       {
         name: 'hot',
         tier: 'high',
-        chords: 'Gm | Gm | Eb | Eb | Cm | Cm | D | D',
-        arpLine: KUMITE_ARP,
-        bass: 'octave',
-        drums: 'kumiteHot',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_CHAIN,
+        bassLine: KATA_BASS,
+        drums: 'kataHot',
         fill: 'taiko',
         pad: 'hold',
+        stabs: 'push',
         drop: true,
       },
     ],
   },
   {
-    // The odaiko's oroshi, strikes coming ever closer, carried by a growling bass in B minor
-    // with a Phrygian C: an exam's strictness and its silences
-    title: 'Dojo Oroshi',
+    // Ma: long notes and silence, each drawn by a quick leap of fourths, D6 in bar 6
+    title: 'Kata Ma',
     sketch: true,
     level: -3.5,
-    bpm: 116,
+    bpm: 118,
     swing: 0,
     kit: 'dojo',
     room: 'plate',
-    grit: 10,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    grit: 6,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
     sections: [
       {
         name: 'hook',
         tier: 'groove',
-        chords: 'Bm | Bm | C | C | Bm | Bm | A | F#',
-        bassLine: OROSHI_BASS,
-        drums: 'oroshi',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_MA,
+        bassLine: KATA_BASS,
+        drums: 'kata',
         pad: 'none',
       },
       {
         name: 'hot',
         tier: 'high',
-        chords: 'Bm | Bm | C | C | Bm | Bm | A | F#',
-        bassLine: OROSHI_BASS,
-        arp: 'sparse',
-        drums: 'oroshiHot',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_MA,
+        bassLine: KATA_BASS,
+        drums: 'kataHot',
         fill: 'taiko',
         pad: 'hold',
-        stabs: 'offbeat',
+        stabs: 'push',
         drop: true,
       },
     ],
