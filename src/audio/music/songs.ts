@@ -539,10 +539,11 @@ const SONG_DEFS: SongDef[] = [
     // After The Midnight and FM-84: a night drive. The engine idles from the first bar — kick,
     // hats, the bass in eighths under the seven-note arpeggio — then a sixteen-bar verse on the
     // anthem beat (a kick on one and three, the gated snare on two and four), toms and a reverse
-    // crash into the sax's chorus, the koto's bridge, and an outro that fades on the vibraphone.
+    // crash into the sax's chorus, a bridge on the sax too, and an outro that fades on the vibraphone.
     // Cymbals and drums mark the turns, no synth swells
     title: 'Sunset Strip',
-    bpm: 100,
+    // Faster than Fuji's dawn by a third of a beat a second: a night drive, not a walk
+    bpm: 112,
     swing: 0,
     level: -0.5,
     // Its backdrop, the outrun, is gone: it plays behind any of the quick match's
@@ -577,7 +578,8 @@ const SONG_DEFS: SongDef[] = [
         lead: W1,
         counter: W1_UNDER,
         arpLine: cycle([...SUNSET_CELLS, ...SUNSET_TURN_CELLS], ARP_RHYTHM.nine),
-        bass: 'eighths',
+        // The bass bouncing on its octave, the spring in the drive
+        bass: 'octave',
         drums: 'anthem',
         fill: 'toms',
         pad: 'hold',
@@ -617,8 +619,9 @@ const SONG_DEFS: SongDef[] = [
         name: 'bridge',
         tier: 'groove',
         chords: 'Ebmaj7 | Cm7 | Cm7 | Dm7 | Gm7 | Gm7 | Dm7 | D',
+        // The sax, the era's voice: the koto belongs to Fuji
         lead: W2,
-        leadVoice: 'koto',
+        leadVoice: 'sax',
         arpLine: cycle(SUNSET_DUSK_CELLS, ARP_RHYTHM.eighths),
         bass: 'walk',
         drums: 'break',
