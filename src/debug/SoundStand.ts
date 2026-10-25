@@ -38,120 +38,174 @@ interface StandSound {
   every?: number;
 }
 
-/** The hits, the Overdrive and the wall (5.7), alone and in the series they come in. */
-const ACTION_SOUNDS: readonly StandSound[] = [
-  { name: 'hit', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9 }) },
-  { name: 'hit hard', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9, force: 1 }) },
-  { name: 'hit cpu', play: (sfx) => sfx.playPaddleHit(1, false, 1, { pan: 0.9 }) },
+/** The stand's sounds by what they belong to, each section folded away until opened. */
+export const STAND_SECTIONS: readonly { name: string; sounds: readonly StandSound[] }[] = [
   {
-    // From side to side, the ball faster with every hit, as a rally heats up
-    name: 'rally ×8',
-    play: (sfx, i) =>
-      sfx.playPaddleHit(i + 1, false, i % 2, { pan: i % 2 ? 0.9 : -0.9, force: i / 7 }),
-    times: 8,
-    every: 0.32,
+    // The hits, the Overdrive and the wall (5.7), a paddle's size (5.7c)
+    name: 'Hits',
+    sounds: [
+      { name: 'hit', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9 }) },
+      { name: 'hit hard', play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9, force: 1 }) },
+      { name: 'hit cpu', play: (sfx) => sfx.playPaddleHit(1, false, 1, { pan: 0.9 }) },
+      {
+        // From side to side, the ball faster with every hit, as a rally heats up
+        name: 'rally ×8',
+        play: (sfx, i) =>
+          sfx.playPaddleHit(i + 1, false, i % 2, { pan: i % 2 ? 0.9 : -0.9, force: i / 7 }),
+        times: 8,
+        every: 0.32,
+      },
+      { name: 'perfect', play: (sfx) => sfx.playPaddleHit(3, true, 0, { pan: -0.9 }) },
+      {
+        name: 'perfect ×4',
+        play: (sfx, i) => sfx.playPaddleHit(i + 1, true, i % 2, { pan: i % 2 ? 0.9 : -0.9 }),
+        times: 4,
+        every: 0.32,
+      },
+      { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4, -0.9) },
+      { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
+      { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
+      {
+        // A rally's walls and hits as they come: hit, wall, hit
+        name: 'hit wall hit',
+        play: (sfx, i) =>
+          i === 1
+            ? sfx.playWallBounce(0)
+            : sfx.playPaddleHit(i + 1, false, i / 2, { pan: i ? 0.9 : -0.9 }),
+        times: 3,
+        every: 0.25,
+      },
+      {
+        name: 'goliath hit',
+        play: (sfx) => sfx.playPaddleHit(2, false, 1, { pan: 0.9, size: 1.5 }),
+      },
+      {
+        name: 'shrunk hit',
+        play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9, size: 0.6 }),
+      },
+    ],
   },
-  { name: 'perfect', play: (sfx) => sfx.playPaddleHit(3, true, 0, { pan: -0.9 }) },
   {
-    name: 'perfect ×4',
-    play: (sfx, i) => sfx.playPaddleHit(i + 1, true, i % 2, { pan: i % 2 ? 0.9 : -0.9 }),
-    times: 4,
-    every: 0.32,
+    // The serve's countdown and the points (5.7b); the player's point goes in on the right, the opponent's on the left
+    name: 'Serve and points',
+    sounds: [
+      {
+        // The serve's countdown: two ticks, then the pip as the ball leaves
+        name: 'serve',
+        play: (sfx, i) => (i < 2 ? sfx.playServeTick() : sfx.playServeGo()),
+        times: 3,
+        every: 0.4,
+      },
+      {
+        // The deciding point served: its sting, then the pip as the ball leaves
+        name: 'decider serve',
+        play: (sfx, i) => (i === 0 ? sfx.playDeciderSting() : sfx.playServeGo()),
+        times: 2,
+        every: 1.2,
+      },
+      { name: 'point won', play: (sfx) => sfx.playPointWon(1) },
+      { name: 'point lost', play: (sfx) => sfx.playPointLost(-1) },
+      { name: 'heartbeat ×4', play: (sfx) => sfx.playHeartbeat(), times: 4, every: 0.9 },
+    ],
   },
-  { name: 'overdrive', play: (sfx) => sfx.playPowerShot(4, -0.9) },
-  { name: 'od ready', play: (sfx) => sfx.playOverdriveReady(-0.9) },
-  { name: 'wall', play: (sfx) => sfx.playWallBounce(0.3) },
   {
-    // A rally's walls and hits as they come: hit, wall, hit
-    name: 'hit wall hit',
-    play: (sfx, i) =>
-      i === 1
-        ? sfx.playWallBounce(0)
-        : sfx.playPaddleHit(i + 1, false, i / 2, { pan: i ? 0.9 : -0.9 }),
-    times: 3,
-    every: 0.25,
+    // Mastery's clean, the implants' digital (5.7c)
+    name: 'Skills',
+    sounds: [
+      { name: 'arc', play: (sfx) => sfx.playSpin(0.4) },
+      { name: 'arc max', play: (sfx) => sfx.playSpin(1) },
+      { name: 'analyzer', play: (sfx) => sfx.playScan() },
+      { name: 'reflex', play: (sfx) => sfx.playTimeWarp() },
+    ],
+  },
+  {
+    // The modifiers' moments (5.7c), the skate on ice and the ball in the dark (5.9)
+    name: 'Modifiers',
+    sounds: [
+      { name: 'wind turn ↓', play: (sfx) => sfx.playWindTurn(1) },
+      { name: 'wind turn ↑', play: (sfx) => sfx.playWindTurn(-1) },
+      { name: 'post rise', play: (sfx) => sfx.playPostRise() },
+      { name: 'post', play: (sfx) => sfx.playPostBounce(0) },
+      { name: 'brick', play: (sfx) => sfx.playBrickBreak(0.2) },
+      {
+        // Shrinking hit by hit, as it does in a rally
+        name: 'shrink ×4',
+        play: (sfx, i) => sfx.playShrink(1 - 0.12 * (i + 1), -0.9),
+        times: 4,
+        every: 0.4,
+      },
+      { name: 'skate push', play: (sfx) => sfx.playSkatePush(0.8, -0.9) },
+      { name: 'skate stop', play: (sfx) => sfx.playSkateStop(0.8, -0.9) },
+      {
+        // A paddle on ice: pushes off, glides, slowing, then brakes hard
+        name: 'skating',
+        play: (sfx, i) => {
+          if (i === 0) sfx.playSkatePush(0.8, -0.9);
+          if (i < 15) sfx.setSkateGlide(0.9 - i * 0.05, -0.9);
+          else sfx.setSkateGlide(null);
+          if (i === 14) sfx.playSkateStop(0.6, -0.9);
+        },
+        times: 16,
+        every: 0.05,
+      },
+      { name: 'ice hit', play: (sfx) => sfx.playIceTink(-0.9) },
+      {
+        // The ball across the dark from the far side at the player, rising, then going away
+        name: 'ball in dark',
+        play: (sfx, i) => {
+          const toward = i <= 24;
+          const t = toward ? i / 24 : (i - 24) / 16;
+          sfx.setBallAir(
+            i === 40
+              ? null
+              : {
+                  x: toward ? 0.9 - 1.8 * t : -0.9 + 1.8 * t,
+                  height: toward ? t * 0.8 : 0.8 - t * 0.5,
+                  nearness: toward ? t : 0,
+                  speed: 0.6,
+                },
+          );
+        },
+        times: 41,
+        every: 0.05,
+      },
+    ],
+  },
+  {
+    // A challenge's clock, the menus, the channels flicking over
+    name: 'Clock and menus',
+    sounds: [
+      {
+        // The clock's last seconds: two once a second, then the last ones four a second
+        name: 'clock',
+        play: (sfx, i) => {
+          if (i < 8 ? i % 4 === 0 : true)
+            sfx.playClockTick(Math.floor(i < 8 ? i / 4 : i) % 2 === 1);
+        },
+        times: 16,
+        every: 0.25,
+      },
+      { name: 'menu move', play: (sfx) => sfx.playMenuMove() },
+      { name: 'menu select', play: (sfx) => sfx.playMenuSelect() },
+      { name: 'menu back', play: (sfx) => sfx.playMenuBack() },
+      { name: 'channel surf', play: (sfx) => sfx.playChannelSurf() },
+    ],
+  },
+  {
+    // The jingles, heard where the music is not (5.8), and the fireworks
+    name: 'End of a match',
+    sounds: [
+      { name: 'victory', play: (sfx) => sfx.playVictory() },
+      { name: 'defeat', play: (sfx) => sfx.playDefeat() },
+      { name: 'fireworks ×6', play: (sfx) => sfx.playFireworkPop(), times: 6, every: 0.25 },
+    ],
   },
 ];
 
 /** Every action sound, alone and in the series it comes in during a match. */
-export const STAND_SOUNDS: readonly StandSound[] = [
-  ...ACTION_SOUNDS,
-  { name: 'arc', play: (sfx) => sfx.playSpin(0.4) },
-  { name: 'arc max', play: (sfx) => sfx.playSpin(1) },
-  { name: 'analyzer', play: (sfx) => sfx.playScan() },
-  { name: 'reflex', play: (sfx) => sfx.playTimeWarp() },
-  {
-    // The serve's countdown: two ticks, then the pip as the ball leaves
-    name: 'serve',
-    play: (sfx, i) => (i < 2 ? sfx.playServeTick() : sfx.playServeGo()),
-    times: 3,
-    every: 0.4,
-  },
-  {
-    // The deciding point served: its sting, then the pip as the ball leaves
-    name: 'decider serve',
-    play: (sfx, i) => (i === 0 ? sfx.playDeciderSting() : sfx.playServeGo()),
-    times: 2,
-    every: 1.2,
-  },
-  // The player's point goes in on the right, the opponent's on the left
-  { name: 'point won', play: (sfx) => sfx.playPointWon(1) },
-  { name: 'point lost', play: (sfx) => sfx.playPointLost(-1) },
-  { name: 'heartbeat ×4', play: (sfx) => sfx.playHeartbeat(), times: 4, every: 0.9 },
-  { name: 'channel surf', play: (sfx) => sfx.playChannelSurf() },
-  { name: 'victory', play: (sfx) => sfx.playVictory() },
-  { name: 'defeat', play: (sfx) => sfx.playDefeat() },
-  { name: 'fireworks ×6', play: (sfx) => sfx.playFireworkPop(), times: 6, every: 0.25 },
-  // 5.7c: a paddle's size, the modifiers' moments, the clock and the menus
-  {
-    name: 'goliath hit',
-    play: (sfx) => sfx.playPaddleHit(2, false, 1, { pan: 0.9, size: 1.5 }),
-  },
-  {
-    name: 'shrunk hit',
-    play: (sfx) => sfx.playPaddleHit(1, false, 0, { pan: -0.9, size: 0.6 }),
-  },
-  { name: 'wind turn ↓', play: (sfx) => sfx.playWindTurn(1) },
-  { name: 'wind turn ↑', play: (sfx) => sfx.playWindTurn(-1) },
-  { name: 'post rise', play: (sfx) => sfx.playPostRise() },
-  { name: 'post', play: (sfx) => sfx.playPostBounce(0) },
-  { name: 'brick', play: (sfx) => sfx.playBrickBreak(0.2) },
-  {
-    // Shrinking hit by hit, as it does in a rally
-    name: 'shrink ×4',
-    play: (sfx, i) => sfx.playShrink(1 - 0.12 * (i + 1), -0.9),
-    times: 4,
-    every: 0.4,
-  },
-  {
-    // A paddle let go on ice, coasting to a stop
-    name: 'ice slide',
-    play: (sfx, i) => sfx.playIceScrape(1 - i / 10, -0.9),
-    times: 10,
-    every: 0.06,
-  },
-  { name: 'ice hit', play: (sfx) => sfx.playIceTink(-0.9) },
-  {
-    // The ball crossing the dark at the player, from the far side, rising
-    name: 'sonar',
-    play: (sfx, i) => sfx.playSonar(1 - i / 6, i / 12),
-    times: 13,
-    every: 0.15,
-  },
-  {
-    // The clock's last seconds: two once a second, then the last ones four a second
-    name: 'clock',
-    play: (sfx, i) => {
-      if (i < 8 ? i % 4 === 0 : true) sfx.playClockTick(Math.floor(i < 8 ? i / 4 : i) % 2 === 1);
-    },
-    times: 16,
-    every: 0.25,
-  },
-  { name: 'menu move', play: (sfx) => sfx.playMenuMove() },
-  { name: 'menu select', play: (sfx) => sfx.playMenuSelect() },
-  { name: 'menu back', play: (sfx) => sfx.playMenuBack() },
-  { name: 'click', play: (sfx) => sfx.playSettingsClick() },
-];
+export const STAND_SOUNDS: readonly StandSound[] = STAND_SECTIONS.flatMap(
+  (section) => section.sounds,
+);
 
 /**
  * Developer-only listening stand, shown with the debug overlay (`?debug` or F3): holds the music
@@ -494,16 +548,27 @@ export class SoundStand {
     return `\nsamples ${count} · ${megabytes} MB · ${samples.renderTime.toFixed(0)} ms`;
   }
 
+  /** Each section's sounds as buttons, under a heading that folds them away (STAND_SECTIONS). */
   private soundButtons(): HTMLElement {
-    const buttons = this.row(
-      ...STAND_SOUNDS.map((sound) => {
-        const button = this.button(sound.name, () => this.playSound(sound));
-        button.dataset.sound = sound.name;
-        return button;
-      }),
-    );
-    buttons.style.flexWrap = 'wrap';
-    return buttons;
+    const sections = document.createElement('div');
+    Object.assign(sections.style, { display: 'flex', flexDirection: 'column', gap: '4px' });
+    for (const { name, sounds } of STAND_SECTIONS) {
+      const section = document.createElement('details');
+      section.className = 'dbg-section';
+      const summary = document.createElement('summary');
+      summary.textContent = `${name} (${sounds.length})`;
+      const buttons = this.row(
+        ...sounds.map((sound) => {
+          const button = this.button(sound.name, () => this.playSound(sound));
+          button.dataset.sound = sound.name;
+          return button;
+        }),
+      );
+      buttons.style.flexWrap = 'wrap';
+      section.append(summary, buttons);
+      sections.append(section);
+    }
+    return sections;
   }
 
   /** Holds the rally in overtime, its alarm over the music, while ticked. */

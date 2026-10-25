@@ -171,7 +171,7 @@ describe('SoundEffects on the mixer', () => {
     sfx.playWallBounce();
     expect(connectedTo(mixer.sfx)).toBe(true);
     expect(connectedTo(mixer.menu)).toBe(false);
-    sfx.playSettingsClick();
+    sfx.playMenuSelect();
     expect(connectedTo(mixer.menu)).toBe(true);
   });
 

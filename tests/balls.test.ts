@@ -160,7 +160,7 @@ describe('the balls on court', () => {
     const particles = new ParticleSystem();
     const effects = new EffectsDirector({
       renderer: { addFlash: vi.fn(), addShake: vi.fn() } as unknown as Renderer,
-      audio: { sfx: {} } as unknown as AudioEngine,
+      audio: { sfx: { setBallAir: vi.fn(), setSkateGlide: vi.fn() } } as unknown as AudioEngine,
       particles,
       paddles: setup().paddles,
       translate: () => '',

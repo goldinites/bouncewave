@@ -28,7 +28,6 @@ const setup = (more: Partial<GameMenuActions> = {}) => {
   });
   const i18n = new I18nManager('en');
   const sfx = {
-    playSettingsClick: vi.fn(),
     playMenuBack: vi.fn(),
     playMenuMove: vi.fn(),
     playMenuSelect: vi.fn(),

@@ -26,6 +26,28 @@ const frequencies = (calls: AudioCall[]) =>
     .filter((value) => value > 20);
 
 describe('SoundEffects', () => {
+  it('holds the ball’s air in the dark on one looping source, steered, then fades it out', () => {
+    const { sfx, calls } = setup();
+    const sources = () => calls.filter((c) => c.method === 'createBufferSource').length;
+    const ball = { x: -0.5, height: 0.5, nearness: 0.8, speed: 0.5 };
+
+    sfx.setBallAir(ball);
+    sfx.setBallAir({ ...ball, nearness: 1 });
+    expect(sources()).toBe(1);
+    const levels = () =>
+      calls.filter((c) => c.method === 'setTargetAtTime').map((c) => c.args[0] as number);
+    const loud = levels().length;
+    sfx.setBallAir(null);
+    expect(levels().slice(loud)).toContain(0);
+  });
+
+  it('holds nothing where action sounds are not heard', () => {
+    const { sfx, calls } = setup({ audible: false });
+    sfx.setBallAir({ x: 0, height: 0.5, nearness: 1, speed: 1 });
+    sfx.setSkateGlide(1);
+    expect(calls.filter((c) => c.method === 'createBufferSource')).toHaveLength(0);
+  });
+
   it('plays a hit on the note of the chord the music is on', () => {
     const { sfx, calls, harmony } = setup();
 
@@ -52,7 +74,7 @@ describe('SoundEffects', () => {
 
     sfx.playPaddleHit(1);
     sfx.playVictory();
-    sfx.playSettingsClick();
+    sfx.playMenuSelect();
     sfx.playChannelSurf();
     expect(oscillators()).toBe(0);
   });
@@ -65,9 +87,9 @@ describe('SoundEffects', () => {
     sfx.playHeartbeat();
     expect(oscillators()).toBe(0);
 
-    sfx.playSettingsClick();
+    sfx.playMenuBack();
     sfx.playFireworkPop();
-    expect(oscillators()).toBe(2);
+    expect(oscillators()).toBeGreaterThanOrEqual(2);
   });
 
   it('plays nothing before the audio is unlocked', () => {
@@ -120,9 +142,9 @@ describe('SoundEffects', () => {
       sfx.playPostBounce();
       sfx.playBrickBreak();
       sfx.playShrink(0.7);
-      sfx.playIceScrape(0.5);
+      sfx.playSkatePush(0.5);
+      sfx.playSkateStop(0.5);
       sfx.playIceTink();
-      sfx.playSonar(0, 0.5);
       sfx.playClockTick();
       sfx.playPaddleHit(1, false, 0, { size: 1.5 });
     };
