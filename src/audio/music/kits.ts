@@ -131,7 +131,7 @@ export const KITS = {
     perc: 'shaker',
     impact: 'impact',
   },
-  // Japan (fuji, dojo): the great odaiko for the taiko, a plain crash, the gong a temple bell
+  // Japan (fuji): the great odaiko for the taiko, a plain crash, the gong a temple bell
   // (metal), wood for the rest
   japan: {
     kick: 'kickPunch',
@@ -145,6 +145,20 @@ export const KITS = {
     taiko: 'odaiko',
     metal: 'gong',
     perc: 'woodblock',
+  },
+  // The dojo's taiko ensemble: the nagado for the kick and the odaiko over it, the shime's crack
+  // for the snare, the sticks on the rims, the atarigane keeping time where a kit's metal would
+  dojo: {
+    kick: 'taiko',
+    snare: 'shime',
+    clap: 'hyoshigi',
+    hat: 'hat',
+    open: 'open',
+    crash: 'crash',
+    tom: 'tom',
+    taiko: 'odaiko',
+    metal: 'atarigane',
+    perc: 'ka',
   },
   // The jungle: hand drums — congas for the toms, bongos for the percussion, the udu's deep
   // bend for the big drum — and a rain stick for the crash

@@ -176,6 +176,54 @@ export const DRUM_PATTERNS = {
     open: '..x...x...x...x.',
     metal: '...o..x....o..X.',
   },
+  // A taiko ensemble's kata (Kodo's "Monochrome"): the shime rolling the ground rhythm, the
+  // nagado's "don" against it, the odaiko once a bar, sticks on the rims, the atarigane's time
+  kata: {
+    kick: 'X..x..X...x.X...',
+    snare: 'x.o.x.ooX.o.x.oo',
+    taiko: 'X...............',
+    perc: '...x.......x..x.',
+    metal: '..x...x...x...x.',
+  },
+  kataHot: {
+    kick: 'X..x..X.X.x.X.x.',
+    snare: 'xoxoxoxoXoxoxoxX',
+    taiko: 'X.......X.....x.',
+    perc: '.x.x...x.x.x..x.',
+    metal: 'x.x.x.x.x.x.x.x.',
+    open: '..............x.',
+  },
+  // A bout's exchange: the kick and snare call in the bar's first half, the taiko answers in
+  // its second
+  kumite: {
+    kick: 'X.....x.X.......',
+    snare: '....X.......X...',
+    taiko: '.........x.x.xX.',
+    hat: 'x.x.x.x.x.x.x.x.',
+  },
+  kumiteHot: {
+    kick: 'X...X...X...X...',
+    snare: '....X.......X...',
+    clap: '....X.......X...',
+    taiko: '..x.....x.x.x.xX',
+    hat: 'xxxxxxxxxxxxxxxx',
+    open: '..x...x...x...x.',
+  },
+  // The odaiko's oroshi under a sensei's count: the big drum and long silences, the sticks
+  // ticking the beats, the nagado striking late
+  oroshi: {
+    taiko: 'X.......x.......',
+    kick: '......x.....x...',
+    perc: 'x...x...x...x...',
+    metal: '..o...o...o...o.',
+  },
+  oroshiHot: {
+    taiko: 'X.......X.......',
+    kick: 'X..x..x.X..x..x.',
+    snare: 'oooooooxoooooooX',
+    perc: '.x.x.x.x.x.x.x.x',
+    metal: 'x.x.x.x.x.x.x.x.',
+  },
   // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
   foundry: {
     kick: 'X...X...X...X.x.',

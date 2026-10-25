@@ -114,6 +114,58 @@ export const EXTRA_DRUMS = {
       chain(sweep(ctx, 'triangle', 180 * tune, 120 * tune, 0.2), hit(ctx, 0.5, 0.3), out);
     },
   },
+  /**
+   * Shime-daiko: the taiko ensemble's small drum, its skins laced tight with rope — a high, dry
+   * crack that rolls the ensemble's ground rhythm (ji-uchi) under the big drums.
+   */
+  shime: {
+    maxRate: RENDER_RATE.MID,
+    duration: 0.3,
+    variants: 3,
+    build: (ctx, random) => {
+      const out = ctx.destination;
+      const tune = jitter(random, 1, 0.02);
+      chain(sweep(ctx, 'sine', 470 * tune, 380 * tune, 0.04), hit(ctx, 1, 0.11), out);
+      chain(sweep(ctx, 'sine', 760 * tune, 640 * tune, 0.03), hit(ctx, 0.4, 0.06), out);
+      chain(noiseSource(ctx, random), filter(ctx, 'bandpass', 2800, 1.5), hit(ctx, 0.7, 0.02), out);
+    },
+  },
+  /** Ka: a taiko's stick struck on the drum's wooden rim, the click that answers its "don". */
+  ka: {
+    duration: 0.12,
+    variants: 3,
+    level: -1,
+    build: (ctx, random) => {
+      const out = ctx.destination;
+      chain(osc(ctx, 'triangle', jitter(random, 2500, 0.03)), hit(ctx, 1, 0.014), out);
+      // The barrel's wood under the click
+      chain(osc(ctx, 'sine', jitter(random, 720, 0.04)), hit(ctx, 0.5, 0.03), out);
+      chain(noiseSource(ctx, random), filter(ctx, 'bandpass', 1900, 4), hit(ctx, 0.6, 0.012), out);
+    },
+  },
+  /**
+   * Atarigane: the small brass gong held in the hand and struck inside with a horn mallet — the
+   * bright "chan" that keeps a taiko ensemble's time, damped by the fingers before it rings.
+   */
+  atarigane: {
+    duration: 0.5,
+    variants: 3,
+    level: -2,
+    build: (ctx, random) => {
+      const out = ctx.destination;
+      const base = jitter(random, 1240, 0.02);
+      for (const [ratio, peak, decay] of [
+        [1, 1, 0.3],
+        [1.52, 0.6, 0.22],
+        [2.31, 0.45, 0.16],
+        [2.95, 0.3, 0.1],
+        [3.8, 0.2, 0.07],
+      ]) {
+        chain(osc(ctx, 'sine', base * ratio), hit(ctx, peak * 0.4, decay), out);
+      }
+      chain(noiseSource(ctx, random), filter(ctx, 'highpass', 4000), hit(ctx, 0.5, 0.01), out);
+    },
+  },
   /** Bongo: the small hand drum's high, quick pop. */
   bongo: {
     maxRate: RENDER_RATE.MID,

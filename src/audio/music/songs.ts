@@ -1,4 +1,4 @@
-import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
+import { cycle, euclid, pulse, Stretch, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 
 /*
@@ -393,6 +393,36 @@ const CONVEYOR_HOLD = `G4 - - - - - - - - - - - - - - - | Eb4 - - - - - - - - - 
                      | G4 - - - - - - - - - - - - - - - | F4 - - - - - - - - - - - - - - -
                      | Ab4 - - - - - - - - - - - - - - - | C5 - - - - - - - - - - - - - - -
                      | B4 - - - - - - - - - - - - - - - | D5 - - - - - - - - - - - - - - -`;
+
+// ——— The dojo's track, 5.11's bases to choose from (no melody yet): a taiko ensemble leading a
+// darksynth, no koto, shakuhachi or shamisen ———
+
+/** The kata's reese: a five-note cell turning over a ten-pulse rhythm, never landing alike. */
+const KATA_BASS = cycle(
+  [
+    { cell: ['A1', 'A1', 'E2', 'A2', 'G2'], bars: 4 },
+    { cell: ['F1', 'F1', 'C2', 'F2', 'E2'], bars: 2 },
+    { cell: ['E1', 'E1', 'B1', 'E2', 'G#1'], bars: 2 },
+  ],
+  euclid(10, 16),
+);
+
+/** The bout's arpeggio: four chord tones struck every third sixteenth, three against four. */
+const KUMITE_ARP = pulse(
+  [
+    { cell: ['G4', 'Bb4', 'D5', 'G5'], bars: 2 },
+    { cell: ['Eb4', 'G4', 'Bb4', 'Eb5'], bars: 2 },
+    { cell: ['C4', 'Eb4', 'G4', 'C5'], bars: 2 },
+    { cell: ['D4', 'F#4', 'A4', 'D5'], bars: 2 },
+  ],
+  3,
+);
+
+/** The oroshi on the bass: strikes coming ever closer over eight bars, then one long again. */
+const OROSHI_BASS = `B1 - - - - - - - - - - - - - - - | B1 - - - - - - - B1 - - - - - - -
+                   | C2 - - - - - C2 - - - - - C2 - - - | C2 - - - C2 - - - C2 - - - C2 - - -
+                   | B1 - - B1 - - B1 - - B1 - - B1 - - B1 | B1 - B1 - B1 - B1 - B1 - B1 - B1 - B1 -
+                   | A1 - A2 - A1 - A2 - A1 - A2 - A1 - A2 - | F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1 F#1`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -1026,6 +1056,112 @@ const SONG_DEFS: SongDef[] = [
         bass: 'long',
         drums: 'shift',
         pad: 'swell',
+      },
+    ],
+  },
+  // The dojo's bases (5.11), for the stand: a groove (hook) and its peak (hot) each
+  {
+    // A taiko kata after Kodo's "Monochrome", a reese under it after Perturbator: the ensemble
+    // leads, the bass turning a cell over it in A minor
+    title: 'Dojo Kata',
+    sketch: true,
+    level: -3.5,
+    bpm: 118,
+    swing: 0,
+    kit: 'dojo',
+    room: 'plate',
+    grit: 6,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        bassLine: KATA_BASS,
+        drums: 'kata',
+        pad: 'none',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        bassLine: KATA_BASS,
+        arp: 'pulse',
+        drums: 'kataHot',
+        fill: 'taiko',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // A bout after Carpenter Brut's drive: the synth calls, the taiko answers, an arpeggio
+    // struck three against four in G minor
+    title: 'Dojo Kumite',
+    sketch: true,
+    level: -2.5,
+    bpm: 120,
+    swing: 0,
+    kit: 'dark',
+    room: 'plate',
+    grit: 4,
+    voices: { lead: 'brass', counter: 'square', arp: 'pluck', bass: 'bassSaw' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Gm | Gm | Eb | Eb | Cm | Cm | D | D',
+        arpLine: KUMITE_ARP,
+        bass: 'eighths',
+        drums: 'kumite',
+        pad: 'none',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Gm | Gm | Eb | Eb | Cm | Cm | D | D',
+        arpLine: KUMITE_ARP,
+        bass: 'octave',
+        drums: 'kumiteHot',
+        fill: 'taiko',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // The odaiko's oroshi, strikes coming ever closer, carried by a growling bass in B minor
+    // with a Phrygian C: an exam's strictness and its silences
+    title: 'Dojo Oroshi',
+    sketch: true,
+    level: -3.5,
+    bpm: 116,
+    swing: 0,
+    kit: 'dojo',
+    room: 'plate',
+    grit: 10,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Bm | Bm | C | C | Bm | Bm | A | F#',
+        bassLine: OROSHI_BASS,
+        drums: 'oroshi',
+        pad: 'none',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Bm | Bm | C | C | Bm | Bm | A | F#',
+        bassLine: OROSHI_BASS,
+        arp: 'sparse',
+        drums: 'oroshiHot',
+        fill: 'taiko',
+        pad: 'hold',
+        stabs: 'offbeat',
+        drop: true,
       },
     ],
   },
