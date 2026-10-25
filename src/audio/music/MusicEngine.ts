@@ -13,12 +13,14 @@ import {
 import { MusicGraph } from '@/audio/music/MusicGraph';
 import { soundsFor, unneeded, VoiceOverrides } from '@/audio/music/palette';
 import { DEFAULT_ROOM } from '@/audio/music/rooms';
+import { finaleSting, FinaleSting } from '@/audio/music/sting';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import {
   chordAt,
   LeadVoice,
   MusicLayer,
   partLevel,
+  Section,
   Song,
   STEPS_PER_BAR,
   Tier,
@@ -32,6 +34,10 @@ import { SceneId } from '@/shared/scenes';
 
 const HARMONY_HISTORY = 8; // scheduled chord changes kept to find what is audible now
 const TAPE_STOP_DURATION = 1.1; // s for the music to grind to a halt on defeat
+// The finales' stings (sting.ts): a defeat's hook grinds to a halt this far in, whatever the tempo,
+// so it is heard as the hook and is over with the finale; a win's last chord rings for a beat
+// before the music goes on (a bar's ring-out was a second of silence in the render)
+const STING = { LOSS_STOP_AT: 0.9, RING_STEPS: 4 } as const; // s, steps
 
 const START_DELAY = 0.1; // s before the first step
 
@@ -39,6 +45,17 @@ const START_DELAY = 0.1; // s before the first step
 const PLAN_STEP = 8;
 const ECHO_STEPS = 3; // lead echo time, in steps
 const TONE_FILTER: Record<GameState, number> = { paused: 450, menu: 2800, play: 16000 };
+
+/** A finale's sting being played: its sections, and where in them the music is. */
+interface StingPlay {
+  kind: FinaleSting;
+  song: Song;
+  sections: Section[];
+  /** Steps played so far, the ring-out after its last section included. */
+  step: number;
+  /** Audio-clock time it started, for a defeat's tape stop. */
+  startedAt: number | null;
+}
 
 /** A song that plays behind any backdrop, at random: what the music opens with. */
 function pickSharedSong(): number {
@@ -64,7 +81,8 @@ export interface MusicPosition {
  * Procedural synthwave soundtrack. The game pushes its state in with `setState` every frame;
  * a look-ahead scheduler turns that into intensity, lets the conductor pick the section that
  * fits, and plays the arrangement step by step. Each song keeps its own tempo throughout.
- * Effect commands (drama, climax, duck, tape stop) are forwarded to the audio graph.
+ * The match's moments (the deciding point, overtime, the climax, Reflex's warp, the finale's
+ * sting) shape it too (docs/AUDIO.md, "Музыка в матче").
  */
 export class MusicEngine {
   private graph: MusicGraph | null = null;
@@ -83,14 +101,24 @@ export class MusicEngine {
   private climaxLevel = 0;
   private isDropPending = false;
   private isTapeStopped = false;
+  /** The deciding point's tension in [0, 1], as last pushed in: the arrangement thins with it. */
+  private dramaLevel = 0;
+  /** A finale's sting, from its first step until the music goes on after it. */
+  private sting: StingPlay | null = null;
+  /** Whether the game has let the sting go (`recover`): the music goes on once it has played. */
+  private isStingReleased = false;
 
   private currentStep = 0;
+  /** The step the bars are counted from: a sting starts its own, and the music after it too. */
+  private barStart = 0;
   private readonly conductor = new Conductor(SONGS, pickSharedSong());
   private scheduler: StepScheduler | null = null;
   // The listening stand's overrides (src/debug/SoundStand.ts); null lets the game lead
   private readonly mutedLayers = new Set<MusicLayer>();
   private pinnedIntensity: number | null = null;
   private pinnedClimax: number | null = null;
+  private pinnedDrama: number | null = null;
+  private pinnedOvertime: boolean | null = null;
 
   /**
    * Builds the audio graph and starts the scheduler; safe to call more than once.
@@ -140,9 +168,13 @@ export class MusicEngine {
     this.state = state;
   }
 
-  /** Muffle the music with a low-pass, level in [0, 1] (0 = fully open). */
+  /**
+   * The deciding point's tension in [0, 1]: the music thins to its kick and bass under the
+   * heartbeat (0 = the full arrangement).
+   */
   public setDramaLevel(level: number): void {
-    this.graph?.setDramaLevel(level);
+    this.dramaLevel = clamp(this.pinnedDrama ?? level, 0, 1);
+    this.graph?.setDramaLevel(this.dramaLevel);
   }
 
   /**
@@ -174,22 +206,50 @@ export class MusicEngine {
     this.graph?.holdTape(duration);
   }
 
-  /** Dip the music so the victory sting sits on top; stays down until `recover`. */
-  public duck(): void {
-    this.graph?.duck();
+  /**
+   * The match is decided: from the next step the song playing plays its sting (sting.ts) in
+   * place of its form — a win's hook rings out on the screen after the match, a defeat's grinds
+   * to a halt in a tape stop. The music goes on after it once `recover` lets it.
+   */
+  public playFinale(kind: FinaleSting): void {
+    const { song } = this.conductor;
+    this.sting = { kind, song, sections: finaleSting(song, kind), step: 0, startedAt: null };
+    this.isStingReleased = false;
   }
 
-  /** Tape stop for a defeat; the sequencer halts until `recover`. */
-  public tapeStop(duration = TAPE_STOP_DURATION): void {
-    if (this.graph?.tapeStop(duration)) {
-      this.isTapeStopped = true;
-    }
-  }
-
-  /** Undo `duck` / `tapeStop` and resume the sequencer. */
+  /**
+   * The finale is over: a defeat's stopped tape runs again, and the music goes on — after a win's
+   * sting has played out, or at once.
+   */
   public recover(): void {
     this.graph?.recover();
     this.isTapeStopped = false;
+    this.isStingReleased = true;
+    if (this.sting?.kind === 'loss') this.endSting();
+  }
+
+  /** A new match: whatever is left of a sting gives way to the music at once. */
+  public cutFinale(): void {
+    if (this.sting) this.recover();
+    this.endSting();
+  }
+
+  /** Whether a finale's sting is playing or ringing out. */
+  public get isPlayingFinale(): boolean {
+    return this.sting !== null;
+  }
+
+  /** The music goes on from a bar line, the conductor deciding afresh where. */
+  private endSting(): void {
+    if (!this.sting) return;
+    this.sting = null;
+    this.barStart = this.currentStep;
+    this.conductor.plan(this.wantedTier());
+  }
+
+  /** Whether the music is heard now: the synthwave mix running, and not muted. */
+  public get isHeard(): boolean {
+    return this.graph !== null && !this.state.isMuted;
   }
 
   /**
@@ -281,6 +341,17 @@ export class MusicEngine {
     this.pinnedClimax = level === null ? null : clamp(level, 0, 1);
   }
 
+  /** The listening stand holds the deciding point's tension, in [0, 1]; null lets the game. */
+  public pinDrama(level: number | null): void {
+    this.pinnedDrama = level === null ? null : clamp(level, 0, 1);
+    this.setDramaLevel(this.pinnedDrama ?? 0);
+  }
+
+  /** The listening stand holds the rally in overtime, or out of it; null lets the game. */
+  public pinOvertime(isOvertime: boolean | null): void {
+    this.pinnedOvertime = isOvertime;
+  }
+
   /** Where the music is now. */
   public getPosition(): MusicPosition {
     const { conductor } = this;
@@ -357,8 +428,10 @@ export class MusicEngine {
     this.intensity =
       this.pinnedIntensity ?? stepIntensity(this.intensity, target, this.climaxLevel, gameState);
 
+    if (this.sting) return this.playStingStep(time, graph, arrangement, this.sting);
+
     const { conductor } = this;
-    const stepInBar = this.currentStep % STEPS_PER_BAR;
+    const stepInBar = (this.currentStep - this.barStart) % STEPS_PER_BAR;
     if (stepInBar === 0 && this.currentStep > 0) conductor.advance();
     if (stepInBar === PLAN_STEP) {
       conductor.plan(this.wantedTier());
@@ -404,6 +477,8 @@ export class MusicEngine {
         pass: conductor.pass,
         intensity: this.intensity,
         climaxLevel: this.climaxLevel,
+        dramaLevel: this.dramaLevel,
+        isOvertime: this.pinnedOvertime ?? (this.state.isOvertime && gameState === 'play'),
         difficulty: this.state.difficulty,
       });
     }
@@ -411,6 +486,78 @@ export class MusicEngine {
     this.climaxLevel =
       this.pinnedClimax ?? followClimax(this.climaxLevel, this.gameClimaxLevel, stepDuration);
     this.currentStep++;
+    return stepDuration;
+  }
+
+  /**
+   * Plays the step at `time` of a finale's sting, in place of the song's form, which waits where
+   * it was. @returns its length in seconds
+   */
+  private playStingStep(
+    time: number,
+    graph: MusicGraph,
+    arrangement: Arrangement,
+    sting: StingPlay,
+  ): number {
+    const { song, sections, kind } = sting;
+    const stepDuration = 60 / song.bpm / 4;
+    sting.startedAt ??= time;
+    let at = sting.step++;
+    this.currentStep++;
+
+    const index = sections.findIndex((section) => {
+      if (at < section.bars * STEPS_PER_BAR) return true;
+      at -= section.bars * STEPS_PER_BAR;
+      return false;
+    });
+    if (index < 0) {
+      // Ringing out: the music goes on once the game has let it, and the last chord has rung
+      if (this.isStingReleased && at >= STING.RING_STEPS) this.endSting();
+      return stepDuration;
+    }
+
+    const section = sections[index];
+    const bar = Math.floor(at / STEPS_PER_BAR);
+    const stepInBar = at % STEPS_PER_BAR;
+    const chord = chordAt(section, at);
+    if (stepInBar % PLAN_STEP === 0 || this.harmony.isEmpty) {
+      this.harmony.push(time, { root: placeAbove(chord.root, BASS_LOW), chord: chord.triad });
+    }
+
+    // At full brightness, whatever screen the result comes up on
+    graph.setToneFilter(TONE_FILTER.play, time);
+    graph.setSongLevel(song.level ?? 0, time);
+    graph.setPartLevel(partLevel(section), time);
+    graph.setPartMix(section.mix ?? {}, time);
+    graph.setSongSpace(song.room ?? DEFAULT_ROOM, song.pump ?? 1, time);
+    graph.setBassGrit(song.grit ?? 0, time);
+    graph.setEchoTime(stepDuration * ECHO_STEPS, time);
+
+    if (kind === 'loss' && !this.isTapeStopped && time - sting.startedAt >= STING.LOSS_STOP_AT) {
+      // Steps already scheduled play into the stop and bend down with it
+      if (graph.tapeStop(TAPE_STOP_DURATION, time)) this.isTapeStopped = true;
+    }
+
+    const next = sections[index + 1];
+    const isLastBar = bar === section.bars - 1 && next !== undefined;
+    if (!this.state.isMuted) {
+      arrangement.playStep({
+        time,
+        stepDuration,
+        song,
+        section,
+        bar,
+        stepInBar,
+        isLastBar,
+        nextBarChord: next ? next.chords[0] : chord,
+        previousTier: 'high',
+        pass: 0,
+        // A win in full voice; a defeat as hot as the match was
+        intensity: kind === 'loss' ? this.intensity : 1,
+        climaxLevel: 0,
+        difficulty: this.state.difficulty,
+      });
+    }
     return stepDuration;
   }
 }

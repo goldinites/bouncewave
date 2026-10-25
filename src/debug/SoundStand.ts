@@ -13,8 +13,10 @@ import {
   Tier,
 } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
+import { FinaleSting } from '@/audio/music/sting';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { debugHeading } from '@/debug/theme';
+import { FINALE } from '@/match/MatchFlow';
 
 const READOUT_MS = 250; // how often the position and latency are redrawn while open
 // The player's form strip: each part coloured by its heat
@@ -232,6 +234,10 @@ export class SoundStand {
       debugHeading('Heat (ticked: held by the stand)'),
       this.slider('intensity', (level) => this.audio.music.pinIntensity(level)),
       this.slider('climax', (level) => this.audio.music.pinClimax(level)),
+      debugHeading('Match (5.8)'),
+      this.slider('deciding', (level) => this.audio.music.pinDrama(level)),
+      this.overtimeRow(),
+      this.finaleButtons(),
       debugHeading('Layers'),
       this.layerRows(),
       debugHeading('Game sounds'),
@@ -497,6 +503,42 @@ export class SoundStand {
     );
     buttons.style.flexWrap = 'wrap';
     return buttons;
+  }
+
+  /** Holds the rally in overtime, its alarm over the music, while ticked. */
+  private overtimeRow(): HTMLElement {
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.dataset.pin = 'overtime';
+    const label = document.createElement('label');
+    label.append(box, ' overtime');
+    this.on(box, 'change', () => this.audio.music.pinOvertime(box.checked ? true : null));
+    return this.row(label);
+  }
+
+  /**
+   * The finales' stings of the song playing, let go when the game would let them: as its
+   * finale ends (match/MatchFlow.ts, FINALE).
+   */
+  private finaleButtons(): HTMLElement {
+    const stings: [FinaleSting, number][] = [
+      ['win', FINALE.WIN_DURATION],
+      ['loss', FINALE.LOSS_DURATION],
+      ['allPassed', FINALE.WIN_DURATION],
+    ];
+    return this.row(
+      ...stings.map(([kind, duration]) =>
+        this.button(`${kind} sting`, () => {
+          this.audio.unlock();
+          this.audio.music.playFinale(kind);
+          const timer = setTimeout(() => {
+            this.timers.delete(timer);
+            this.audio.music.recover();
+          }, duration * 1000);
+          this.timers.add(timer);
+        }),
+      ),
+    );
   }
 
   /** Plays a sound, or its series, heard even behind the menus. */

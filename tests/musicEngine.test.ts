@@ -61,18 +61,57 @@ describe('MusicEngine', () => {
     expect(engine.getHarmony()).not.toBeNull();
   });
 
-  it('stops the sequencer during a tape stop and picks it up again on recover', () => {
-    const { engine, notes, play } = track(setup());
-    play(1);
+  describe('at the end of a match', () => {
+    it("plays a defeat's hook, stops the tape on it, and picks the music up on recover", () => {
+      const { engine, notes, play } = track(setup());
+      play(1);
 
-    engine.tapeStop();
-    const stopped = notes();
-    play(2);
-    expect(notes()).toBe(stopped);
+      engine.playFinale('loss');
+      play(1.2); // the hook's first bar, until the tape stops
+      expect(engine.isPlayingFinale).toBe(true);
+      const stopped = notes();
+      play(2);
+      expect(notes()).toBe(stopped);
 
-    engine.recover();
-    play(1);
-    expect(notes()).toBeGreaterThan(stopped);
+      engine.recover();
+      expect(engine.isPlayingFinale).toBe(false);
+      play(1);
+      expect(notes()).toBeGreaterThan(stopped);
+    });
+
+    it("lets a win's sting play out on the screen after the match, then goes on", () => {
+      const { engine, notes, play } = track(setup());
+      play(1);
+
+      engine.playFinale('win');
+      play(1);
+      engine.recover(); // the finale ends while the sting still plays
+      expect(engine.isPlayingFinale).toBe(true);
+      play(15); // the longest sting, the slowest song: three bars and the ring-out
+      expect(engine.isPlayingFinale).toBe(false);
+
+      const after = notes();
+      play(2);
+      expect(notes()).toBeGreaterThan(after);
+    });
+
+    it('holds the music after a sting until the finale lets it go', () => {
+      const { engine, notes, play } = track(setup());
+      engine.playFinale('win');
+      play(15);
+      expect(engine.isPlayingFinale).toBe(true);
+      const ringing = notes();
+      play(2);
+      expect(notes()).toBe(ringing);
+    });
+
+    it('gives a sting up at once when the next match starts', () => {
+      const { engine, play } = track(setup());
+      engine.playFinale('allPassed');
+      play(1);
+      engine.cutFinale();
+      expect(engine.isPlayingFinale).toBe(false);
+    });
   });
 
   it("opens with the backdrop's own song when it has one", () => {

@@ -20,6 +20,8 @@ export interface MusicState {
   /** Top ball speed of the current difficulty. */
   maxBallSpeed: number;
   rally: number;
+  /** Whether the rally has gone to overtime (match/overtime.ts): the music sounds its alarm. */
+  isOvertime: boolean;
   scores: [number, number];
   /** Points that win the match being played, for each side. */
   winningScores: Scores;
@@ -33,6 +35,7 @@ export const INITIAL_MUSIC_STATE: MusicState = {
   ballSpeed: 0,
   maxBallSpeed: 1,
   rally: 0,
+  isOvertime: false,
   scores: [0, 0],
   winningScores: STANDARD_RULES.winningScores,
   isMuted: false,

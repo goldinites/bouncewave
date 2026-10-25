@@ -48,11 +48,27 @@ describe('MusicGraph', () => {
     const { ctx, calls } = fakeAudioContext(10);
     const graph = new MusicGraph(ctx);
 
-    graph.duck();
     graph.recover();
 
     const [gainRamp] = callsOf(calls, 'linearRampToValueAtTime').slice(-1);
     expect(gainRamp.args).toEqual([1, 10.6]);
+  });
+
+  it('thins the pads and the melody out on the deciding point, and brings them back', () => {
+    const { ctx, calls } = fakeAudioContext(10);
+    const graph = new MusicGraph(ctx);
+    const fades = (level: number) =>
+      callsOf(calls, 'setTargetAtTime').filter((c) => c.args[0] === level).length;
+
+    graph.setDramaLevel(0.6);
+    expect(fades(0)).toBe(2);
+    // No filter muffles it: that is the pause's sound
+    expect(callsOf(calls, 'setTargetAtTime').some((c) => (c.args[0] as number) > 1)).toBe(false);
+
+    graph.setDramaLevel(0.25);
+    expect(fades(0.5)).toBe(2);
+    graph.setDramaLevel(0);
+    expect(fades(1)).toBe(2);
   });
 
   it('brings the music back after a drop-out, and a rewind back to its pitch', () => {

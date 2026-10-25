@@ -53,6 +53,10 @@ export interface StepContext {
   intensity: number;
   /** 0..1: rally climax build-up; fades the climax-only layers in. */
   climaxLevel: number;
+  /** 0..1: the deciding point's tension; the drums thin to the kick with it. 0 if left out. */
+  dramaLevel?: number;
+  /** Whether the rally has gone to overtime: the alarm plays over the music. */
+  isOvertime?: boolean;
   difficulty: DifficultyLevel;
 }
 
@@ -147,6 +151,19 @@ const FX_HIT_VOLUME = 0.12;
 // A ghost note and a phrase fill, as shares of the snare's written level
 const GHOST_SNARE = 0.3;
 const PHRASE_FILL = { FROM_STEP: 14, VELOCITIES: [0.35, 0.75] } as const;
+// On the deciding point, from this tension on, the drums play their kick alone (the pads and the
+// melody fade out on the graph, MusicGraph's DRAMA_THIN_AT)
+const DRAMA_KICK_ONLY = 0.25;
+// Overtime's alarm (5.8): the chord's root in eighths, the octave on the off-beats, on the song's
+// own arpeggio voice, straight into the mix, so neither the deciding point's thinning nor the
+// climax buries it. It comes in on a crash and a kick, at once, as OVERTIME lights up
+const OVERTIME = {
+  VOLUME: 0.055,
+  OFFBEAT: 0.65, // share of the volume on the off-beat octave
+  CUTOFF: 4200, // Hz
+  CRASH: 0.16,
+  KICK: 0.9,
+} as const;
 // How hot each tier is, to tell the music going up from coming down
 const TIER_HEAT: Record<Tier, number> = { calm: 0, groove: 1, rise: 2, high: 3 };
 
@@ -226,6 +243,8 @@ export class Arrangement {
   private variation: BarVariation = barVariation('', '', 0, 0);
   /** Layers the listening stand has silenced; read live on every step. */
   private readonly muted: ReadonlySet<MusicLayer>;
+  /** Whether the last step was in overtime, to strike its entry once. */
+  private wasOvertime = false;
 
   constructor(
     instruments: Instruments,
@@ -281,9 +300,12 @@ export class Arrangement {
       this.variation = barVariation(song.id, section.name, context.pass ?? 0, bar);
     }
 
+    const isThin = (context.dramaLevel ?? 0) >= DRAMA_KICK_ONLY;
+    this.playOvertime(time, chord, context);
+
     if (sectionStep === 0) {
       // A crash marks every new section except the quiet ones
-      if (section.tier !== 'calm' && this.plays('drums')) this.drum('crash', time, 0.12);
+      if (section.tier !== 'calm' && this.plays('drums') && !isThin) this.drum('crash', time, 0.12);
       if (this.has('fx')) this.playTransitions(time, context);
       if (section.drop) this.playDrop(time, chord, stepDuration, song.transitions);
     }
@@ -314,10 +336,10 @@ export class Arrangement {
       );
     }
 
-    if (this.plays('drums')) this.playDrums(time, context);
-    if (section.hits && this.plays('fx')) this.playHits(time, sectionStep, section.hits);
+    if (this.plays('drums')) this.playDrums(time, context, isThin);
+    if (section.hits && this.plays('fx') && !isThin) this.playHits(time, sectionStep, section.hits);
 
-    if (context.climaxLevel > 0.01) {
+    if (context.climaxLevel > 0.01 && !isThin) {
       this.playClimaxLayers(time, chord, context);
     }
     if (section.glitch && context.isLastBar && this.has('fx')) {
@@ -455,11 +477,14 @@ export class Arrangement {
       );
     }
 
-    if (section.stabs && this.voicing && STAB_PATTERNS[section.stabs][s] !== '.') {
+    const stabs = section.stabs ? STAB_PATTERNS[section.stabs] : '';
+    if (this.voicing && stabs[s] && stabs[s] !== '.' && stabs[s] !== '-') {
+      // A stab rings a little past its step, or as long as the pattern holds it
+      const held = heldSteps(stabs, s);
       this.play.stab(
         this.voicing,
         time,
-        stepDuration * 1.5,
+        stepDuration * (held > 1 ? held - 0.1 : 1.5),
         STAB_VOLUME * (0.7 + 0.3 * I),
         section.stabsVoice,
       );
@@ -600,8 +625,40 @@ export class Arrangement {
     );
   }
 
-  /** The section's beat, the fill in the second half of a last bar, and hats that heat up. */
-  private playDrums(time: number, context: StepContext): void {
+  /**
+   * Overtime's alarm on the eighths, and its entry on the step it starts (OVERTIME); silent
+   * while the stand has the fx muted.
+   */
+  private playOvertime(time: number, chord: Chord, context: StepContext): void {
+    const isOvertime = context.isOvertime === true;
+    const isEntry = isOvertime && !this.wasOvertime;
+    this.wasOvertime = isOvertime;
+    if (!isOvertime || !this.has('fx')) return;
+
+    if (isEntry) {
+      this.drum('crash', time, OVERTIME.CRASH);
+      this.drum('kick', time, OVERTIME.KICK);
+    }
+    const { stepInBar: s, stepDuration, song } = context;
+    if (s % 2 !== 0) return;
+    const isOffbeat = s % 4 === 2;
+    const root = placeAbove(chord.root, ARP_LOW);
+    this.play.arp(
+      song.voices.arp,
+      isOffbeat ? root + 12 : root,
+      time,
+      stepDuration * 0.9,
+      OVERTIME.VOLUME * (isOffbeat ? OVERTIME.OFFBEAT : 1),
+      this.graph.bus,
+      OVERTIME.CUTOFF,
+    );
+  }
+
+  /**
+   * The section's beat, the fill in the second half of a last bar, and hats that heat up; the
+   * kick alone when `isThin` (the deciding point).
+   */
+  private playDrums(time: number, context: StepContext, isThin = false): void {
     const { section, stepInBar: s, intensity: I, isLastBar } = context;
     const hit = (line: string | undefined, index: number) =>
       HIT_VELOCITY[line?.[index] ?? '.'] ?? 0;
@@ -611,6 +668,7 @@ export class Arrangement {
     if (fill) {
       const i = s - 8;
       this.playKick(time, hit(fill.kick, i), I);
+      if (isThin) return;
       const snare = hit(fill.snare, i);
       if (snare) this.drum('snare', time, snare * (0.18 + 0.12 * I));
       const tom = fill.tom?.[i];
@@ -626,6 +684,7 @@ export class Arrangement {
     const step = feelStep(section.feel, s, context.bar);
     const felt = (line: string | undefined) => (step === null ? 0 : hit(line, step));
     this.playKick(time, felt(beat.kick), I);
+    if (isThin) return;
     this.playTaiko(time, felt(beat.taiko), I);
 
     const snareLevel = 0.18 + 0.12 * I;

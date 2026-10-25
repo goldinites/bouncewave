@@ -5,7 +5,7 @@ import { Scores } from '@/match/side';
 import { approach, clamp, lerp } from '@/shared/math';
 
 export const DRAMA = {
-  LEVEL: 0.6, // tension for the whole deciding rally: vignette, muffled music
+  LEVEL: 0.6, // tension for the whole deciding rally: vignette, the music thinned to kick and bass
   LEVEL_SMOOTHING: 4.1, // 1/s
   // Heartbeat through the deciding rally, quickening the longer it lasts
   HEARTBEAT_FIRST: 0.4, // s from the start of the deciding point to the first beat
@@ -24,7 +24,7 @@ export const DRAMA = {
 /**
  * Presentation-only tension on the deciding point, when both sides are one point from winning.
  *
- * - The whole rally: `level` rises (vignette, muffled music) and a heartbeat quickens, each beat
+ * - The whole rally: `level` rises (vignette, thinned music) and a heartbeat quickens, each beat
  *   pulsing the vignette.
  * - Once the ball has slipped past a paddle — the match is decided — the heartbeat stops, time
  *   slows right down and the camera closes in on the ball until the point is scored.
