@@ -479,40 +479,40 @@ const SIGNAL_ECHO = `D4 - - - - - E4 - - - - - - - - - | D5 - - - - - C5 - - - B
 // base as it is ———
 
 /** Lament, the verse: a line falling from D5 a step at a time, each phrase starting lower. */
-const SIGNAL_FALL_VERSE = `D5 - - - - - - - - - - - C#5 D5 C#5 - | B4 - - - - - - - - - - - . . . .
-                         | B4 - - - - - - - A4 - - - - - - - | G4 - - - - - - - - - - - F#4 E4 F#4 -
-                         | E5 - - - - - - - D5 - - - - - - - | B4 - - - - - - - A4 - - - G4 - - -
-                         | C#5 - - - - - - - - - - - B4 - A#4 - | F#4 - - - - - - - - - - - - - . .`;
+const SIGNAL_FALL_VERSE = `D4 - - - - - - - - - - - C#4 D4 C#4 - | B3 - - - - - - - - - - - . . . .
+                         | B3 - - - - - - - A3 - - - - - - - | G3 - - - - - - - - - - - F#3 E3 F#3 -
+                         | E4 - - - - - - - D4 - - - - - - - | B3 - - - - - - - A3 - - - G3 - - -
+                         | C#4 - - - - - - - - - - - B3 - A#3 - | F#3 - - - - - - - - - - - - - . .`;
 
 /** Lament, the chorus: down by semitones from D5 to G4 over four bars, cried back up to E5. */
-const SIGNAL_FALL_CHORUS = `D5 - - - - - - - C#5 - - - C5 - - - | B4 - - - - - - - - - - - - - . .
-                          | B4 - - - A#4 - - - A4 - - - G#4 - - - | G4 - - - - - - - - - - - E5 D5 C#5 -
-                          | B4 - - - E5 - - - - - - - D5 - - - | B4 - - - - - - - A4 - - - G4 - F#4 -
-                          | A#4 - - - - - - - - - - - C#5 - A#4 - | F#4 - - - - - - - - - - - - - . .`;
+const SIGNAL_FALL_CHORUS = `D4 - - - - - - - C#4 - - - C4 - - - | B3 - - - - - - - - - - - - - . .
+                          | B3 - - - A#3 - - - A3 - - - G#3 - - - | G3 - - - - - - - - - - - E4 D4 C#4 -
+                          | B3 - - - E4 - - - - - - - D4 - - - | B3 - - - - - - - A3 - - - G3 - F#3 -
+                          | A#3 - - - - - - - - - - - C#4 - A#3 - | F#3 - - - - - - - - - - - - - . .`;
 
 /** Cry, the verse: a leap of a sixth or an octave from low, then a fall; the octave in bar 5. */
-const SIGNAL_CRY_VERSE = `F#4 - - - D5 - - - - - - - C#5 B4 A#4 - | B4 - - - - - - - - - - - . . . .
-                        | D4 - - - B4 - - - - - - - A4 - G4 - | D5 - - - - - - - B4 - - - - - . .
-                        | E4 - - - E5 - - - - - - - - - - - | D5 - - - - - - - B4 - - - G4 - - -
-                        | C#5 - - - - - - - A#4 - - - - - - - | F#4 - - - - - - - . . . . . . . .`;
+const SIGNAL_CRY_VERSE = `F#3 - - - D4 - - - - - - - C#4 B3 A#3 - | B3 - - - - - - - - - - - . . . .
+                        | G3 - - - E4 - - - - - - - D4 - B3 - | D4 - - - - - - - B3 - - - - - . .
+                        | E3 - - - E4 - - - - - - - - - - - | D4 - - - - - - - B3 - - - G3 - - -
+                        | C#4 - - - - - - - A#3 - - - - - - - | F#3 - - - - - - - . . . . . . . .`;
 
 /** Cry, the chorus: octaves leapt up from the bottom, each sobbing back down. */
-const SIGNAL_CRY_CHORUS = `D4 - - - D5 - - - - - - - - - - - | C#5 - - - - - - - B4 - A#4 - B4 - - -
-                         | D4 - - - E5 - - - - - - - - - - - | D5 - - - - - - - B4 A4 G4 - . . . .
-                         | E4 - - - - - - - E5 - - - - - - - | D5 - - - - - - - - - - - B4 - G4 -
-                         | A#4 - - - - - - - C#5 - - - - - - - | F#4 - - - - - - - - - - - - - . .`;
+const SIGNAL_CRY_CHORUS = `F#3 - - - D4 - - - - - - - - - - - | C#4 - - - - - - - B3 - A#3 - B3 - - -
+                         | G3 - - - E4 - - - - - - - - - - - | D4 - - - - - - - B3 A3 G3 - . . . .
+                         | E3 - - - - - - - E4 - - - - - - - | D4 - - - - - - - - - - - B3 - G3 -
+                         | A#3 - - - - - - - C#4 - - - - - - - | F#3 - - - - - - - - - - - - - . .`;
 
 /** Sighs, the verse: a note a step above the chord on the downbeat, falling onto it. */
-const SIGNAL_SIGH_VERSE = `C#5 - - - - - B4 - - - - - - - . . | E4 - - - - - D4 - - - . . F#4 G4 F#4 -
-                         | A4 - - - - - G4 - - - - - - - . . | E5 - - - - - D5 - - - - - B4 - - -
-                         | E5 - - - - - - - D5 - - - - - B4 - | A4 - - - - - G4 - - - . . G4 F#4 E4 -
-                         | G#4 - - - - - F#4 - - - - - - - . . | A#4 - - - - - - - - - - - - - . .`;
+const SIGNAL_SIGH_VERSE = `C#4 - - - - - B3 - - - - - - - . . | E4 - - - - - D4 - - - . . F#3 G3 F#3 -
+                         | A3 - - - - - G3 - - - - - - - . . | E4 - - - - - D4 - - - - - B3 - - -
+                         | E4 - - - - - - - D4 - - - - - B3 - | A3 - - - - - G3 - - - . . G3 F#3 E3 -
+                         | G#3 - - - - - F#3 - - - - - - - . . | A#3 - - - - - - - - - - - - - . .`;
 
 /** Sighs, the chorus: the same falling steps, higher and longer, in 3+3+2. */
-const SIGNAL_SIGH_CHORUS = `E5 - - - - - D5 - - - - - C#5 - - - | B4 - - - - - - - . . A#4 B4 C#5 - - -
-                          | A4 - - - - - G4 - - - - - B4 - - - | D5 - - - - - - - - - - - . . . .
-                          | E5 - - - - - - - - - - - D5 C#5 D5 - | A4 - - - - - G4 - - - . . B4 - G4 -
-                          | G#4 - - - - - F#4 - - - - - C#5 - - - | A#4 - - - - - - - - - - - - - . .`;
+const SIGNAL_SIGH_CHORUS = `E4 - - - - - D4 - - - - - C#4 - - - | B3 - - - - - - - . . A#3 B3 C#4 - - -
+                          | A3 - - - - - G3 - - - - - B3 - - - | D4 - - - - - - - - - - - . . . .
+                          | E4 - - - - - - - - - - - D4 C#4 D4 - | A3 - - - - - G3 - - - . . B3 - G3 -
+                          | G#3 - - - - - F#3 - - - - - C#4 - - - | A#3 - - - - - - - - - - - - - . .`;
 
 /** A sketch of Signal Lost with other melodies: its verse (hook) and its peak (hot) as they are. */
 const signalSketch = (title: string, verse: string, chorus: string): SongDef => ({
