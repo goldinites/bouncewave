@@ -3,22 +3,26 @@ import { LeadVoice, MelodyNote, SongDef, STEPS_PER_BAR } from '@/audio/music/sco
 import { SONGS } from '@/audio/music/songs';
 import { PAD_SOUND } from '@/audio/music/palette';
 import { DRUM_PATTERNS } from '@/audio/music/patterns';
-import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
+import {
+  EXTRA_LEAD_FOR,
+  EXTRA_LEADS,
+  ExtraLeadId,
+  LEAD_SAMPLE_FOR,
+  LOW_TWINS,
+} from '@/audio/samples/leads';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { isSceneId } from '@/shared/scenes';
 
 // The lead voices played from rendered instruments, and how far a note may sit from a root
-const SAMPLED: Partial<Record<LeadVoice, PitchedSampleId>> = {
-  saw: 'supersaw',
-  square: 'squareLead',
-  pluck: 'pluck',
-};
-/** The roots a lead voice is rendered at, from the core palette or the extra leads. */
+/** The roots a lead voice is rendered at: its sound's own, from the core palette or the extra leads, and its low twin's. */
 const rootsOf = (voice: LeadVoice): number[] | null => {
-  const core = SAMPLED[voice];
-  if (core) return PITCHED_SAMPLES[core].roots;
-  const extra = EXTRA_LEAD_FOR[voice];
-  return extra ? EXTRA_LEADS[extra].roots : null;
+  const id = LEAD_SAMPLE_FOR[voice];
+  if (!id) return null;
+  const own =
+    id in EXTRA_LEADS
+      ? EXTRA_LEADS[id as ExtraLeadId].roots
+      : PITCHED_SAMPLES[id as PitchedSampleId].roots;
+  return [...LOW_TWINS[id].recipe.roots, ...own];
 };
 const STRETCH = 3; // semitones: further, a note played from its root starts to sound stretched
 

@@ -98,7 +98,7 @@ describe('the soundtrack', () => {
       for (const section of sections) {
         for (const note of [...(section.lead ?? []), ...(section.counter ?? [])]) {
           if (!note) continue;
-          expect(note.note).toBeGreaterThanOrEqual(parseNote('C4'));
+          expect(note.note).toBeGreaterThanOrEqual(parseNote('E3'));
           expect(note.note).toBeLessThanOrEqual(parseNote('D6'));
         }
       }

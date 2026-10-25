@@ -59,6 +59,20 @@ describe('the palette a song needs rendered', () => {
     expect(Object.keys(swapped.pitched).sort()).toEqual(['bassGrowl', 'leadHarp', 'padReverse']);
     expect(Object.keys(swapped.oneShots).sort()).toEqual(['chain', 'steam', 'synthCymbal']);
   });
+
+  it('takes the leads’ low twins only for a song whose melody goes under D4', () => {
+    const bars = (a: string, b: string) => `${a}${' -'.repeat(15)} | ${b}${' -'.repeat(15)}`;
+    const high = soundsFor(song({}, { lead: bars('E4', 'D4') }));
+    expect(high.pitched).not.toHaveProperty('leadMarimbaLow');
+    const low = soundsFor(song({}, { lead: bars('E4', 'G3') }));
+    expect(low.pitched).toHaveProperty('leadMarimbaLow');
+    expect(low.pitched.leadMarimbaLow.roots.every((root) => root < 62)).toBe(true);
+    // A core lead's twin, the core sound itself already rendered
+    const saw = { lead: 'saw', counter: 'bell', arp: 'square', bass: 'bassSlap' } as const;
+    const core = soundsFor(song({ voices: saw }, { lead: bars('E4', 'E3') }));
+    expect(core.pitched).toHaveProperty('supersawLow');
+    expect(core.pitched).not.toHaveProperty('supersaw');
+  });
 });
 
 describe('the wider palette’s sounds freed', () => {

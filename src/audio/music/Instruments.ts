@@ -3,7 +3,7 @@ import { MusicGraph, PAD_SPREAD } from '@/audio/music/MusicGraph';
 import { PAD_SOUND, STAB_SOUND } from '@/audio/music/palette';
 import { ArpVoice, BassVoice, LeadVoice, PadVoice, StabVoice } from '@/audio/music/score';
 import { ExtraPitchedId } from '@/audio/samples/extra';
-import { EXTRA_LEAD_FOR, ExtraLeadId } from '@/audio/samples/leads';
+import { ExtraLeadId, LEAD_SAMPLE_FOR, LOW_TWINS } from '@/audio/samples/leads';
 import { PitchedSampleId } from '@/audio/samples/pitched';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { TransitionSampleId } from '@/audio/samples/transitions';
@@ -56,13 +56,6 @@ const LIVE_BASS: Record<BassVoice, OscillatorType> = {
 };
 const LIVE_ARP: Record<ArpVoice, OscillatorType> = { arpPulse: 'square', pluck: 'sawtooth' };
 const OSCILLATOR_TYPES: readonly string[] = ['sine', 'square', 'sawtooth', 'triangle'];
-// Lead voices that have a rendered instrument
-const SAMPLED_LEADS: Partial<Record<LeadVoice, PitchedSampleId | ExtraLeadId>> = {
-  saw: 'supersaw',
-  square: 'squareLead',
-  pluck: 'pluck',
-  ...EXTRA_LEAD_FOR,
-};
 // A rendered note is played a touch louder or softer each time, never out of tune
 const NOTE_HUMANIZE = 0.05; // ± share of the volume
 
@@ -222,7 +215,10 @@ export class Instruments {
     destination: AudioNode,
     shape: NoteShape,
   ): boolean {
-    const note = this.samples.pickNote(id, midiNote);
+    // A lead's low note comes from its low twin, when its song has one rendered
+    const twin = LOW_TWINS[id];
+    const low = twin && midiNote < twin.below ? this.samples.pickNote(twin.id, midiNote) : null;
+    const note = low ?? this.samples.pickNote(id, midiNote);
     if (!note) return false;
     const end = time + duration;
     const peak = volume * (1 + (Math.random() * 2 - 1) * NOTE_HUMANIZE);
@@ -443,7 +439,7 @@ export class Instruments {
     glide?: { from: number; time: number },
     fall?: number,
   ): void {
-    const sampled = SAMPLED_LEADS[voice];
+    const sampled = LEAD_SAMPLE_FOR[voice];
     if (sampled) {
       const shape = leadShape(voice, duration, filterCutoff, glide, fall);
       if (this.playNote(sampled, midiNote, time, duration, volume, destination, shape)) return;
