@@ -1379,7 +1379,9 @@ const SONG_DEFS: SongDef[] = [
     kit: 'synthwave',
     room: 'cathedral',
     pump: 0.3,
-    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassSaw', pad: 'synth' },
+    // A round, clean bass, as dreamwave's is: under even the mix's own bend
+    grit: -8,
+    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
     sections: [
       {
         name: 'hook',
@@ -1408,12 +1410,14 @@ const SONG_DEFS: SongDef[] = [
     // figure on five pulses of eight
     title: 'Menu Dive',
     sketch: true,
-    level: -4,
+    level: -3,
     bpm: 84,
     swing: 0.15,
     kit: 'night',
     room: 'studio',
     pump: 0.2,
+    // A round, clean bass, as dreamwave's is: under even the mix's own bend
+    grit: -8,
     voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
     sections: [
       {
@@ -1450,7 +1454,9 @@ const SONG_DEFS: SongDef[] = [
     kit: 'synthwave',
     room: 'valley',
     pump: 0.2,
-    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassSaw', pad: 'reverse' },
+    // A round, clean bass, as dreamwave's is: under even the mix's own bend
+    grit: -8,
+    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
     sections: [
       {
         name: 'hook',
