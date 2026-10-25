@@ -54,6 +54,17 @@ export const DRUM_PATTERNS = {
     taiko: '......x.....x.xX',
     perc: '..x.x.....x.x.x.',
   },
+  // The chorus's half-time with the odaiko leading it, the hats running eighths over it: Japan's
+  // drum carrying a pop chorus, neither a festival nor a straight synthwave beat
+  dawn: {
+    kick: 'X.........x.....',
+    snare: '........X.......',
+    hat: 'x.x.x.x.x.x.x.x.',
+    open: '..............x.',
+    taiko: 'X.....x.X.......',
+  },
+  // A temple bell (bonshō), struck once and left to ring; with a half-time feel, every two bars
+  bonsho: { metal: 'X...............' },
   // The kabuki's clappers (hyoshigi) striking ever faster, as they do before the curtain, over
   // the odaiko
   kabuki: {

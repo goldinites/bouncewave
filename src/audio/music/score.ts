@@ -127,6 +127,11 @@ export interface SectionDef {
   arp?: ArpPatternName;
   /** The arpeggio written out, in the melody notation: an ostinato of its own. Takes the place of `arp`. */
   arpLine?: string;
+  /**
+   * A lead voice the written arpeggio plays on, each note as long as written: a koto plucking
+   * where a synth's arpeggio would run. The song's arpeggio voice if left out.
+   */
+  arpVoice?: LeadVoice;
   drums: DrumPatternName;
   /** Played in the second half of the section's last bar. */
   fill?: DrumFillName;
@@ -207,6 +212,12 @@ export interface SongDef {
      * from it, so the line sings rather than steps. None if left out.
      */
     glide?: number;
+    /**
+     * Semitones the song's own lead falls by as a note ends before a rest, as a shakuhachi's
+     * breath lets the note go at a phrase's end. None if left out; never on another section's
+     * lead voice.
+     */
+    fall?: number;
   };
   /**
    * The backdrop this song belongs to: it plays only behind that one, and first whenever that

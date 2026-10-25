@@ -79,7 +79,12 @@ interface NoteShape {
   vibrato?: boolean;
   /** Portamento: the note slides in from this MIDI note over `glide.time` seconds. */
   glide?: { from: number; time: number };
+  /** Semitones the note falls by as it ends, as a flute's breath lets go of it (FALL). */
+  fall?: number;
 }
+
+// A falling note ends over this share of its length, at most TIME seconds
+const FALL = { SHARE: 0.3, TIME: 0.18 } as const;
 
 // Sustained leads that breathe or bow in slower than a synth's
 const SLOW_ATTACK: Partial<Record<LeadVoice, number>> = {
@@ -98,6 +103,7 @@ function leadShape(
   duration: number,
   filterCutoff: number,
   glide?: { from: number; time: number },
+  fall?: number,
 ): NoteShape {
   switch (voice) {
     case 'pluck':
@@ -131,6 +137,7 @@ function leadShape(
         cutoff: { from: filterCutoff * 1.6, to: filterCutoff, over: 0.2 },
         vibrato: true,
         glide,
+        fall,
       };
   }
 }
@@ -276,6 +283,13 @@ export class Instruments {
       depth.connect(source.detune);
       lfo.start(time);
       lfo.stop(end + 0.05);
+    }
+
+    if (shape.fall) {
+      // In cents, so it adds to a glide's rate and a vibrato's wobble rather than fight them
+      const falls = Math.min(duration * FALL.SHARE, FALL.TIME);
+      source.detune.setValueAtTime(0, end - falls);
+      source.detune.linearRampToValueAtTime(-shape.fall * 100, end);
     }
 
     source.start(time);
@@ -427,10 +441,11 @@ export class Instruments {
     destination: AudioNode,
     filterCutoff: number,
     glide?: { from: number; time: number },
+    fall?: number,
   ): void {
     const sampled = SAMPLED_LEADS[voice];
     if (sampled) {
-      const shape = leadShape(voice, duration, filterCutoff, glide);
+      const shape = leadShape(voice, duration, filterCutoff, glide, fall);
       if (this.playNote(sampled, midiNote, time, duration, volume, destination, shape)) return;
     }
     switch (voice) {

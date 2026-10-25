@@ -69,7 +69,7 @@ export function soundsFor(
     song.voices.lead,
     song.voices.counter,
     overrides.lead,
-    ...song.sections.flatMap((s) => [s.leadVoice, s.counterVoice]),
+    ...song.sections.flatMap((s) => [s.leadVoice, s.counterVoice, s.arpVoice]),
   ];
   for (const voice of leads) {
     const id = voice && EXTRA_LEAD_FOR[voice];

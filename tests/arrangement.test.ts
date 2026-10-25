@@ -290,4 +290,56 @@ describe('Arrangement', () => {
       expect(arps.mock.calls.filter((call) => call[5] === graph.bus)).toHaveLength(8);
     });
   });
+  it("lets the song's own lead fall at a phrase's end, and plays a written arpeggio on a lead's voice", () => {
+    const { ctx } = fakeAudioContext();
+    const graph = new MusicGraph(ctx);
+    const instruments = new Instruments(graph);
+    const arrangement = new Arrangement(instruments, graph);
+    const leads = vi.spyOn(instruments, 'lead');
+    const song = compileSong({
+      title: 'Breath',
+      bpm: 120,
+      swing: 0,
+      voices: { lead: 'shakuhachi', counter: 'koto', arp: 'pluck', bass: 'sawtooth', fall: 2 },
+      sections: [
+        {
+          name: 'verse',
+          tier: 'groove',
+          chords: 'D',
+          lead: 'A4 - B4 - D5 - - - . . . . . . . .',
+          arpLine: '. . . . . . . . D4 A4 - - - - - -',
+          arpVoice: 'koto',
+          bass: 'long',
+          drums: 'none',
+          pad: 'none',
+          layers: { lead: 0, arp: 0 },
+        },
+      ],
+    });
+    const section = song.sections[0];
+    const step = 60 / song.bpm / 4;
+    for (let s = 0; s < STEPS_PER_BAR; s++) {
+      arrangement.playStep({
+        time: s * step,
+        stepDuration: step,
+        song,
+        section,
+        bar: 0,
+        stepInBar: s,
+        isLastBar: false,
+        nextBarChord: section.chords[0],
+        intensity: 1,
+        climaxLevel: 0,
+        difficulty: DifficultyLevel.NORMAL,
+      });
+    }
+    const shakuhachi = leads.mock.calls.filter((call) => call[0] === 'shakuhachi');
+    // Only the note before the rest falls
+    expect(shakuhachi.map((call) => call[8])).toEqual([undefined, undefined, 2]);
+    const koto = leads.mock.calls.filter((call) => call[0] === 'koto');
+    expect(koto.map((call) => [call[1], call[3] / step])).toEqual([
+      [62, 0.95],
+      [69, 7 * 0.95],
+    ]);
+  });
 });
