@@ -365,35 +365,31 @@ const KAKEAI_LOW = `${KAKEAI_QUESTION}
                   | . . . . A4 B4 D5 - . . . . . . . . | . . . . . . . . . . . . E5 D5 B4 A4`;
 
 /*
- * The chorus as a matsuri, a festival: the shinobue — the festival's high bamboo flute — leads
- * over a drone of open suspended chords on D (no third, no chord a bar), three motifs to choose
- * from, the koto's tremolo under it.
+ * The chorus as Japan's pop writes one (no festival postcard): the "royal road" progression
+ * (ōdō shinkō, IV V iii vi, the J-pop and anime chorus's own), its melody in yonanuki — the
+ * pentatonic of Japanese popular song, with the third the folk scale leaves out — on the
+ * shakuhachi doubled by the track's synth lead, two motifs to choose from; the koto plucking now
+ * and then
  */
-const MATSURI_CHORDS = 'Dsus2 | Dsus2 | Dsus4 | Dsus2 | Gsus2 | Gsus2 | Asus4 | Asus4';
+const DAWN_CHORDS = 'Gmaj7 | A | F#m7 | Bm7 | Gmaj7 | A | D | D';
 
-/** A, the festival's music (hayashi): repeated notes, leaps of a fourth, a trill falling home. */
-const MATSURI_HAYASHI = `D5 . D5 . G5 - - - A5 . A5 . D6 - - - | B5 A5 B5 A5 G5 - - - E5 - - - D5 - - -
-                       | D5 . D5 . G5 - - - A5 - B5 A5 G5 - - - | E5 - - - - - - - - - - - . . . .
-                       | G5 . G5 . A5 - - - D6 - - - - - - - | B5 A5 B5 A5 B5 - - - A5 - - - G5 - - -
-                       | E5 - - - G5 - - - A5 - - - B5 A5 G5 - | A5 - - - - - - - - - - - - - - -`;
+/** A, the hook (sabi): a falling figure turning back up, a leap to D6 the second time. */
+const SABI_FALL = `B5 - - - A5 - - - F#5 - - - A5 - B5 - | E5 - - - - - - - - - - - F#5 E5 D5 -
+                 | F#5 - - - E5 - - - A5 - - - B5 - A5 - | D5 - - - - - - - - - - - . . . .
+                 | B5 - - - A5 - - - F#5 - - - A5 - D6 - | B5 - - - - - - - A5 - B5 - A5 F#5 E5 -
+                 | D5 - - - E5 - - - F#5 - - - E5 - - - | D5 - - - - - - - - - - - - - - -`;
 
-/** B, the flute soaring: long high notes, ornamented, reaching D6 early and singing down from it. */
-const MATSURI_SOAR = `D6 - - - B5 - A5 - G5 - - - A5 - - - | B5 A5 G5 - E5 - - - - - - - . . . .
-                    | D5 - E5 - G5 - - - A5 - - - B5 - - - | D6 - - - - - - - - - - - B5 D6 B5 -
-                    | A5 - - - - - - - G5 A5 G5 E5 D5 - - - | E5 - - - - - - - . . . . D5 E5 G5 -
-                    | A5 - - - - - - - B5 - - - A5 - G5 - | A5 - - - - - - - - - - - - - - -`;
+/** B, the climb: rising by steps to D6 in bar 4, then singing home, a ma before the cadence. */
+const SABI_CLIMB = `D5 - E5 - F#5 - - - A5 - - - - - - - | B5 - - - A5 - - - F#5 - E5 - - - - -
+                  | E5 - F#5 - A5 - - - B5 - - - - - - - | D6 - - - B5 - - - A5 - F#5 - - - - -
+                  | B5 - - - - - - - A5 B5 A5 F#5 E5 - - - | E5 - - - - - - - . . . . . . . .
+                  | F#5 - - - E5 - - - D5 - - - E5 - - - | D5 - - - - - - - - - - - - - - -`;
 
-/** C, call and silence: a bar of the flute, a bar for the drums alone, the ma made a rhythm. */
-const MATSURI_CALL = `D5 . G5 . A5 - - - D6 - - - B5 - A5 - | . . . . . . . . . . . . . . . .
-                    | D5 . G5 . A5 - - - B5 - - - G5 - E5 - | . . . . . . . . . . . . . . . .
-                    | G5 . A5 . D6 - - - - - - - B5 A5 B5 - | D6 - - - - - - - . . . . . . . .
-                    | B5 A5 G5 - E5 - G5 - A5 - - - - - - - | . . . . . . . . . . . . . . . .`;
-
-/** The koto's tremolo under the festival: one string struck fast, every other bar, swelling. */
-const KOTO_TREMOLO = `A4 A4 A4 A4 A4 A4 A4 A4 . . . . . . . . | . . . . . . . . . . . . . . . .
-                    | A4 A4 A4 A4 D5 D5 D5 D5 . . . . . . . . | . . . . . . . . . . . . . . . .
-                    | D5 D5 D5 D5 D5 D5 D5 D5 . . . . . . . . | . . . . . . . . . . . . . . . .
-                    | E5 E5 E5 E5 E5 E5 E5 E5 . . . . . . . . | . . . . . . . . A4 B4 D5 E5 G5 A5 . .`;
+/** The koto under the chorus: a fifth or a third plucked on every other chord, a run into the cadence. */
+const KOTO_SPARSE = `G4 D5 - - - - - - - - - - - - - - | . . . . . . . . . . . . . . . .
+                   | F#4 A4 - - - - - - - - - - - - - - | . . . . . . . . . . . . . . . .
+                   | G4 B4 - - - - - - - - - - - - - - | . . . . . . . . . . . . A4 B4 D5 E5
+                   | D4 A4 - - - - - - - - - - - - - - | . . . . . . . . . . . . . . . .`;
 
 /**
  * The build's koto: struck on the strong beats under the clappers, then a glissando up the yo
@@ -401,12 +397,6 @@ const KOTO_TREMOLO = `A4 A4 A4 A4 A4 A4 A4 A4 . . . . . . . . | . . . . . . . . 
  */
 const KOTO_GLISS = `G4 - - - . . . . D5 - - - . . . . | G4 - - - . . . . B4 - - - . . D5 -
                   | A4 - - - . . . . E5 - - - . . . . | . G4 A4 B4 D5 E5 G5 A5 B5 . . . . . . .`;
-
-/** Wind chimes at dawn (D D Bm7 Bm7 G G Asus4 A): a high bell now and then, never on the beat. */
-const FURIN_DAWN = `. . . D6 - - - - - - - - - A5 - - | - - - - - B5 - - - - - - - - - -
-                  | . . . . . . . . . . D6 - - - - - | - A5 - - - - - - - - - - - - B5 -
-                  | - - - - - D6 - - - - - - - - - - | . . . . . . . . . . . B5 - G5 - -
-                  | - - - - - - - A5 - - - - - - - - | - - - - - - - - - - - - - E5 - -`;
 
 /** Wind chimes in the valley's shadow, in its in-scale (G A B flat D E flat). */
 const FURIN_VALLEY = `. . . . . D6 - - - - - - - - - - | - - - A5 - - - - - - - - - - . .
@@ -957,14 +947,12 @@ const SONG_DEFS: SongDef[] = [
     form: ['intro', 'verse', 'verse2-a', 'build', 'chorus', 'valley'],
     sections: [
       {
-        // Dawn on the koto, wind chimes over the pad
+        // Dawn on the koto alone over the pad
         name: 'intro',
         tier: 'calm',
         chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
         lead: tease(V1_YO),
         leadVoice: 'koto',
-        counter: FURIN_DAWN,
-        counterVoice: 'celesta',
         bass: 'long',
         drums: 'none',
         pad: 'swell',
@@ -1018,52 +1006,39 @@ const SONG_DEFS: SongDef[] = [
         silence: 6,
       },
       {
-        // The festival: the shinobue's hayashi over the drone, the koto's tremolo under it
+        // The shakuhachi and the synth lead in unison on the royal road, the odaiko under the beat
         name: 'chorus',
         tier: 'high',
-        chords: MATSURI_CHORDS,
-        lead: MATSURI_HAYASHI,
-        leadVoice: 'flute',
-        arpLine: KOTO_TREMOLO,
+        chords: DAWN_CHORDS,
+        lead: SABI_FALL,
+        counter: SABI_FALL,
+        counterVoice: 'pwm',
+        arpLine: KOTO_SPARSE,
         arpVoice: 'koto',
         bass: 'drive',
-        drums: 'matsuri',
+        drums: 'dawn',
         fill: 'taiko',
         pad: 'hold',
         drop: true,
       },
       {
-        // The festival, B: the shinobue soaring
+        // The same, B: the climb
         name: 'chorus-b',
         tier: 'high',
-        chords: MATSURI_CHORDS,
-        lead: MATSURI_SOAR,
-        leadVoice: 'flute',
-        arpLine: KOTO_TREMOLO,
+        chords: DAWN_CHORDS,
+        lead: SABI_CLIMB,
+        counter: SABI_CLIMB,
+        counterVoice: 'pwm',
+        arpLine: KOTO_SPARSE,
         arpVoice: 'koto',
         bass: 'drive',
-        drums: 'matsuri',
+        drums: 'dawn',
         fill: 'taiko',
         pad: 'hold',
         drop: true,
       },
       {
-        // The festival, C: a bar of the flute, a bar of the drums
-        name: 'chorus-c',
-        tier: 'high',
-        chords: MATSURI_CHORDS,
-        lead: MATSURI_CALL,
-        leadVoice: 'flute',
-        arpLine: KOTO_TREMOLO,
-        arpVoice: 'koto',
-        bass: 'drive',
-        drums: 'matsuri',
-        fill: 'taiko',
-        pad: 'hold',
-        drop: true,
-      },
-      {
-        // The shakuhachi alone in the in-scale's shadow, wind chimes in the silence
+        // The shakuhachi alone in the in-scale's shadow, wind chimes and a temple bell in the silence
         name: 'valley',
         tier: 'calm',
         chords: 'Gsus2 | Gsus2 | Gm | Gm | Ebmaj7 | Ebmaj7 | Dsus4 | Asus4',
@@ -1071,7 +1046,9 @@ const SONG_DEFS: SongDef[] = [
         counter: FURIN_VALLEY,
         counterVoice: 'celesta',
         bass: 'long',
-        drums: 'none',
+        // A temple bell, slowly, once every two bars
+        drums: 'bonsho',
+        feel: 'half',
         pad: 'swell',
       },
     ],

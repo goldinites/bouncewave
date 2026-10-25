@@ -131,14 +131,16 @@ export const KITS = {
     perc: 'shaker',
     impact: 'impact',
   },
-  // Japan (fuji, dojo): the great odaiko for the taiko, a gong for the crash, wood for the rest
+  // Japan (fuji, dojo): the great odaiko for the taiko, a plain crash, the gong a temple bell
+  // (metal), wood for the rest
   japan: {
     kick: 'kickPunch',
     snare: 'snare',
     clap: 'hyoshigi',
     hat: 'hat',
     open: 'open',
-    crash: 'gong',
+    // A plain cymbal marks the parts: a gong on every one is the "mysterious East" of films
+    crash: 'crash',
     tom: 'tom',
     taiko: 'odaiko',
     metal: 'gong',
