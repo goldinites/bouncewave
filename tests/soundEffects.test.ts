@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MINOR_TRIAD } from '@/audio/music/theory';
-import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
+import { getClimbingRallyNote } from '@/audio/sfx/harmony';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
@@ -58,15 +58,18 @@ describe('SoundEffects', () => {
     expect(frequencies(calls)[0]).toBeGreaterThan(target.args[0] as number);
   });
 
-  it('climbs the chord the music is on as the channels flick past', () => {
+  it('flicks the channels past as a relay and static, then chimes the root and fifth', () => {
     const { sfx, calls, harmony } = setup();
 
     sfx.playChannelSurf();
-    // Each blip follows its button click; the blips walk up the chord like a rally does
-    const blips = frequencies(calls).filter((frequency) => frequency !== 2400);
-    for (let i = 0; i < 4; i++) {
-      expect(blips[i]).toBeCloseTo(midiToFrequency(getRallyNote(harmony, i + 1)));
-    }
+    // A relay's thud and a breath of static for each channel, no notes among them
+    expect(calls.filter((c) => c.method === 'createBufferSource')).toHaveLength(5);
+    // The static's low-pass aside, every frequency set is a relay's or the chime's
+    const tones = frequencies(calls).filter((frequency) => frequency !== 3000);
+    const chime = tones.slice(-2);
+    expect(chime[0]).toBeCloseTo(midiToFrequency(harmony.root + 48));
+    expect(chime[1]).toBeCloseTo(midiToFrequency(harmony.root + 48 + 7));
+    expect(tones.slice(0, -2).every((frequency) => frequency < 300)).toBe(true);
   });
 
   it('stays silent with sound effects off', () => {

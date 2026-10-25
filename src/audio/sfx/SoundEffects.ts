@@ -27,7 +27,14 @@ const HEARTBEAT = [
 const HEARTBEAT_KNOCK = { HZ: 330, LENGTH: 0.06, SHARE: 1 } as const;
 
 // The channel surf's last channel starts this far flat and glides up onto its note
-const TUNE_IN_FLAT = 0.94;
+// The channel surf (playChannelSurf): a relay's soft thud, Hz, falling from FROM semitones up;
+// static under a low-pass, clearing to CLEAR Hz as the last channel settles; the chime, MIDI over
+// the chord's root, AFTER s into the last channel
+const CHANNEL_SOUND = {
+  RELAY: { HZ: 110, FROM: 12, VOLUME: 0.09, LENGTH: 0.05 },
+  STATIC: { VOLUME: 0.035, CUTOFF: 3000, CLEAR: 400 },
+  CHIME: { OFFSET: 48, VOLUME: 0.05, FIFTH: 0.6, LENGTH: 0.6, AFTER: 0.12 },
+} as const;
 
 // Shared echo used by the victory sting
 const ECHO = { TIME: 0.28, FEEDBACK: 0.35, WET: 0.5 } as const;
@@ -657,7 +664,7 @@ export class SoundEffects {
   private noiseBurst(ac: AudioContext, burst: NoiseBurst): void {
     try {
       const source = ac.createBufferSource();
-      source.buffer = burst.smooth ? this.hissSource(ac).buffer : this.consoleNoise(ac);
+      source.buffer = burst.smooth ? this.hissBuffer(ac) : this.consoleNoise(ac);
       const start = ac.currentTime + (burst.delay ?? 0);
       const filter = ac.createBiquadFilter();
       filter.type = burst.filter;
@@ -1194,17 +1201,21 @@ export class SoundEffects {
 
   /** A source of smooth white noise, looping. */
   private hissSource(ac: AudioContext): AudioBufferSourceNode {
-    if (!this.hiss || this.hissContext !== ac) {
-      const buffer = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      this.hiss = buffer;
-      this.hissContext = ac;
-    }
     const source = ac.createBufferSource();
-    source.buffer = this.hiss;
+    source.buffer = this.hissBuffer(ac);
     source.loop = true;
     return source;
+  }
+
+  /** Two seconds of smooth white noise, rendered once per context. */
+  private hissBuffer(ac: AudioContext): AudioBuffer {
+    if (this.hiss && this.hissContext === ac) return this.hiss;
+    const buffer = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    this.hiss = buffer;
+    this.hissContext = ac;
+    return buffer;
   }
 
   /** A hit on ice: two glassy tones over it. */
@@ -1457,55 +1468,56 @@ export class SoundEffects {
   }
 
   /**
-   * The channel surf at the start of a match: a synth blip at every switch, climbing the chord
-   * the music is playing like a retro set's channel-up button, then the last channel tunes in,
-   * gliding up onto the top note and ringing out through the echo.
+   * The channel surf at the start of a match, an old set's (5.9): every channel flicked past
+   * thuds its relay under a breath of soft static, with no notes to clash with the song coming
+   * in (the climbing square blips grated); as the last one comes on the static clears and a soft
+   * chime, the chord's root and fifth, says the picture is in (CHANNEL_SOUND).
    */
   public playChannelSurf(): void {
     const ac = this.getUnmutedContext();
     if (!ac) return;
+    const { root, chord } = this.harmonyGetter() ?? { root: 33, chord: [0, 3, 7] };
+    const { RELAY, STATIC, CHIME } = CHANNEL_SOUND;
 
-    try {
-      const now = ac.currentTime;
-      const harmony = this.harmonyGetter();
-      const last = CHANNEL_SURF.CHANNELS - 1;
+    for (let i = 0; i < CHANNEL_SURF.CHANNELS; i++) {
+      const delay = i * CHANNEL_SURF.STEP;
+      this.hitTone(ac, {
+        frequency: RELAY.HZ,
+        wave: 'sine',
+        volume: RELAY.VOLUME,
+        length: RELAY.LENGTH,
+        pan: 0,
+        from: RELAY.FROM,
+        glide: RELAY.LENGTH * 0.5,
+        delay,
+      });
+      const isLast = i === CHANNEL_SURF.CHANNELS - 1;
+      this.noiseBurst(ac, {
+        volume: STATIC.VOLUME,
+        length: isLast ? CHANNEL_SURF.SETTLE : CHANNEL_SURF.STEP * 0.9,
+        pan: 0,
+        filter: 'lowpass',
+        from: STATIC.CUTOFF,
+        to: isLast ? STATIC.CLEAR : undefined,
+        smooth: true,
+        delay,
+      });
+    }
 
-      for (let i = 0; i < last; i++) {
-        const start = now + i * CHANNEL_SURF.STEP;
-        const frequency = midiToFrequency(getRallyNote(harmony, i + 1));
-        // A click of the button, then the blip itself
-        this.tone(ac, 2400, start, 0.012, 'triangle', 0.03, 0.001, null);
-        this.tone(
-          ac,
-          frequency,
-          start + 0.005,
-          CHANNEL_SURF.STEP * 0.7,
-          'square',
-          0.04,
-          0.004,
-          null,
-        );
-      }
-
-      const start = now + last * CHANNEL_SURF.STEP;
-      const frequency = midiToFrequency(getRallyNote(harmony, CHANNEL_SURF.CHANNELS));
-      const echo = this.getEchoInput(ac);
-      this.tone(ac, 2400, start, 0.012, 'triangle', 0.03, 0.001, null);
-      // Tuning in: from a little flat up onto the note, the way a dial finds the station
-      this.tone(
-        ac,
-        frequency * TUNE_IN_FLAT,
-        start,
-        0.5,
-        'triangle',
-        0.06,
-        0.01,
-        echo,
-        1 / TUNE_IN_FLAT,
-      );
-      this.tone(ac, frequency * 2, start + 0.06, 0.4, 'sine', 0.025, 0.02, echo);
-    } catch {
-      // Audio playback fails silently if browser policy blocks it
+    const tuned = (CHANNEL_SURF.CHANNELS - 1) * CHANNEL_SURF.STEP + CHIME.AFTER;
+    const fifth = chord.find((interval) => interval === 7) ?? chord[chord.length - 1];
+    for (const [interval, share] of [
+      [0, 1],
+      [fifth, CHIME.FIFTH],
+    ] as const) {
+      this.hitTone(ac, {
+        frequency: midiToFrequency(root + CHIME.OFFSET + interval),
+        wave: 'sine',
+        volume: CHIME.VOLUME * share,
+        length: CHIME.LENGTH,
+        pan: 0,
+        delay: tuned,
+      });
     }
   }
 }
