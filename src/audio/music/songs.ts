@@ -407,23 +407,29 @@ const KATA_BASS = cycle(
   euclid(10, 16),
 );
 
-/** Strikes: two quick blows landing on a held note, then a stop, as a kata's moves are. */
-const KATA_STRIKES = `A4 - - . . . E4 E4 A4 - - - - - . . | . . . C5 - - B4 A4 E4 - - - - - - -
-                    | A4 - - . D5 - - . E5 - - - - - . . | . . . . E5 D5 C5 D5 B4 - - - - - - -
-                    | C5 - - . . . F5 F5 A5 - - - - - . . | . . . G5 - - F5 E5 C5 - - - - - - -
-                    | B4 - - . . . E5 E5 G#4 - - - - - . . | . . . . G#4 A4 B4 - E4 - - - - - - -`;
+/** Theme: a fighting game's theme in A harmonic minor, syncopated, climbing to C6 and D6. */
+const KATA_THEME = `A4 - - E5 - - A5 - - - G#5 - A5 - B5 - | C6 - - - B5 - - A5 - - - - - - E5 -
+                  | A4 - - E5 - - A5 - - - G#5 - A5 - D6 - | C6 - - B5 - - G#5 - - - - - E5 - - -
+                  | C6 - - A5 - - C6 - D6 - - - C6 - A5 - | F5 - - - - - - - - - G5 A5 Bb5 - A5 G5
+                  | G#5 - - E5 - - B4 - - - D5 - E5 - - - | B5 - - - - - - - . . . . E5 F5 G#5 -`;
 
-/** Chain: a line walking in dotted eighths, three against the bar's four, then holding. */
-const KATA_CHAIN = `A4 - - C5 - - D5 - - E5 - - - - - - | . . . . G5 - - E5 - - D5 - - C5 D5 C5
-                  | A4 - - - - - - - . . . E5 - - D5 - | E5 - - G5 - - A5 - - G5 - - E5 - - -
-                  | C6 - - - - - A5 - - F5 - - G5 A5 C6 - | - - - - A5 - - F5 - - C5 - - - - -
-                  | B4 - - D5 - - E5 - - G#5 - - - - - - | . . E5 D5 B4 - - - G#4 - - - - - . .`;
+/** Hero: a heroic call in dotted rhythm, falling home through the harmonic minor at the end. */
+const KATA_HERO = `E5 - - E5 A5 - - - B5 - - C6 - - B5 - | A5 - - - - - - - G#5 - - E5 - - - -
+                 | E5 - - E5 A5 - - - B5 - - D6 - - C6 - | B5 - - A5 - - G#5 - A5 - - - - - . .
+                 | C6 - - C6 F5 - - - A5 - - C6 - - D6 - | C6 - - - - - A5 G5 F5 G5 A5 - - - . .
+                 | B5 - - G#5 - - E5 - - - - - D5 - E5 - | G#5 - - - - - - - B5 A5 G#5 F5 E5 - - -`;
 
-/** Ma: long notes and silence, each drawn like a sword by a quick leap of fourths up into it. */
-const KATA_MA = `A4 - - - - - - - - - - - . E5 A5 - | - - - - - - - - G5 - - - E5 - - -
-               | E5 - - - - - - - . . . . . . . . | . . . . A4 D5 G5 - - - - - E5 - - -
-               | F5 - - - - - - - . . . . C5 F5 Bb5 - | - - - - . . F5 Bb5 D6 - - - - - - -
-               | B5 - - - - - - - G#5 - - - - - . . | E5 - - - D5 C5 B4 C5 B4 - - - - - - -`;
+/** Kiai: a shout of fourths, A–D–E, answered backwards, growing a note each time it comes. */
+const KATA_KIAI = `A4 - . D5 - . E5 - - - - - - - . . | . . . . . . . . E5 - . D5 - . A4 -
+                 | A4 - . D5 - . E5 - . G5 - - - - - - | . . . . . . . . G5 - . E5 - . D5 -
+                 | A4 - . C5 - . F5 - . A5 - . C6 - - - | - - - - - - - - A5 G5 F5 - C5 - - -
+                 | B4 - . E5 - . G#5 - . B5 - - - - - - | . . . . . . . . G#5 - . E5 - . B4 -`;
+
+/** Chant: low, marching on the nagado's own rhythm, a held note left for the drums to answer. */
+const KATA_CHANT = `A4 - . A4 - . C5 - - - B4 - A4 - - - | E4 - - - - - - - . . . . . . . .
+                  | A4 - . A4 - . D5 - - - C5 - B4 - - - | E5 - - - - - - - D5 - C5 - B4 - - -
+                  | C5 - . C5 - . F5 - - - E5 - D5 - - - | C5 - . F5 - . A5 - - - - - . . . .
+                  | G#4 - G#4 - B4 - - - E5 - D5 - B4 - - - | B4 - - - - - - - . . . . E4 F4 G#4 -`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -1062,8 +1068,8 @@ const SONG_DEFS: SongDef[] = [
   },
   // The dojo's melodies over the kata (5.11), for the stand: a groove (hook) and its peak (hot) each
   {
-    // Strikes: two quick blows onto a held note and a stop, as in a kata
-    title: 'Kata Strikes',
+    // Theme: a fighting game's theme in A harmonic minor, its summit D6 in bar 5
+    title: 'Kata Theme',
     sketch: true,
     level: -3.5,
     bpm: 118,
@@ -1077,7 +1083,7 @@ const SONG_DEFS: SongDef[] = [
         name: 'hook',
         tier: 'groove',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_STRIKES,
+        lead: KATA_THEME,
         bassLine: KATA_BASS,
         drums: 'kata',
         pad: 'none',
@@ -1086,7 +1092,7 @@ const SONG_DEFS: SongDef[] = [
         name: 'hot',
         tier: 'high',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_STRIKES,
+        lead: KATA_THEME,
         bassLine: KATA_BASS,
         drums: 'kataHot',
         fill: 'taiko',
@@ -1097,8 +1103,8 @@ const SONG_DEFS: SongDef[] = [
     ],
   },
   {
-    // Chain: dotted eighths walking three against four, its summit C6 in bar 5
-    title: 'Kata Chain',
+    // Hero: a heroic dotted call, falling home through the harmonic minor
+    title: 'Kata Hero',
     sketch: true,
     level: -3.5,
     bpm: 118,
@@ -1112,7 +1118,7 @@ const SONG_DEFS: SongDef[] = [
         name: 'hook',
         tier: 'groove',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_CHAIN,
+        lead: KATA_HERO,
         bassLine: KATA_BASS,
         drums: 'kata',
         pad: 'none',
@@ -1121,7 +1127,7 @@ const SONG_DEFS: SongDef[] = [
         name: 'hot',
         tier: 'high',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_CHAIN,
+        lead: KATA_HERO,
         bassLine: KATA_BASS,
         drums: 'kataHot',
         fill: 'taiko',
@@ -1132,8 +1138,8 @@ const SONG_DEFS: SongDef[] = [
     ],
   },
   {
-    // Ma: long notes and silence, each drawn by a quick leap of fourths, D6 in bar 6
-    title: 'Kata Ma',
+    // Kiai: a shout of fourths answered backwards, a note longer each time
+    title: 'Kata Kiai',
     sketch: true,
     level: -3.5,
     bpm: 118,
@@ -1147,7 +1153,7 @@ const SONG_DEFS: SongDef[] = [
         name: 'hook',
         tier: 'groove',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_MA,
+        lead: KATA_KIAI,
         bassLine: KATA_BASS,
         drums: 'kata',
         pad: 'none',
@@ -1156,7 +1162,42 @@ const SONG_DEFS: SongDef[] = [
         name: 'hot',
         tier: 'high',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_MA,
+        lead: KATA_KIAI,
+        bassLine: KATA_BASS,
+        drums: 'kataHot',
+        fill: 'taiko',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // Chant: low, marching on the nagado's rhythm, the drums answering
+    title: 'Kata Chant',
+    sketch: true,
+    level: -3.5,
+    bpm: 118,
+    swing: 0,
+    kit: 'dojo',
+    room: 'plate',
+    grit: 6,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_CHANT,
+        bassLine: KATA_BASS,
+        drums: 'kata',
+        pad: 'none',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_CHANT,
         bassLine: KATA_BASS,
         drums: 'kataHot',
         fill: 'taiko',
