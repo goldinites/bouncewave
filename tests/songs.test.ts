@@ -298,6 +298,28 @@ describe('the tracks stay apart', () => {
     }
   });
 
+  // Where a melody's notes start is its rhythm, its accent: the four tracks made by 25.10.2026 share
+  // one, which the user kept (docs/AUDIO.md, "Разнообразие"); every track after them starts its
+  // notes its own way, apart from each of them and from each other
+  it('gives every track after the first four a rhythm of its own', () => {
+    const kept = ['Neon Cathedral', 'Sunset Strip', 'Kabukicho Rain', 'Above the Clouds'];
+    const onsets = (song: (typeof SONGS)[number]) => {
+      const counts = Array<number>(STEPS_PER_BAR).fill(0);
+      for (const part of [...melodies(song, 'groove'), ...melodies(song, 'high')]) {
+        part.lead!.forEach((note, step) => {
+          if (note) counts[step % STEPS_PER_BAR]++;
+        });
+      }
+      return counts;
+    };
+    const cosine = (a: number[], b: number[]) =>
+      a.reduce((sum, x, i) => sum + x * b[i], 0) / (Math.hypot(...a) * Math.hypot(...b));
+    for (const [a, b] of pairs) {
+      if (kept.includes(a.title) && kept.includes(b.title)) continue;
+      expect(cosine(onsets(a), onsets(b)), `${a.title} and ${b.title}`).toBeLessThan(0.9);
+    }
+  });
+
   // Each sings somewhere of its own (docs/AUDIO.md, "Треки сейчас"): not in the same register in
   // both its verses and its chorus as another
   it('sings each in a register of its own, in its verses or its chorus', () => {
