@@ -220,32 +220,44 @@ describe('Game', () => {
     expect(isPickableScene(renderer.scene as SceneId)).toBe(true);
   });
 
-  it('plays the menus’ own music outside a match, the backdrop’s where one is picked or shown', () => {
+  it('plays the menus’ own music in every menu outside a match, the backdrop’s with its match', () => {
     const { music } = (
       game as unknown as { audio: { music: { enterPlace(place: unknown): void } } }
     ).audio;
     const places = vi.spyOn(music, 'enterPlace');
-    const last = () => places.mock.calls.at(-1)?.[0];
+    const heard = () => new Set(places.mock.calls.map(([place]) => place));
     buttons()[0].click(); // play
-    expect(last()).toBe('menu');
     screenButton('QUICK MATCH').click();
-    expect(last()).toBeNull();
     press('Escape');
-    expect(last()).toBe('menu');
     screenButton('CHALLENGE').click();
-    expect(last()).toBe('menu');
-    screenButton('FIRST SERVE').click();
-    expect(last()).toBeNull(); // the card shows its challenge's backdrop
+    screenButton('FIRST SERVE').click(); // the card shows its challenge's backdrop, silently
     press('Escape');
-    expect(last()).toBe('menu');
     press('Escape');
+    expect(heard()).toEqual(new Set(['menu']));
     screenButton('QUICK MATCH').click();
     screenButton('START').click();
-    expect(last()).toBeNull();
+    expect(places.mock.calls.at(-1)?.[0]).toBeNull();
     // The pause belongs to the match: its music plays on
     places.mockClear();
     press('Escape');
     expect(places).not.toHaveBeenCalled();
+  });
+
+  it('changes the backdrops behind the menus, but not where one is picked or shown', () => {
+    const { menuBackdrops } = game as unknown as {
+      menuBackdrops: { setActive(isActive: boolean): void };
+    };
+    const changing = vi.spyOn(menuBackdrops, 'setActive');
+    const isChanging = () => changing.mock.calls.at(-1)?.[0];
+    buttons()[0].click(); // play
+    expect(isChanging()).toBe(true);
+    screenButton('QUICK MATCH').click();
+    expect(isChanging()).toBe(false);
+    press('Escape');
+    expect(isChanging()).toBe(true);
+    screenButton('CHALLENGE').click();
+    screenButton('FIRST SERVE').click();
+    expect(isChanging()).toBe(false);
   });
 
   it('tunes to each backdrop flicked to in the setup, with the old set’s relay', () => {
