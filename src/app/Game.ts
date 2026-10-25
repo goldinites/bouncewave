@@ -1,7 +1,9 @@
 import { effect, untracked } from '@preact/signals-core';
 import { FixedStep } from '@/app/FixedStep';
+import { MenuBackdrops } from '@/app/MenuBackdrops';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
+import { MusicPlace } from '@/audio/music/score';
 import { BackgroundMenu } from '@/debug/BackgroundMenu';
 import { DebugDock, DockPanel } from '@/debug/DebugDock';
 import { FpsMeter } from '@/debug/FpsMeter';
@@ -94,6 +96,8 @@ export class Game {
    * story chapter's) own; null plays it on the player's. Set by whatever starts the match.
    */
   private matchScene: SceneId | null = null;
+  private readonly menuBackdrops: MenuBackdrops;
+  private readonly stopFollowingSections: () => void;
   /** Whether the match starting is the one on court started again: it keeps its backdrop. */
   private isRestarting = false;
   /** The music's volume before the M key turned it off, for the M key to bring it back to. */
@@ -220,6 +224,14 @@ export class Game {
     this.debugDock = debugDock;
     // The music opens with the song of whichever backdrop comes up first
     this.audio.music.enterScene(this.renderer.scene);
+    // Behind the menus the backdrops give way one to the next with the menus' song
+    this.menuBackdrops = new MenuBackdrops(
+      () => this.audio.music.enterScene(this.renderer.dissolveBackground()),
+      () => this.audio.music.audioTime,
+    );
+    this.stopFollowingSections = this.audio.music.onSectionStart((time, song) =>
+      this.menuBackdrops.onSectionStart(time, song),
+    );
     this.showDebugDetail();
     this.uiManager = new UIManager(this.i18n);
 
@@ -482,7 +494,7 @@ export class Game {
   public start(): void {
     this.setLandscape(this.isTwoPlayers);
     // The menus' music gives way to the match's backdrop's, or to the tutorial's own
-    this.audio.music.enterPlace(this.isTutorial ? 'tutorial' : null);
+    this.enterPlace(this.isTutorial ? 'tutorial' : null);
     this.challengeJudge.judge(this.challenge);
     // The scene is set before the match starts: the effects ask for it on its matchStart
     if (this.challenge) {
@@ -594,13 +606,22 @@ export class Game {
     this.menuController.showTutorialCard(card, () => this.resume());
   }
 
+  /**
+   * The game went to a place with music of its own (the menus, the tutorial), or left it for the
+   * backdrop's (null); in the menus' the backdrops behind them give way one to the next.
+   */
+  private enterPlace(place: MusicPlace | null): void {
+    this.audio.music.enterPlace(place);
+    this.menuBackdrops.setActive(place === 'menu');
+  }
+
   /** Every step done: the tutorial is through for good, and its end screen comes up. */
   private finishTutorial(): void {
     this.isTutorial = false;
     this.profile.update({ tutorial: 'done' });
     this.flow.returnToMenu();
     // Its end screen is a menu: the menus' music, as on every one outside a match
-    this.audio.music.enterPlace('menu');
+    this.enterPlace('menu');
     this.uiManager.setPauseButtonVisibility(false);
     this.menuController.showTutorialDone();
   }
@@ -719,6 +740,8 @@ export class Game {
     }
     this.flow.interpolate(this.simulation.alpha);
 
+    this.menuBackdrops.update(realDt);
+
     // Music reads this on its own scheduler tick, paused frames included (it muffles in pause)
     this.audio.setVolumes(this.settings.current.musicVolume, this.settings.current.soundVolume);
     this.audio.playMusic(this.buildMusicState());
@@ -779,7 +802,7 @@ export class Game {
   private onQuickMatchSetup(isShown: boolean): void {
     if (isShown) {
       // The setup is where a backdrop is picked: its song plays, not the menus'
-      if (this.flow.phase === 'attract') this.audio.music.enterPlace(null);
+      if (this.flow.phase === 'attract') this.enterPlace(null);
       this.previewBackground(this.settings.current.matchBackground);
     } else if (this.renderer.isShowingMystery) {
       this.audio.music.enterScene(this.renderer.switchChannel(false));
@@ -796,7 +819,7 @@ export class Game {
   private showMenuScene(scene: SceneId | null): void {
     if (this.flow.phase !== 'attract') return;
     // The menus have their own music; a challenge's card plays its backdrop's
-    this.audio.music.enterPlace(scene === null ? 'menu' : null);
+    this.enterPlace(scene === null ? 'menu' : null);
     const current = this.renderer.scene;
     const isPlayers = isPickableScene(current) && !this.renderer.isShowingMystery;
     if (scene === null ? isPlayers : current === scene) return;
@@ -898,6 +921,7 @@ export class Game {
 
     this.listeners.abort();
     this.matchEvents.clear();
+    this.stopFollowingSections();
     this.unsubscribeSettings();
     this.menuController.dispose();
     this.stopFollowingLook();

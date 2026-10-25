@@ -255,6 +255,14 @@ export class Renderer {
     return this.background.isShowingMystery;
   }
 
+  /**
+   * The menus' next backdrop dissolving in over the one on screen (5.13).
+   * @returns the backdrop on screen now
+   */
+  public dissolveBackground(): SceneId {
+    return this.background.dissolve();
+  }
+
   /** Whether channels are flicking past in static right now, on the way to the match's. */
   public get isSurfing(): boolean {
     return this.background.isSurfing;

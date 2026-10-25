@@ -87,6 +87,8 @@ export interface MusicPosition {
  */
 export class MusicEngine {
   private graph: MusicGraph | null = null;
+  /** Who hears every section start, with the audio-clock time it sounds at. */
+  private readonly sectionListeners = new Set<(time: number, song: Song) => void>();
   private instruments: Instruments | null = null;
   private arrangement: Arrangement | null = null;
   private isGlideOn = true;
@@ -407,7 +409,24 @@ export class MusicEngine {
     return this.graph ? this.harmony.at(this.graph.context.currentTime) : null;
   }
 
+  /**
+   * Hears every section start, the song's first bar of it and every time it comes round, at the
+   * audio-clock time it sounds (scheduled ahead, so a little before then). Muted, the music still
+   * walks its form and the starts still come; before the audio is unlocked there are none.
+   * @returns a function that stops it
+   */
+  public onSectionStart(listener: (time: number, song: Song) => void): () => void {
+    this.sectionListeners.add(listener);
+    return () => this.sectionListeners.delete(listener);
+  }
+
+  /** The audio clock's time now; null before the music has a graph. */
+  public get audioTime(): number | null {
+    return this.graph?.context.currentTime ?? null;
+  }
+
   public dispose(): void {
+    this.sectionListeners.clear();
     this.scheduler?.dispose();
     this.scheduler = null;
     this.graph?.dispose();
@@ -452,6 +471,16 @@ export class MusicEngine {
 
     const { song, section, bar } = conductor;
     const stepDuration = 60 / song.bpm / 4;
+    if (stepInBar === 0 && bar === 0) {
+      for (const listener of this.sectionListeners) {
+        try {
+          listener(time, song);
+        } catch (error) {
+          // One listener failing leaves the music, and the others, playing on
+          console.error(error);
+        }
+      }
+    }
     const chord = chordAt(section, bar * STEPS_PER_BAR + stepInBar);
 
     // Remember chord changes (even while muted) so hits can be tuned to the audible chord
