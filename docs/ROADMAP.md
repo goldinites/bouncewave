@@ -317,9 +317,8 @@ Strip он не выделяется (+5…+6 дБ) — так и задуман
 `MenuController`.
 
 **8.3 Страховка.** Бюджет размера сборки в CI, тесты на найденное, расширение
-`tests/architecture.test.ts`. Нестабильные тесты — на зафиксированной случайности: сейчас
-`tests/brokenNetBackground.test.ts` («never one twice») иногда падает, фон берёт `Math.random`
-без зерна.
+`tests/architecture.test.ts`. Нестабильные тесты — на зафиксированной случайности (как
+`tests/brokenNetBackground.test.ts`: `Math.random` с зерном).
 
 ## Этап 9. Экономика и прогрессия → 1.7.0 (9.2–9.6) и 1.8.0 (9.7–9.10)
 

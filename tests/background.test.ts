@@ -80,6 +80,7 @@ describe('BackgroundRenderer', () => {
     );
     const renderer = new BackgroundRenderer(backgrounds);
     const target = renderer.switchChannel(true);
+    expect(renderer.isSurfing).toBe(true);
     const shown = (time: number) => {
       backgrounds.forEach((b) => vi.mocked(b.render).mockClear());
       draw(renderer, time);
@@ -93,6 +94,7 @@ describe('BackgroundRenderer', () => {
     // Once it is over, only the match's own is left
     expect(shown(1.6)).toBe(target);
     expect(shown(1.7)).toBe(target);
+    expect(renderer.isSurfing).toBe(false);
   });
 
   it('keeps a pinned background through every match', () => {
@@ -115,8 +117,10 @@ describe('BackgroundRenderer', () => {
 
     renderer.choose('neonCity');
     expect(renderer.switchChannel(true)).toBe('neonCity');
+    for (let t = 0; t < 2; t += 0.05) draw(renderer, t);
     // Already on it: no surf, it stays
     expect(renderer.switchChannel(true)).toBe('neonCity');
+    expect(renderer.isSurfing).toBe(false);
     expect(renderer.switchChannel(false)).toBe('neonCity');
 
     renderer.choose(null);

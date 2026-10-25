@@ -17,6 +17,7 @@ const makeRenderer = () => ({
   triggerVictoryEffect: vi.fn(),
   triggerCrtGlitch: vi.fn(),
   switchChannel: vi.fn(() => 'fuji'),
+  isSurfing: true,
   hideFinalScore: vi.fn(),
   showFinalScore: vi.fn(),
   showsEffects: true,
@@ -151,6 +152,17 @@ describe('EffectsDirector.handle', () => {
     expect(audio.sfx.playChannelSurf).toHaveBeenCalledOnce();
     // Again, straight after a finale: its sting gives way
     expect(audio.music.cutFinale).toHaveBeenCalledOnce();
+  });
+
+  it('plays the channel surf only when channels flick past on screen', () => {
+    const { effects, audio, renderer } = makeDirector();
+    // Staying on the backdrop chosen, or cutting over with reduced motion: nothing flicks past
+    renderer.isSurfing = false;
+
+    handle(effects, { type: 'matchStart' });
+
+    expect(renderer.switchChannel).toHaveBeenCalledOnce();
+    expect(audio.sfx.playChannelSurf).not.toHaveBeenCalled();
   });
 
   it('plays a match that asks for its own backdrop on it (a challenge), else on the player’s', () => {
