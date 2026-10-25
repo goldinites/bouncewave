@@ -442,7 +442,7 @@ const MOKUSO_HOLD = `F5 - - - - - - - - - - - - - - - | E5 - - - - - - - D5 - - 
 
 /**
  * The signal reconnecting: a cell growing a note a bar and falling back, as a link retries; high
- * and cold, an octave above the melody.
+ * and cold, far above the low melody.
  */
 const SIGNAL_ARP = additive(
   ['B5', 'F#6', 'D6', 'C#6', 'A5', 'E6', 'F#5'],
@@ -457,103 +457,23 @@ const SIGNAL_TRIPLET = cycle([
   { cell: ['F#5', 'C#6', 'A#5'], bars: 2 },
 ]);
 
-/** The lament, the verses' melody: long low notes sighing down a step, the answer climbing to D5. */
-const SIGNAL_LAMENT = `F#4 - - - - - - - E4 - - D4 - - - - | E4 - - - - - - - - - . . D4 E4 F#4 -
-                     | B4 - - - - - - - . . . . D5 - B4 - | A4 - - - - - - - - - - - - - . .
-                     | G4 - - - - - - - F#4 - - E4 - - B4 - | D5 - - - - - - - - - - - C#5 B4 A4 -
-                     | A#4 - - - - - - - - - - - C#5 B4 A#4 - | F#4 - - - - - - - - - - - - - . .`;
+/** The lament, the verses' melody: low, falling a step at a time from D4, each phrase starting lower. */
+const SIGNAL_LAMENT = `D4 - - - - - - - - - - - C#4 D4 C#4 - | B3 - - - - - - - - - - - . . . .
+                     | B3 - - - - - - - A3 - - - - - - - | G3 - - - - - - - - - - - F#3 E3 F#3 -
+                     | E4 - - - - - - - D4 - - - - - - - | B3 - - - - - - - A3 - - - G3 - - -
+                     | C#4 - - - - - - - - - - - B3 - A#3 - | F#3 - - - - - - - - - - - - - . .`;
 
-/** The anthem, the chorus: a third and then a minor sixth up to D5, falling back off the beat. */
-const SIGNAL_ANTHEM = `D4 - - - - - F#4 - - - - - - - - - | D5 - - - - - C#5 - - - B4 - A4 - - -
-                     | D4 - - - - - G4 - - - - - - - - - | D5 - - - - - B4 - - - A4 - G4 - - -
-                     | E4 - - - - - B4 - - - - - G4 - A4 - | D5 - - - - - - - B4 A4 G4 F#4 E4 - - -
-                     | C#5 - - - - - A#4 - - - - - F#4 - - - | A#4 - - - - - - - - - - - - - . .`;
+/** The sighs, the chorus: a note a step above the chord on the downbeat falling onto it, in 3+3+2. */
+const SIGNAL_SIGHS = `E4 - - - - - D4 - - - - - C#4 - - - | B3 - - - - - - - . . A#3 B3 C#4 - - -
+                    | A3 - - - - - G3 - - - - - B3 - - - | D4 - - - - - - - - - - - . . . .
+                    | E4 - - - - - - - - - - - D4 C#4 D4 - | A3 - - - - - G3 - - - . . B3 - G3 -
+                    | G#3 - - - - - F#3 - - - - - C#4 - - - | A#3 - - - - - - - - - - - - - . .`;
 
-/** The connection lost: the anthem's head, slow and quiet, over the C and A minor the verses never reach. */
-const SIGNAL_ECHO = `D4 - - - - - E4 - - - - - - - - - | D5 - - - - - C5 - - - B4 - A4 - - -
-                   | E4 - - - - - A4 - - - - - - - - - | C5 - - - - - B4 - - - A4 - E4 - - -
-                   | D4 - - - - - - - - - - - E4 - - - | D5 - - - - - C5 - - - B4 - - - - -
-                   | E4 - - - - - - - - - - - - - - - | . . . . . . . . . . . . . . . .`;
-
-// ——— Sketches, for the stand: three tragic melodies for Signal Lost's verse and chorus, over its
-// base as it is ———
-
-/** Lament, the verse: a line falling from D5 a step at a time, each phrase starting lower. */
-const SIGNAL_FALL_VERSE = `D4 - - - - - - - - - - - C#4 D4 C#4 - | B3 - - - - - - - - - - - . . . .
-                         | B3 - - - - - - - A3 - - - - - - - | G3 - - - - - - - - - - - F#3 E3 F#3 -
-                         | E4 - - - - - - - D4 - - - - - - - | B3 - - - - - - - A3 - - - G3 - - -
-                         | C#4 - - - - - - - - - - - B3 - A#3 - | F#3 - - - - - - - - - - - - - . .`;
-
-/** Lament, the chorus: down by semitones from D5 to G4 over four bars, cried back up to E5. */
-const SIGNAL_FALL_CHORUS = `D4 - - - - - - - C#4 - - - C4 - - - | B3 - - - - - - - - - - - - - . .
-                          | B3 - - - A#3 - - - A3 - - - G#3 - - - | G3 - - - - - - - - - - - E4 D4 C#4 -
-                          | B3 - - - E4 - - - - - - - D4 - - - | B3 - - - - - - - A3 - - - G3 - F#3 -
-                          | A#3 - - - - - - - - - - - C#4 - A#3 - | F#3 - - - - - - - - - - - - - . .`;
-
-/** Cry, the verse: a leap of a sixth or an octave from low, then a fall; the octave in bar 5. */
-const SIGNAL_CRY_VERSE = `F#3 - - - D4 - - - - - - - C#4 B3 A#3 - | B3 - - - - - - - - - - - . . . .
-                        | G3 - - - E4 - - - - - - - D4 - B3 - | D4 - - - - - - - B3 - - - - - . .
-                        | E3 - - - E4 - - - - - - - - - - - | D4 - - - - - - - B3 - - - G3 - - -
-                        | C#4 - - - - - - - A#3 - - - - - - - | F#3 - - - - - - - . . . . . . . .`;
-
-/** Cry, the chorus: octaves leapt up from the bottom, each sobbing back down. */
-const SIGNAL_CRY_CHORUS = `F#3 - - - D4 - - - - - - - - - - - | C#4 - - - - - - - B3 - A#3 - B3 - - -
-                         | G3 - - - E4 - - - - - - - - - - - | D4 - - - - - - - B3 A3 G3 - . . . .
-                         | E3 - - - - - - - E4 - - - - - - - | D4 - - - - - - - - - - - B3 - G3 -
-                         | A#3 - - - - - - - C#4 - - - - - - - | F#3 - - - - - - - - - - - - - . .`;
-
-/** Sighs, the verse: a note a step above the chord on the downbeat, falling onto it. */
-const SIGNAL_SIGH_VERSE = `C#4 - - - - - B3 - - - - - - - . . | E4 - - - - - D4 - - - . . F#3 G3 F#3 -
-                         | A3 - - - - - G3 - - - - - - - . . | E4 - - - - - D4 - - - - - B3 - - -
-                         | E4 - - - - - - - D4 - - - - - B3 - | A3 - - - - - G3 - - - . . G3 F#3 E3 -
-                         | G#3 - - - - - F#3 - - - - - - - . . | A#3 - - - - - - - - - - - - - . .`;
-
-/** Sighs, the chorus: the same falling steps, higher and longer, in 3+3+2. */
-const SIGNAL_SIGH_CHORUS = `E4 - - - - - D4 - - - - - C#4 - - - | B3 - - - - - - - . . A#3 B3 C#4 - - -
-                          | A3 - - - - - G3 - - - - - B3 - - - | D4 - - - - - - - - - - - . . . .
-                          | E4 - - - - - - - - - - - D4 C#4 D4 - | A3 - - - - - G3 - - - . . B3 - G3 -
-                          | G#3 - - - - - F#3 - - - - - C#4 - - - | A#3 - - - - - - - - - - - - - . .`;
-
-/** A sketch of Signal Lost with other melodies: its verse (hook) and its peak (hot) as they are. */
-const signalSketch = (title: string, verse: string, chorus: string): SongDef => ({
-  title,
-  sketch: true,
-  level: -0.5,
-  bpm: 104,
-  swing: 0,
-  kit: 'net',
-  room: 'void',
-  pump: 0.5,
-  grit: 8,
-  voices: { lead: 'pwm', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
-  sections: [
-    {
-      name: 'hook',
-      tier: 'groove',
-      chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
-      lead: verse,
-      arpLine: SIGNAL_ARP,
-      bass: 'long',
-      drums: 'signal',
-      pad: 'swell',
-      sweep: { arp: [0.4, 1.3] },
-      mix: { bass: -4 },
-    },
-    {
-      name: 'hot',
-      tier: 'high',
-      chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
-      lead: chorus,
-      leadVoice: 'saw',
-      arpLine: SIGNAL_TRIPLET,
-      bass: 'drive',
-      drums: 'netPulseHot',
-      pad: 'hold',
-      stabs: 'push',
-      drop: true,
-    },
-  ],
-});
+/** The connection lost: the sighs' head, slow and quiet, over the C and A minor the verses never reach. */
+const SIGNAL_ECHO = `E4 - - - - - D4 - - - - - C4 - - - | C4 - - - - - - - - - . . . . . .
+                   | B3 - - - - - A3 - - - - - - - - - | C4 - - - - - - - - - - - . . . .
+                   | E4 - - - - - D4 - - - - - - - - - | D4 - - - - - - - C4 - - - - - . .
+                   | B3 - - - - - A3 - - - - - - - - - | . . . . . . . . . . . . . . . .`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -1304,9 +1224,9 @@ const SONG_DEFS: SongDef[] = [
   {
     // The finale, where the world loses its connection, after Cyberpunk 2077's "V" and Blade
     // Runner 2049: the last transmission. Static, then the arpeggio reconnecting alone over the
-    // drone; the lament low in the verses, the line dropping out, then stuttering with the beat
-    // filling in; the network collapses into a rewind and the chorus is the anthem over Net
-    // Pulse's peak, the kick on every beat; then the connection is lost — static, the anthem's
+    // drone; the lament falling low in the verses, the line dropping out, then stuttering with the
+    // beat filling in; the network collapses into a rewind and the chorus is the sighs over Net
+    // Pulse's peak, the kick on every beat; then the connection is lost — static, the sighs'
     // head echoing over chords the verses never reach — and it comes back
     title: 'Signal Lost',
     bpm: 104,
@@ -1379,12 +1299,12 @@ const SONG_DEFS: SongDef[] = [
         glitch: 'rewind',
       },
       {
-        // The anthem on a saw over Net Pulse's peak: the bass driving, the arpeggio three against
+        // The sighs on a saw over Net Pulse's peak: the bass driving, the arpeggio three against
         // four, the kick on every beat, brass pushing
         name: 'chorus',
         tier: 'high',
         chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
-        lead: SIGNAL_ANTHEM,
+        lead: SIGNAL_SIGHS,
         leadVoice: 'saw',
         arpLine: SIGNAL_TRIPLET,
         bass: 'drive',
@@ -1396,7 +1316,7 @@ const SONG_DEFS: SongDef[] = [
         drop: true,
       },
       {
-        // The connection lost: no beat, static, the anthem's head echoing softly over C and A minor
+        // The connection lost: no beat, static, the sighs' head echoing softly over C and A minor
         name: 'lost',
         tier: 'calm',
         chords: 'C | C | Am | Am | C | C | Am | Am',
@@ -1409,9 +1329,6 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  signalSketch('Signal Lost v2', SIGNAL_FALL_VERSE, SIGNAL_FALL_CHORUS),
-  signalSketch('Signal Lost v3', SIGNAL_CRY_VERSE, SIGNAL_CRY_CHORUS),
-  signalSketch('Signal Lost v4', SIGNAL_SIGH_VERSE, SIGNAL_SIGH_CHORUS),
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);
