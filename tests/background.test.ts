@@ -97,6 +97,31 @@ describe('BackgroundRenderer', () => {
     expect(renderer.isSurfing).toBe(false);
   });
 
+  it('tunes straight to the chosen backdrop with one short burst of static', () => {
+    const scenes: SceneId[] = ['lasers', 'fuji', 'neonCity'];
+    const renderer = new BackgroundRenderer(
+      scenes.map((scene) => fakeBackground(0.1, false, scene)),
+    );
+    renderer.choose(renderer.scene === 'fuji' ? 'lasers' : 'fuji');
+    const tuned = renderer.tune();
+    expect(renderer.scene).toBe(tuned);
+    expect(renderer.isSurfing).toBe(true);
+    // Quicker than the match's surf: it clears in a quarter of a second
+    draw(renderer, 0);
+    draw(renderer, 0.1);
+    expect(renderer.isSurfing).toBe(true);
+    draw(renderer, 0.2);
+    draw(renderer, 0.3);
+    expect(renderer.isSurfing).toBe(false);
+    // Already on it, nothing to tune to
+    renderer.tune();
+    expect(renderer.isSurfing).toBe(false);
+    // The unknown channel is tuned to the same way, once
+    renderer.showMystery(true);
+    expect(renderer.isShowingMystery).toBe(true);
+    expect(renderer.isSurfing).toBe(true);
+  });
+
   it('keeps a pinned background through every match', () => {
     const scenes: SceneId[] = ['lasers', 'fuji', 'neonCity'];
     const renderer = new BackgroundRenderer(
@@ -278,5 +303,55 @@ describe('the unknown channel (random picked)', () => {
         expect(spies.arc).toHaveBeenCalled();
       }
     }
+  });
+
+  describe('dissolving behind the menus', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    /** A renderer drawing into a layer of its own, as the game's does, so its frame can be held. */
+    const layered = () => {
+      const { ctx } = fakeContext();
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+        ctx as unknown as RenderingContext,
+      );
+      const backgrounds = (['lasers', 'fuji', 'neonCity'] as SceneId[]).map((scene) =>
+        fakeBackground(0.1, false, scene),
+      );
+      const renderer = new BackgroundRenderer(backgrounds);
+      renderer.setScale(1);
+      return { renderer, backgrounds };
+    };
+    it('melts the old backdrop’s held frame over the next one, then lets it go', () => {
+      const { renderer, backgrounds } = layered();
+      draw(renderer, 0);
+      const before = renderer.scene;
+      const next = renderer.dissolve();
+      expect(next).not.toBe(before);
+      expect(renderer.isDissolving).toBe(true);
+      // The new backdrop plays live underneath from the first frame
+      backgrounds.forEach((b) => vi.mocked(b.render).mockClear());
+      draw(renderer, 0.05);
+      const live = backgrounds.find((b) => vi.mocked(b.render).mock.calls.length > 0)!;
+      expect(live.scene).toBe(next);
+      for (let t = 0.1; t < 3.2; t += 0.1) draw(renderer, t);
+      expect(renderer.isDissolving).toBe(false);
+    });
+
+    it('never dissolves over a developer’s pin or the unknown channel', () => {
+      const { renderer } = layered();
+      renderer.showMystery();
+      expect(renderer.dissolve()).toBe(renderer.scene);
+      expect(renderer.isDissolving).toBe(false);
+      renderer.pin('fuji');
+      expect(renderer.dissolve()).toBe('fuji');
+      expect(renderer.isDissolving).toBe(false);
+    });
+
+    it('gives way to a channel switch on its way', () => {
+      const { renderer } = layered();
+      renderer.dissolve();
+      renderer.switchChannel(true);
+      expect(renderer.isDissolving).toBe(false);
+    });
   });
 });

@@ -5,7 +5,13 @@ import { DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import { HumanController } from '@/match/PaddleController';
-import { TrainerController, TUTORIAL, TUTORIAL_RULES, TutorialCoach } from '@/match/tutorial';
+import {
+  TrainerController,
+  TUTORIAL,
+  TUTORIAL_RULES,
+  TutorialCoach,
+  tutorialMechanics,
+} from '@/match/tutorial';
 import { EventBus } from '@/shared/EventBus';
 import { I18nManager } from '@/i18n/I18nManager';
 import { describeTutorial } from '@/ui/tutorialTexts';
@@ -50,6 +56,20 @@ const line = (coach: TutorialCoach, isTouch = false) =>
   describeTutorial(new I18nManager('en'), coach, isTouch)?.text;
 
 describe('the tutorial', () => {
+  it('opens each move at the step that teaches it: perfect hits, then Overdrive', () => {
+    expect(
+      ['move', 'hit', 'angle', 'perfect', 'overdrive'].map((step) =>
+        tutorialMechanics(step as Parameters<typeof tutorialMechanics>[0]),
+      ),
+    ).toEqual([
+      { perfect: false, overdrive: false },
+      { perfect: false, overdrive: false },
+      { perfect: false, overdrive: false },
+      { perfect: true, overdrive: false },
+      { perfect: true, overdrive: true },
+    ]);
+  });
+
   it('starts with moving, no card, and opens the moves that need one on a card', () => {
     const { coach, move, hit, wait } = setup();
     expect(coach.card).toBeNull();

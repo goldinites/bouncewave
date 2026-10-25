@@ -189,6 +189,7 @@ export const STAND_SECTIONS: readonly { name: string; sounds: readonly StandSoun
       { name: 'menu select', play: (sfx) => sfx.playMenuSelect() },
       { name: 'menu back', play: (sfx) => sfx.playMenuBack() },
       { name: 'channel surf', play: (sfx) => sfx.playChannelSurf() },
+      { name: 'channel tune', play: (sfx) => sfx.playChannelTune() },
     ],
   },
   {

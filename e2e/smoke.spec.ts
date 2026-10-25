@@ -221,7 +221,7 @@ test('opens the settings, switches the language and comes back', async ({ page }
 });
 
 // The challenges' own backgrounds too, as they arrive (steps 2.7–2.9: all three now)
-for (const scene of [...SCENES, 'warehouse', 'dojo', 'brokenNet']) {
+for (const scene of [...SCENES, 'warehouse', 'dojo', 'brokenNet', 'range']) {
   test(`draws the ${scene} background without an error`, async ({ page }) => {
     await page.goto(`?bg=${scene}`);
 

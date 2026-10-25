@@ -7,6 +7,7 @@ import { FujiBackground } from '@/render/backgrounds/FujiBackground';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MysteryBackground } from '@/render/backgrounds/MysteryBackground';
 import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
+import { RangeBackground } from '@/render/backgrounds/RangeBackground';
 import { WarehouseBackground } from '@/render/backgrounds/WarehouseBackground';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp } from '@/shared/math';
@@ -20,11 +21,26 @@ const OVERLAY_TINT_RGB = '10, 2, 32';
 const STATIC = { BANDS: 14, BAND_HEIGHT: [2, 14], ROLL: 28, DIM: 0.35 } as const;
 const STATIC_COLORS = ['rgb(255, 255, 255)', 'rgb(25, 240, 255)', 'rgb(255, 43, 214)'] as const;
 
+// The menus' backdrops giving way one to the next (5.13): the last frame of the old one, still,
+// melting over the new one as it plays, so a frame never draws two backgrounds
+export const DISSOLVE = { DURATION: 3 } as const; // s
+
+interface Dissolve {
+  /** Seconds since it began. */
+  age: number;
+  /** The old backdrop's last frame, as the layer held it. */
+  frame: HTMLCanvasElement;
+}
+
 interface Surf {
   /** Seconds since it began. */
   age: number;
   /** Background indices shown in turn, the last one the one that stays. */
   channels: number[];
+  /** Seconds the static takes to clear on the last one. */
+  settle: number;
+  /** Whether it tunes to the unknown channel, which the last one stands for. */
+  toMystery?: boolean;
 }
 
 /**
@@ -38,6 +54,7 @@ const createBackgrounds = (): Background[] => [
   new WarehouseBackground(),
   new DojoBackground(),
   new BrokenNetBackground(),
+  new RangeBackground(),
 ];
 
 /**
@@ -56,6 +73,9 @@ export class BackgroundRenderer {
   /** Background indices still to come before the deck is shuffled again; the next is last. */
   private deck: number[] = [];
   private surf: Surf | null = null;
+  private dissolving: Dissolve | null = null;
+  /** The canvas the old backdrop's last frame is copied into, kept so a dissolve makes no new one. */
+  private still: HTMLCanvasElement | null = null;
   /** A developer pinned the background: it stays, matches included, and the deck sits idle. */
   private _isPinned = false;
   /** The background the player chose for their matches; null deals one from the deck. */
@@ -148,6 +168,9 @@ export class BackgroundRenderer {
     const target = asked >= 0 ? asked : this.chosen;
     // Already on it (and showing it, not the mystery): it stays
     if (target === previous && !wasMystery) return this.scene;
+    // A cut or a surf takes over from a dissolve or a burst of static on its way
+    this.dissolving = null;
+    this.surf = null;
     this.backgroundIndex = target ?? this.deal();
 
     // Channels flicking past are the pickable ones, each unlike the one before, ending on the
@@ -164,19 +187,46 @@ export class BackgroundRenderer {
       }
       if (last === this.backgroundIndex) channels.pop();
       channels.push(this.backgroundIndex);
-      this.surf = { age: 0, channels };
+      this.surf = { age: 0, channels, settle: CHANNEL_SURF.SETTLE };
     }
     return this.scene;
   }
 
   /**
+   * Tunes straight to the backdrop the player chose, as the quick match's setup flicks between
+   * them: one burst of static as its channel comes on, no channels flicking past first.
+   * @returns the backdrop on screen now
+   */
+  public tune(): SceneId {
+    const before = this.backgroundIndex;
+    const wasMystery = this._isShowingMystery;
+    const scene = this.switchChannel(false);
+    if (this.backgroundIndex !== before || wasMystery) this.tuneIn(false);
+    return scene;
+  }
+
+  /** One burst of static over the channel coming on: the backdrop's, or the unknown one. */
+  private tuneIn(toMystery: boolean): void {
+    this.surf = {
+      age: 0,
+      channels: [this.backgroundIndex],
+      settle: CHANNEL_SURF.TUNE,
+      toMystery,
+    };
+  }
+
+  /**
    * Shows the unknown channel in place of the background (the player picked "random"), until
    * the next switchChannel deals a real one. Not over a developer's pin.
+   * @param isTuned tuned to as the setup flicks to it: one burst of static as it comes on
    */
-  public showMystery(): void {
+  public showMystery(isTuned = false): void {
     if (this._isPinned) return;
+    const wasMystery = this._isShowingMystery;
     this._isShowingMystery = true;
     this.surf = null;
+    this.dissolving = null;
+    if (isTuned && !wasMystery) this.tuneIn(true);
   }
 
   /** Whether the unknown channel stands in for the background right now. */
@@ -204,6 +254,7 @@ export class BackgroundRenderer {
     this.backgroundIndex = index;
     this._isPinned = true;
     this.surf = null;
+    this.dissolving = null;
     return true;
   }
 
@@ -222,6 +273,36 @@ export class BackgroundRenderer {
       }
     }
     return this.deck.pop() ?? this.backgroundIndex;
+  }
+
+  /**
+   * The menus' next backdrop, off the deck, dissolving in over the one on screen: its last frame
+   * held still and melting away. Not over a developer's pin, the unknown channel, nor channels
+   * flicking past; without a layer of its own to copy, the new one simply cuts in.
+   * @returns the backdrop on screen now
+   */
+  public dissolve(): SceneId {
+    if (this._isPinned || this._isShowingMystery || this.surf || this.pickable.length < 2) {
+      return this.scene;
+    }
+    const next = this.deal();
+    if (next === this.backgroundIndex) return this.scene;
+    const layer = this.layer;
+    if (layer) {
+      const still = this.still ?? document.createElement('canvas');
+      still.width = layer.canvas.width;
+      still.height = layer.canvas.height;
+      still.getContext('2d')?.drawImage(layer.canvas, 0, 0);
+      this.still = still;
+      this.dissolving = { age: 0, frame: still };
+    }
+    this.backgroundIndex = next;
+    return this.scene;
+  }
+
+  /** Whether a backdrop is dissolving into the next right now. */
+  public get isDissolving(): boolean {
+    return this.dissolving !== null;
   }
 
   /** Victory burst, for every background that has one. */
@@ -255,10 +336,10 @@ export class BackgroundRenderer {
     }
 
     const surf = this.advanceSurf(dt);
-    const background =
-      this._isShowingMystery && !surf
-        ? this.mystery
-        : this.backgrounds[surf?.channel ?? this.backgroundIndex];
+    const isMystery = this._isShowingMystery && (!surf || this.surf?.toMystery);
+    const background = isMystery
+      ? this.mystery
+      : this.backgrounds[surf?.channel ?? this.backgroundIndex];
 
     // At each switch the picture rolls down a little and settles, as an old set's would
     const roll = surf?.roll ?? 0;
@@ -274,6 +355,7 @@ export class BackgroundRenderer {
     target.fillStyle = `rgba(${OVERLAY_TINT_RGB}, ${background.overlayTint})`;
     target.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
     if (surf) this.renderStatic(target, surf.noise);
+    this.renderDissolve(target, dt);
 
     if (layer) {
       ctx.drawImage(layer.canvas, 0, 0, COURT.WIDTH, COURT.HEIGHT);
@@ -290,9 +372,9 @@ export class BackgroundRenderer {
     if (!surf) return null;
 
     surf.age += dt;
-    const { STEP, SETTLE } = CHANNEL_SURF;
+    const { STEP } = CHANNEL_SURF;
     const last = surf.channels.length - 1;
-    if (surf.age >= last * STEP + SETTLE) {
+    if (surf.age >= last * STEP + surf.settle) {
       this.surf = null;
       return null;
     }
@@ -300,9 +382,25 @@ export class BackgroundRenderer {
     const step = Math.min(last, Math.floor(surf.age / STEP));
     // Static flares at every switch and fades through the step; on the last one it fades for good
     const sinceSwitch = surf.age - step * STEP;
-    const fade = step < last ? sinceSwitch / STEP : sinceSwitch / SETTLE;
+    const fade = step < last ? sinceSwitch / STEP : sinceSwitch / surf.settle;
     const noise = (1 - fade) * (step < last ? 1 : 0.8);
     return { channel: surf.channels[step], noise, roll: (1 - fade) ** 2 * STATIC.ROLL };
+  }
+
+  /** The old backdrop's last frame over the new one, melting away with an ease out of it. */
+  private renderDissolve(ctx: CanvasRenderingContext2D, dt: number): void {
+    const dissolving = this.dissolving;
+    if (!dissolving) return;
+    dissolving.age += dt;
+    const t = dissolving.age / DISSOLVE.DURATION;
+    if (t >= 1) {
+      this.dissolving = null;
+      return;
+    }
+    ctx.save();
+    ctx.globalAlpha = 1 - t * t * (3 - 2 * t);
+    ctx.drawImage(dissolving.frame, 0, 0, COURT.WIDTH, COURT.HEIGHT);
+    ctx.restore();
   }
 
   /** Static over the picture: a dim veil and bright bands torn across it, new every frame. */

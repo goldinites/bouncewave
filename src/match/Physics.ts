@@ -128,7 +128,9 @@ export class Physics {
 
         if (isCollidingX && isCollidingY) {
           const hitOffset = clamp((ball.y - paddle.y) / (spec.height / 2), -1, 1);
-          const isPerfect = Math.abs(hitOffset) <= spec.perfectZone * paddle.perfectZoneScale;
+          const isPerfect =
+            paddle.hasPerfectZone &&
+            Math.abs(hitOffset) <= spec.perfectZone * paddle.perfectZoneScale;
           const steer = isPerfect
             ? Physics.getSteerAngle(
                 paddle.velocity,

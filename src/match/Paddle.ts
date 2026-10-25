@@ -39,6 +39,11 @@ export class Paddle {
    * 1 the rest of the time; the skill that changes it puts it back.
    */
   public perfectZoneScale = 1;
+  /**
+   * Whether a hit off its center is a perfect one at all: the tutorial holds perfect hits back
+   * until the step that teaches them; every other match has them.
+   */
+  public hasPerfectZone = true;
   /** The side of the court it plays on; its points are that side's. */
   public readonly side: Side;
   private _spec: PaddleSpec;

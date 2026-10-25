@@ -27,6 +27,18 @@ export const TUTORIAL_CARDS = ['angle', 'perfect', 'overdrive'] as const;
 
 export type TutorialCard = (typeof TUTORIAL_CARDS)[number];
 
+/**
+ * What the learner's paddle can do at a step: each move comes in with the step that teaches it,
+ * so nothing happens before it is explained — perfect hits from theirs on, Overdrive (its meter
+ * with it) at its own.
+ */
+export const tutorialMechanics = (
+  step: TutorialStep,
+): { perfect: boolean; overdrive: boolean } => ({
+  perfect: TUTORIAL_STEPS.indexOf(step) >= TUTORIAL_STEPS.indexOf('perfect'),
+  overdrive: TUTORIAL_STEPS.indexOf(step) >= TUTORIAL_STEPS.indexOf('overdrive'),
+});
+
 const hasCard = (step: TutorialStep): step is TutorialCard =>
   (TUTORIAL_CARDS as readonly TutorialStep[]).includes(step);
 

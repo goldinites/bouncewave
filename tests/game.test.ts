@@ -220,32 +220,54 @@ describe('Game', () => {
     expect(isPickableScene(renderer.scene as SceneId)).toBe(true);
   });
 
-  it('plays the menus’ own music outside a match, the backdrop’s where one is picked or shown', () => {
+  it('plays the menus’ own music in every menu outside a match, the backdrop’s with its match', () => {
     const { music } = (
       game as unknown as { audio: { music: { enterPlace(place: unknown): void } } }
     ).audio;
     const places = vi.spyOn(music, 'enterPlace');
-    const last = () => places.mock.calls.at(-1)?.[0];
+    const heard = () => new Set(places.mock.calls.map(([place]) => place));
     buttons()[0].click(); // play
-    expect(last()).toBe('menu');
     screenButton('QUICK MATCH').click();
-    expect(last()).toBeNull();
     press('Escape');
-    expect(last()).toBe('menu');
     screenButton('CHALLENGE').click();
-    expect(last()).toBe('menu');
-    screenButton('FIRST SERVE').click();
-    expect(last()).toBeNull(); // the card shows its challenge's backdrop
+    screenButton('FIRST SERVE').click(); // the card shows its challenge's backdrop, silently
     press('Escape');
-    expect(last()).toBe('menu');
     press('Escape');
+    expect(heard()).toEqual(new Set(['menu']));
     screenButton('QUICK MATCH').click();
     screenButton('START').click();
-    expect(last()).toBeNull();
+    expect(places.mock.calls.at(-1)?.[0]).toBeNull();
     // The pause belongs to the match: its music plays on
     places.mockClear();
     press('Escape');
     expect(places).not.toHaveBeenCalled();
+  });
+
+  it('changes the backdrops behind the menus, but not where one is picked or shown', () => {
+    const { menuBackdrops } = game as unknown as {
+      menuBackdrops: { setActive(isActive: boolean): void };
+    };
+    const changing = vi.spyOn(menuBackdrops, 'setActive');
+    const isChanging = () => changing.mock.calls.at(-1)?.[0];
+    buttons()[0].click(); // play
+    expect(isChanging()).toBe(true);
+    screenButton('QUICK MATCH').click();
+    expect(isChanging()).toBe(false);
+    press('Escape');
+    expect(isChanging()).toBe(true);
+    screenButton('CHALLENGE').click();
+    screenButton('FIRST SERVE').click();
+    expect(isChanging()).toBe(false);
+  });
+
+  it('tunes to each backdrop flicked to in the setup, with the old set’s relay', () => {
+    const { sfx } = (game as unknown as { audio: { sfx: { playChannelTune(): void } } }).audio;
+    const tunes = vi.spyOn(sfx, 'playChannelTune');
+    buttons()[0].click(); // play
+    screenButton('QUICK MATCH').click();
+    const before = tunes.mock.calls.length;
+    document.querySelectorAll<HTMLButtonElement>('[aria-label="Next"]')[0].click(); // background
+    expect(tunes.mock.calls.length).toBe(before + 1);
   });
 
   it('cuts a random backdrop straight in on leaving the setup, no channels flicking past', () => {
@@ -328,6 +350,13 @@ describe('Game', () => {
       screenButton('YES').click();
       // The tutorial has music of its own
       expect(places.mock.calls.at(-1)?.[0]).toBe('tutorial');
+      // Nothing it hasn't taught yet: no perfect hits, no Overdrive meter
+      const { flow, paddles } = game as unknown as {
+        flow: MatchFlow;
+        paddles: { hasPerfectZone: boolean }[];
+      };
+      expect(flow.overdriveCharges[0]).toBeNull();
+      expect(paddles[0].hasPerfectZone).toBe(false);
       expect(isMenuOpen()).toBe(false);
       expect(isPauseButtonShown()).toBe(true);
       // Started is not gone through: left halfway, it is offered again
