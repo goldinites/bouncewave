@@ -206,6 +206,63 @@ describe('Conductor', () => {
     });
   });
 
+  describe('with songs of a place: the menus, the tutorial', () => {
+    // The menus' song and the tutorial's, with the shared songs and the backdrops' own
+    const WITH_PLACES = [
+      ...WITH_SCENES,
+      compileSong({ ...def('Theme'), place: 'menu' }),
+      compileSong({ ...def('Warm-up'), place: 'tutorial' }),
+    ];
+    const THEME = WITH_PLACES.length - 2;
+
+    it('plays the place’s song from the next bar line, not waiting for a phrase', () => {
+      const conductor = new Conductor(WITH_PLACES, 0);
+      expect(conductor.enterPlace('menu')).toBe(true);
+      play(conductor, 'calm', 1);
+      expect(conductor.song.title).toBe('Theme');
+    });
+
+    it('keeps the place’s song over every backdrop, and through every skip', () => {
+      const conductor = new Conductor(WITH_PLACES, THEME);
+      conductor.enterPlace('menu');
+      expect(conductor.enterScene('neonCity')).toBe(false);
+      conductor.skip('calm');
+      play(conductor, 'calm', SONG_BARS * 2);
+      expect(conductor.song.title).toBe('Theme');
+    });
+
+    it('gives way to the backdrop’s song when the game leaves the place', () => {
+      const conductor = new Conductor(WITH_PLACES, 0);
+      conductor.enterScene('neonCity');
+      conductor.enterPlace('menu');
+      play(conductor, 'calm', 1);
+      expect(conductor.enterPlace(null)).toBe(true);
+      play(conductor, 'groove', 1);
+      expect(conductor.song.title).toBe('City');
+    });
+
+    it('never plays a place’s song anywhere else', () => {
+      const titles = new Set<string>();
+      for (const roll of [0, 0.2, 0.4, 0.6, 0.8, 0.99]) {
+        const conductor = new Conductor(WITH_PLACES, 0, 'groove', () => roll);
+        conductor.enterScene('fuji');
+        for (let i = 0; i < 4; i++) {
+          conductor.skip('groove');
+          conductor.advance();
+          titles.add(conductor.song.title);
+        }
+      }
+      expect(titles.has('Theme') || titles.has('Warm-up')).toBe(false);
+    });
+
+    it('leaves the backdrop’s song playing in a place with no song of its own yet', () => {
+      const conductor = new Conductor(WITH_SCENES, 2);
+      expect(conductor.enterPlace('tutorial')).toBe(false);
+      play(conductor, 'groove', 4);
+      expect(conductor.song.title).toBe('City');
+    });
+  });
+
   describe('on the listening stand', () => {
     it('loops the pinned part from the next bar line, whatever the game wants', () => {
       const conductor = new Conductor(SONGS, 0);
