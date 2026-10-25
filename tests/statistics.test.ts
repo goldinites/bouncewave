@@ -236,13 +236,13 @@ describe('the statistics screen', () => {
     return { menu, rows };
   };
 
-  it('opens from the main menu, under the multiplayer', () => {
+  it('opens from the main menu, under 2 players', () => {
     const { menu } = setup();
     menu.showMainMenu();
     const buttons = [...document.querySelectorAll<HTMLButtonElement>('#gameScreen button')];
     expect(buttons.map((b) => b.textContent)).toEqual([
       'PLAY',
-      'MULTIPLAYER',
+      '2 PLAYERS',
       'STATISTICS',
       'SETTINGS',
     ]);
