@@ -237,6 +237,19 @@ export const DRUM_PATTERNS = {
     snare: '....X.......X...',
     metal: '..............o.',
   },
+  // The second verse: a push before three, the hats in broken sixteenths
+  signal2: {
+    kick: 'X.......X.x.....',
+    snare: '....X.......X...',
+    hat: 'x.xxx.x.x.xxx.x.',
+    metal: '..............o.',
+  },
+  // The network collapsing into the peak: the kick on every beat, the snare rolling up
+  collapse: {
+    kick: 'X...X...X...X...',
+    snare: 'o.o.o.o.x.x.xxXX',
+    hat: 'xxxxxxxxxxxxxxxx',
+  },
   // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
   foundry: {
     kick: 'X...X...X...X.x.',

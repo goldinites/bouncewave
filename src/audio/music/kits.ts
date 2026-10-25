@@ -75,6 +75,21 @@ export const KITS = {
     perc: 'rim',
     impact: 'impact',
   },
+  // The broken network's: the dark kit with a punchy kick in place of the distorted one, which on
+  // every beat of the peak buried the paddle hits; the synth cymbal for the crash
+  net: {
+    kick: 'kickPunch',
+    snare: 'snareGated',
+    clap: 'clap',
+    hat: 'hat',
+    open: 'open',
+    crash: 'synthCymbal',
+    tom: 'tom',
+    taiko: 'taiko',
+    metal: 'clang',
+    perc: 'rim',
+    impact: 'impact',
+  },
   // Neon Cathedral's: the dark kit with a timpani tuned to E for its kick, the cathedral's
   // orchestra, round where the distorted kick pounded
   cathedral: {

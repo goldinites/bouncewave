@@ -436,9 +436,9 @@ const MOKUSO_HOLD = `F5 - - - - - - - - - - - - - - - | E5 - - - - - - - D5 - - 
                    | A5 - - - - - - - - - - - - - - - | G5 - - - - - - - F5 - - - - - - -
                    | E5 - - - - - - - - - - - - - - - | G#5 - - - - - - - - - - - . . . .`;
 
-// ——— The broken network's track, 5.11: the lost signal's base (dark cyberpunk after Cyberpunk
-// 2077's "V" and Blade Runner 2049, a straight heavy pulse at 104, nothing Japanese, no
-// half-time), its peak Net Pulse's, and three low melodies over it to choose from ———
+// ——— The broken network's track (5.11): dark cyberpunk after Cyberpunk 2077's "V" and Blade
+// Runner 2049, chosen of three bases and three melodies — a growling drone in B minor, a straight
+// heavy pulse at 104, nothing Japanese and no half-time; low melodies under a cold arpeggio ———
 
 /**
  * The signal reconnecting: a cell growing a note a bar and falling back, as a link retries; high
@@ -457,23 +457,23 @@ const SIGNAL_TRIPLET = cycle([
   { cell: ['F#5', 'C#6', 'A#5'], bars: 2 },
 ]);
 
-/** Lament: long low notes sighing down a step, the answer climbing to D5 and falling back. */
+/** The lament, the verses' melody: long low notes sighing down a step, the answer climbing to D5. */
 const SIGNAL_LAMENT = `F#4 - - - - - - - E4 - - D4 - - - - | E4 - - - - - - - - - . . D4 E4 F#4 -
                      | B4 - - - - - - - . . . . D5 - B4 - | A4 - - - - - - - - - - - - - . .
                      | G4 - - - - - - - F#4 - - E4 - - B4 - | D5 - - - - - - - - - - - C#5 B4 A4 -
                      | A#4 - - - - - - - - - - - C#5 B4 A#4 - | F#4 - - - - - - - - - - - - - . .`;
 
-/** Broken: each phrase buffering on one note, cut off, then going on; a bar lost entirely. */
-const SIGNAL_BROKEN = `D4 D4 D4 . . . . . F#4 - - - - - . . | E4 E4 E4 . . . . . D4 - - - F#4 - - -
-                     | B4 B4 B4 . . . . . D5 - - - - - . . | . . . . . . . . . . . . . . . .
-                     | G4 G4 G4 . . . . . B4 - - - - - . . | A4 A4 A4 . . . . . G4 - - - F#4 - E4 -
-                     | F#4 - - - - - - - . . . . A#4 B4 C#5 - | A#4 - - - - - - - - - - - . . . .`;
-
-/** Anthem: a third and then a minor sixth up to D5, the line falling back pushed off the beat. */
+/** The anthem, the chorus: a third and then a minor sixth up to D5, falling back off the beat. */
 const SIGNAL_ANTHEM = `D4 - - - - - F#4 - - - - - - - - - | D5 - - - - - C#5 - - - B4 - A4 - - -
                      | D4 - - - - - G4 - - - - - - - - - | D5 - - - - - B4 - - - A4 - G4 - - -
                      | E4 - - - - - B4 - - - - - G4 - A4 - | D5 - - - - - - - B4 A4 G4 F#4 E4 - - -
                      | C#5 - - - - - A#4 - - - - - F#4 - - - | A#4 - - - - - - - - - - - - - . .`;
+
+/** The connection lost: the anthem's head, slow and quiet, over the C and A minor the verses never reach. */
+const SIGNAL_ECHO = `D4 - - - - - E4 - - - - - - - - - | D5 - - - - - C5 - - - B4 - A4 - - -
+                   | E4 - - - - - A4 - - - - - - - - - | C5 - - - - - B4 - - - A4 - E4 - - -
+                   | D4 - - - - - - - - - - - E4 - - - | D5 - - - - - C5 - - - B4 - - - - -
+                   | E4 - - - - - - - - - - - - - - - | . . . . . . . . . . . . . . . .`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -1217,22 +1217,42 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // The broken network's melodies over the lost signal (5.11), for the stand: a groove (hook) and
-  // its peak (hot) each
   {
-    // Lament: long low notes sighing down a step, the answer climbing to D5
-    title: 'Signal Lament',
-    sketch: true,
-    level: -1.5,
+    // The finale, where the world loses its connection, after Cyberpunk 2077's "V" and Blade
+    // Runner 2049: the last transmission. Static, then the arpeggio reconnecting alone over the
+    // drone; the lament low in the verses, the line dropping out, then stuttering with the beat
+    // filling in; the network collapses into a rewind and the chorus is the anthem over Net
+    // Pulse's peak, the kick on every beat; then the connection is lost — static, the anthem's
+    // head echoing over chords the verses never reach — and it comes back
+    title: 'Signal Lost',
     bpm: 104,
     swing: 0,
-    kit: 'dark',
-    room: 'plate',
+    scene: 'brokenNet',
+    kit: 'net',
+    transitions: 'synth',
+    // An empty digital space: the melody and the pads drifting in a long, cold tail, the drums
+    // dry and close; the bass torn and pumping as darksynth's does
+    room: 'void',
+    pump: 0.8,
     grit: 14,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    voices: { lead: 'pwm', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'lost', 'verse2', 'build', 'chorus'],
     sections: [
       {
-        name: 'hook',
+        // Static on the line, the arpeggio reconnecting over the drone, then the beat
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
+        arpLine: SIGNAL_ARP,
+        bass: 'long',
+        drums: 'signal',
+        pad: 'swell',
+        hits: { radioStatic: `X${'.'.repeat(127)}` },
+        sweep: { arp: [0.4, 1.3] },
+        enter: { drums: 4 },
+      },
+      {
+        name: 'verse',
         tier: 'groove',
         chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
         lead: SIGNAL_LAMENT,
@@ -1240,105 +1260,64 @@ const SONG_DEFS: SongDef[] = [
         bass: 'long',
         drums: 'signal',
         pad: 'swell',
-        hits: { radioStatic: `X${'.'.repeat(127)}` },
         sweep: { arp: [0.4, 1.3] },
-        glitch: 'rewind',
+        layers: { lead: 0.3 },
+        glitch: 'dropout',
       },
       {
-        // Net Pulse's peak, as the user chose it: the bass driving, the arpeggio three against
-        // four, the kick on every beat, brass pushing
-        name: 'hot',
-        tier: 'high',
+        // The beat filling in, the bass in octaves, the line stuttering at the end
+        name: 'verse2',
+        tier: 'groove',
         chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
         lead: SIGNAL_LAMENT,
-        arpLine: SIGNAL_TRIPLET,
-        bass: 'drive',
-        drums: 'netPulseHot',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // Broken: each phrase buffering on one note, cut off; a bar lost entirely
-    title: 'Signal Broken',
-    sketch: true,
-    level: -1.5,
-    bpm: 104,
-    swing: 0,
-    kit: 'dark',
-    room: 'plate',
-    grit: 14,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
-        lead: SIGNAL_BROKEN,
         arpLine: SIGNAL_ARP,
-        bass: 'long',
-        drums: 'signal',
-        pad: 'swell',
-        hits: { radioStatic: `X${'.'.repeat(127)}` },
-        sweep: { arp: [0.4, 1.3] },
+        bass: 'octave',
+        drums: 'signal2',
+        pad: 'hold',
+        // The octave bass pumping under the kick sits below the first verse: lifted over it
+        level: 2.5,
+        layers: { lead: 0.3 },
+        glitch: 'stutter',
+      },
+      {
+        // The network collapses: the bass in sixteenths, the snare rolling, a rewind into the peak
+        name: 'build',
+        tier: 'rise',
+        chords: 'G | F#',
+        bass: 'pulse16',
+        drums: 'collapse',
+        pad: 'hold',
+        riser: true,
         glitch: 'rewind',
       },
       {
-        // Net Pulse's peak, as the user chose it: the bass driving, the arpeggio three against
+        // The anthem on a saw over Net Pulse's peak: the bass driving, the arpeggio three against
         // four, the kick on every beat, brass pushing
-        name: 'hot',
+        name: 'chorus',
         tier: 'high',
         chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
-        lead: SIGNAL_BROKEN,
+        lead: SIGNAL_ANTHEM,
+        leadVoice: 'saw',
         arpLine: SIGNAL_TRIPLET,
         bass: 'drive',
         drums: 'netPulseHot',
         pad: 'hold',
         stabs: 'push',
+        // Lifted over the verses, whose pumping octave bass is as loud
+        level: 0.5,
         drop: true,
       },
-    ],
-  },
-  {
-    // Anthem: a third and a minor sixth up to D5, falling back off the beat
-    title: 'Signal Anthem',
-    sketch: true,
-    level: -1.5,
-    bpm: 104,
-    swing: 0,
-    kit: 'dark',
-    room: 'plate',
-    grit: 14,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
-    sections: [
       {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
-        lead: SIGNAL_ANTHEM,
-        arpLine: SIGNAL_ARP,
+        // The connection lost: no beat, static, the anthem's head echoing softly over C and A minor
+        name: 'lost',
+        tier: 'calm',
+        chords: 'C | C | Am | Am | C | C | Am | Am',
+        lead: SIGNAL_ECHO,
+        leadVoice: 'soft',
         bass: 'long',
-        drums: 'signal',
+        drums: 'none',
         pad: 'swell',
-        hits: { radioStatic: `X${'.'.repeat(127)}` },
-        sweep: { arp: [0.4, 1.3] },
-        glitch: 'rewind',
-      },
-      {
-        // Net Pulse's peak, as the user chose it: the bass driving, the arpeggio three against
-        // four, the kick on every beat, brass pushing
-        name: 'hot',
-        tier: 'high',
-        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
-        lead: SIGNAL_ANTHEM,
-        arpLine: SIGNAL_TRIPLET,
-        bass: 'drive',
-        drums: 'netPulseHot',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
+        hits: { radioStatic: `X${'.'.repeat(63)}` },
       },
     ],
   },

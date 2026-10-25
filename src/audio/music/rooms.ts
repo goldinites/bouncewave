@@ -86,6 +86,16 @@ export const ROOMS = {
     return: 0.36,
     sends: { pads: 0.4, melody: 0.3, drums: 0.3 },
   },
+  // An empty digital space: a long, cold tail the melody and the pads drift into, the drums kept
+  // dry and close
+  void: {
+    decay: 2.8,
+    preDelay: 0.05,
+    lowCut: 400,
+    highCut: 9500,
+    return: 0.4,
+    sends: { pads: 0.6, melody: 0.42, drums: 0.06 },
+  },
   // An old stone temple: a short, bright answer that hand drums and mallets ring in
   stone: {
     decay: 1.2,
