@@ -508,8 +508,8 @@ export class Game {
         difficulty,
       );
     } else if (this.isTutorial) {
-      // The learner against the trainer, on the player's own backdrop, from the first step
-      this.matchScene = null;
+      // The learner against the trainer, on the Range, from the first step
+      this.matchScene = 'range';
       this.tutorialCoach.reset(this.pinnedTutorialStep);
       this.flow.startMatch(
         TUTORIAL_RULES,

@@ -7,6 +7,7 @@ import { FujiBackground } from '@/render/backgrounds/FujiBackground';
 import { LaserBackground } from '@/render/backgrounds/LaserBackground';
 import { MysteryBackground } from '@/render/backgrounds/MysteryBackground';
 import { NeonCityBackground } from '@/render/backgrounds/NeonCityBackground';
+import { RangeBackground } from '@/render/backgrounds/RangeBackground';
 import { WarehouseBackground } from '@/render/backgrounds/WarehouseBackground';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp } from '@/shared/math';
@@ -53,6 +54,7 @@ const createBackgrounds = (): Background[] => [
   new WarehouseBackground(),
   new DojoBackground(),
   new BrokenNetBackground(),
+  new RangeBackground(),
 ];
 
 /**

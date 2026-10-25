@@ -16,6 +16,8 @@ export type PickableSceneId = (typeof SCENES)[number];
  */
 export const EXCLUSIVE_SCENES = {
   challenges: ['warehouse', 'dojo', 'brokenNet'],
+  // The Range: the tutorial's quiet blueprint hall (5.13)
+  tutorial: ['range'],
   story: [],
 } as const;
 
