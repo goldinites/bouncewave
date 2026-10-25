@@ -17,7 +17,7 @@ const stubAudioContext = (state: string) => {
     },
   );
   const count = (method: string) => calls.filter((c) => c.method === method).length;
-  return { ctx, count, created: () => created };
+  return { ctx, calls, count, created: () => created };
 };
 
 describe('AudioEngine', () => {
@@ -34,6 +34,23 @@ describe('AudioEngine', () => {
   afterEach(() => {
     engines.splice(0).forEach((engine) => engine.dispose());
     vi.unstubAllGlobals();
+  });
+
+  it("sets the player's volumes on the mixer's buses, once it exists, and only when they change", () => {
+    const { calls } = stubAudioContext('running');
+    const engine = makeEngine();
+    engine.setVolumes(0, 50); // before the first gesture: kept for the mixer
+    engine.unlock();
+    const targets = () => calls.filter((c) => c.method === 'setTargetAtTime').map((c) => c.args[0]);
+
+    // The music silent, the action and menu sounds five steps down
+    const half = 10 ** (-15 / 20);
+    expect(targets()).toContain(0);
+    expect(targets().filter((level) => Math.abs((level as number) - half) < 1e-9)).toHaveLength(2);
+
+    const before = targets().length;
+    engine.setVolumes(0, 50);
+    expect(targets()).toHaveLength(before);
   });
 
   it('creates the audio context on the first gesture, and only once', () => {

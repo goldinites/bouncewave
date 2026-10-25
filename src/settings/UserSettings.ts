@@ -3,6 +3,7 @@ import { DIFFICULTY_LEVELS, DifficultyLevel, isDifficultyLevel } from '@/match/d
 import { DEFAULT_MATCH_POINTS, isMatchPoints, MATCH_POINTS, MatchPoints } from '@/match/modes';
 import { stepThrough } from '@/shared/math';
 import { BACKGROUND_CHOICES, BackgroundChoice, isBackgroundChoice } from '@/shared/scenes';
+import { isVolume, stepVolume, Volume, VOLUME } from '@/shared/volume';
 
 /**
  * Everything the player chose that outlasts a visit: the settings proper, and the quick match
@@ -12,8 +13,9 @@ export interface UserSettings {
   difficulty: DifficultyLevel;
   matchPoints: MatchPoints;
   matchBackground: BackgroundChoice;
-  soundMuted: boolean;
-  musicMuted: boolean;
+  /** The action and menu sounds' volume, 0 for none (shared/volume.ts). */
+  soundVolume: Volume;
+  musicVolume: Volume;
   language: Language;
 }
 
@@ -28,9 +30,11 @@ export interface SettingDefinition<T> {
   previous(value: T): T;
 }
 
-const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
-const toggle = (value: boolean): boolean => !value;
-const onOff = { next: toggle, previous: toggle };
+// A volume steps by tens and stops at the ends: from full, one more step up is not silence
+const volumeSteps = {
+  next: (value: Volume) => stepVolume(value, 1),
+  previous: (value: Volume) => stepVolume(value, -1),
+};
 
 /** Steps through `list` either way, wrapping around at both ends. */
 const through = <T>(list: readonly T[]) => ({
@@ -60,8 +64,8 @@ export const SETTINGS: { [K in keyof UserSettings]: SettingDefinition<UserSettin
     isValid: isBackgroundChoice,
     ...through(BACKGROUND_CHOICES),
   },
-  soundMuted: { defaultValue: false, isValid: isBoolean, ...onOff },
-  musicMuted: { defaultValue: false, isValid: isBoolean, ...onOff },
+  soundVolume: { defaultValue: VOLUME.MAX, isValid: isVolume, ...volumeSteps },
+  musicVolume: { defaultValue: VOLUME.MAX, isValid: isVolume, ...volumeSteps },
   language: { defaultValue: 'en', isValid: isLanguage, ...through(LANGUAGES) },
 };
 

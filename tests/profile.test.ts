@@ -68,7 +68,7 @@ describe('the profile', () => {
     new ProfileStore(storage).update({ settings });
 
     expect(JSON.parse(storage.getItem(PROFILE_KEY)!)).toEqual({
-      version: 4,
+      version: PROFILE_VERSION,
       settings,
       stats: getEmptyStatistics(),
       challenges: { passed: [] },
@@ -122,12 +122,12 @@ describe('the profile', () => {
       throw new Error('QuotaExceededError');
     };
     const store = new ProfileStore(storage);
-    store.update({ settings: { ...DEFAULTS, musicMuted: true } });
-    expect(store.current.settings.musicMuted).toBe(true);
+    store.update({ settings: { ...DEFAULTS, musicVolume: 0 } });
+    expect(store.current.settings.musicVolume).toBe(0);
 
     const nowhere = new ProfileStore(null);
-    nowhere.update({ settings: { ...DEFAULTS, soundMuted: true } });
-    expect(nowhere.current.settings.soundMuted).toBe(true);
+    nowhere.update({ settings: { ...DEFAULTS, soundVolume: 0 } });
+    expect(nowhere.current.settings.soundVolume).toBe(0);
   });
 });
 
@@ -137,13 +137,13 @@ describe('a profile saved by 1.4 (version 1)', () => {
     const storage = storageWith({ [PROFILE_KEY]: { version: 1, settings } });
 
     expect(new ProfileStore(storage).current).toEqual({
-      version: 4,
+      version: PROFILE_VERSION,
       settings,
       stats: getEmptyStatistics(),
       challenges: getEmptyChallengeProgress(),
       tutorial: null,
     });
-    expect(JSON.parse(storage.getItem(PROFILE_KEY)!).version).toBe(4);
+    expect(JSON.parse(storage.getItem(PROFILE_KEY)!).version).toBe(PROFILE_VERSION);
   });
 });
 
@@ -154,14 +154,14 @@ describe('a profile saved by 1.5 (version 2)', () => {
     const storage = storageWith({ [PROFILE_KEY]: { version: 2, settings, stats } });
 
     expect(new ProfileStore(storage).current).toEqual({
-      version: 4,
+      version: PROFILE_VERSION,
       settings,
       stats,
       challenges: { passed: [] },
       // Matches played: the tutorial isn't offered
       tutorial: 'skipped',
     });
-    expect(JSON.parse(storage.getItem(PROFILE_KEY)!).version).toBe(4);
+    expect(JSON.parse(storage.getItem(PROFILE_KEY)!).version).toBe(PROFILE_VERSION);
   });
 });
 
@@ -185,6 +185,24 @@ describe('a profile saved by 1.5 (version 3)', () => {
   });
 });
 
+describe('a profile saved by 1.5 (version 4)', () => {
+  it('turns music and sound off into no volume, and on into the full one', () => {
+    const { musicVolume, soundVolume, ...rest } = DEFAULTS;
+    const saved = (musicMuted: unknown, soundMuted: unknown) => ({
+      ...getDefaultProfile(),
+      version: 4,
+      settings: { ...rest, musicMuted, soundMuted },
+    });
+    expect(loadProfile(saved(true, false)).settings).toEqual({
+      ...DEFAULTS,
+      musicVolume: 0,
+      soundVolume: 100,
+    });
+    expect(loadProfile(saved('x', true)).settings).toMatchObject({ musicVolume, soundVolume: 0 });
+    expect(soundVolume).toBe(100);
+  });
+});
+
 describe('settings saved before the profile (version 0)', () => {
   const legacy = (saved: unknown) =>
     new ProfileStore(storageWith({ [LEGACY_SETTINGS_KEY]: saved })).current.settings;
@@ -194,8 +212,8 @@ describe('settings saved before the profile (version 0)', () => {
       difficulty: DifficultyLevel.NORMAL,
       matchPoints: 7,
       matchBackground: 'fuji',
-      soundMuted: true,
-      musicMuted: false,
+      soundVolume: 0,
+      musicVolume: 100,
       language: 'ru',
     });
   });
@@ -205,7 +223,7 @@ describe('settings saved before the profile (version 0)', () => {
     new ProfileStore(storage);
 
     expect(JSON.parse(storage.getItem(PROFILE_KEY)!)).toEqual({
-      version: 4,
+      version: PROFILE_VERSION,
       settings: { ...DEFAULTS, language: 'ru', matchPoints: 3 },
       stats: getEmptyStatistics(),
       challenges: getEmptyChallengeProgress(),
@@ -235,7 +253,7 @@ describe('settings saved before the profile (version 0)', () => {
   it('fall back per setting, and get the quick match setup they predate at its defaults', () => {
     expect(legacy({ d: 'x', m: true, l: 'ru' })).toEqual({
       ...DEFAULTS,
-      soundMuted: true,
+      soundVolume: 0,
       language: 'ru',
     });
   });

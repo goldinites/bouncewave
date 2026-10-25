@@ -242,6 +242,7 @@ export class SoundStand {
       this.layerRows(),
       debugHeading('Game sounds'),
       this.soundButtons(),
+      this.phoneSpeakerRow(),
       debugHeading('Status'),
       this.readout,
     );
@@ -506,6 +507,20 @@ export class SoundStand {
   }
 
   /** Holds the rally in overtime, its alarm over the music, while ticked. */
+  /** Everything through a phone speaker's stand-in, while ticked: mono, no lows (5.9). */
+  private phoneSpeakerRow(): HTMLElement {
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.dataset.phoneSpeaker = '';
+    const label = document.createElement('label');
+    label.append(box, ' phone speaker (mono, nothing below 150 Hz)');
+    this.on(box, 'change', () => {
+      this.audio.unlock();
+      this.audio.setPhoneSpeaker(box.checked);
+    });
+    return this.row(label);
+  }
+
   private overtimeRow(): HTMLElement {
     const box = document.createElement('input');
     box.type = 'checkbox';

@@ -340,10 +340,24 @@ describe('Game', () => {
 
   it('switches every text outside the menus to the language picked', () => {
     buttons()[3].click(); // settings
-    document.querySelector<HTMLButtonElement>('#gameScreen [aria-label="Next"]')!.click(); // language
+    const language = [...document.querySelectorAll('#gameScreen .option-row')].at(-1)!;
+    language.querySelector<HTMLButtonElement>('[aria-label="Next"]')!.click();
 
     expect(document.documentElement.lang).toBe('ru');
     expect($('#pauseButton').getAttribute('aria-label')).toBe('Пауза');
+  });
+
+  it('turns the music off on M, and back on at the volume it had', () => {
+    const saved = () => JSON.parse(localStorage.getItem(PROFILE_KEY)!).settings.musicVolume;
+    buttons()[3].click(); // settings
+    const music = document.querySelector('#gameScreen .option-row')!;
+    music.querySelector<HTMLButtonElement>('[aria-label="Previous"]')!.click();
+    expect(saved()).toBe(90);
+
+    press('KeyM');
+    expect(saved()).toBe(0);
+    press('KeyM');
+    expect(saved()).toBe(90);
   });
 
   it('stops answering the keyboard once disposed', () => {

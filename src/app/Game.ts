@@ -49,6 +49,7 @@ import { describeTutorial } from '@/ui/tutorialTexts';
 import { Condition, describeCondition, describeFinale } from '@/ui/challengeTexts';
 import { ConditionBar, SIDE_DOCK_QUERY } from '@/ui/ConditionBar';
 import { UIManager } from '@/ui/UIManager';
+import { Volume, VOLUME } from '@/shared/volume';
 
 // Longest step the simulation takes in one frame (e.g. after a hitch)
 const MAX_FRAME_DT = 0.033;
@@ -95,6 +96,8 @@ export class Game {
   private matchScene: SceneId | null = null;
   /** Whether the match starting is the one on court started again: it keeps its backdrop. */
   private isRestarting = false;
+  /** The music's volume before the M key turned it off, for the M key to bring it back to. */
+  private musicVolumeBeforeMute: Volume = VOLUME.MAX;
   /** For developers: the challenge ?challenge= makes every quick match an attempt at. */
   private pinnedChallenge: ChallengeId | null = null;
   /**
@@ -162,7 +165,7 @@ export class Game {
     ];
 
     this.audio = new AudioEngine(
-      () => this.settings.current.soundMuted,
+      () => this.settings.current.soundVolume === 0,
       () => this.flow.gameState === 'play',
     );
 
@@ -332,6 +335,7 @@ export class Game {
         onResumeGame: () => this.resume(),
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
+        onSoundVolume: () => this.audio.previewSound(),
         onQuickMatchSetup: (isShown) => this.onQuickMatchSetup(isShown),
         onMenuScene: (scene) => this.showMenuScene(scene),
       },
@@ -425,10 +429,15 @@ export class Game {
     this.audio.unlock();
   }
 
-  /** The M key: the same switch as the music setting. */
+  /**
+   * The M key: the music off, or back on at the volume it had (the full one if it was off when the
+   * game started).
+   */
   private toggleMusic(): void {
     this.unlockAudio();
-    this.settings.cycle('musicMuted');
+    const volume = this.settings.current.musicVolume;
+    if (volume > 0) this.musicVolumeBeforeMute = volume;
+    this.settings.update({ musicVolume: volume > 0 ? 0 : this.musicVolumeBeforeMute });
   }
 
   private get look(): Look {
@@ -707,6 +716,7 @@ export class Game {
     this.flow.interpolate(this.simulation.alpha);
 
     // Music reads this on its own scheduler tick, paused frames included (it muffles in pause)
+    this.audio.setVolumes(this.settings.current.musicVolume, this.settings.current.soundVolume);
     this.audio.playMusic(this.buildMusicState());
 
     const isTutorialOn = this.isTutorial && !this.flow.isDemo;
@@ -822,7 +832,7 @@ export class Game {
       isOvertime: this.flow.isOvertime,
       scores: [...this.flow.scores],
       winningScores: this.flow.rules.winningScores,
-      isMuted: this.settings.current.musicMuted,
+      isMuted: this.settings.current.musicVolume === 0,
       difficulty,
     };
   }

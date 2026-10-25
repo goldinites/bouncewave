@@ -23,7 +23,7 @@ const makeUIManager = (i18n: I18nManager) => {
 
 const setup = (more: Partial<GameMenuActions> = {}) => {
   const store = new SettingsStore({
-    load: () => ({ ...getDefaultSettings(), musicMuted: true }),
+    load: () => ({ ...getDefaultSettings(), musicVolume: 0 }),
     save: () => {},
   });
   const i18n = new I18nManager('en');
@@ -64,29 +64,6 @@ describe('settings menu', () => {
       <div id="gameScreen"></div><button id="pauseButton"></button>`;
   });
 
-  it('shows music and sound as toggles, pressed while on', () => {
-    const { menu, buttons } = setup();
-    menu.showSettingsMenu();
-
-    // music (muted), sound (on), language, controls, back
-    expect(buttons().map((b) => b.getAttribute('aria-pressed'))).toEqual([
-      'false',
-      'true',
-      null,
-      null,
-      null,
-    ]);
-  });
-
-  it('flips a toggle when it is picked', () => {
-    const { menu, buttons } = setup();
-    menu.showSettingsMenu();
-
-    buttons()[0].click(); // music back on
-    expect(buttons()[0].getAttribute('aria-pressed')).toBe('true');
-    expect(buttons()[0].textContent).toBe('MUSIC: ON');
-  });
-
   it('answers the menu keys with a tick, a press with a blip, and going back with its own', async () => {
     const { menu, buttons, sfx } = setup();
     menu.showMainMenu();
@@ -95,7 +72,7 @@ describe('settings menu', () => {
     expect(sfx.playMenuMove).toHaveBeenCalledOnce();
 
     menu.showSettingsMenu();
-    buttons()[0].click();
+    buttons()[3].click(); // controls
     await Promise.resolve();
     expect(sfx.playMenuSelect).toHaveBeenCalled();
     menu.goBack();
@@ -108,13 +85,18 @@ describe('settings menu', () => {
 
     menu.showSettingsMenu();
     expect(classes()).toEqual([
-      'game-button game-button--pink', // music
-      'game-button game-button--purple', // sound
-      'option-row__value', // language: a choice, its row green
+      'option-row__value', // music: a volume, its row pink
+      'option-row__value', // sound, purple
+      'option-row__value', // language, green
       'game-button game-button--yellow', // controls
       'game-button', // back, default cyan
     ]);
-    expect(buttons()[2].closest('.option-row')?.className).toBe('option-row game-button--green');
+    const rows = buttons().map((b) => b.closest('.option-row')?.className);
+    expect(rows.slice(0, 3)).toEqual([
+      'option-row game-button--pink',
+      'option-row game-button--purple',
+      'option-row game-button--green',
+    ]);
 
     menu.showPauseMenu();
     expect(classes()).toEqual([
@@ -129,7 +111,9 @@ describe('settings menu', () => {
     const { menu, buttons, store } = setup();
     menu.showSettingsMenu();
     const arrow = (label: string) =>
-      document.querySelector<HTMLButtonElement>(`#gameScreen [aria-label="${label}"]`)!;
+      buttons()[2]
+        .closest('.option-row')!
+        .querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!;
 
     buttons()[2].focus();
     arrow('Next').click();
@@ -141,21 +125,32 @@ describe('settings menu', () => {
     expect(store.current.language).toBe('en');
   });
 
-  it('redraws an open settings menu when the music is toggled from outside it', () => {
+  it('redraws an open settings menu when the music is turned off from outside it (M)', () => {
     const { menu, buttons, store } = setup();
     menu.showSettingsMenu();
 
-    store.cycle('musicMuted');
-    expect(buttons()[0].textContent).toBe('MUSIC: ON');
+    store.update({ musicVolume: 0 });
+    expect(buttons()[0].getAttribute('aria-valuetext')).toBe('OFF');
   });
 
-  it('keeps the keyboard focus on the setting that was just changed', () => {
-    const { menu, buttons } = setup();
+  it('steps a volume by its arrows, the keys, and plays a hit at the new sound volume', () => {
+    const onSoundVolume = vi.fn();
+    const { menu, buttons, store } = setup({ onSoundVolume });
     menu.showSettingsMenu();
+    const step = (index: number, code: string) =>
+      buttons()[index].dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true }));
 
-    buttons()[1].focus();
-    buttons()[1].click(); // sound, redrawing the whole menu
-    expect(document.activeElement).toBe(buttons()[1]);
+    buttons()[0].focus();
+    step(0, 'ArrowRight'); // from off
+    expect(store.current.musicVolume).toBe(10);
+    expect(buttons()[0].getAttribute('aria-valuetext')).toBe('10%');
+    // Redrawn, the focus stays on the setting that was just changed
+    expect(document.activeElement).toBe(buttons()[0]);
+    expect(onSoundVolume).not.toHaveBeenCalled();
+
+    step(1, 'ArrowLeft');
+    expect(store.current.soundVolume).toBe(90);
+    expect(onSoundVolume).toHaveBeenCalledOnce();
   });
 
   it('moves the focus to the first button of the menu it leads to', () => {
@@ -280,17 +275,20 @@ describe('settings menu', () => {
     const labels = () => buttons().map((b) => text(b));
     expect(labels()).toEqual([
       'MUSIC: OFF',
-      'SOUND EFFECTS: ON',
+      'SOUND EFFECTS: 100%',
       'LANGUAGE: ENGLISH',
       'CONTROLS',
       'BACK',
     ]);
 
-    // Switching a setting redraws the menu where it is
-    buttons()[0].click();
+    // Stepping a setting redraws the menu where it is
+    buttons()[0]
+      .closest('.option-row')!
+      .querySelector<HTMLButtonElement>('[aria-label="Next"]')!
+      .click();
     expect(labels()).toEqual([
-      'MUSIC: ON',
-      'SOUND EFFECTS: ON',
+      'MUSIC: 10%',
+      'SOUND EFFECTS: 100%',
       'LANGUAGE: ENGLISH',
       'CONTROLS',
       'BACK',
@@ -336,8 +334,8 @@ describe('settings menu', () => {
     menu.showSettingsMenu();
     document.getElementById('gameUI')?.classList.add('game__ui--hidden');
 
-    store.cycle('musicMuted');
+    store.update({ musicVolume: 0 });
     expect(document.getElementById('gameUI')?.classList.contains('game__ui--hidden')).toBe(true);
-    expect(buttons()[0].textContent).toBe('MUSIC: OFF');
+    expect(buttons()[0].getAttribute('aria-valuetext')).toBe('OFF');
   });
 });

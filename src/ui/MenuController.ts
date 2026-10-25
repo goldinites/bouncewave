@@ -27,6 +27,7 @@ import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
 import { Look } from '@/shared/look';
 import { BACKGROUND_CHOICES, SceneId } from '@/shared/scenes';
+import { Volume, VOLUMES } from '@/shared/volume';
 import { describeShortfall } from '@/ui/challengeTexts';
 import { ScreenEntry, ScreenStack, ScreenView } from '@/ui/ScreenStack';
 import { ButtonMenu } from '@/ui/screens/ButtonMenu';
@@ -99,6 +100,8 @@ export interface GameMenuActions {
   onResumeGame: () => void;
   onReturnToMainMenu: () => void;
   onUnlockAudio: () => void;
+  /** The sound volume was stepped: a hit plays at the new volume, as sounds play only in a match. */
+  onSoundVolume?: () => void;
   /** The quick match's setup came on screen (true) or gave way to another (false). */
   onQuickMatchSetup?: (isShown: boolean) => void;
   /**
@@ -107,17 +110,6 @@ export interface GameMenuActions {
    * belong to a match (pause, its end, an attempt's result) leave the backdrop as it is.
    */
   onMenuScene?: (scene: SceneId | null) => void;
-}
-
-/** An on/off setting: a toggle, filled while on; picking it switches it. */
-interface ToggleEntry {
-  kind: 'toggle';
-  key: keyof UserSettings;
-  label: (settings: UserSettings, i18n: I18nManager) => string;
-  isOn: (settings: UserSettings) => boolean;
-  /** Play the menu click after the change, e.g. to let the player hear sound is back on. */
-  clicks?: boolean;
-  color: ButtonColor;
 }
 
 /** A setting picked from a list: its name and value between arrows that step it either way. */
@@ -129,9 +121,9 @@ interface ChoiceEntry {
   /** Every value it can show, so its row keeps the widest one's room. */
   values: (i18n: I18nManager) => string[];
   color: ButtonColor;
+  /** A hit plays after the change, at the volume it set (the sound volume). */
+  previews?: boolean;
 }
-
-type SettingsMenuEntry = ToggleEntry | ChoiceEntry;
 
 /** Each mode's button color in the PLAY menu; a new mode needs one. */
 const MODE_COLORS: Record<ModeId, ButtonColor> = {
@@ -154,24 +146,28 @@ const isCourtTurned = (): boolean =>
 const isMotionReduced = (): boolean =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const onOff = (i18n: I18nManager, isMuted: boolean) => i18n.t(isMuted ? 'off' : 'on');
+/** A volume as the settings show it: in percent, OFF at none. */
+const volumeText = (i18n: I18nManager, volume: Volume) =>
+  volume === 0 ? i18n.t('off') : `${volume}%`;
 
 /** The settings menu, top to bottom. */
-const SETTINGS_MENU: SettingsMenuEntry[] = [
+const SETTINGS_MENU: ChoiceEntry[] = [
   {
-    kind: 'toggle',
-    key: 'musicMuted',
+    kind: 'choice',
+    key: 'musicVolume',
     color: 'pink',
-    label: (s, i18n) => `${i18n.t('music')}: ${onOff(i18n, s.musicMuted)}`,
-    isOn: (s) => !s.musicMuted,
+    name: (i18n) => i18n.t('music'),
+    value: (s, i18n) => volumeText(i18n, s.musicVolume),
+    values: (i18n) => VOLUMES.map((volume) => volumeText(i18n, volume)),
   },
   {
-    kind: 'toggle',
-    key: 'soundMuted',
+    kind: 'choice',
+    key: 'soundVolume',
     color: 'purple',
-    label: (s, i18n) => `${i18n.t('sound')}: ${onOff(i18n, s.soundMuted)}`,
-    clicks: true,
-    isOn: (s) => !s.soundMuted,
+    name: (i18n) => i18n.t('sound'),
+    value: (s, i18n) => volumeText(i18n, s.soundVolume),
+    values: (i18n) => VOLUMES.map((volume) => volumeText(i18n, volume)),
+    previews: true,
   },
   {
     kind: 'choice',
@@ -915,18 +911,10 @@ export class MenuController {
           subtitle: '',
           body: h(SettingsScreen, {
             items: [
-              ...SETTINGS_MENU.map((entry) =>
-                entry.kind === 'toggle'
-                  ? {
-                      kind: 'toggle' as const,
-                      id: entry.key,
-                      label: entry.label(settings, this.i18n),
-                      color: entry.color,
-                      isOn: entry.isOn(settings),
-                      onToggle: () => this.changeSetting(entry),
-                    }
-                  : { kind: 'choice' as const, ...this.choiceOf(entry, settings) },
-              ),
+              ...SETTINGS_MENU.map((entry) => ({
+                kind: 'choice' as const,
+                ...this.choiceOf(entry, settings),
+              })),
               {
                 kind: 'link' as const,
                 id: 'controls',
@@ -988,14 +976,9 @@ export class MenuController {
   }
 
   /** Switches one setting; the screen showing it is drawn again by itself. */
-  private changeSetting(
-    entry: { key: keyof UserSettings; clicks?: boolean },
-    step: 1 | -1 = 1,
-  ): void {
+  private changeSetting(entry: ChoiceEntry, step: 1 | -1 = 1): void {
     this.settings.cycle(entry.key, step);
-    if (entry.clicks) {
-      // Only audible when sound is on
-      this.sfx.playSettingsClick();
-    }
+    // Silent at none
+    if (entry.previews) this.actions.onSoundVolume?.();
   }
 }
