@@ -135,6 +135,31 @@ describe('MatchFlow', () => {
     expect(events.find((e) => e.type === 'paddleHit')).toMatchObject({ paddleIndex: 0, rally: 1 });
   });
 
+  it('gives a paddle perfect hits and Overdrive in the middle of a match, or takes them away', () => {
+    const { flow, ball, paddles, events, clear, finishServe } = setup();
+    flow.startMatch();
+    finishServe();
+    const [left] = paddles;
+    /** A return off the very center of the left paddle: perfect, if the paddle has the zone. */
+    const centreHit = () => {
+      clear();
+      left.y = left.targetY = ball.y;
+      ball.x = left.x + PADDLE.WIDTH + 2;
+      ball.vx = -400;
+      ball.vy = 0;
+      flow.update(0.001);
+      return events.find((e) => e.type === 'paddleHit');
+    };
+
+    flow.setMechanics(0, { perfect: false, overdrive: false });
+    expect(centreHit()).toMatchObject({ isPerfect: false });
+    expect(flow.overdriveCharges[0]).toBeNull();
+
+    flow.setMechanics(0, { perfect: true, overdrive: true });
+    expect(flow.overdriveCharges[0]).toBe(0);
+    expect(centreHit()).toMatchObject({ isPerfect: true });
+  });
+
   it('runs the finale after the winning point, then returns to the demo', () => {
     const { flow, events, clear, scoreFor } = setup();
     flow.startMatch();

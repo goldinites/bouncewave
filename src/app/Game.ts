@@ -31,6 +31,7 @@ import {
   TUTORIAL_STEPS,
   TutorialCoach,
   TutorialStep,
+  tutorialMechanics,
 } from '@/match/tutorial';
 import { isSkillId, SKILL_IDS, SkillId } from '@/match/skills/Skill';
 import { challengeState, isEveryChallengePassed, markPassed } from '@/profile/ChallengeProgress';
@@ -85,6 +86,8 @@ export class Game {
   private readonly tutorialCoach: TutorialCoach;
   /** For developers: the step ?tutorial= starts the tutorial at. */
   private pinnedTutorialStep: TutorialStep = TUTORIAL_STEPS[0];
+  /** The step whose moves the learner's paddle has (tutorialMechanics), to give the next ones. */
+  private tutorialMechanicsStep: TutorialStep = TUTORIAL_STEPS[0];
   /**
    * Two players on a phone held upright: their match (its pause and its end too) is shown in
    * landscape, the phone held sideways between them. Off again back on the main menu.
@@ -511,10 +514,15 @@ export class Game {
       // The learner against the trainer, on the Range, from the first step
       this.matchScene = 'range';
       this.tutorialCoach.reset(this.pinnedTutorialStep);
+      // Perfect hits and Overdrive come in with the steps that teach them
+      this.tutorialMechanicsStep = this.pinnedTutorialStep;
       this.flow.startMatch(
         TUTORIAL_RULES,
         [
-          { controller: new HumanController(this.inputHandler), overdrive: true },
+          {
+            controller: new HumanController(this.inputHandler),
+            ...tutorialMechanics(this.pinnedTutorialStep),
+          },
           { controller: new TrainerController(Math.random), overdrive: false },
         ],
         DifficultyLevel.EASY,
@@ -743,6 +751,12 @@ export class Game {
     const isTutorialOn = this.isTutorial && !this.flow.isDemo;
     if (isTutorialOn && !isPaused) {
       this.tutorialCoach.update(realDt);
+      // A new step: the learner's paddle gets the moves it teaches
+      const step = this.tutorialCoach.progress?.step;
+      if (step && step !== this.tutorialMechanicsStep) {
+        this.tutorialMechanicsStep = step;
+        this.flow.setMechanics(0, tutorialMechanics(step));
+      }
       if (this.tutorialCoach.isFinished) this.finishTutorial();
       else this.showTutorialCard();
     }

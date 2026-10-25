@@ -97,6 +97,11 @@ export interface Participant {
   readonly controller: PaddleController;
   /** Whether the paddle charges Overdrive, when the match's rules have it on. */
   readonly overdrive: boolean;
+  /**
+   * Whether a hit off the paddle's center is a perfect one; true when left out. The tutorial
+   * holds perfect hits back until the step that teaches them.
+   */
+  readonly perfect?: boolean;
   /** The paddle they play with; the standard one when left out. */
   readonly paddle?: PaddleSpec;
   /** What they can do beyond the base game (match/skills/); none when left out. */
@@ -234,6 +239,19 @@ export class MatchFlow {
     if (this._phase !== 'rally') return [];
     // A CPU's reads sharpen its eye; nothing of them is shown
     return this.skills.reads.filter((read) => this.isPlayerPaddle(read.paddleIndex));
+  }
+
+  /**
+   * Gives paddle `index` perfect hits and Overdrive, or takes them away, in the middle of the
+   * match: the tutorial opens each at the step that teaches it. A meter given anew starts empty.
+   */
+  public setMechanics(index: number, mechanics: { perfect: boolean; overdrive: boolean }): void {
+    const participant = this.lineup[index];
+    if (!participant) return;
+    const { perfect, overdrive } = mechanics;
+    if (overdrive && !participant.overdrive) this.overdrives[index].reset();
+    this.lineup = this.lineup.map((p, i) => (i === index ? { ...p, perfect, overdrive } : p));
+    this.paddles[index].hasPerfectZone = perfect;
   }
 
   /** Whether paddle `index` charges Overdrive: in a real match, if it and the rules have it. */
@@ -641,6 +659,7 @@ export class MatchFlow {
     lineup.forEach(({ paddle, skills = [] }, i) => {
       this.paddles[i].useSpec(paddle ?? STANDARD_PADDLE);
       this.paddles[i].perfectZoneScale = 1;
+      this.paddles[i].hasPerfectZone = lineup[i].perfect ?? true;
       this.overdrives[i].useCore(skills.some((id) => IMPLANTS.includes(id)));
       lineup[i].controller.useSkills?.(skills);
     });

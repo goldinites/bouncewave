@@ -350,6 +350,13 @@ describe('Game', () => {
       screenButton('YES').click();
       // The tutorial has music of its own
       expect(places.mock.calls.at(-1)?.[0]).toBe('tutorial');
+      // Nothing it hasn't taught yet: no perfect hits, no Overdrive meter
+      const { flow, paddles } = game as unknown as {
+        flow: MatchFlow;
+        paddles: { hasPerfectZone: boolean }[];
+      };
+      expect(flow.overdriveCharges[0]).toBeNull();
+      expect(paddles[0].hasPerfectZone).toBe(false);
       expect(isMenuOpen()).toBe(false);
       expect(isPauseButtonShown()).toBe(true);
       // Started is not gone through: left halfway, it is offered again
