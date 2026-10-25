@@ -24,6 +24,15 @@ export type ModifierId = (typeof MODIFIER_IDS)[number];
 export const isModifierId = (value: string): value is ModifierId =>
   (MODIFIER_IDS as readonly string[]).includes(value);
 
+/** A moment of a modifier's worth hearing or showing: the match reports it as a `modifier` event. */
+export type ModifierMoment =
+  // The wind has turned around, now blowing this way (+1 down the court's y)
+  | { moment: 'windTurn'; direction: number }
+  // The middle post starts rising (Bumpers)
+  | { moment: 'postRise' }
+  // A paddle shrank on its hit (Shrinking paddle), to this share of its height
+  | { moment: 'paddleShrink'; paddleIndex: number; share: number };
+
 /** What a modifier may read and change of the match. */
 export interface ModifierHost {
   readonly paddles: readonly Paddle[];
@@ -34,6 +43,8 @@ export interface ModifierHost {
   isPlayerPaddle(index: number): boolean;
   /** The match's own randomness, so a seed still replays it. */
   random(): number;
+  /** Tells the match a moment worth hearing happened; it changes nothing. */
+  report(moment: ModifierMoment): void;
 }
 
 /**

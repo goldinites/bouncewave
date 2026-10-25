@@ -85,7 +85,12 @@ describe('the menus in the classic look', () => {
     const menu = new MenuController(
       ui,
       i18n,
-      {} as SoundEffects,
+      {
+        playSettingsClick: vi.fn(),
+        playMenuBack: vi.fn(),
+        playMenuMove: vi.fn(),
+        playMenuSelect: vi.fn(),
+      } as unknown as SoundEffects,
       store,
       actions,
       undefined,

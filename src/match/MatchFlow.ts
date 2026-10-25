@@ -1,7 +1,7 @@
 import { ShotThreat, SHOT_THREAT } from '@/match/AiController';
 import { Ball } from '@/match/Ball';
 import { Brick, CourtConditions } from '@/match/court';
-import { ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
+import { ModifierHost, ModifierId, ModifierMoment } from '@/match/modifiers/Modifier';
 import { HALVES, SECOND_PADDLE_STEP } from '@/match/modifiers/modifiers';
 import { ModifierSet } from '@/match/modifiers/ModifierSet';
 import { BALL, COURT } from '@/match/config';
@@ -55,7 +55,7 @@ export type MatchEvent =
   | { type: 'matchStart' }
   | { type: 'returnToMenu' }
   | { type: 'serve' }
-  | { type: 'wallBounce'; x: number; y: number }
+  | { type: 'wallBounce'; x: number; y: number; isPost?: boolean }
   // A ball broke a brick (Bricks), bouncing off it
   | { type: 'brickBreak'; brick: Brick; x: number; y: number }
   | {
@@ -77,6 +77,8 @@ export type MatchEvent =
     }
   // A paddle's skill did something worth showing (docs/PROGRESSION.md)
   | ({ type: 'skill' } & SkillUse)
+  // A modifier's moment worth hearing: the wind turning, a post rising, a paddle shrinking
+  | ({ type: 'modifier' } & ModifierMoment)
   // The side that won the point, and the side that won the match
   | { type: 'score'; scoringPlayerIndex: Side; y: number; isDemo: boolean }
   | {
@@ -675,6 +677,7 @@ export class MatchFlow {
       court: this._court,
       isPlayerPaddle: (index) => this.isPlayerPaddle(index),
       random: this.random,
+      report: (moment) => this.emit({ type: 'modifier', ...moment }),
     };
   }
 

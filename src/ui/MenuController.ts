@@ -268,6 +268,8 @@ export class MenuController {
     this.uiManager = uiManager;
     this.i18n = i18n;
     this.sfx = sfx;
+    uiManager.onMenuSound = (sound) =>
+      sound === 'move' ? sfx.playMenuMove() : sfx.playMenuSelect();
     this.settings = settings;
     this.actions = actions;
     this.statistics = statistics;
@@ -321,7 +323,7 @@ export class MenuController {
 
   /** Back down the stack, as BACK does. */
   private readonly back = () => {
-    this.stack.back();
+    if (this.stack.back()) this.sfx.playMenuBack();
   };
 
   public showMainMenu(): void {
@@ -893,7 +895,9 @@ export class MenuController {
    */
   public goBack(): boolean {
     if (!this.uiManager.isMenuVisible) return false;
-    return this.stack.back();
+    const isBack = this.stack.back();
+    if (isBack) this.sfx.playMenuBack();
+    return isBack;
   }
 
   /**

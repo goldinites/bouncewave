@@ -5,7 +5,7 @@ import { CourtConditions } from '@/match/court';
 import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { forecastArrival } from '@/match/forecast';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
-import { MODIFIER_IDS, ModifierHost, ModifierId } from '@/match/modifiers/Modifier';
+import { MODIFIER_IDS, ModifierHost, ModifierId, ModifierMoment } from '@/match/modifiers/Modifier';
 import {
   BRICK_WALL,
   BRICKS,
@@ -42,6 +42,7 @@ const ballOver = (conditions: CourtConditions, x: number, y: number, vx: number,
 const make = (id: ModifierId, balls: Ball[] = []) => {
   const paddles = court();
   const conditions = new CourtConditions();
+  const moments: ModifierMoment[] = [];
   let seed = 0.13;
   const host: ModifierHost = {
     paddles,
@@ -50,8 +51,9 @@ const make = (id: ModifierId, balls: Ball[] = []) => {
     isPlayerPaddle: (index) => index === 0,
     // A spread of values, so the wind's gusts differ
     random: () => (seed = (seed * 9301 + 0.4927) % 1),
+    report: (moment) => void moments.push(moment),
   };
-  return { modifier: MODIFIERS[id](host), paddles, conditions };
+  return { modifier: MODIFIERS[id](host), paddles, conditions, moments };
 };
 
 describe('The court’s conditions in the physics', () => {
@@ -106,7 +108,8 @@ describe('The court’s conditions in the physics', () => {
       events.push(...Physics.step(ball, [], CONFIG, STEP));
     }
     expect(ball.vx).toBeLessThan(0);
-    expect(events.some((event) => event.type === 'wallBounce')).toBe(true);
+    // A post's bounce, told from a wall's, for its own sound
+    expect(events).toContainEqual(expect.objectContaining({ type: 'wallBounce', isPost: true }));
   });
 
   it('bounces the ball off a brick, leaving the breaking of it to the match', () => {
@@ -141,14 +144,16 @@ describe('The court’s conditions in the physics', () => {
 
 describe('The modifiers', () => {
   it('turns the wind around every period, warning of it as it comes', () => {
-    const { modifier, conditions } = make('wind');
+    const { modifier, conditions, moments } = make('wind');
     modifier.start!();
     const before = Math.sign(conditions.wind);
     for (let t = 0; t < WIND.PERIOD - 0.5; t += 0.1) modifier.beforeStep!(0.1);
     expect(conditions.windTurnsIn).toBeLessThan(WIND.WARNING);
     expect(Math.sign(conditions.wind)).toBe(before);
+    expect(moments).toEqual([]);
     for (let t = 0; t < 1; t += 0.1) modifier.beforeStep!(0.1);
     expect(Math.sign(conditions.wind)).toBe(-before);
+    expect(moments).toEqual([{ moment: 'windTurn', direction: -before }]);
 
     modifier.end!();
     expect(conditions.wind).toBe(0);
@@ -198,7 +203,7 @@ describe('The modifiers', () => {
 
   it('raises the middle post only into an empty middle, never at the serve', () => {
     const ball = ballOver(new CourtConditions(), COURT.WIDTH / 2, COURT.HEIGHT / 2, 0);
-    const { modifier, conditions } = make('bumpers', [ball]);
+    const { modifier, conditions, moments } = make('bumpers', [ball]);
     modifier.start!();
     const middle = () => conditions.bumpers.find((post) => post.y === COURT.HEIGHT / 2);
     expect(conditions.bumpers).toHaveLength(2);
@@ -206,9 +211,11 @@ describe('The modifiers', () => {
     // Its time comes with the ball in the middle: it waits
     for (let t = 0; t < BUMPERS.DOWN + 1; t += 0.05) modifier.beforeStep!(0.05);
     expect(middle()).toBeUndefined();
+    expect(moments).toEqual([]);
 
     ball.x = 100;
     modifier.beforeStep!(0.05);
+    expect(moments).toEqual([{ moment: 'postRise' }]);
     modifier.beforeStep!(BUMPERS.RISE / 2);
     expect(middle()!.growth).toBeGreaterThan(0);
     expect(middle()!.growth).toBeLessThan(1);
@@ -220,7 +227,7 @@ describe('The modifiers', () => {
   });
 
   it('shrinks the player’s paddle with each of their hits, whole again at the serve', () => {
-    const { modifier, paddles } = make('shrinkingPaddle');
+    const { modifier, paddles, moments } = make('shrinkingPaddle');
     modifier.start!();
     const hit = (paddleIndex: number) =>
       modifier.afterHit!({ paddleIndex, ball: new Ball(), isPerfect: false, isPowerShot: false });
@@ -230,8 +237,16 @@ describe('The modifiers', () => {
     hit(1);
     expect(paddles[0].spec.height).toBeCloseTo(PADDLE.HEIGHT * (1 - 2 * SHRINK.PER_HIT));
     expect(paddles[1].spec.height).toBe(PADDLE.HEIGHT);
+    expect(moments).toEqual([
+      { moment: 'paddleShrink', paddleIndex: 0, share: 1 - SHRINK.PER_HIT },
+      { moment: 'paddleShrink', paddleIndex: 0, share: 1 - 2 * SHRINK.PER_HIT },
+    ]);
     for (let i = 0; i < 20; i++) hit(0);
     expect(paddles[0].spec.height).toBeCloseTo(PADDLE.HEIGHT * SHRINK.FLOOR);
+    // Once at its floor it shrinks no more, and says nothing
+    const shrinks = moments.length;
+    hit(0);
+    expect(moments).toHaveLength(shrinks);
 
     modifier.onServe!();
     expect(paddles[0].spec.height).toBe(PADDLE.HEIGHT);
