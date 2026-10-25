@@ -475,6 +475,86 @@ const SIGNAL_ECHO = `D4 - - - - - E4 - - - - - - - - - | D5 - - - - - C5 - - - B
                    | D4 - - - - - - - - - - - E4 - - - | D5 - - - - - C5 - - - B4 - - - - -
                    | E4 - - - - - - - - - - - - - - - | . . . . . . . . . . . . . . . .`;
 
+// ——— Sketches, for the stand: three tragic melodies for Signal Lost's verse and chorus, over its
+// base as it is ———
+
+/** Lament, the verse: a line falling from D5 a step at a time, each phrase starting lower. */
+const SIGNAL_FALL_VERSE = `D5 - - - - - - - - - - - C#5 D5 C#5 - | B4 - - - - - - - - - - - . . . .
+                         | B4 - - - - - - - A4 - - - - - - - | G4 - - - - - - - - - - - F#4 E4 F#4 -
+                         | E5 - - - - - - - D5 - - - - - - - | B4 - - - - - - - A4 - - - G4 - - -
+                         | C#5 - - - - - - - - - - - B4 - A#4 - | F#4 - - - - - - - - - - - - - . .`;
+
+/** Lament, the chorus: down by semitones from D5 to G4 over four bars, cried back up to E5. */
+const SIGNAL_FALL_CHORUS = `D5 - - - - - - - C#5 - - - C5 - - - | B4 - - - - - - - - - - - - - . .
+                          | B4 - - - A#4 - - - A4 - - - G#4 - - - | G4 - - - - - - - - - - - E5 D5 C#5 -
+                          | B4 - - - E5 - - - - - - - D5 - - - | B4 - - - - - - - A4 - - - G4 - F#4 -
+                          | A#4 - - - - - - - - - - - C#5 - A#4 - | F#4 - - - - - - - - - - - - - . .`;
+
+/** Cry, the verse: a leap of a sixth or an octave from low, then a fall; the octave in bar 5. */
+const SIGNAL_CRY_VERSE = `F#4 - - - D5 - - - - - - - C#5 B4 A#4 - | B4 - - - - - - - - - - - . . . .
+                        | D4 - - - B4 - - - - - - - A4 - G4 - | D5 - - - - - - - B4 - - - - - . .
+                        | E4 - - - E5 - - - - - - - - - - - | D5 - - - - - - - B4 - - - G4 - - -
+                        | C#5 - - - - - - - A#4 - - - - - - - | F#4 - - - - - - - . . . . . . . .`;
+
+/** Cry, the chorus: octaves leapt up from the bottom, each sobbing back down. */
+const SIGNAL_CRY_CHORUS = `D4 - - - D5 - - - - - - - - - - - | C#5 - - - - - - - B4 - A#4 - B4 - - -
+                         | D4 - - - E5 - - - - - - - - - - - | D5 - - - - - - - B4 A4 G4 - . . . .
+                         | E4 - - - - - - - E5 - - - - - - - | D5 - - - - - - - - - - - B4 - G4 -
+                         | A#4 - - - - - - - C#5 - - - - - - - | F#4 - - - - - - - - - - - - - . .`;
+
+/** Sighs, the verse: a note a step above the chord on the downbeat, falling onto it. */
+const SIGNAL_SIGH_VERSE = `C#5 - - - - - B4 - - - - - - - . . | E4 - - - - - D4 - - - . . F#4 G4 F#4 -
+                         | A4 - - - - - G4 - - - - - - - . . | E5 - - - - - D5 - - - - - B4 - - -
+                         | E5 - - - - - - - D5 - - - - - B4 - | A4 - - - - - G4 - - - . . G4 F#4 E4 -
+                         | G#4 - - - - - F#4 - - - - - - - . . | A#4 - - - - - - - - - - - - - . .`;
+
+/** Sighs, the chorus: the same falling steps, higher and longer, in 3+3+2. */
+const SIGNAL_SIGH_CHORUS = `E5 - - - - - D5 - - - - - C#5 - - - | B4 - - - - - - - . . A#4 B4 C#5 - - -
+                          | A4 - - - - - G4 - - - - - B4 - - - | D5 - - - - - - - - - - - . . . .
+                          | E5 - - - - - - - - - - - D5 C#5 D5 - | A4 - - - - - G4 - - - . . B4 - G4 -
+                          | G#4 - - - - - F#4 - - - - - C#5 - - - | A#4 - - - - - - - - - - - - - . .`;
+
+/** A sketch of Signal Lost with other melodies: its verse (hook) and its peak (hot) as they are. */
+const signalSketch = (title: string, verse: string, chorus: string): SongDef => ({
+  title,
+  sketch: true,
+  level: -0.5,
+  bpm: 104,
+  swing: 0,
+  kit: 'net',
+  room: 'void',
+  pump: 0.5,
+  grit: 8,
+  voices: { lead: 'pwm', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+  sections: [
+    {
+      name: 'hook',
+      tier: 'groove',
+      chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
+      lead: verse,
+      arpLine: SIGNAL_ARP,
+      bass: 'long',
+      drums: 'signal',
+      pad: 'swell',
+      sweep: { arp: [0.4, 1.3] },
+      mix: { bass: -4 },
+    },
+    {
+      name: 'hot',
+      tier: 'high',
+      chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
+      lead: chorus,
+      leadVoice: 'saw',
+      arpLine: SIGNAL_TRIPLET,
+      bass: 'drive',
+      drums: 'netPulseHot',
+      pad: 'hold',
+      stabs: 'push',
+      drop: true,
+    },
+  ],
+});
+
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
  * the hottest rallies, and the conductor moves between them as the match heats up and cools
@@ -1329,6 +1409,9 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  signalSketch('Signal Lost v2', SIGNAL_FALL_VERSE, SIGNAL_FALL_CHORUS),
+  signalSketch('Signal Lost v3', SIGNAL_CRY_VERSE, SIGNAL_CRY_CHORUS),
+  signalSketch('Signal Lost v4', SIGNAL_SIGH_VERSE, SIGNAL_SIGH_CHORUS),
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);
