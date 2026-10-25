@@ -828,19 +828,22 @@ export class Game {
   }
 
   /**
-   * The quick match's background was picked: from now on matches are played on it, and it cuts
-   * in behind the menu at once, its song with it, so the player can flick through them; random
-   * puts the unknown channel there, since which backdrop it will be is not known yet.
+   * The quick match's background was picked: from now on matches are played on it, and its
+   * channel is tuned to behind the menu at once, a burst of static as it comes on and its song
+   * with it, so the player can flick through them; random tunes to the unknown channel, since
+   * which backdrop it will be is not known yet.
    */
   private previewBackground(choice: BackgroundChoice): void {
     this.renderer.chooseBackground(choice);
     if (this.flow.phase !== 'attract') return;
     if (choice === 'random') {
-      this.renderer.showMystery();
-      return;
+      this.renderer.showMystery(true);
+    } else {
+      this.audio.music.enterScene(this.renderer.tuneBackground());
+      this.showDebugDetail();
     }
-    this.audio.music.enterScene(this.renderer.switchChannel(false));
-    this.showDebugDetail();
+    // The old set's relay is heard only when its static is seen
+    if (this.renderer.isSurfing) this.audio.sfx.playChannelTune();
   }
 
   /** For developers, from the debug menu: pins a background, its music coming in with it. */

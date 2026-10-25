@@ -1473,6 +1473,34 @@ export class SoundEffects {
    * in (the climbing square blips grated); as the last one comes on the static clears and a soft
    * chime, the chord's root and fifth, says the picture is in (CHANNEL_SOUND).
    */
+  /**
+   * One channel tuned to straight off, as the quick match's setup flicks between backdrops: the
+   * relay's thud and a breath of static clearing, no chime — the menu's own tick says the choice.
+   */
+  public playChannelTune(): void {
+    const ac = this.getUnmutedContext();
+    if (!ac) return;
+    const { RELAY, STATIC } = CHANNEL_SOUND;
+    this.hitTone(ac, {
+      frequency: RELAY.HZ,
+      wave: 'sine',
+      volume: RELAY.VOLUME,
+      length: RELAY.LENGTH,
+      pan: 0,
+      from: RELAY.FROM,
+      glide: RELAY.LENGTH * 0.5,
+    });
+    this.noiseBurst(ac, {
+      volume: STATIC.VOLUME,
+      length: CHANNEL_SURF.TUNE,
+      pan: 0,
+      filter: 'lowpass',
+      from: STATIC.CUTOFF,
+      to: STATIC.CLEAR,
+      smooth: true,
+    });
+  }
+
   public playChannelSurf(): void {
     const ac = this.getUnmutedContext();
     if (!ac) return;

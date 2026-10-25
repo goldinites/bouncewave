@@ -239,15 +239,30 @@ export class Renderer {
    * @returns the backdrop on screen now
    */
   public switchChannel(isAnimated = true, scene: SceneId | null = null): SceneId {
-    return this.background.switchChannel(
-      isAnimated && !this.reducedMotion.matches && this.showsEffects,
-      scene,
-    );
+    return this.background.switchChannel(isAnimated && this.isAnimating, scene);
   }
 
-  /** Puts the unknown channel in place of the background until the next switchChannel. */
-  public showMystery(): void {
-    this.background.showMystery();
+  /**
+   * Puts the unknown channel in place of the background until the next switchChannel.
+   * @param isTuned tuned to as the setup flicks to it: a burst of static as it comes on (a plain
+   *   cut with reduced motion)
+   */
+  public showMystery(isTuned = false): void {
+    this.background.showMystery(isTuned && this.isAnimating);
+  }
+
+  /**
+   * Tunes straight to the background the player chose, as the quick match's setup flicks between
+   * them: a burst of static as its channel comes on (a plain cut with reduced motion).
+   * @returns the backdrop on screen now
+   */
+  public tuneBackground(): SceneId {
+    return this.isAnimating ? this.background.tune() : this.background.switchChannel(false);
+  }
+
+  /** Whether a switch of background may be animated: effects on, and no reduced motion. */
+  private get isAnimating(): boolean {
+    return !this.reducedMotion.matches && this.showsEffects;
   }
 
   /** Whether the unknown channel stands in for the background right now. */

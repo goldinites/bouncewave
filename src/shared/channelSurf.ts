@@ -9,4 +9,9 @@ export const CHANNEL_SURF = {
   STEP: 0.14,
   /** Seconds the static takes to clear once the last one is on. */
   SETTLE: 0.35,
+  /**
+   * Seconds the static takes to clear when one channel is tuned to straight off, as the quick
+   * match's setup flicks between backdrops: quick enough to flick through them.
+   */
+  TUNE: 0.25,
 } as const;

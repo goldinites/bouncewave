@@ -36,6 +36,10 @@ interface Surf {
   age: number;
   /** Background indices shown in turn, the last one the one that stays. */
   channels: number[];
+  /** Seconds the static takes to clear on the last one. */
+  settle: number;
+  /** Whether it tunes to the unknown channel, which the last one stands for. */
+  toMystery?: boolean;
 }
 
 /**
@@ -162,8 +166,9 @@ export class BackgroundRenderer {
     const target = asked >= 0 ? asked : this.chosen;
     // Already on it (and showing it, not the mystery): it stays
     if (target === previous && !wasMystery) return this.scene;
-    // A cut or a surf takes over from a dissolve on its way
+    // A cut or a surf takes over from a dissolve or a burst of static on its way
     this.dissolving = null;
+    this.surf = null;
     this.backgroundIndex = target ?? this.deal();
 
     // Channels flicking past are the pickable ones, each unlike the one before, ending on the
@@ -180,20 +185,46 @@ export class BackgroundRenderer {
       }
       if (last === this.backgroundIndex) channels.pop();
       channels.push(this.backgroundIndex);
-      this.surf = { age: 0, channels };
+      this.surf = { age: 0, channels, settle: CHANNEL_SURF.SETTLE };
     }
     return this.scene;
   }
 
   /**
+   * Tunes straight to the backdrop the player chose, as the quick match's setup flicks between
+   * them: one burst of static as its channel comes on, no channels flicking past first.
+   * @returns the backdrop on screen now
+   */
+  public tune(): SceneId {
+    const before = this.backgroundIndex;
+    const wasMystery = this._isShowingMystery;
+    const scene = this.switchChannel(false);
+    if (this.backgroundIndex !== before || wasMystery) this.tuneIn(false);
+    return scene;
+  }
+
+  /** One burst of static over the channel coming on: the backdrop's, or the unknown one. */
+  private tuneIn(toMystery: boolean): void {
+    this.surf = {
+      age: 0,
+      channels: [this.backgroundIndex],
+      settle: CHANNEL_SURF.TUNE,
+      toMystery,
+    };
+  }
+
+  /**
    * Shows the unknown channel in place of the background (the player picked "random"), until
    * the next switchChannel deals a real one. Not over a developer's pin.
+   * @param isTuned tuned to as the setup flicks to it: one burst of static as it comes on
    */
-  public showMystery(): void {
+  public showMystery(isTuned = false): void {
     if (this._isPinned) return;
+    const wasMystery = this._isShowingMystery;
     this._isShowingMystery = true;
     this.surf = null;
     this.dissolving = null;
+    if (isTuned && !wasMystery) this.tuneIn(true);
   }
 
   /** Whether the unknown channel stands in for the background right now. */
@@ -303,10 +334,10 @@ export class BackgroundRenderer {
     }
 
     const surf = this.advanceSurf(dt);
-    const background =
-      this._isShowingMystery && !surf
-        ? this.mystery
-        : this.backgrounds[surf?.channel ?? this.backgroundIndex];
+    const isMystery = this._isShowingMystery && (!surf || this.surf?.toMystery);
+    const background = isMystery
+      ? this.mystery
+      : this.backgrounds[surf?.channel ?? this.backgroundIndex];
 
     // At each switch the picture rolls down a little and settles, as an old set's would
     const roll = surf?.roll ?? 0;
@@ -339,9 +370,9 @@ export class BackgroundRenderer {
     if (!surf) return null;
 
     surf.age += dt;
-    const { STEP, SETTLE } = CHANNEL_SURF;
+    const { STEP } = CHANNEL_SURF;
     const last = surf.channels.length - 1;
-    if (surf.age >= last * STEP + SETTLE) {
+    if (surf.age >= last * STEP + surf.settle) {
       this.surf = null;
       return null;
     }
@@ -349,7 +380,7 @@ export class BackgroundRenderer {
     const step = Math.min(last, Math.floor(surf.age / STEP));
     // Static flares at every switch and fades through the step; on the last one it fades for good
     const sinceSwitch = surf.age - step * STEP;
-    const fade = step < last ? sinceSwitch / STEP : sinceSwitch / SETTLE;
+    const fade = step < last ? sinceSwitch / STEP : sinceSwitch / surf.settle;
     const noise = (1 - fade) * (step < last ? 1 : 0.8);
     return { channel: surf.channels[step], noise, roll: (1 - fade) ** 2 * STATIC.ROLL };
   }

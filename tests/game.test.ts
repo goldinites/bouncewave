@@ -248,6 +248,16 @@ describe('Game', () => {
     expect(places).not.toHaveBeenCalled();
   });
 
+  it('tunes to each backdrop flicked to in the setup, with the old set’s relay', () => {
+    const { sfx } = (game as unknown as { audio: { sfx: { playChannelTune(): void } } }).audio;
+    const tunes = vi.spyOn(sfx, 'playChannelTune');
+    buttons()[0].click(); // play
+    screenButton('QUICK MATCH').click();
+    const before = tunes.mock.calls.length;
+    document.querySelectorAll<HTMLButtonElement>('[aria-label="Next"]')[0].click(); // background
+    expect(tunes.mock.calls.length).toBe(before + 1);
+  });
+
   it('cuts a random backdrop straight in on leaving the setup, no channels flicking past', () => {
     const { renderer } = game as unknown as {
       renderer: { isShowingMystery: boolean; background: { surf: unknown } };

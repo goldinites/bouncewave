@@ -97,6 +97,31 @@ describe('BackgroundRenderer', () => {
     expect(renderer.isSurfing).toBe(false);
   });
 
+  it('tunes straight to the chosen backdrop with one short burst of static', () => {
+    const scenes: SceneId[] = ['lasers', 'fuji', 'neonCity'];
+    const renderer = new BackgroundRenderer(
+      scenes.map((scene) => fakeBackground(0.1, false, scene)),
+    );
+    renderer.choose(renderer.scene === 'fuji' ? 'lasers' : 'fuji');
+    const tuned = renderer.tune();
+    expect(renderer.scene).toBe(tuned);
+    expect(renderer.isSurfing).toBe(true);
+    // Quicker than the match's surf: it clears in a quarter of a second
+    draw(renderer, 0);
+    draw(renderer, 0.1);
+    expect(renderer.isSurfing).toBe(true);
+    draw(renderer, 0.2);
+    draw(renderer, 0.3);
+    expect(renderer.isSurfing).toBe(false);
+    // Already on it, nothing to tune to
+    renderer.tune();
+    expect(renderer.isSurfing).toBe(false);
+    // The unknown channel is tuned to the same way, once
+    renderer.showMystery(true);
+    expect(renderer.isShowingMystery).toBe(true);
+    expect(renderer.isSurfing).toBe(true);
+  });
+
   it('keeps a pinned background through every match', () => {
     const scenes: SceneId[] = ['lasers', 'fuji', 'neonCity'];
     const renderer = new BackgroundRenderer(
