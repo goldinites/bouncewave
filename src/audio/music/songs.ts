@@ -1,4 +1,4 @@
-import { additive, cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
+import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 
 /*
@@ -368,8 +368,9 @@ const FURIN_VALLEY = `. . . . . D6 - - - - - - - - - - | - - - A5 - - - - - - - 
                     | . . . . . . G5 - - - - - - - - - | - - - - - - - - - - - Bb5 - - - -
                     | - - - - . . . . . . . . . A5 - - | - - - - - - - - . . . . . . . .`;
 
-// ——— The warehouse's track, 5.11's bases to choose from (no melody yet): the factory's kit, each
-// on its own process and reference, nothing Asian ———
+// ——— The warehouse's track (5.11): EBM after Front 242 and Nitzer Ebb, chosen of three bases —
+// a bass sequenced in sixteenths marching in C minor, the factory's kit; three melodies over it
+// to choose from, each starting its notes off the beat, as none of the other tracks does ———
 
 /** EBM's sequenced bass: the root in a machine's sixteenths, the octave and the fifth kicking in. */
 const CONVEYOR_BASS = cycle(
@@ -381,14 +382,23 @@ const CONVEYOR_BASS = cycle(
   euclid(12, 16, 1),
 );
 
-/** The press's pluck: a cell growing a note a bar and shrinking back, as a machine winds up. */
-const PRESS_PLUCK = additive(['D4', 'D5', 'A4', 'Eb5', 'D5', 'A4', 'F4'], [2, 3, 4, 5, 6, 7, 5, 3]);
+/** A, the chant (Nitzer Ebb): one note hammered off the beat, shouted, then a held answer. */
+const CONVEYOR_CHANT = `. . C5 . . C5 . Eb5 . . C5 . G4 . . . | . . C5 . . C5 . Eb5 . . F5 - Eb5 - C5 -
+                      | . . G5 . . G5 . F5 . . Eb5 . C5 . . . | D5 - - - - - - - . . . . . . . .
+                      | . . F5 . . F5 . Ab5 . . F5 . C5 . . . | . . Ab5 . . G5 . F5 . . Eb5 - - - . .
+                      | . . G5 . . G5 . . B4 . D5 . G5 - - - | D5 - - - - - - - B4 - - - . . . .`;
 
-/** Industrial metal's chug: the root muted in eighths, stopped dead, the turn on the last beat. */
-const FURNACE_BASS = `A1 A1 . A1 A1 . A1 . C2 . A1 A1 . G1 . . | A1 A1 . A1 A1 . A1 . E2 . D2 . C2 . G1 .
-                    | F1 F1 . F1 F1 . F1 . A1 . F1 F1 . E1 . . | G1 G1 . G1 G1 . G1 . B1 . D2 . G1 . . .
-                    | A1 A1 . A1 A1 . A1 . C2 . A1 A1 . G1 . . | A1 A1 . A1 A1 . A1 . E2 . D2 . C2 . G1 .
-                    | F1 F1 . F1 F1 . F1 . A1 . F1 F1 . E1 . . | E1 E1 . E1 E1 . E1 . G#1 . B1 . E2 . . .`;
+/** B, the call (Front 242): a rising 3+3 figure answered by its fall, peaking on C6 in bar 5. */
+const CONVEYOR_CALL = `C5 - - Eb5 - - G5 - . . . . . . . . | F5 - - Eb5 - - D5 - C5 - - - . . . .
+                     | C5 - - Eb5 - - G5 - . . Bb5 - Ab5 - G5 - | G5 - - - - - - - . . . . . . . .
+                     | Ab5 - - C6 - - Ab5 - . . . . . . . . | G5 - - Ab5 - - F5 - Eb5 - - - . . . .
+                     | D5 - - F5 - - G5 - B4 - - - D5 - - - | G4 - - - - - - - . . . . . . . .`;
+
+/** C, the hocket: notes only on the sixteenths between the beat's, leaping, like a machine's sparks. */
+const CONVEYOR_HOCKET = `. C5 . . . G5 . . . C5 . . . Eb5 . . | . D5 . . . G5 . . . C6 . . Bb5 - - -
+                       | . C5 . . . G5 . . . Eb5 . . . F5 . . | G5 - - - - - - - . . . . . . . .
+                       | . F5 . . . C6 . . . Ab5 . . . G5 . . | . F5 . . . C6 . . . Eb5 . . D5 - - -
+                       | . G5 . . D5 . . B4 . . D5 . . G5 . . | G5 - - - - - - - . . . . . . . .`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -931,10 +941,10 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // The warehouse's bases (5.11), for the stand: a groove (hook) and its peak (hot) each
+  // The warehouse's melodies (5.11), for the stand: each over the chosen base, its groove and peak
   {
-    // EBM after Front 242 and Nitzer Ebb: the conveyor belt, a sequenced bass marching in C minor
-    title: 'Warehouse Conveyor',
+    // A, the chant
+    title: 'Conveyor Chant',
     sketch: true,
     level: -1.5,
     bpm: 112,
@@ -942,12 +952,13 @@ const SONG_DEFS: SongDef[] = [
     kit: 'factory',
     room: 'plate',
     grit: 8,
-    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
     sections: [
       {
         name: 'hook',
         tier: 'groove',
         chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_CHANT,
         bassLine: CONVEYOR_BASS,
         drums: 'ebm',
         pad: 'none',
@@ -957,6 +968,7 @@ const SONG_DEFS: SongDef[] = [
         name: 'hot',
         tier: 'high',
         chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_CHANT,
         bassLine: CONVEYOR_BASS,
         drums: 'ebmHot',
         pad: 'hold',
@@ -966,72 +978,71 @@ const SONG_DEFS: SongDef[] = [
     ],
   },
   {
-    // A press after Kraftwerk's "Metal on Metal" and Einstürzende Neubauten: the machine's 3+3+4+3+3
-    // cycle in D Phrygian, its pluck winding up a note a bar over a growling drone
-    title: 'Warehouse Press',
+    // B, the call
+    title: 'Conveyor Call',
     sketch: true,
-    level: -4,
-    bpm: 108,
+    level: -1.5,
+    bpm: 112,
     swing: 0,
     kit: 'factory',
     room: 'plate',
-    grit: 12,
-    voices: { lead: 'saw', counter: 'square', arp: 'pluck', bass: 'bassGrowl' },
+    grit: 8,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
     sections: [
       {
         name: 'hook',
         tier: 'groove',
-        chords: 'Dm | Dm | Eb | Dm | Dm | Dm | Eb | C',
-        arpLine: PRESS_PLUCK,
-        bass: 'long',
-        drums: 'press',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_CALL,
+        bassLine: CONVEYOR_BASS,
+        drums: 'ebm',
         pad: 'none',
-        sweep: { arp: [0.5, 1.4] },
+        stabs: 'offbeat',
       },
       {
         name: 'hot',
         tier: 'high',
-        chords: 'Dm | Dm | Eb | Dm | Dm | Dm | Eb | C',
-        arpLine: PRESS_PLUCK,
-        bass: 'eighths',
-        drums: 'pressHot',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_CALL,
+        bassLine: CONVEYOR_BASS,
+        drums: 'ebmHot',
         pad: 'hold',
-        // Its drone and the press are loud already: the peak lifted so it stands over them
-        level: 1.5,
+        stabs: 'push',
         drop: true,
       },
     ],
   },
   {
-    // Industrial metal after Nine Inch Nails and Rammstein: the furnace, a torn bass chugging in
-    // A minor and stopping dead, the harmonic minor's E major turning it round
-    title: 'Warehouse Furnace',
+    // C, the hocket
+    title: 'Conveyor Hocket',
     sketch: true,
-    level: -3.5,
-    bpm: 116,
+    level: -1.5,
+    bpm: 112,
     swing: 0,
     kit: 'factory',
     room: 'plate',
-    grit: 14,
-    voices: { lead: 'saw', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    grit: 8,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
     sections: [
       {
         name: 'hook',
         tier: 'groove',
-        chords: 'Am | Am | F | G | Am | Am | F | E',
-        bassLine: FURNACE_BASS,
-        drums: 'furnace',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_HOCKET,
+        bassLine: CONVEYOR_BASS,
+        drums: 'ebm',
         pad: 'none',
+        stabs: 'offbeat',
       },
       {
         name: 'hot',
         tier: 'high',
-        chords: 'Am | Am | F | G | Am | Am | F | E',
-        bassLine: FURNACE_BASS,
-        drums: 'furnaceHot',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_HOCKET,
+        bassLine: CONVEYOR_BASS,
+        drums: 'ebmHot',
         pad: 'hold',
         stabs: 'push',
-        stabsVoice: 'guitar',
         drop: true,
       },
     ],
