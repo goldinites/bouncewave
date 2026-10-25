@@ -47,9 +47,17 @@ const ANALYSER_FFT_SIZE = 256;
 const ANALYSER_SMOOTHING = 0.75;
 // Faults of a song that breaks down (GLITCH_PATTERNS)
 const GLITCH = {
-  EDGE: 0.004, // s the level takes to cut out and come back, short enough to sound like a drop
-  REWIND_DEPTH: 0.15, // s the rewind's delay swells to: the pitch sags, then shrieks up
-  REWIND_SAG: 0.7, // share of the rewind spent sagging; the rest is the shriek
+  CUT_EDGE: 0.004, // s a break takes to stop dead and come back
+  // A drop-out sinks the signal rather than cutting it: the music falls away to a faint, muffled
+  // trace, as a radio losing its station does, never to dead silence with a click at each edge
+  EDGE: 0.02, // s the signal takes to sink and come back: quick, but too slow to click
+  DIP: 0.15, // share of the level left while the signal is down
+  DIP_TONE: 500, // Hz the filter closes to while the signal is down
+  OPEN_TONE: 20000, // Hz, the filter wide open: the music as written
+  // The rewind sags the pitch, then catches up and lands at pitch, smoothly at both ends: a
+  // bend of about 15% down and 25% up over a half-bar, never the shriek of the delay collapsing
+  REWIND_DEPTH: 0.07, // s the rewind's delay swells to
+  REWIND_SAG: 0.6, // share of the rewind spent sagging; the rest catches up
   // s the held tape's delay swells to: over a 0.6 s hold the pitch sags by up to ~15%, then
   // runs as far sharp as the tape catches up
   HOLD_DEPTH: 0.03,
@@ -66,8 +74,8 @@ const GLITCH = {
  *                └─ echo L ⇄ echo R (ping-pong) ┤
  * drums, pads, melody ─ sends → the song's room ┤
  *                                           bus → songLevel → toneFilter → compressor
- *   → partLevel → glitchDelay → tapeDelay → glitchGain → fadeGain ─┬─ master → output
- *                                                                   └─ analyser
+ *   → partLevel → glitchDelay → tapeDelay → glitchFilter → glitchGain → fadeGain ─┬─ master
+ *                                                                                  └─ analyser
  * ```
  * - each stem is a part of the arrangement: its own saturation, sidechain and sends
  * - the pumps duck the bass and pads under every kick (`pump`), as deep as the song asks
@@ -81,7 +89,7 @@ const GLITCH = {
  * - toneFilter follows the game state (muffled in menus and pause), set per step
  * - the thin gains fade the pads and the melody out on the deciding point (`setDramaLevel`)
  * - tapeDelay sits at 0 ms until a tape stop sweeps it to bend the pitch down
- * - glitchDelay and glitchGain are the rewinds and drop-outs of a song that breaks down; their
+ * - glitchDelay, glitchFilter and glitchGain are the rewinds and drop-outs of a song that breaks down; their
  *   own nodes, so they never overlap the tape stop's automation
  * - fadeGain fades the music out under a tape stop, independent of the mute gain
  *
@@ -135,6 +143,7 @@ export class MusicGraph {
   private readonly toneFilter: BiquadFilterNode;
   private readonly tapeDelay: DelayNode;
   private readonly glitchDelay: DelayNode;
+  private readonly glitchFilter: BiquadFilterNode;
   private readonly glitchGain: GainNode;
   private readonly fadeGain: GainNode;
   private readonly master: GainNode;
@@ -172,6 +181,7 @@ export class MusicGraph {
     this.melodyThin = ac.createGain();
     this.tapeDelay = ac.createDelay(1);
     this.glitchDelay = ac.createDelay(1);
+    this.glitchFilter = ac.createBiquadFilter();
     this.glitchGain = ac.createGain();
     this.fadeGain = ac.createGain();
     this.master = ac.createGain();
@@ -182,6 +192,9 @@ export class MusicGraph {
     this.toneFilter.frequency.value = 2800;
     this.tapeDelay.delayTime.value = 0;
     this.glitchDelay.delayTime.value = 0;
+    this.glitchFilter.frequency.value = GLITCH.OPEN_TONE;
+    // No resonance: the closing filter muffles, it doesn't whistle
+    this.glitchFilter.Q.value = Math.SQRT1_2;
     this.master.gain.value = 0;
     this.analyser.fftSize = ANALYSER_FFT_SIZE;
     this.analyser.smoothingTimeConstant = ANALYSER_SMOOTHING;
@@ -215,7 +228,8 @@ export class MusicGraph {
     compressor.connect(this.partLevel);
     this.partLevel.connect(this.glitchDelay);
     this.glitchDelay.connect(this.tapeDelay);
-    this.tapeDelay.connect(this.glitchGain);
+    this.tapeDelay.connect(this.glitchFilter);
+    this.glitchFilter.connect(this.glitchGain);
     this.glitchGain.connect(this.fadeGain);
     this.fadeGain.connect(this.master);
     this.fadeGain.connect(this.analyser);
@@ -446,13 +460,13 @@ export class MusicGraph {
     this.melodyThin.gain.setTargetAtTime(gain, this.now, DRAMA_THIN_TIME);
   }
 
-  /** The music cuts out from `time` for `duration` seconds, as a dropped connection does. */
+  /** The music cuts out from `time` for `duration` seconds: a break, stopping dead. */
   public cutOut(time: number, duration: number): void {
     try {
       const gain = this.glitchGain.gain;
       gain.setValueAtTime(1, time);
-      gain.linearRampToValueAtTime(0, time + GLITCH.EDGE);
-      gain.setValueAtTime(0, time + duration - GLITCH.EDGE);
+      gain.linearRampToValueAtTime(0, time + GLITCH.CUT_EDGE);
+      gain.setValueAtTime(0, time + duration - GLITCH.CUT_EDGE);
       gain.linearRampToValueAtTime(1, time + duration);
     } catch {
       // Play on uncut rather than break audio
@@ -460,19 +474,42 @@ export class MusicGraph {
   }
 
   /**
-   * A tape rewind from `time` over `duration` seconds: the delay swells slowly, which sags the
-   * pitch, then collapses, which shrieks it up, and is back at 0 when the next bar comes.
+   * The signal drops from `time` for `duration` seconds, as a lost connection does: it sinks,
+   * quieter and muffled, a trace of the music left, then comes back as it was.
+   */
+  public dropSignal(time: number, duration: number): void {
+    const edge = Math.min(GLITCH.EDGE, duration / 2);
+    try {
+      const tone = this.glitchFilter.frequency;
+      tone.setValueAtTime(GLITCH.OPEN_TONE, time);
+      tone.exponentialRampToValueAtTime(GLITCH.DIP_TONE, time + edge);
+      tone.setValueAtTime(GLITCH.DIP_TONE, time + duration - edge);
+      tone.exponentialRampToValueAtTime(GLITCH.OPEN_TONE, time + duration);
+      const gain = this.glitchGain.gain;
+      gain.setValueAtTime(1, time);
+      gain.linearRampToValueAtTime(GLITCH.DIP, time + edge);
+      gain.setValueAtTime(GLITCH.DIP, time + duration - edge);
+      gain.linearRampToValueAtTime(1, time + duration);
+    } catch {
+      // Play on undropped rather than break audio
+    }
+  }
+
+  /**
+   * A tape rewind from `time` over `duration` seconds: the delay swells, which sags the pitch,
+   * then falls back quicker, which runs it sharp, and is back at 0, at pitch, when the next bar
+   * comes. Both halves are a smooth bump, so the pitch bends without a jump at either end.
    */
   public rewind(time: number, duration: number): void {
     const steps = 32;
     const curve = new Float32Array(steps);
     for (let i = 0; i < steps; i++) {
       const t = i / (steps - 1);
-      const share =
+      const phase =
         t < GLITCH.REWIND_SAG
-          ? (t / GLITCH.REWIND_SAG) ** 2
-          : 1 - ((t - GLITCH.REWIND_SAG) / (1 - GLITCH.REWIND_SAG)) ** 2;
-      curve[i] = GLITCH.REWIND_DEPTH * share;
+          ? t / GLITCH.REWIND_SAG / 2
+          : 0.5 + (t - GLITCH.REWIND_SAG) / (1 - GLITCH.REWIND_SAG) / 2;
+      curve[i] = GLITCH.REWIND_DEPTH * Math.sin(Math.PI * phase) ** 2;
     }
     try {
       this.glitchDelay.delayTime.setValueCurveAtTime(curve, time, duration);

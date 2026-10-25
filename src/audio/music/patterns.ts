@@ -342,7 +342,7 @@ export const PAD_CHOP = 'x.x.xx.x.x.xx.x.';
 
 /**
  * Signal faults on the whole mix, over a section's last bar (16 steps), for a song that
- * breaks down: x cuts the music out for that step, as a dropped connection does; r rewinds
+ * breaks down: x drops the signal for that step, the music sinking to a muffled trace; r rewinds
  * the tape from that step, the pitch sagging and then shrieking up, over the steps marked -
  * after it; . plays as written.
  */

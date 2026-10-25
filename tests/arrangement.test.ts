@@ -46,10 +46,10 @@ describe('Arrangement', () => {
     });
   }, 20000); // every section of every song, the versions on the stand included: seconds of work
 
-  it('cuts the music out and rewinds it over the last bar of a section that breaks down', () => {
+  it('drops the signal and rewinds it over the last bar of a section that breaks down', () => {
     const { ctx } = fakeAudioContext();
     const graph = new MusicGraph(ctx);
-    const cutOut = vi.spyOn(graph, 'cutOut');
+    const dropSignal = vi.spyOn(graph, 'dropSignal');
     const rewind = vi.spyOn(graph, 'rewind');
     const arrangement = new Arrangement(new Instruments(graph), graph);
     // A song that breaks down, as a challenge's may: the line drops out, then the tape rewinds
@@ -100,9 +100,9 @@ describe('Arrangement', () => {
       }
     };
 
-    // The intro drops out over '..........xx.xxx': two runs, each one cut
+    // The intro drops out over '..........xx.xxx': two runs, each one drop
     playLastBar('intro');
-    expect(cutOut.mock.calls).toEqual([
+    expect(dropSignal.mock.calls).toEqual([
       [10 * step, 2 * step],
       [13 * step, 3 * step],
     ]);
@@ -110,9 +110,9 @@ describe('Arrangement', () => {
     playLastBar('build');
     expect(rewind.mock.calls).toEqual([[8 * step, 8 * step]]);
     // Not the last bar: it plays as written
-    cutOut.mockClear();
+    dropSignal.mockClear();
     playLastBar('intro', false);
-    expect(cutOut).not.toHaveBeenCalled();
+    expect(dropSignal).not.toHaveBeenCalled();
   });
 
   it('brings a layer in on the bar the section has it enter on', () => {
