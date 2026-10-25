@@ -515,6 +515,94 @@ const MENU_HAZE = `. . A3 - - - - - C4 - - - - - . . | F4 - - - - - - - E4 - - -
                   | . . D4 - - - - - F4 - - - A4 - C5 - | A4 - - - - - - - - - - - - - . .
                   | . . . . . . . . . . G4 F4 C4 - . . | . . E4 - - - - - - - - - - - . .`;
 
+// ——— The tutorial's track (5.12): light major synthwave at 100, few layers; Stretch chosen of
+// three bases — E major, a relaxed half-time, the pad chopped in the 80s' rhythm — and melodies
+// over it to choose from ———
+
+/** Stretch's arpeggio in a rally: the chord in quarters, an octave over the melody. */
+const WARMUP_QUARTERS = cycle(
+  [
+    { cell: ['E5', 'G#5', 'B5', 'G#5'], bars: 2 },
+    { cell: ['E5', 'G#5', 'C#6', 'G#5'], bars: 2 },
+    { cell: ['E5', 'A5', 'C#6', 'A5'], bars: 2 },
+    { cell: ['F#5', 'B5', 'D#6', 'B5'], bars: 2 },
+  ],
+  ARP_RHYTHM.quarters,
+);
+
+/** Stretch's arpeggio at the peak: the chord broken in sixteenths, up and back, as high. */
+const WARMUP_BROKEN = cycle([
+  { cell: ['E5', 'G#5', 'B5', 'E6', 'B5', 'G#5'], bars: 2 },
+  { cell: ['E5', 'G#5', 'C#6', 'E6', 'C#6', 'G#5'], bars: 2 },
+  { cell: ['E5', 'A5', 'C#6', 'E6', 'C#6', 'A5'], bars: 2 },
+  { cell: ['F#5', 'B5', 'D#6', 'F#6', 'D#6', 'B5'], bars: 2 },
+]);
+
+/**
+ * The tutorial's base, chosen: Stretch — E major, a relaxed half-time with a clap, the pad
+ * chopped in the 80s' rhythm, the bass syncopated; the peak goes straight, the pad held.
+ */
+const WARMUP_STRETCH: SongDef = {
+  title: 'Warm-up Stretch',
+  sketch: true,
+  level: 1,
+  bpm: 100,
+  swing: 0,
+  kit: 'synthwave',
+  room: 'plate',
+  pump: 0.4,
+  voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
+  sections: [
+    {
+      name: 'hook',
+      tier: 'groove',
+      chords: 'E | E | C#m | C#m | A | A | B | B',
+      arpLine: WARMUP_QUARTERS,
+      bass: 'sync',
+      drums: 'halftime',
+      pad: 'chop',
+    },
+    {
+      name: 'hot',
+      tier: 'high',
+      chords: 'E | E | C#m | C#m | A | A | B | B',
+      arpLine: WARMUP_BROKEN,
+      bass: 'sync',
+      drums: 'four',
+      // Held, not chopped, under the straight beat: the peak's only so many voices
+      pad: 'hold',
+      stabs: 'comp',
+      drop: true,
+    },
+  ],
+};
+
+/** Bounce: the line hopping between a low note and a high one and back, as the ball does. */
+const WARMUP_BOUNCE = `B3 - G#4 - B3 - G#4 - E4 - - - - - . . | B4 - - - - - - - G#4 - - - - - . .
+                      | C#4 - G#4 - C#4 - G#4 - E4 - - - - - . . | C#5 - - - - - - - B4 - - - - - . .
+                      | E4 - C#5 - E4 - C#5 - B4 - A4 - - - . . | C#5 - - - - - - - - - - - - - . .
+                      | F#4 - B4 - F#4 - B4 - D#5 - - - C#5 - B4 - | B4 - - - - - - - - - - - . . . .`;
+
+/** Count: three notes up the scale, a set of reps, each set a step higher than the last. */
+const WARMUP_COUNT = `B3 - C#4 - D#4 - - - - - - - . . . . | . . . . . . . . G#4 - - - E4 - - -
+                     | C#4 - D#4 - E4 - - - - - - - . . . . | . . . . . . . . B4 - G#4 - E4 - - -
+                     | D#4 - E4 - F#4 - - - - - - - . . . . | . . . . . . . . C#5 - B4 A4 E4 - - -
+                     | F#4 - - - G#4 - - - B4 - - - - - . . | D#4 - - - - - - - - - - - . . . .`;
+
+/** Whistle: a cheerful pentatonic tune off the beat, called and answered, as a coach whistles. */
+const WARMUP_WHISTLE = `. . G#4 - B4 - . . G#4 - - - E4 - - - | F#4 - - - E4 - - - - - - - . . . .
+                       | . . G#4 - B4 - . . C#5 - - - B4 - - - | G#4 - - - - - - - - - - - . . . .
+                       | . . C#5 - B4 - . . A4 - - - F#4 - E4 - | E4 - - - - - - - C#4 - - - - - . .
+                       | . . F#4 - G#4 - . . B4 - C#5 B4 G#4 - - - | F#4 - - - - - - - - - - - . . . .`;
+
+/** Stretch with a melody over it, for the stand: an ordinary rally (hook) and the peak (hot). */
+const stretchSketch = (title: string, lead: string): SongDef => ({
+  ...WARMUP_STRETCH,
+  title,
+  voices: { ...WARMUP_STRETCH.voices, lead: 'brass' },
+  sections: WARMUP_STRETCH.sections.map((section) => ({ ...section, lead })),
+});
+
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
  * the hottest rallies, and the conductor moves between them as the match heats up and cools
@@ -1447,112 +1535,11 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // The tutorial's bases (5.12), for the stand: an ordinary rally (hook) and the peak (hot)
-  {
-    // Morning Run: A major, a light straight kick, the arpeggio climbing the chord in eighths, a
-    // plain bass in eighths: bright and see-through
-    title: 'Warm-up Run',
-    sketch: true,
-    level: 0.5,
-    bpm: 100,
-    swing: 0,
-    kit: 'synthwave',
-    room: 'plate',
-    pump: 0.3,
-    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'A | A | D | D | F#m | F#m | E | E',
-        arp: 'pulse',
-        bass: 'eighths',
-        drums: 'four',
-        pad: 'hold',
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'A | A | D | D | F#m | F#m | E | E',
-        arp: 'up',
-        bass: 'octave',
-        drums: 'drive',
-        pad: 'hold',
-        stabs: 'offbeat',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // Level Up: G major, a little like a game: a square arpeggio in threes over the four beats,
-    // the bass in octaves, claps
-    title: 'Warm-up Level',
-    sketch: true,
-    level: -1,
-    bpm: 100,
-    swing: 0,
-    kit: 'synthwave',
-    room: 'plate',
-    pump: 0.3,
-    voices: { lead: 'soft', counter: 'bell', arp: 'arpPulse', bass: 'bassFm', pad: 'synth' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'G | G | Em | Em | C | C | D | D',
-        arp: 'triplet',
-        bass: 'octave',
-        drums: 'disco',
-        pad: 'hold',
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'G | G | Em | Em | C | C | D | D',
-        arp: 'triplet',
-        bass: 'drive',
-        drums: 'disco',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // Stretch: E major, a relaxed half-time with a clap, the pad chopped in the 80s' rhythm, the
-    // bass syncopated
-    title: 'Warm-up Stretch',
-    sketch: true,
-    level: 1,
-    bpm: 100,
-    swing: 0,
-    kit: 'synthwave',
-    room: 'plate',
-    pump: 0.4,
-    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'E | E | C#m | C#m | A | A | B | B',
-        arp: 'sparse',
-        bass: 'sync',
-        drums: 'halftime',
-        pad: 'chop',
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'E | E | C#m | C#m | A | A | B | B',
-        arp: 'broken',
-        bass: 'sync',
-        drums: 'four',
-        pad: 'chop',
-        stabs: 'comp',
-        drop: true,
-      },
-    ],
-  },
+  // The tutorial's melodies over Stretch (5.12), for the stand
+  WARMUP_STRETCH,
+  stretchSketch('Warm-up Stretch v2', WARMUP_BOUNCE),
+  stretchSketch('Warm-up Stretch v3', WARMUP_COUNT),
+  stretchSketch('Warm-up Stretch v4', WARMUP_WHISTLE),
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);
