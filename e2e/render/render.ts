@@ -22,7 +22,10 @@ Math.random = () => {
 
 const { K_WEIGHTING, Mixer } = await import('@/audio/Mixer');
 const { WHOLE_FORM } = await import('@/audio/music/Conductor');
+const { INITIAL_MUSIC_STATE } = await import('@/audio/music/intensity');
 const { MusicEngine } = await import('@/audio/music/MusicEngine');
+const { hookOf } = await import('@/audio/music/sting');
+const { FINALE } = await import('@/match/MatchFlow');
 const { soundsFor } = await import('@/audio/music/palette');
 const { STEPS_PER_BAR } = await import('@/audio/music/score');
 const { SONGS } = await import('@/audio/music/songs');
@@ -41,6 +44,7 @@ type MusicLayer = import('@/audio/music/score').MusicLayer;
 type Song = import('@/audio/music/score').Song;
 type Tier = import('@/audio/music/score').Tier;
 type KitName = import('@/audio/music/kits').KitName;
+type Engine = InstanceType<typeof MusicEngine>;
 
 const RATE = 48000;
 // Each part played at the heat its tier has in a match (audio/music/intensity.ts): calm in the
@@ -60,6 +64,87 @@ const TICK = 0.05; // s of audio between the scheduler's ticks (it looks 0.15 s 
 const HIT_STEP = 4; // the step of each bar a test hit lands on: the second beat
 const HIT_KINDS = ['player', 'cpu', 'perfect', 'overdrive'] as const;
 const HIT_BARS = 17; // at least: a hit of each kind on four bars
+
+// The match's moments (5.8), each over the song's first groove: what the music does, when (s),
+// the game's calls as it makes them — the finale's end lets a sting go (FINALE), the deciding
+// point's tension and the time warp as the effects push them
+const MOMENT_AT = 2; // s of groove before the moment, the music's own jumps measured over it
+const DRAMA_LEVEL = 0.6; // MatchPointDrama's for the whole deciding rally
+const REFLEX_HOLD = 0.6; // s, the Reflex's longest time warp
+// A sting plays the hook: its jumps are measured against the hook's own as well as the groove's
+const MOMENTS: {
+  name: string;
+  seconds: number;
+  isSting?: boolean;
+  events: [number, string, (music: Engine) => void][];
+}[] = [
+  {
+    name: 'win',
+    isSting: true,
+    seconds: 13,
+    events: [
+      [0, 'sting', (music) => music.playFinale('win')],
+      [FINALE.WIN_DURATION, 'menu', (music) => music.recover()],
+    ],
+  },
+  {
+    name: 'loss',
+    isSting: true,
+    seconds: 8,
+    events: [
+      [0, 'sting', (music) => music.playFinale('loss')],
+      [FINALE.LOSS_DURATION, 'menu', (music) => music.recover()],
+    ],
+  },
+  {
+    name: 'all passed',
+    isSting: true,
+    seconds: 16,
+    events: [
+      [0, 'sting', (music) => music.playFinale('allPassed')],
+      [FINALE.WIN_DURATION, 'menu', (music) => music.recover()],
+    ],
+  },
+  {
+    name: 'win, again at once',
+    isSting: true,
+    seconds: 7,
+    events: [
+      [0, 'sting', (music) => music.playFinale('win')],
+      [FINALE.SKIP_AFTER, 'skip', (music) => music.recover()],
+      [1.2, 'again', (music) => music.cutFinale()],
+    ],
+  },
+  {
+    name: 'pause',
+    seconds: 7,
+    events: [
+      [0, 'pause', (music) => music.setState({ ...INITIAL_MUSIC_STATE, gameState: 'paused' })],
+      [2, 'play', (music) => music.setState(INITIAL_MUSIC_STATE)],
+    ],
+  },
+  {
+    name: 'deciding point',
+    seconds: 7,
+    events: [
+      [0, 'serve', (music) => music.setDramaLevel(DRAMA_LEVEL)],
+      [3, 'point', (music) => music.setDramaLevel(0)],
+    ],
+  },
+  {
+    name: 'overtime',
+    seconds: 7,
+    events: [
+      [0, 'in', (music) => music.pinOvertime(true)],
+      [3, 'point', (music) => music.pinOvertime(null)],
+    ],
+  },
+  {
+    name: 'reflex',
+    seconds: 5,
+    events: [[0, 'warp', (music) => music.holdTape(REFLEX_HOLD)]],
+  },
+];
 
 // The pictures: a bar's width, the spectrum's height and range, the similarity's cell
 const PICTURE = {
@@ -94,6 +179,8 @@ interface MusicRender {
   kit?: KitName;
   /** Paddle hits played at these times, s, of these kinds. */
   hits?: { at: number; kind: (typeof HIT_KINDS)[number]; rally: number }[];
+  /** The game's calls to the music, at these times, s. */
+  calls?: { at: number; run: (music: Engine) => void }[];
 }
 
 declare global {
@@ -121,6 +208,7 @@ async function renderMusic({
   bass,
   kit,
   hits = [],
+  calls = [],
 }: MusicRender) {
   const overrides = { lead, bass, kit };
   const { pitched, oneShots } = soundsFor(song, overrides);
@@ -177,6 +265,7 @@ async function renderMusic({
         : sfx.playPaddleHit(hit.rally, hit.kind === 'perfect', hit.kind === 'cpu' ? 1 : 0),
     );
   }
+  for (const call of calls) at(call.at, () => call.run(music));
   for (const [frame, run] of actions) {
     void context.suspend(frame / RATE).then(() => {
       for (const action of run) action();
@@ -357,6 +446,46 @@ function similarityPicture(song: Song, similarity: number[][]) {
   return element.toDataURL('image/png');
 }
 
+/** Each of the match's moments rendered over the song's first groove, and how it sounds. */
+async function renderMoments(
+  song: Song,
+  options: Pick<MusicRender, 'lead' | 'bass' | 'kit' | 'mute'>,
+) {
+  const groove = song.form.map((i) => song.sections[i]).find((s) => s.tier === 'groove');
+  const part = (groove ?? song.sections[song.form[0]]).name;
+  const reports: import('./analysis').MomentReport[] = [];
+  // The same music with nothing happening, and the hook a sting plays: how steep their own
+  // jumps are
+  const longest = Math.max(...MOMENTS.map((m) => m.seconds));
+  const alone = async (name: string) =>
+    analysis.toMono(
+      await renderMusic({ ...options, song, part: name, seconds: MOMENT_AT + longest }),
+    );
+  const groovePart = await alone(part);
+  const withHook = new Float32Array(groovePart.length * 2);
+  withHook.set(groovePart);
+  withHook.set(await alone(hookOf(song).name), groovePart.length);
+  for (const moment of MOMENTS) {
+    const start = MOMENT_AT;
+    const mix = await renderMusic({
+      ...options,
+      song,
+      part,
+      seconds: start + moment.seconds,
+      calls: moment.events.map(([at, , run]) => ({ at: start + at, run })),
+    });
+    const mono = analysis.toMono(mix);
+    reports.push({
+      name: moment.name,
+      events: moment.events.map(([at, what]) => `${what} ${(start + at).toFixed(1)}`).join(', '),
+      levels: analysis.levelTrack(mono, RATE, ANALYSIS.LEVEL_STEP),
+      jump: analysis.worstJump(mono, moment.isSting ? withHook : groovePart, RATE, start),
+      gap: analysis.longestGap(mono, RATE, start),
+    });
+  }
+  return reports;
+}
+
 async function renderSong({ song: id, lead, bass, kit, mute = [] }: RenderOptions) {
   const song = SONGS.find((s) => s.id === id);
   if (!song) throw new Error(`No song called ${id}`);
@@ -479,6 +608,7 @@ async function renderSong({ song: id, lead, bass, kit, mute = [] }: RenderOption
     bars,
     changes,
     still: analysis.longestStill(changes, bars),
+    moments: await renderMoments(song, { lead, bass, kit, mute }),
     renderSeconds: (performance.now() - startedAt) / 1000,
   };
   return {

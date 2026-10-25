@@ -29,6 +29,15 @@ export const ANALYSIS = {
   // A bar whose texture differs from the four before it by this much is a change of texture
   NOVELTY_CHANGE: 0.15,
   NOVELTY_HALF: 4, // bars on either side of the line the novelty compares
+  // A moment of the match (a finale, the pause…): its level every LEVEL_STEP s, its steepest
+  // sample-to-sample jump in each JUMP_WINDOW s against the steepest the same music makes without
+  // it (a jump this many times steeper may be a click), and its longest stretch quieter than
+  // SILENCE_FLOOR (a drop-out) in GAP_WINDOW s pieces
+  LEVEL_STEP: 0.25,
+  JUMP_WINDOW: 0.05,
+  JUMP_SUSPECT: 2,
+  SILENCE_FLOOR: -60, // dBFS
+  GAP_WINDOW: 0.01,
 } as const;
 
 /** Octave bands a hit is looked for in, from its body to its click: 250 Hz to 16 kHz. */
@@ -446,6 +455,69 @@ export interface HitReport {
   margins: ReturnType<typeof hitMargin>[];
 }
 
+/** A moment of the match rendered over a groove: how it sounds as it comes and goes. */
+export interface MomentReport {
+  name: string;
+  /** What happens when, s from the start. */
+  events: string;
+  /** dBFS every LEVEL_STEP s. */
+  levels: number[];
+  /** The steepest jump after the first event, against the music's own steepest, and where, s. */
+  jump: { ratio: number; at: number };
+  /** The longest stretch quieter than SILENCE_FLOOR after the first event, s. */
+  gap: number;
+}
+
+/** The level of `samples` every `step` seconds, dBFS. */
+export function levelTrack(samples: Float32Array, rate: number, step: number): number[] {
+  const size = Math.round(step * rate);
+  return Array.from({ length: Math.floor(samples.length / size) }, (_, i) =>
+    Math.round(levels(samples, i * size, (i + 1) * size).rms),
+  );
+}
+
+/** The steepest step from one sample to the next in [from, to). */
+function steepest(samples: Float32Array, from: number, to: number): number {
+  let top = 0;
+  for (let i = Math.max(1, from); i < Math.min(to, samples.length); i++) {
+    top = Math.max(top, Math.abs(samples[i] - samples[i - 1]));
+  }
+  return top;
+}
+
+/**
+ * The steepest jump from `start` s on, as a share of the steepest in `music` — the same music
+ * rendered without the moment — and the window it is in: a click is a jump far steeper than any
+ * the music makes by itself.
+ */
+export function worstJump(
+  samples: Float32Array,
+  music: Float32Array,
+  rate: number,
+  start: number,
+): { ratio: number; at: number } {
+  const reference = Math.max(1e-6, steepest(music, 0, music.length));
+  const size = Math.round(ANALYSIS.JUMP_WINDOW * rate);
+  let worst = { ratio: 0, at: start };
+  for (let from = Math.round(start * rate); from < samples.length; from += size) {
+    const ratio = steepest(samples, from, from + size) / reference;
+    if (ratio > worst.ratio) worst = { ratio, at: from / rate };
+  }
+  return worst;
+}
+
+/** The longest run of GAP_WINDOW pieces quieter than SILENCE_FLOOR from `start` s on, in s. */
+export function longestGap(samples: Float32Array, rate: number, start: number): number {
+  const size = Math.round(ANALYSIS.GAP_WINDOW * rate);
+  let run = 0;
+  let longest = 0;
+  for (let from = Math.round(start * rate); from + size <= samples.length; from += size) {
+    run = levels(samples, from, from + size).rms < ANALYSIS.SILENCE_FLOOR ? run + 1 : 0;
+    longest = Math.max(longest, run);
+  }
+  return longest * ANALYSIS.GAP_WINDOW;
+}
+
 export interface TrackReport {
   title: string;
   id: string;
@@ -465,6 +537,8 @@ export interface TrackReport {
   bars: number;
   changes: number[];
   still: { from: number; length: number };
+  /** The match's moments over a groove (5.8): the finales, the pause, the deciding point… */
+  moments: MomentReport[];
   renderSeconds: number;
 }
 
@@ -553,6 +627,23 @@ export function formatReport(report: TrackReport): string {
     `Changes on bars: ${report.changes.map((bar) => bar + 1).join(', ') || 'none'}.`,
     `Longest stretch without a change: **${report.still.length} bars** ` +
       `(bars ${report.still.from + 1}–${report.still.from + report.still.length}).`,
+    '',
+    '## Match moments',
+    '',
+    `Each over the groove: its level every ${ANALYSIS.LEVEL_STEP} s (dBFS), the steepest ` +
+      'jump after it against the music’s own before it (×; above ' +
+      `${ANALYSIS.JUMP_SUSPECT} may be a click: listen), the longest stretch below ` +
+      `${ANALYSIS.SILENCE_FLOOR} dBFS after it.`,
+    '',
+    '| moment | events | jump | gap s | levels |',
+    '| --- | --- | --- | --- | --- |',
+    ...report.moments.map(
+      (m) =>
+        `| ${m.name} | ${m.events} | ${m.jump.ratio >= ANALYSIS.JUMP_SUSPECT ? '**' : ''}` +
+        `×${m.jump.ratio.toFixed(1)} at ${m.jump.at.toFixed(2)} s` +
+        `${m.jump.ratio >= ANALYSIS.JUMP_SUSPECT ? '**' : ''} | ${m.gap.toFixed(2)} | ` +
+        `${m.levels.join(' ')} |`,
+    ),
     '',
     '## Melody notes',
     '',

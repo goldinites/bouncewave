@@ -51,12 +51,13 @@ const makeAudio = () => ({
     playOverdriveReady: vi.fn(),
     playChannelSurf: vi.fn(),
   },
+  isMusicHeard: true,
   music: {
     setDramaLevel: vi.fn(),
     triggerDrop: vi.fn(),
     setClimaxLevel: vi.fn(),
-    duck: vi.fn(),
-    tapeStop: vi.fn(),
+    playFinale: vi.fn(),
+    cutFinale: vi.fn(),
     recover: vi.fn(),
     enterScene: vi.fn(),
     resetClimax: vi.fn(),
@@ -146,6 +147,8 @@ describe('EffectsDirector.handle', () => {
     expect(renderer.switchChannel).toHaveBeenCalledOnce();
     expect(audio.music.enterScene).toHaveBeenCalledExactlyOnceWith('fuji');
     expect(audio.sfx.playChannelSurf).toHaveBeenCalledOnce();
+    // Again, straight after a finale: its sting gives way
+    expect(audio.music.cutFinale).toHaveBeenCalledOnce();
   });
 
   it('plays a match that asks for its own backdrop on it (a challenge), else on the player’s', () => {
@@ -456,8 +459,9 @@ describe('EffectsDirector.handle', () => {
 
     expect(renderer.triggerVictoryEffect).toHaveBeenCalledOnce();
     expect(renderer.celebrate).toHaveBeenCalledOnce();
-    expect(audio.sfx.playVictory).toHaveBeenCalledOnce();
-    expect(audio.music.duck).toHaveBeenCalledOnce();
+    // The song's own hook is the jingle
+    expect(audio.music.playFinale).toHaveBeenCalledWith('win');
+    expect(audio.sfx.playVictory).not.toHaveBeenCalled();
     expect(renderer.showFinalScore).toHaveBeenCalledWith({
       text: '10 : 7',
       label: 'YOU WIN',
@@ -466,7 +470,7 @@ describe('EffectsDirector.handle', () => {
     });
   });
 
-  it('glitches the screen and tape-stops the music when the player loses', () => {
+  it('glitches the screen and plays the hook into a tape stop when the player loses', () => {
     const { effects, renderer, audio } = makeDirector();
 
     handle(effects, {
@@ -478,8 +482,8 @@ describe('EffectsDirector.handle', () => {
     });
 
     expect(renderer.triggerCrtGlitch).toHaveBeenCalledOnce();
-    expect(audio.sfx.playDefeat).toHaveBeenCalledOnce();
-    expect(audio.music.tapeStop).toHaveBeenCalledOnce();
+    expect(audio.music.playFinale).toHaveBeenCalledWith('loss');
+    expect(audio.sfx.playDefeat).not.toHaveBeenCalled();
     expect(renderer.showFinalScore).toHaveBeenCalledWith({
       text: '7 : 10',
       label: 'YOU LOSE',
@@ -500,7 +504,7 @@ describe('EffectsDirector.handle', () => {
     });
 
     expect(renderer.triggerVictoryEffect).toHaveBeenCalledOnce();
-    expect(audio.music.tapeStop).not.toHaveBeenCalled();
+    expect(audio.music.playFinale).toHaveBeenCalledWith('win');
     expect(renderer.showFinalScore).toHaveBeenCalledWith({
       text: '3 : 5',
       label: 'PLAYER 2 WINS',
@@ -523,13 +527,59 @@ describe('EffectsDirector.handle', () => {
     });
 
     expect(renderer.triggerVictoryEffect).not.toHaveBeenCalled();
-    expect(audio.sfx.playDefeat).toHaveBeenCalledOnce();
+    expect(audio.music.playFinale).toHaveBeenCalledWith('loss');
     expect(renderer.showFinalScore).toHaveBeenCalledWith({
       text: '3 / 5',
       label: 'NOT ENOUGH OVERDRIVE',
       color: COLORS.PINK,
       isWin: false,
     });
+  });
+
+  it('plays the big sting for the pass that completes every challenge', () => {
+    const { effects, audio } = makeDirector(undefined, undefined, {
+      challengeFinale: () => ({
+        label: 'PASSED',
+        text: '5 / 5',
+        isPassed: true,
+        completesAll: true,
+      }),
+    });
+
+    handle(effects, {
+      type: 'finaleStart',
+      winnerIndex: 0,
+      ballY: 250,
+      scores: [7, 4],
+      reason: 'points',
+    });
+
+    expect(audio.music.playFinale).toHaveBeenCalledWith('allPassed');
+  });
+
+  it('plays the stand-alone jingles where the music is not heard', () => {
+    const win = makeDirector();
+    win.audio.isMusicHeard = false;
+    handle(win.effects, {
+      type: 'finaleStart',
+      winnerIndex: 0,
+      ballY: 250,
+      scores: [10, 7],
+      reason: 'points',
+    });
+    expect(win.audio.sfx.playVictory).toHaveBeenCalledOnce();
+
+    const loss = makeDirector();
+    loss.audio.isMusicHeard = false;
+    handle(loss.effects, {
+      type: 'finaleStart',
+      winnerIndex: 1,
+      ballY: 250,
+      scores: [7, 10],
+      reason: 'points',
+    });
+    expect(loss.audio.sfx.playDefeat).toHaveBeenCalledOnce();
+    expect(loss.audio.music.playFinale).not.toHaveBeenCalled();
   });
 
   it('skips the victory fireworks entirely in a look without effects (classic)', () => {

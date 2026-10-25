@@ -118,6 +118,11 @@ export class AudioEngine {
     this.classicMusic.setActive(isClassic && !state.isMuted);
   }
 
+  /** Whether the synthwave music is heard now (not muted, not the classic look's loop). */
+  public get isMusicHeard(): boolean {
+    return this.music.isHeard;
+  }
+
   public unlock(): void {
     if (!this.audioContext) {
       try {

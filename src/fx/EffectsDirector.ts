@@ -1,4 +1,5 @@
 import { AudioEngine } from '@/audio/AudioEngine';
+import { FinaleSting } from '@/audio/music/sting';
 import { MatchPointDrama } from '@/fx/MatchPointDrama';
 import { PaddleEffects } from '@/fx/PaddleEffects';
 import { ParticleSystem } from '@/fx/ParticleSystem';
@@ -121,6 +122,8 @@ export interface ChallengeFinale {
   label: string;
   text: string;
   isPassed: boolean;
+  /** This pass is the player's last challenge to pass: now every one is (the music's big sting). */
+  completesAll?: boolean;
 }
 
 /** Where across the court `x` is, as a sound's pan: -1 the left edge, 1 the right. */
@@ -314,6 +317,8 @@ export class EffectsDirector {
         this.renderer.addFlash(FLASH.START);
         this.paddleFx.reset();
         this.resetTension();
+        // Again, at once: the last match's sting gives way to this one's music
+        this.audio.music.cutFinale();
         break;
 
       case 'returnToMenu':
@@ -582,14 +587,12 @@ export class EffectsDirector {
         ]);
       }
 
-      this.audio.sfx.playVictory();
-      this.audio.music.duck();
+      this.playFinaleSting(attempt?.completesAll ? 'allPassed' : 'win');
     } else {
       this.renderer.triggerCrtGlitch();
       this.renderer.addShake(SHAKE.FINALE_LOSS);
 
-      this.audio.sfx.playDefeat();
-      this.audio.music.tapeStop();
+      this.playFinaleSting('loss');
     }
 
     this.renderer.showFinalScore({
@@ -609,6 +612,20 @@ export class EffectsDirector {
       color: this.colorOf(attempt ? (attempt.isPassed ? 0 : 1) : finale.winnerIndex),
       isWin: playerWon,
     });
+  }
+
+  /**
+   * The end heard: the song playing's sting from its hook (audio/music/sting.ts), or, where the
+   * synthwave music isn't heard (muted, the classic look), the stand-alone jingle.
+   */
+  private playFinaleSting(kind: FinaleSting): void {
+    if (this.audio.isMusicHeard) {
+      this.audio.music.playFinale(kind);
+    } else if (kind === 'loss') {
+      this.audio.sfx.playDefeat();
+    } else {
+      this.audio.sfx.playVictory();
+    }
   }
 
   /** Drops the deciding-point drama and the rally climax at once, sound included. */

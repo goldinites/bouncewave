@@ -8,6 +8,8 @@ import {
   hitMargin,
   levelChange,
   levels,
+  levelTrack,
+  longestGap,
   logEdges,
   longestStill,
   melodyStats,
@@ -17,6 +19,7 @@ import {
   selfSimilarity,
   textureChanges,
   TrackReport,
+  worstJump,
 } from '../e2e/render/analysis';
 
 const RATE = 48000;
@@ -146,6 +149,15 @@ describe('track analysis', () => {
       bars: 8,
       changes: [],
       still: { from: 0, length: 8 },
+      moments: [
+        {
+          name: 'win',
+          events: 'sting 2.0',
+          levels: [-30, -28],
+          jump: { ratio: 2.5, at: 2.4 },
+          gap: 0,
+        },
+      ],
       renderSeconds: 10,
     };
     const markdown = formatReport(report);
@@ -154,5 +166,29 @@ describe('track analysis', () => {
     expect(markdown).toContain('level -1.0 → **+1.5** (+2.5)');
     expect(markdown).toContain('| player | +8.0 | 2000 | +8.0 | yes | +2.0 |');
     expect(markdown).not.toContain('unreliable');
+    expect(markdown).toContain('| win | sting 2.0 | **×2.5 at 2.40 s** | 0.00 | -30 -28 |');
+  });
+
+  describe('match moments', () => {
+    const rate = 1000;
+    // A steady tone: the music a click is measured against
+    const tone = (seconds: number) =>
+      Float32Array.from({ length: seconds * rate }, (_, i) => 0.1 * Math.sin(i / 5));
+
+    it('finds a click as a jump far steeper than the music before it', () => {
+      const samples = tone(4);
+      samples[3000] = 0.9;
+      const jump = worstJump(samples, tone(4), rate, 2);
+      expect(jump.ratio).toBeGreaterThan(ANALYSIS.JUMP_SUSPECT);
+      expect(jump.at).toBeCloseTo(3, 1);
+      expect(worstJump(tone(4), tone(4), rate, 2).ratio).toBeLessThanOrEqual(1);
+    });
+
+    it('measures the longest drop-out, and the level as it goes', () => {
+      const samples = tone(4);
+      samples.fill(0, 2500, 3000);
+      expect(longestGap(samples, rate, 2)).toBeCloseTo(0.5, 1);
+      expect(levelTrack(samples, rate, 1)).toHaveLength(4);
+    });
   });
 });

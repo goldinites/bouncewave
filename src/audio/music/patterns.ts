@@ -24,6 +24,8 @@ export const DRUM_PATTERNS = {
   none: {},
   // A soft heartbeat for intros and the menu
   pulse: { kick: 'x.......x.......', hat: '....o.......o...' },
+  // The last chord of a finale's sting: one hit, then it rings
+  coda: { kick: 'X...............' },
   halftime: { kick: 'X.........x.....', snare: '........X.......', hat: '..o...o...o...o.' },
   four: { kick: 'X...X...X...X...', snare: '....X.......X...', hat: '..x...x...x...x.' },
   drive: {
@@ -227,6 +229,8 @@ export const STAB_PATTERNS = {
   comp: '...x..x....x..x.',
   // A string section pulsing in eighths under a melody
   eighths: 'x.x.x.x.x.x.x.x.',
+  // A fanfare on the chord: two short blasts and a long one (- holds the stab)
+  fanfare: 'x.x.X-----------',
 } satisfies Record<string, string>;
 
 export type StabPatternName = keyof typeof STAB_PATTERNS;

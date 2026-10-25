@@ -5,13 +5,14 @@ import { clamp } from '@/shared/math';
 // Overall music volume when not muted: the rendered instruments are fuller than the live
 // synths were, so it sits lower to leave the action sounds on top (docs/AUDIO.md, "Микс")
 const MUSIC_MASTER_LEVEL = 0.21;
-const MUSIC_DUCK_LEVEL = 0.25; // music level under the victory sting
 // Time constants of a part's level change (setPartLevel, setPartMix): up on the downbeat, down gently
 const PART_RISE = 0.01; // s
 const PART_FALL = 0.25; // s
-// Low-pass cutoff of the music bus at full match-point drama (fully open at level 0)
-const DRAMA_FILTER_MIN_FREQ = 550;
-const DRAMA_FILTER_MAX_FREQ = 20000;
+// On the deciding point the pads and the melody fade out with the tension, gone at this level
+// (MatchPointDrama's is 0.6 for the whole rally), leaving the kick and the bass under the
+// heartbeat; the pause, not the deciding point, is the music muffled behind a wall
+const DRAMA_THIN_AT = 0.5;
+const DRAMA_THIN_TIME = 0.08; // s, time constant of the fade
 
 const ECHO_FEEDBACK = 0.4;
 // The echo bounces left and right, each repeat a little darker
@@ -60,12 +61,12 @@ const GLITCH = {
  * ```
  * drums → saturation ───────────────────────┐
  * bass → saturation → pump ─────────────────┤
- * pads → pump ──────────────────────────────┤
- * melody ─┬─────────────────────────────────┤
- *         └─ echo L ⇄ echo R (ping-pong) ───┤
+ * pads → thin → pump ───────────────────────┤
+ * melody → thin ─┬──────────────────────────┤
+ *                └─ echo L ⇄ echo R (ping-pong) ┤
  * drums, pads, melody ─ sends → the song's room ┤
  *                                           bus → songLevel → toneFilter → compressor
- *   → partLevel → dramaFilter → glitchDelay → tapeDelay → glitchGain → duckGain ─┬─ master → output
+ *   → partLevel → glitchDelay → tapeDelay → glitchGain → fadeGain ─┬─ master → output
  *                                                                   └─ analyser
  * ```
  * - each stem is a part of the arrangement: its own saturation, sidechain and sends
@@ -78,11 +79,11 @@ const GLITCH = {
  * - pads and melody are raised or lowered against the drums and bass as a part asks
  *   (`setPartMix`), before the compressor, so a fuller part pushes the beat back
  * - toneFilter follows the game state (muffled in menus and pause), set per step
- * - dramaFilter muffles on match point; separate so it never fights the tone filter
+ * - the thin gains fade the pads and the melody out on the deciding point (`setDramaLevel`)
  * - tapeDelay sits at 0 ms until a tape stop sweeps it to bend the pitch down
  * - glitchDelay and glitchGain are the rewinds and drop-outs of a song that breaks down; their
  *   own nodes, so they never overlap the tape stop's automation
- * - duckGain dips the music under end-of-match stings, independent of the mute gain
+ * - fadeGain fades the music out under a tape stop, independent of the mute gain
  *
  * Parameters are only automated when their value changes: every automation call adds an event
  * to the parameter's timeline, and the scheduler would otherwise add dozens per second for as
@@ -116,6 +117,9 @@ export class MusicGraph {
   private readonly bassGritTrim: GainNode;
   private gritDb: number | null = null;
   private readonly padsPump: GainNode;
+  /** The pads and the melody, thinned out on the deciding point; the melody's echo and room too. */
+  private readonly padsThin: GainNode;
+  private readonly melodyThin: GainNode;
   private readonly songLevel: GainNode;
   private songLevelDb: number | null = null;
   private readonly partLevel: GainNode;
@@ -129,11 +133,10 @@ export class MusicGraph {
   /** Rooms waiting to be built off the scheduler's tick, by the timer that will build them. */
   private readonly roomTimers = new Map<RoomName, ReturnType<typeof setTimeout>>();
   private readonly toneFilter: BiquadFilterNode;
-  private readonly dramaFilter: BiquadFilterNode;
   private readonly tapeDelay: DelayNode;
   private readonly glitchDelay: DelayNode;
   private readonly glitchGain: GainNode;
-  private readonly duckGain: GainNode;
+  private readonly fadeGain: GainNode;
   private readonly master: GainNode;
   private dramaLevel = 0;
   // Last values handed to the audio graph; null until first set
@@ -165,18 +168,18 @@ export class MusicGraph {
     this.songLevel = ac.createGain();
     this.partLevel = ac.createGain();
     this.toneFilter = ac.createBiquadFilter();
-    this.dramaFilter = ac.createBiquadFilter();
+    this.padsThin = ac.createGain();
+    this.melodyThin = ac.createGain();
     this.tapeDelay = ac.createDelay(1);
     this.glitchDelay = ac.createDelay(1);
     this.glitchGain = ac.createGain();
-    this.duckGain = ac.createGain();
+    this.fadeGain = ac.createGain();
     this.master = ac.createGain();
     this.analyser = ac.createAnalyser();
 
     const compressor = ac.createDynamicsCompressor();
 
     this.toneFilter.frequency.value = 2800;
-    this.dramaFilter.frequency.value = DRAMA_FILTER_MAX_FREQ;
     this.tapeDelay.delayTime.value = 0;
     this.glitchDelay.delayTime.value = 0;
     this.master.gain.value = 0;
@@ -199,22 +202,23 @@ export class MusicGraph {
     bassMakeup.connect(this.bassPump);
     this.bassPump.connect(this.bus);
 
-    this.pads.connect(this.padsPump);
+    this.pads.connect(this.padsThin);
+    this.padsThin.connect(this.padsPump);
     this.padsPump.connect(this.bus);
-    this.melody.connect(this.bus);
+    this.melody.connect(this.melodyThin);
+    this.melodyThin.connect(this.bus);
     this.echoes = this.buildEcho(ac);
 
     this.bus.connect(this.songLevel);
     this.songLevel.connect(this.toneFilter);
     this.toneFilter.connect(compressor);
     compressor.connect(this.partLevel);
-    this.partLevel.connect(this.dramaFilter);
-    this.dramaFilter.connect(this.glitchDelay);
+    this.partLevel.connect(this.glitchDelay);
     this.glitchDelay.connect(this.tapeDelay);
     this.tapeDelay.connect(this.glitchGain);
-    this.glitchGain.connect(this.duckGain);
-    this.duckGain.connect(this.master);
-    this.duckGain.connect(this.analyser);
+    this.glitchGain.connect(this.fadeGain);
+    this.fadeGain.connect(this.master);
+    this.fadeGain.connect(this.analyser);
     this.master.connect(output);
   }
 
@@ -238,7 +242,7 @@ export class MusicGraph {
       damping.connect(gain);
       gain.connect(to);
     };
-    this.melody.connect(left);
+    this.melodyThin.connect(left);
     feedback(left, right);
     feedback(right, left);
     return echoes;
@@ -263,7 +267,7 @@ export class MusicGraph {
 
     const sources: [AudioNode, number][] = [
       [this.padsPump, room.sends.pads],
-      [this.melody, room.sends.melody],
+      [this.melodyThin, room.sends.melody],
       [this.drums, room.sends.drums],
     ];
     const sends = sources.map(([source, level]) => {
@@ -426,16 +430,20 @@ export class MusicGraph {
     this.echoes.forEach((echo) => echo.delayTime.setTargetAtTime(seconds, time, 0.1));
   }
 
-  /** Muffle the music with a low-pass, level in [0, 1] (0 = fully open). */
+  /**
+   * The deciding point's tension, level in [0, 1]: the pads and the melody fade out as it
+   * rises, gone from DRAMA_THIN_AT (0 = the full mix).
+   */
   public setDramaLevel(level: number): void {
     const clamped = clamp(level, 0, 1);
-    if (Math.abs(clamped - this.dramaLevel) < 0.01) return;
+    const change = Math.abs(clamped - this.dramaLevel);
+    // Small changes are skipped, but the way back to the full mix always lands
+    if (change === 0 || (change < 0.01 && clamped > 0)) return;
 
     this.dramaLevel = clamped;
-    // Interpolate in log space so the sweep sounds even
-    const frequency =
-      DRAMA_FILTER_MAX_FREQ * Math.pow(DRAMA_FILTER_MIN_FREQ / DRAMA_FILTER_MAX_FREQ, clamped);
-    this.dramaFilter.frequency.setTargetAtTime(frequency, this.now, 0.03);
+    const gain = 1 - clamp(clamped / DRAMA_THIN_AT, 0, 1);
+    this.padsThin.gain.setTargetAtTime(gain, this.now, DRAMA_THIN_TIME);
+    this.melodyThin.gain.setTargetAtTime(gain, this.now, DRAMA_THIN_TIME);
   }
 
   /** The music cuts out from `time` for `duration` seconds, as a dropped connection does. */
@@ -490,17 +498,12 @@ export class MusicGraph {
     }
   }
 
-  /** Dip the music so the victory sting sits on top; stays down until `recover`. */
-  public duck(): void {
-    this.rampDuckGain(MUSIC_DUCK_LEVEL, 0.08);
-  }
-
   /**
    * Tape stop: the delay time sweeps up quadratically, which bends the pitch from normal
-   * down to zero (Doppler), while the level fades out.
+   * down to zero (Doppler), while the level fades out; from `at`, now if left out.
    * @returns false if the browser rejected the automation (the effect is then skipped)
    */
-  public tapeStop(duration: number): boolean {
+  public tapeStop(duration: number, at = this.now): boolean {
     // d(t) = (T/2)·(t/T)² → pitch factor 1 − d'(t) falls linearly from 1 to 0
     const steps = 32;
     const delayCurve = new Float32Array(steps);
@@ -511,17 +514,17 @@ export class MusicGraph {
 
     try {
       const delay = this.tapeDelay.delayTime;
-      delay.cancelScheduledValues(this.now);
-      delay.setValueCurveAtTime(delayCurve, this.now, duration);
+      delay.cancelScheduledValues(at);
+      delay.setValueCurveAtTime(delayCurve, at, duration);
 
-      const gain = this.duckGain.gain;
-      gain.cancelScheduledValues(this.now);
+      const gain = this.fadeGain.gain;
+      gain.cancelScheduledValues(at);
       gain.setValueCurveAtTime(
         new Float32Array([gain.value, gain.value, 0.7, 0.3, 0]),
-        this.now,
+        at,
         duration,
       );
-      this.tapeStopEndsAt = this.now + duration;
+      this.tapeStopEndsAt = at + duration;
       return true;
     } catch {
       // Overlapping automation is rejected by some browsers; skip the effect rather than break audio
@@ -529,7 +532,7 @@ export class MusicGraph {
     }
   }
 
-  /** Undo `duck` / `tapeStop`. */
+  /** Undo `tapeStop`. */
   public recover(): void {
     // Safari rejects automation that overlaps a running curve, which would leave the music
     // silent, so a tape stop that is still running (finale skipped) plays out first
@@ -542,7 +545,7 @@ export class MusicGraph {
       // Leave the pitch bend as is rather than break audio
     }
     // After a tape stop the level is at 0, so the delay jump above is inaudible
-    this.rampDuckGain(1, 0.6);
+    this.rampFadeGain(1, 0.6);
   }
 
   /** Earliest time new automation may start: now, or when a running tape stop ends. */
@@ -550,11 +553,11 @@ export class MusicGraph {
     return Math.max(this.now, this.tapeStopEndsAt);
   }
 
-  /** Ramps the duck gain to `level` over `seconds`, after any running tape stop. */
-  private rampDuckGain(level: number, seconds: number): void {
+  /** Ramps the fade gain to `level` over `seconds`, after any running tape stop. */
+  private rampFadeGain(level: number, seconds: number): void {
     const at = this.afterTapeStop();
     try {
-      const gain = this.duckGain.gain;
+      const gain = this.fadeGain.gain;
       gain.cancelScheduledValues(at);
       // Without a running curve, start from the current level; otherwise from where it ends
       if (at === this.now) gain.setValueAtTime(gain.value, at);

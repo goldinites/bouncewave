@@ -204,4 +204,90 @@ describe('Arrangement', () => {
       expect(without, layer).toBeLessThan(all);
     }
   });
+  describe('in the match', () => {
+    const song = compileSong({
+      title: 'Groove',
+      bpm: 120,
+      swing: 0,
+      voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'sawtooth' },
+      sections: [
+        {
+          name: 'verse',
+          tier: 'groove',
+          chords: 'Am | F',
+          lead: 'A4 - C5 - E5 - C5 -',
+          bass: 'eighths',
+          arp: 'up',
+          drums: 'four',
+          pad: 'hold',
+        },
+      ],
+    });
+    const section = song.sections[0];
+    const step = 60 / song.bpm / 4;
+
+    const setup = () => {
+      const { ctx } = fakeAudioContext();
+      const graph = new MusicGraph(ctx);
+      const instruments = new Instruments(graph);
+      const arrangement = new Arrangement(instruments, graph);
+      const drums = vi.spyOn(instruments, 'drum');
+      const arps = vi.spyOn(instruments, 'arp');
+      /** Plays a bar of the verse, its first step at `from` steps into it. */
+      const playBar = (extra: { dramaLevel?: number; isOvertime?: boolean }, from = 0) => {
+        for (let s = from; s < STEPS_PER_BAR; s++) {
+          arrangement.playStep({
+            time: s * step,
+            stepDuration: step,
+            song,
+            section,
+            bar: 0,
+            stepInBar: s,
+            isLastBar: false,
+            nextBarChord: section.chords[2],
+            intensity: 1,
+            climaxLevel: 0,
+            difficulty: DifficultyLevel.NORMAL,
+            ...extra,
+          });
+        }
+      };
+      const roles = () => new Set(drums.mock.calls.map((call) => call[1]));
+      return { graph, drums, arps, playBar, roles };
+    };
+
+    it('thins the drums to the kick on the deciding point', () => {
+      const { playBar, roles } = setup();
+      playBar({ dramaLevel: 0.6 });
+      expect([...roles()]).toEqual(['kick']);
+    });
+
+    it('plays the full beat once the deciding point is over', () => {
+      const { playBar, roles } = setup();
+      playBar({ dramaLevel: 0.1 });
+      expect(roles()).toContain('snare');
+    });
+
+    it("sounds overtime's alarm on the eighths, straight into the mix, entering on a crash", () => {
+      const { graph, drums, arps, playBar } = setup();
+      playBar({ isOvertime: false });
+      const before = arps.mock.calls.length;
+      drums.mockClear();
+
+      playBar({ isOvertime: true }, 5); // overtime starts off the beat
+      const alarm = arps.mock.calls.slice(before).filter((call) => call[5] === graph.bus);
+      // From the sixth step: the eighths on steps 6, 8, … 14, the octave on the off-beats
+      expect(alarm.map((call) => call[2] / step)).toEqual([6, 8, 10, 12, 14]);
+      const root = alarm[1][1];
+      expect(alarm[0][1]).toBe(root + 12);
+      expect(drums.mock.calls[0].slice(1, 3)).toEqual(['crash', 5 * step]);
+      expect(drums.mock.calls.filter((call) => call[1] === 'crash')).toHaveLength(1);
+    });
+
+    it("keeps overtime's alarm through the deciding point", () => {
+      const { graph, arps, playBar } = setup();
+      playBar({ isOvertime: true, dramaLevel: 0.6 });
+      expect(arps.mock.calls.filter((call) => call[5] === graph.bus)).toHaveLength(8);
+    });
+  });
 });

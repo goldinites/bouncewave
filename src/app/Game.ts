@@ -254,9 +254,18 @@ export class Game {
       isTwoPlayer: () => this.isTwoPlayers,
       challengeFinale: (finale) => {
         const verdict = this.challengeJudge.verdictFor(finale.winnerIndex);
-        return (
-          verdict && { ...describeFinale(this.i18n, verdict, finale), isPassed: verdict.isPassed }
-        );
+        if (!verdict) return null;
+        // Passed for the first time, and the last there was to pass
+        const progress = this.profile.current.challenges;
+        const completesAll =
+          verdict.isPassed &&
+          challengeState(progress, verdict.challenge) !== 'passed' &&
+          isEveryChallengePassed(markPassed(progress, verdict.challenge));
+        return {
+          ...describeFinale(this.i18n, verdict, finale),
+          isPassed: verdict.isPassed,
+          completesAll,
+        };
       },
       isRestart: () => this.isRestarting,
     });
@@ -810,6 +819,7 @@ export class Game {
       ballSpeed: Math.max(...this.flow.balls.map((b) => b.speed)),
       maxBallSpeed: DIFFICULTY_CONFIGS[difficulty].maxSpeed,
       rally: this.flow.rally,
+      isOvertime: this.flow.isOvertime,
       scores: [...this.flow.scores],
       winningScores: this.flow.rules.winningScores,
       isMuted: this.settings.current.musicMuted,
