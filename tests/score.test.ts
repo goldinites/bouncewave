@@ -86,10 +86,22 @@ describe('score', () => {
 
 describe('the soundtrack', () => {
   it('gives every song a section for each tier (sketches are only a hook)', () => {
-    for (const { sections } of SONGS.filter((song) => !song.sketch)) {
+    for (const { sections } of SONGS.filter((song) => !song.sketch && song.place !== 'menu')) {
       for (const tier of ['calm', 'groove', 'rise', 'high']) {
         expect(sections.some((section) => section.tier === tier)).toBe(true);
       }
+    }
+  });
+
+  // The menus play only calm parts: anything hotter in the menus' own song would never be heard
+  it('gives the menus’ song calm parts only', () => {
+    const menus = SONGS.filter((song) => song.place === 'menu' && !song.sketch);
+    expect(menus).toHaveLength(1);
+    for (const { title, sections } of menus) {
+      expect(
+        sections.map((section) => section.tier).every((tier) => tier === 'calm'),
+        title,
+      ).toBe(true);
     }
   });
 

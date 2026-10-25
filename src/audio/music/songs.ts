@@ -475,8 +475,9 @@ const SIGNAL_ECHO = `E4 - - - - - D4 - - - - - C4 - - - | C4 - - - - - - - - - .
                    | E4 - - - - - D4 - - - - - - - - - | D4 - - - - - - - C4 - - - - - . .
                    | B3 - - - - - A3 - - - - - - - - - | . . . . . . . . . . . . . . . .`;
 
-// ——— The menus' track (5.12): dreamwave at ~84, calling the player in rather than pressing;
-// Float, after Boards of Canada, chosen of three bases, and melodies over it to choose from ———
+// ——— The menus' track (5.12): dreamwave at ~84, calling the player in rather than pressing, after
+// Boards of Canada; chosen of three bases and three melodies — F lydian, a kalimba over a pad
+// swelling backwards, and a melody drifting low on a Rhodes with a lot of air ———
 
 /** Float: a kalimba's cell growing a note a bar and shrinking back, the lydian fourth in it. */
 const MENU_FLOAT_ARP = additive(
@@ -484,75 +485,35 @@ const MENU_FLOAT_ARP = additive(
   [2, 3, 4, 5, 6, 7, 5, 3],
 );
 
-/** Call: a rising arpeggio asks, the lydian B leans up into C; it ends open, on the B. */
-const MENU_CALL = `C4 - - - F4 - - - A4 - - - - - - - | B4 - - - - - C5 - - - - - . . . .
-                  | D4 - - - G4 - - - B4 - - - - - - - | A4 - - - - - - - G4 - - - . . . .
-                  | C5 - - - - - - - B4 C5 D5 - - - - - | C5 - - - - - - - A4 - - - F4 - - -
-                  | E4 - - - - - - - G4 - - - A4 - - - | B4 - - - - - - - - - - - . . . .`;
-
-/** Drift: a few pentatonic notes off the beat and a lot of air, low. */
+/** The drift, the melody: a few pentatonic notes off the beat and a lot of air, low. */
 const MENU_DRIFT = `. . A3 - - - - - C4 - - - - - . . | D4 - - - - - - - - - - - . . . .
                    | . . . . . . . . . . G4 - D4 - - - | A3 - - - - - - - . . . . . . . .
                    | . . C4 - - - - - F4 - - - G4 - A4 - | C5 - - - - - - - - - - - - - . .
                    | . . . . . . . . . . A4 G4 E4 - . . | . . D4 - - - - - - - - - - - . .`;
 
-/** Breath: each phrase drawn in a sixth up, then let out softly. */
-const MENU_BREATH = `C4 - - - - - A4 - - - - - - - - - | G4 - - - - - - - E4 - - - - - . .
-                    | D4 - - - - - B4 - - - - - - - - - | A4 - - - - - - - G4 - - - - - . .
-                    | E4 - - - - - C5 - - - - - - - - - | B4 - - - A4 - - - G4 - - - A4 - - -
-                    | C4 - - - - - A4 - - - - - G4 A4 G4 - | D4 - - - - - - - - - - - - - . .`;
-
-/**
- * The menus' base, chosen: Float, after Boards of Canada — F lydian, no drums, a kalimba's
- * growing cell over a pad swelling backwards; the bloom brings a soft half-time in.
- */
-const MENU_FLOAT: SongDef = {
-  title: 'Menu Float',
-  sketch: true,
-  level: -1.5,
-  bpm: 84,
-  swing: 0,
-  kit: 'synthwave',
-  room: 'valley',
-  pump: 0.2,
-  // A round, clean bass, as dreamwave's is: under even the mix's own bend
-  grit: -8,
-  voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
-  sections: [
-    {
-      name: 'hook',
-      tier: 'groove',
-      chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
-      arpLine: MENU_FLOAT_ARP,
-      arpVoice: 'kalimba',
-      bass: 'long',
-      drums: 'none',
-      pad: 'swell',
-    },
-    {
-      name: 'hot',
-      tier: 'high',
-      chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
-      arpLine: MENU_FLOAT_ARP,
-      arpVoice: 'kalimba',
-      bass: 'long',
-      drums: 'halftime',
-      pad: 'hold',
-      drop: true,
-    },
+/** The kalimba in the haze: the same growing cell, on D minor's and B-flat's tones, as high. */
+const MENU_HAZE_ARP = cycle(
+  [
+    { cell: ['F5', 'A5', 'D6', 'C6'], bars: 2 },
+    { cell: ['F5', 'A5', 'D6', 'A#5'], bars: 2 },
+    { cell: ['F5', 'A5', 'D6', 'C6'], bars: 2 },
+    { cell: ['G5', 'C6', 'F5', 'C6'], bars: 1 },
+    { cell: ['G5', 'C6', 'E5', 'C6'], bars: 1 },
   ],
-};
+  ARP_RHYTHM.seven,
+);
 
-/** Float with a melody over it, for the stand: the base (hook) and its bloom (hot). */
-const floatSketch = (title: string, lead: string): SongDef => {
-  const float = MENU_FLOAT;
-  return {
-    ...float,
-    title,
-    voices: { ...float.voices, lead: 'brass' },
-    sections: float.sections.map((section) => ({ ...section, lead })),
-  };
-};
+/** The strings answering the drift in its rests, long notes between it and the kalimba. */
+const MENU_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . A4 - - -
+                    | B4 - - - - - - - - - . . . . . . | . . . . . . . . B4 - - - - - - -
+                    | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
+                    | C5 - - - - - - - . . . . . . . . | . . . . . . . . B4 - - - - - - -`;
+
+/** The haze, the bridge: the drift's head taken where the lydian F never goes, D minor and B-flat. */
+const MENU_HAZE = `. . A3 - - - - - C4 - - - - - . . | F4 - - - - - - - E4 - - - - - . .
+                  | . . . . . . . . . . F4 - D4 - - - | C4 - - - - - - - . . . . . . . .
+                  | . . D4 - - - - - F4 - - - A4 - C5 - | A4 - - - - - - - - - - - - - . .
+                  | . . . . . . . . . . G4 F4 C4 - . . | . . E4 - - - - - - - - - - - . .`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -1408,11 +1369,84 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // The menus' melodies over Float (5.12), for the stand
-  MENU_FLOAT,
-  floatSketch('Menu Float v2', MENU_CALL),
-  floatSketch('Menu Float v3', MENU_DRIFT),
-  floatSketch('Menu Float v4', MENU_BREATH),
+  {
+    // The menus at night, after Boards of Canada and Home: the game on standby, its screen
+    // glowing in the dark, calling the player back. The pad swells in backwards, the kalimba
+    // reconnects a note at a time, the bass under it; the drift comes in low on a Rhodes with a
+    // lot of air; a soft half-time blooms under it, the strings answering its rests; the haze
+    // takes its head to D minor and B-flat, where the lydian F never goes, a heartbeat under it;
+    // and round again. Calm all through: the menus play nothing else
+    title: 'Standby',
+    bpm: 84,
+    level: 4.5,
+    swing: 0,
+    place: 'menu',
+    kit: 'synthwave',
+    transitions: 'synth',
+    room: 'haze',
+    pump: 0.2,
+    // A round, clean bass, as dreamwave's is: under even the mix's own bend
+    grit: -8,
+    voices: { lead: 'rhodes', counter: 'strings', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
+    form: ['glow', 'drift', 'bloom', 'haze', 'drift', 'bloom'],
+    sections: [
+      {
+        // The screen comes on: the pad swelling in backwards, the kalimba, then the bass
+        name: 'glow',
+        tier: 'calm',
+        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+        arpLine: MENU_FLOAT_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        enter: { arp: 2, bass: 4 },
+        // The long clean bass alone under the pad would fill the sub: held back
+        mix: { bass: -4 },
+      },
+      {
+        name: 'drift',
+        tier: 'calm',
+        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+        lead: MENU_DRIFT,
+        arpLine: MENU_FLOAT_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        mix: { bass: -4 },
+      },
+      {
+        // A soft half-time under the drift, the strings answering its rests
+        name: 'bloom',
+        tier: 'calm',
+        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+        lead: MENU_DRIFT,
+        counter: MENU_ANSWER,
+        arpLine: MENU_FLOAT_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'hold',
+        mix: { bass: -4 },
+      },
+      {
+        // The drift's head on a soft lead in D minor and B-flat, a heartbeat under it
+        name: 'haze',
+        tier: 'calm',
+        chords: 'Dm7 | Dm7 | Bbmaj7 | Bbmaj7 | Dm7 | Dm7 | Csus4 | C',
+        lead: MENU_HAZE,
+        leadVoice: 'soft',
+        arpLine: MENU_HAZE_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'pulse',
+        pad: 'swell',
+        // The heartbeat and the bass's root under it stand out of the drift's quiet: brought down
+        level: -2.5,
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);

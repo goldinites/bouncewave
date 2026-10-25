@@ -7,6 +7,7 @@ import {
   formatReport,
   hitMargin,
   levelChange,
+  targetFor,
   levels,
   levelTrack,
   longestGap,
@@ -116,6 +117,10 @@ describe('track analysis', () => {
     expect(levelChange(ANALYSIS.TARGET_DB)).toBe(0);
     expect(levelChange(ANALYSIS.TARGET_DB - 3)).toBe(4);
     expect(levelChange(ANALYSIS.TARGET_DB + 1)).toBe(-1.5);
+    // A song of calm parts only is levelled to where the others' calm parts sit
+    expect(targetFor(false)).toBe(ANALYSIS.TARGET_DB);
+    expect(targetFor(true)).toBeLessThan(ANALYSIS.TARGET_DB - ANALYSIS.CALM_DROP[0]);
+    expect(targetFor(true)).toBeGreaterThan(ANALYSIS.TARGET_DB - ANALYSIS.CALM_DROP[1]);
   });
 
   it('writes the report with every part, every hit and the suggested level', () => {
@@ -142,6 +147,7 @@ describe('track analysis', () => {
         },
       ],
       loudness: -27,
+      isCalmOnly: false,
       hitPart: 'verse',
       hits: [{ kind: 'player', margins: [{ inBand: 2, best: 8, bestHz: 2000 }] }],
       hitResidual: -100,

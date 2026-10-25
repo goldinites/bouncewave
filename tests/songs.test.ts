@@ -109,8 +109,14 @@ describe('the soundtrack', () => {
   // shorter in a row — and a long, held one, half a bar or more
   it('gives the verse and chorus melodies quick moments and held ones', () => {
     for (const song of SONGS.filter((s) => !s.sketch)) {
-      for (const tier of ['groove', 'high'] as const) {
-        const { name, lead } = song.sections.find((s) => s.tier === tier && s.lead)!;
+      // The menus' song has no verse or chorus: every melody it plays
+      const melodies =
+        song.place === 'menu'
+          ? song.sections.filter((s) => s.lead)
+          : (['groove', 'high'] as const).map((tier) =>
+              song.sections.find((s) => s.tier === tier && s.lead)!,
+            );
+      for (const { name, lead } of melodies) {
         const notes = notesOf(lead!);
         const quick = notes.some(
           (_, i) => notes.slice(i, i + 3).filter((n) => n.steps <= 2).length === 3,
@@ -174,7 +180,12 @@ describe('the soundtrack', () => {
     const chordsOf = (section: (typeof SONGS)[number]['sections'][number]) =>
       new Set(section.chords.map((chord) => chord.symbol));
     for (const song of SONGS.filter((song) => !song.sketch)) {
-      const verse = chordsOf(song.sections.find((section) => section.tier === 'groove')!);
+      // The menus' song has no verse: its first part with a melody stands for one
+      const verse = chordsOf(
+        song.sections.find((section) =>
+          song.place === 'menu' ? section.lead : section.tier === 'groove',
+        )!,
+      );
       const elsewhere = song.sections
         .filter((section) => section.tier !== 'rise')
         .some((section) => [...chordsOf(section)].filter((c) => !verse.has(c)).length >= 2);
@@ -209,7 +220,8 @@ describe('the soundtrack', () => {
     for (const song of SONGS.filter((s) => !s.sketch)) {
       const tiers = new Set(song.form.map((i) => song.sections[i].tier));
       expect(tiers.has('calm'), song.title).toBe(true);
-      expect(tiers.has('high'), song.title).toBe(true);
+      // The menus' song is all calm (score.test.ts): nothing there to earn
+      if (song.place !== 'menu') expect(tiers.has('high'), song.title).toBe(true);
     }
   });
 });
@@ -226,10 +238,14 @@ describe('the tracks stay apart', () => {
   const tracks = SONGS.filter((song) => !song.sketch);
   const pairs = tracks.flatMap((a, i) => tracks.slice(i + 1).map((b) => [a, b] as const));
   const partsOf = (song: Track) => [...new Set(song.form.map((i) => song.sections[i]))];
+  // The menus' song, all calm, has no verse or chorus: its first melody stands for both
   const part = (song: Track, tier: 'groove' | 'high') =>
-    partsOf(song).find((section) => section.tier === tier)!;
+    partsOf(song).find((section) => section.tier === tier) ??
+    partsOf(song).find((section) => section.lead)!;
   const melodies = (song: Track) =>
-    partsOf(song).filter((s) => (s.tier === 'groove' || s.tier === 'high') && s.lead);
+    partsOf(song).filter(
+      (s) => (song.place === 'menu' || s.tier === 'groove' || s.tier === 'high') && s.lead,
+    );
   const cosine = (a: number[], b: number[]) =>
     a.reduce((sum, x, i) => sum + x * b[i], 0) / (Math.hypot(...a) * Math.hypot(...b));
   const median = (values: number[]) =>

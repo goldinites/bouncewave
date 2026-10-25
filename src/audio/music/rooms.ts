@@ -96,6 +96,16 @@ export const ROOMS = {
     return: 0.4,
     sends: { pads: 0.6, melody: 0.42, drums: 0.06 },
   },
+  // A screen glowing in the dark: the softest, longest tail of all, late and warm, the melody
+  // and the pads blurring into it; the most the impulse's memory allows
+  haze: {
+    decay: 3.3,
+    preDelay: 0.06,
+    lowCut: 300,
+    highCut: 5500,
+    return: 0.45,
+    sends: { pads: 0.75, melody: 0.55, drums: 0.15 },
+  },
   // An old stone temple: a short, bright answer that hand drums and mallets ring in
   stone: {
     decay: 1.2,

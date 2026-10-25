@@ -601,6 +601,7 @@ async function renderSong({ song: id, lead, bass, kit, mute = [] }: RenderOption
     options,
     parts: partReports,
     loudness,
+    isCalmOnly: rallyParts.length === 0,
     hitPart: loudest.name,
     hits: hitReports,
     hitResidual: analysis.levels(residual).rms - analysis.levels(without, 0, beforeHits).rms,
