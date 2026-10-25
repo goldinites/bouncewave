@@ -208,10 +208,13 @@ test('opens the settings, switches the language and comes back', async ({ page }
   await page.goto('');
 
   await button(page, 'SETTINGS').click();
-  await expect(button(page, /^SOUND EFFECTS/)).toBeVisible();
+  await expect(choice(page, 'SOUND EFFECTS')).toHaveAttribute('aria-valuetext', '100%');
   await expect(button(page, /^DIFFICULTY/)).toHaveCount(0);
 
-  await button(page, 'Next').click(); // the language's arrow
+  // The volumes' and the language's rows each have one: the language's is the last
+  await button(page, 'Previous').first().click();
+  await expect(choice(page, 'MUSIC')).toHaveAttribute('aria-valuetext', '90%');
+  await button(page, 'Next').last().click();
   await expect(choice(page, 'ЯЗЫК')).toHaveAttribute('aria-valuetext', 'РУССКИЙ');
   await button(page, 'НАЗАД').click();
   await expect(button(page, 'ИГРАТЬ')).toBeVisible();
@@ -255,7 +258,8 @@ test('brings settings saved before the profile into it', async ({ page }) => {
   await button(page, 'БЫСТРЫЙ МАТЧ').click();
   await expect(choice(page, 'ОЧКИ')).toHaveAttribute('aria-valuetext', '7');
   const profile = await page.evaluate(() => localStorage.getItem('bouncewave_profile'));
-  expect(JSON.parse(profile ?? '{}')).toMatchObject({ version: 4 });
+  // The music off is no music volume
+  expect(JSON.parse(profile ?? '{}')).toMatchObject({ version: 5, settings: { musicVolume: 0 } });
 });
 
 test('shows the statistics on the court, and comes back', async ({ page }) => {

@@ -4,6 +4,7 @@ import { Harmony } from '@/audio/music/HarmonyTimeline';
 import { HIT_BODIES, HIT_CLICK } from '@/audio/samples/actions';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { getClimbingRallyNote, getRallyNote, getWallNote, MELODY_LOW } from '@/audio/sfx/harmony';
+import { LoopTarget, LoopVoice } from '@/audio/sfx/LoopVoice';
 import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp, midiToFrequency } from '@/shared/math';
 
@@ -26,7 +27,14 @@ const HEARTBEAT = [
 const HEARTBEAT_KNOCK = { HZ: 330, LENGTH: 0.06, SHARE: 1 } as const;
 
 // The channel surf's last channel starts this far flat and glides up onto its note
-const TUNE_IN_FLAT = 0.94;
+// The channel surf (playChannelSurf): a relay's soft thud, Hz, falling from FROM semitones up;
+// static under a low-pass, clearing to CLEAR Hz as the last channel settles; the chime, MIDI over
+// the chord's root, AFTER s into the last channel
+const CHANNEL_SOUND = {
+  RELAY: { HZ: 110, FROM: 12, VOLUME: 0.09, LENGTH: 0.05 },
+  STATIC: { VOLUME: 0.035, CUTOFF: 3000, CLEAR: 400 },
+  CHIME: { OFFSET: 48, VOLUME: 0.05, FIFTH: 0.6, LENGTH: 0.6, AFTER: 0.12 },
+} as const;
 
 // Shared echo used by the victory sting
 const ECHO = { TIME: 0.28, FEEDBACK: 0.35, WET: 0.5 } as const;
@@ -187,12 +195,40 @@ const MOMENT = {
   BRICK: { CRACK: 0.1, SHARD: 0.03, SHARDS: 3, SHARD_STEP: 0.025 },
   // A paddle shrinking: a sigh sliding down onto a note a semitone lower for each tenth lost
   SHRINK: { OFFSET: 48, VOLUME: 0.07, SIGH: 5, LENGTH: 0.14 },
-  // Ice: a skate's dull grind while a paddle coasts, as loud as it is fast; on a hit, two glassy
-  // tones over it
-  ICE: { SCRAPE: 0.125, GRAIN: 0.07, HZ: 1500, TINK: 0.025, TINK_LENGTH: 0.08 },
-  // The ball's sonar in the dark, a submarine's: a ping where it is, panned across, higher the
-  // higher it flies (MIDI notes)
-  SONAR: { VOLUME: 0.09, LENGTH: 0.22, LOW: 60, HIGH: 84 },
+  // Ice: on a hit, two glassy tones over it
+  ICE: { TINK: 0.025, TINK_LENGTH: 0.08 },
+  // A person's paddle on ice moves as a skate does (5.9): a blade's "shhk" as it pushes off, rising
+  // through the band, louder the harder; a thin hiss as it glides, as loud as it is fast; a hockey
+  // stop's spray as it brakes — falling, brighter and longer, with a crunch of ice under it. Hz
+  SKATE: {
+    PUSH: 0.13,
+    PUSH_LENGTH: 0.14,
+    PUSH_FROM: 2200,
+    PUSH_TO: 5500,
+    GLIDE: 0.035,
+    GLIDE_HZ: 4200,
+    GLIDE_SPEED_HZ: 2500, // the hiss brightens by this at full speed
+    GLIDE_Q: 5,
+    STOP: 0.2,
+    STOP_LENGTH: 0.32,
+    STOP_FROM: 7000,
+    STOP_TO: 2600,
+    CRUNCH: 0.09,
+    CRUNCH_HZ: 900,
+  },
+  // The ball in the dark (5.9): its air as it flies, a soft rush of noise held while it is live —
+  // near silent far away and going away, swelling as it closes on a person's goal; panned across,
+  // its band higher the higher it flies and brighter the faster. A guide under the game, not a
+  // sound of it: on the goal it sits about 12 dB under a paddle hit (-46 against -35 dBFS RMS,
+  // measured in a browser; at 0.16 it was as loud as a hit, and held), mid-court about 9 dB lower. Hz
+  BALL_AIR: {
+    VOLUME: 0.04,
+    FAR: 0.12, // share of the volume far from the goal, or flying away
+    LOW: 500,
+    HIGH: 2000,
+    FAST: 0.7, // the band rises by this share at the top speed
+    Q: 1.4,
+  },
   // The clock's last seconds: a woodblock's tick and tock, Hz
   CLOCK: { VOLUME: 0.06, LENGTH: 0.03, TICK: 1300, TOCK: 950 },
   // The menus: soft sines on the chord the music is on; one at a time, the next within
@@ -219,6 +255,18 @@ const POINT = {
 } as const;
 
 /** One filtered burst of the console noise. */
+/** Where the ball is in the dark, as its sound follows it. */
+export interface BallInDark {
+  /** Across the court, -1 the left edge to 1 the right. */
+  x: number;
+  /** 0 at the bottom to 1 at the top. */
+  height: number;
+  /** 0 far from the goal it flies at (or flying at no person's goal) to 1 on it. */
+  nearness: number;
+  /** 0 to 1 of the level's top speed. */
+  speed: number;
+}
+
 interface NoiseBurst {
   volume: number;
   length: number;
@@ -229,6 +277,8 @@ interface NoiseBurst {
   to?: number;
   q?: number;
   delay?: number;
+  /** Smooth noise, in place of the console's stepped noise channel. */
+  smooth?: boolean;
 }
 
 /** One tone of a hit. */
@@ -289,6 +339,12 @@ export class SoundEffects {
   /** The punch's console noise, rendered once for `noiseContext`. */
   private noise: AudioBuffer | null = null;
   private noiseContext: AudioContext | null = null;
+  /** Smooth white noise, looped by the held sounds, rendered once per context. */
+  private hiss: AudioBuffer | null = null;
+  private hissContext: AudioContext | null = null;
+  // The held sounds: the ball's air in the dark, a skate's glide
+  private readonly ballAir = new LoopVoice((ac) => this.hissSource(ac), 'bandpass');
+  private readonly skateGlide = new LoopVoice((ac) => this.hissSource(ac), 'bandpass');
 
   /**
    * @param getIsGameplayAudible whether gameplay sounds should play right now (false behind
@@ -608,7 +664,7 @@ export class SoundEffects {
   private noiseBurst(ac: AudioContext, burst: NoiseBurst): void {
     try {
       const source = ac.createBufferSource();
-      source.buffer = this.consoleNoise(ac);
+      source.buffer = burst.smooth ? this.hissBuffer(ac) : this.consoleNoise(ac);
       const start = ac.currentTime + (burst.delay ?? 0);
       const filter = ac.createBiquadFilter();
       filter.type = burst.filter;
@@ -1056,20 +1112,110 @@ export class SoundEffects {
     });
   }
 
-  /** A grain of a paddle's grind on ice, `speed` 0-1 of its top: played while it coasts. */
-  public playIceScrape(speed: number, pan = 0): void {
+  /** A skate pushing off on ice, `strength` 0-1 (how hard the paddle sped up). */
+  public playSkatePush(strength: number, pan = 0): void {
     const at = this.pointContext();
     if (!at) return;
-    const { ac, trim } = at;
-    const { ICE } = MOMENT;
-    this.noiseBurst(ac, {
-      volume: ICE.SCRAPE * clamp(speed, 0, 1) * trim,
-      length: ICE.GRAIN,
+    const { SKATE } = MOMENT;
+    this.noiseBurst(at.ac, {
+      volume: SKATE.PUSH * (0.4 + 0.6 * clamp(strength, 0, 1)) * at.trim,
+      length: SKATE.PUSH_LENGTH,
       pan: clamp(pan, -1, 1) * COURT_PAN,
       filter: 'bandpass',
-      from: ICE.HZ,
+      from: SKATE.PUSH_FROM,
+      to: SKATE.PUSH_TO,
+      q: 4,
+      smooth: true,
+    });
+  }
+
+  /** A skate's hockey stop on ice, `strength` 0-1 (how fast the paddle was going). */
+  public playSkateStop(strength: number, pan = 0): void {
+    const at = this.pointContext();
+    if (!at) return;
+    const { SKATE } = MOMENT;
+    const level = (0.4 + 0.6 * clamp(strength, 0, 1)) * at.trim;
+    const where = clamp(pan, -1, 1) * COURT_PAN;
+    this.noiseBurst(at.ac, {
+      volume: SKATE.STOP * level,
+      length: SKATE.STOP_LENGTH,
+      pan: where,
+      filter: 'bandpass',
+      from: SKATE.STOP_FROM,
+      to: SKATE.STOP_TO,
+      q: 2,
+      smooth: true,
+    });
+    // The ice crunching under the blade, in the console's stepped noise
+    this.noiseBurst(at.ac, {
+      volume: SKATE.CRUNCH * level,
+      length: SKATE.STOP_LENGTH * 0.6,
+      pan: where,
+      filter: 'bandpass',
+      from: SKATE.CRUNCH_HZ,
       q: 3,
     });
+  }
+
+  /** A skate's glide while the paddle slides, `speed` 0-1 of its top; null when it stands. */
+  public setSkateGlide(speed: number | null, pan = 0): void {
+    const { SKATE } = MOMENT;
+    this.hold(this.skateGlide, (trim) =>
+      speed === null || speed <= 0
+        ? null
+        : {
+            volume: SKATE.GLIDE * clamp(speed, 0, 1) * trim,
+            frequency: SKATE.GLIDE_HZ + SKATE.GLIDE_SPEED_HZ * clamp(speed, 0, 1),
+            q: SKATE.GLIDE_Q,
+            pan: clamp(pan, -1, 1) * COURT_PAN,
+          },
+    );
+  }
+
+  /** The ball's air in the dark while it flies (BALL_AIR); null when there is none to hear. */
+  public setBallAir(air: BallInDark | null): void {
+    const { BALL_AIR } = MOMENT;
+    this.hold(this.ballAir, (trim) => {
+      if (!air) return null;
+      const near = clamp(air.nearness, 0, 1);
+      const band = BALL_AIR.LOW + (BALL_AIR.HIGH - BALL_AIR.LOW) * clamp(air.height, 0, 1);
+      return {
+        volume: BALL_AIR.VOLUME * (BALL_AIR.FAR + (1 - BALL_AIR.FAR) * near * near) * trim,
+        frequency: band * (1 + BALL_AIR.FAST * clamp(air.speed, 0, 1)),
+        q: BALL_AIR.Q,
+        pan: clamp(air.x, -1, 1) * COURT_PAN,
+      };
+    });
+  }
+
+  /**
+   * Steers a held sound to what `target` makes of the heat's trim, or to silence wherever action
+   * sounds are not heard (muted, behind the menus, paused).
+   */
+  private hold(voice: LoopVoice, target: (trim: number) => LoopTarget | null): void {
+    const ac = this.audioContextGetter();
+    if (!ac) return;
+    const at = this.pointContext();
+    voice.update(ac, this.output(ac), at ? target(at.trim) : null);
+  }
+
+  /** A source of smooth white noise, looping. */
+  private hissSource(ac: AudioContext): AudioBufferSourceNode {
+    const source = ac.createBufferSource();
+    source.buffer = this.hissBuffer(ac);
+    source.loop = true;
+    return source;
+  }
+
+  /** Two seconds of smooth white noise, rendered once per context. */
+  private hissBuffer(ac: AudioContext): AudioBuffer {
+    if (this.hiss && this.hissContext === ac) return this.hiss;
+    const buffer = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    this.hiss = buffer;
+    this.hissContext = ac;
+    return buffer;
   }
 
   /** A hit on ice: two glassy tones over it. */
@@ -1087,21 +1233,6 @@ export class SoundEffects {
         pan: clamp(pan, -1, 1) * COURT_PAN,
       });
     }
-  }
-
-  /** The ball's sonar ping in the dark: `x` across the court (-1 to 1), `height` 0 low to 1 high. */
-  public playSonar(x: number, height: number): void {
-    const at = this.pointContext();
-    if (!at) return;
-    const { ac, trim } = at;
-    const { SONAR } = MOMENT;
-    this.hitTone(ac, {
-      frequency: midiToFrequency(SONAR.LOW + (SONAR.HIGH - SONAR.LOW) * clamp(height, 0, 1)),
-      wave: 'sine',
-      volume: SONAR.VOLUME * trim,
-      length: SONAR.LENGTH,
-      pan: clamp(x, -1, 1) * COURT_PAN,
-    });
   }
 
   /** A tick of the clock's last seconds, a woodblock's; every other one a tock. */
@@ -1337,61 +1468,56 @@ export class SoundEffects {
   }
 
   /**
-   * The channel surf at the start of a match: a synth blip at every switch, climbing the chord
-   * the music is playing like a retro set's channel-up button, then the last channel tunes in,
-   * gliding up onto the top note and ringing out through the echo.
+   * The channel surf at the start of a match, an old set's (5.9): every channel flicked past
+   * thuds its relay under a breath of soft static, with no notes to clash with the song coming
+   * in (the climbing square blips grated); as the last one comes on the static clears and a soft
+   * chime, the chord's root and fifth, says the picture is in (CHANNEL_SOUND).
    */
   public playChannelSurf(): void {
     const ac = this.getUnmutedContext();
     if (!ac) return;
+    const { root, chord } = this.harmonyGetter() ?? { root: 33, chord: [0, 3, 7] };
+    const { RELAY, STATIC, CHIME } = CHANNEL_SOUND;
 
-    try {
-      const now = ac.currentTime;
-      const harmony = this.harmonyGetter();
-      const last = CHANNEL_SURF.CHANNELS - 1;
-
-      for (let i = 0; i < last; i++) {
-        const start = now + i * CHANNEL_SURF.STEP;
-        const frequency = midiToFrequency(getRallyNote(harmony, i + 1));
-        // A click of the button, then the blip itself
-        this.tone(ac, 2400, start, 0.012, 'triangle', 0.03, 0.001, null);
-        this.tone(
-          ac,
-          frequency,
-          start + 0.005,
-          CHANNEL_SURF.STEP * 0.7,
-          'square',
-          0.04,
-          0.004,
-          null,
-        );
-      }
-
-      const start = now + last * CHANNEL_SURF.STEP;
-      const frequency = midiToFrequency(getRallyNote(harmony, CHANNEL_SURF.CHANNELS));
-      const echo = this.getEchoInput(ac);
-      this.tone(ac, 2400, start, 0.012, 'triangle', 0.03, 0.001, null);
-      // Tuning in: from a little flat up onto the note, the way a dial finds the station
-      this.tone(
-        ac,
-        frequency * TUNE_IN_FLAT,
-        start,
-        0.5,
-        'triangle',
-        0.06,
-        0.01,
-        echo,
-        1 / TUNE_IN_FLAT,
-      );
-      this.tone(ac, frequency * 2, start + 0.06, 0.4, 'sine', 0.025, 0.02, echo);
-    } catch {
-      // Audio playback fails silently if browser policy blocks it
+    for (let i = 0; i < CHANNEL_SURF.CHANNELS; i++) {
+      const delay = i * CHANNEL_SURF.STEP;
+      this.hitTone(ac, {
+        frequency: RELAY.HZ,
+        wave: 'sine',
+        volume: RELAY.VOLUME,
+        length: RELAY.LENGTH,
+        pan: 0,
+        from: RELAY.FROM,
+        glide: RELAY.LENGTH * 0.5,
+        delay,
+      });
+      const isLast = i === CHANNEL_SURF.CHANNELS - 1;
+      this.noiseBurst(ac, {
+        volume: STATIC.VOLUME,
+        length: isLast ? CHANNEL_SURF.SETTLE : CHANNEL_SURF.STEP * 0.9,
+        pan: 0,
+        filter: 'lowpass',
+        from: STATIC.CUTOFF,
+        to: isLast ? STATIC.CLEAR : undefined,
+        smooth: true,
+        delay,
+      });
     }
-  }
 
-  /** UI feedback: settings are only reachable from menus, so it must bypass the gameplay gate. */
-  /** A setting switched: a soft click. */
-  public playSettingsClick(): void {
-    this.menuTone([19]);
+    const tuned = (CHANNEL_SURF.CHANNELS - 1) * CHANNEL_SURF.STEP + CHIME.AFTER;
+    const fifth = chord.find((interval) => interval === 7) ?? chord[chord.length - 1];
+    for (const [interval, share] of [
+      [0, 1],
+      [fifth, CHIME.FIFTH],
+    ] as const) {
+      this.hitTone(ac, {
+        frequency: midiToFrequency(root + CHIME.OFFSET + interval),
+        wave: 'sine',
+        volume: CHIME.VOLUME * share,
+        length: CHIME.LENGTH,
+        pan: 0,
+        delay: tuned,
+      });
+    }
   }
 }

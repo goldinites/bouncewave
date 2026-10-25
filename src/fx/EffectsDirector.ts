@@ -132,12 +132,20 @@ const courtPan = (x: number) => (x / COURT.WIDTH) * 2 - 1;
 // The serve's countdown (5.7b): s before the ball leaves at which a tick sounds; a pip as it leaves
 const SERVE_TICKS = [0.8, 0.4] as const;
 
-// 5.7c's moments heard over time. Ice: a scrape grain every GRAIN s while a player's paddle coasts
-// faster than MIN px/s, as loud as its speed against FULL px/s. Darkness: the ball's sonar pings
-// every FAR s, quickening to NEAR s as it closes on a person's goal. The clock: ticks once a second
-// in its last URGENT s (as the condition line turns urgent), every FAST_STEP s in its last FAST s
-const ICE_SCRAPE = { GRAIN: 0.06, MIN: 40, FULL: 700 } as const;
-const SONAR = { FAR: 0.45, NEAR: 0.1 } as const;
+// The moments heard over time. A skate on ice (5.9): it glides above MIN px/s, as loud as its speed
+// against FULL; it pushes off when it gains PUSH_GAIN px/s every second from below PUSH_FROM, at
+// most every PUSH_GAP s; it stops when steered back against a slide faster than STOP_FROM, the
+// target further than STOP_REACH px away. The clock: ticks once a second in its last URGENT s (as
+// the condition line turns urgent), every FAST_STEP s in its last FAST s
+const SKATE = {
+  MIN: 40,
+  FULL: 700,
+  PUSH_GAIN: 2500,
+  PUSH_FROM: 150,
+  PUSH_GAP: 0.25,
+  STOP_FROM: 250,
+  STOP_REACH: 20,
+} as const;
 const CLOCK = { URGENT: 10, FAST: 3, FAST_STEP: 0.25 } as const;
 
 /**
@@ -165,12 +173,13 @@ export class EffectsDirector {
   private readonly isTwoPlayer: () => boolean;
   /** The serve's wait as the last step left it, to hear its countdown cross each tick. */
   private lastServeTime = 0;
-  /** Each paddle's speed as the last step left it, and the time to the next scrape on ice. */
-  private lastPaddleSpeeds: number[] = [];
+  /**
+   * Each paddle's skate on ice: its speed as the last step left it, whether it is braking, and
+   * the time before it may push off again.
+   */
+  private readonly skates: { speed: number; isBraking: boolean; pushIn: number }[] = [];
   /** Whether the match is being played on ice, as the last step left it: its hits tink. */
   private isOnIce = false;
-  private nextScrapeIn = 0;
-  private nextPingIn = 0;
   /** The match clock as the last step left it, and whether the next tick is a tock. */
   private lastTimeLeft: number | null = null;
   private isTock = false;
@@ -272,7 +281,7 @@ export class EffectsDirector {
     this.followMeters(flow);
     this.followServe(flow);
     this.followIce(dt, flow);
-    this.followSonar(dt, flow);
+    this.followBallInDark(flow);
     this.followClock(flow);
     const sparkRally = flow.phase === 'finale' ? 0 : flow.rally;
     this.paddleFx.update(dt, this.paddles, this.particles, sparkRally);
@@ -485,42 +494,66 @@ export class EffectsDirector {
     }
   }
 
-  /** On ice a person's paddle scrapes while it coasts, as loud as it is fast. */
+  /**
+   * A person's paddle on ice heard as a skate (5.9): a push as it speeds up hard from slow, a
+   * glide while it slides, a hockey stop as it is steered against its slide at speed.
+   */
   private followIce(dt: number, flow: MatchFlow): void {
-    const speeds = this.paddles.map((paddle) => Math.abs(paddle.velocity));
-    const last = this.lastPaddleSpeeds;
-    this.lastPaddleSpeeds = speeds;
     this.isOnIce = flow.activeModifiers.includes('ice');
-    if (!this.isOnIce || flow.phase === 'paused') return;
-    this.nextScrapeIn -= dt;
-    if (this.nextScrapeIn > 0) return;
-    this.nextScrapeIn = ICE_SCRAPE.GRAIN;
-    speeds.forEach((speed, i) => {
-      // Coasting: moving, and no faster than a step ago
-      const isCoasting = speed > ICE_SCRAPE.MIN && speed <= (last[i] ?? 0);
-      if (isCoasting && flow.isPlayerPaddle(i)) {
-        this.audio.sfx.playIceScrape(speed / ICE_SCRAPE.FULL, courtPan(this.paddles[i].x));
+    const isOn = this.isOnIce && (flow.phase === 'serving' || flow.phase === 'rally');
+    let glide: { speed: number; pan: number } | null = null;
+    for (const [i, paddle] of this.paddles.entries()) {
+      const state = (this.skates[i] ??= { speed: 0, isBraking: false, pushIn: 0 });
+      const speed = Math.abs(paddle.velocity);
+      const gained = speed - state.speed;
+      state.speed = speed;
+      state.pushIn = Math.max(0, state.pushIn - dt);
+      if (!isOn || !flow.isPlayerPaddle(i)) continue;
+      const pan = courtPan(paddle.x);
+
+      if (gained > SKATE.PUSH_GAIN * dt && speed - gained < SKATE.PUSH_FROM && state.pushIn === 0) {
+        this.audio.sfx.playSkatePush(speed / SKATE.FULL, pan);
+        state.pushIn = SKATE.PUSH_GAP;
       }
-    });
+      // Braking: the paddle wants the other way from where it slides
+      const wants = Math.sign(paddle.targetY - paddle.y);
+      const isBraking =
+        speed > SKATE.STOP_FROM &&
+        wants !== 0 &&
+        wants !== Math.sign(paddle.velocity) &&
+        Math.abs(paddle.targetY - paddle.y) > SKATE.STOP_REACH;
+      if (isBraking && !state.isBraking) this.audio.sfx.playSkateStop(speed / SKATE.FULL, pan);
+      state.isBraking = isBraking || (state.isBraking && speed > SKATE.MIN);
+
+      if (speed > SKATE.MIN && (!glide || speed / SKATE.FULL > glide.speed)) {
+        glide = { speed: speed / SKATE.FULL, pan };
+      }
+    }
+    this.audio.sfx.setSkateGlide(glide?.speed ?? null, glide?.pan);
   }
 
   /**
-   * In the dark the ball pings where it is, quicker the nearer it is to a person's goal: heard
-   * where it cannot be seen.
+   * In the dark the ball is heard as its air (5.9): where it is, swelling as it closes on a
+   * person's goal; silent but while it flies.
    */
-  private followSonar(dt: number, flow: MatchFlow): void {
-    if (!flow.activeModifiers.includes('darkness') || !flow.isBallLive) return;
-    this.nextPingIn -= dt;
-    if (this.nextPingIn > 0) return;
+  private followBallInDark(flow: MatchFlow): void {
+    const isOn =
+      flow.activeModifiers.includes('darkness') && flow.isBallLive && flow.phase === 'rally';
+    if (!isOn) {
+      this.audio.sfx.setBallAir(null);
+      return;
+    }
     const ball = flow.leadBall;
-    const goal = ball.vx < 0 ? 0 : COURT.WIDTH;
     const side: Side = ball.vx < 0 ? 0 : 1;
-    const isComingAtPlayer = this.isTwoPlayer() || side === 0;
-    const distance = Math.abs(ball.x - goal) / COURT.WIDTH;
-    this.nextPingIn = isComingAtPlayer
-      ? SONAR.NEAR + (SONAR.FAR - SONAR.NEAR) * Math.min(1, distance)
-      : SONAR.FAR;
-    this.audio.sfx.playSonar(courtPan(ball.drawX), 1 - ball.drawY / COURT.HEIGHT);
+    const isComingAtPerson = this.isTwoPlayer() || side === 0;
+    const goal = side === 0 ? 0 : COURT.WIDTH;
+    const distance = Math.min(1, Math.abs(ball.drawX - goal) / COURT.WIDTH);
+    this.audio.sfx.setBallAir({
+      x: courtPan(ball.drawX),
+      height: 1 - ball.drawY / COURT.HEIGHT,
+      nearness: isComingAtPerson ? 1 - distance : 0,
+      speed: Math.min(1, ball.speed / this.maxBallSpeed),
+    });
   }
 
   /** The match clock's last seconds tick, faster at the very end. */

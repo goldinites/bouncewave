@@ -9,6 +9,9 @@ import { TRANSITION_SAMPLES } from '@/audio/samples/transitions';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { Look } from '@/shared/look';
+import { Volume, VOLUME, volumeGain } from '@/shared/volume';
+
+const VOLUME_RAMP = 0.03; // s, time constant of a volume change: quick, and without a click
 
 /**
  * Owns the AudioContext (created on the first user gesture), the mixer every sound ends in, and
@@ -30,6 +33,10 @@ export class AudioEngine {
   public isAuditioning = false;
   /** The listening stand's pause: the audio clock stopped, the music held where it was. */
   private isStandPaused = false;
+  /** Whether the listening stand plays everything through a phone speaker's stand-in. */
+  private isPhoneSpeaker = false;
+  /** The player's volumes, set on the mixer's buses once it exists. */
+  private volumes: { music: Volume; sound: Volume } = { music: VOLUME.MAX, sound: VOLUME.MAX };
 
   /**
    * Both getters are read live, at the moment a sound plays, so a settings toggle or a
@@ -104,6 +111,44 @@ export class AudioEngine {
     else if (!document.hidden) void this.audioContext.resume();
   }
 
+  /** The listening stand hears the game through a phone's speaker (Mixer), or as it is. */
+  public setPhoneSpeaker(isOn: boolean): void {
+    this.isPhoneSpeaker = isOn;
+    this.mixer?.setPhoneSpeaker(isOn);
+  }
+
+  /**
+   * The player's volumes (settings): the music's on the music bus, the sounds' on the action and
+   * menu buses. Only acts when one changes.
+   */
+  public setVolumes(music: Volume, sound: Volume): void {
+    if (music === this.volumes.music && sound === this.volumes.sound) return;
+    this.volumes = { music, sound };
+    this.applyVolumes();
+  }
+
+  private applyVolumes(): void {
+    const mixer = this.mixer;
+    if (!mixer) return;
+    const now = mixer.context.currentTime;
+    const set = (bus: GainNode, volume: Volume) =>
+      bus.gain.setTargetAtTime(volumeGain(volume), now, VOLUME_RAMP);
+    set(mixer.music, this.volumes.music);
+    set(mixer.sfx, this.volumes.sound);
+    set(mixer.menu, this.volumes.sound);
+  }
+
+  /** A paddle hit, heard behind the menus too: the sound volume being set, heard as it plays. */
+  public previewSound(): void {
+    this.unlock();
+    this.isAuditioning = true;
+    try {
+      this.sfx.playPaddleHit(1, false, 0);
+    } finally {
+      this.isAuditioning = false;
+    }
+  }
+
   public setLook(look: Look): void {
     this.look = look;
   }
@@ -148,6 +193,8 @@ export class AudioEngine {
 
     if (!this.mixer) {
       this.mixer = new Mixer(ac);
+      this.applyVolumes();
+      if (this.isPhoneSpeaker) this.mixer.setPhoneSpeaker(true);
       // Rendered off the frame, in the background; the live synths play until they are ready.
       // The action sounds first, the first hit comes within seconds; then the drums: they are
       // small, and every song needs them from its first bar

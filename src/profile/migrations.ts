@@ -2,20 +2,20 @@ import * as v from 'valibot';
 import { getDefaultProfile, Profile, PROFILE_VERSION, profileSchema } from '@/profile/Profile';
 import { getEmptyChallengeProgress } from '@/profile/ChallengeProgress';
 import { getEmptyStatistics } from '@/profile/Statistics';
-import { UserSettings } from '@/settings/UserSettings';
+import { VOLUME } from '@/shared/volume';
 
 /** Where the game kept its settings before there was a profile (up to 1.2): version 0. */
 export const LEGACY_SETTINGS_KEY = 'bouncewave_settings';
 
-/** The short keys version 0 saved each setting under. */
-export const LEGACY_KEYS: Record<keyof UserSettings, string> = {
+/** The short keys version 0 saved each setting under, by the names it had then. */
+export const LEGACY_KEYS = {
   difficulty: 'd',
   matchPoints: 'p',
   matchBackground: 'b',
   soundMuted: 'm',
   musicMuted: 'u',
   language: 'l',
-};
+} as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -39,7 +39,17 @@ const MIGRATIONS: ((saved: Record<string, unknown>) => Record<string, unknown>)[
   // 3 → 4: the tutorial begins; someone who has played a match already knows the game, and isn't
   // offered it (it stays on the PLAY menu)
   (saved) => ({ ...saved, version: 4, tutorial: hasPlayed(saved) ? 'skipped' : null }),
+  // 4 → 5: music and sound on or off become volumes (step 5.9): off is none, on the full mix
+  (saved) => ({ ...saved, version: 5, settings: withVolumes(saved.settings) }),
 ];
+
+/** The settings with the music and sound switches turned into volumes (a bad one: the default). */
+function withVolumes(settings: unknown): unknown {
+  if (!isRecord(settings)) return settings;
+  const { musicMuted, soundMuted, ...rest } = settings;
+  const volume = (muted: unknown) => (muted === true ? 0 : VOLUME.MAX);
+  return { ...rest, musicVolume: volume(musicMuted), soundVolume: volume(soundMuted) };
+}
 
 /** Whether a saved profile records a finished match. */
 const hasPlayed = (saved: Record<string, unknown>): boolean =>

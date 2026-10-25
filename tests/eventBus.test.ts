@@ -131,7 +131,6 @@ describe('listening to the match', () => {
       ui,
       i18n,
       {
-        playSettingsClick: vi.fn(),
         playMenuBack: vi.fn(),
         playMenuMove: vi.fn(),
         playMenuSelect: vi.fn(),

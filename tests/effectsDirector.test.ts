@@ -36,9 +36,11 @@ const makeAudio = () => ({
     playWindTurn: vi.fn(),
     playPostRise: vi.fn(),
     playShrink: vi.fn(),
-    playIceScrape: vi.fn(),
+    playSkatePush: vi.fn(),
+    playSkateStop: vi.fn(),
+    setSkateGlide: vi.fn(),
     playIceTink: vi.fn(),
-    playSonar: vi.fn(),
+    setBallAir: vi.fn(),
     playClockTick: vi.fn(),
     playSpin: vi.fn(),
     playScan: vi.fn(),
@@ -375,38 +377,56 @@ describe('EffectsDirector.handle', () => {
     expect(audio.sfx.playClockTick).toHaveBeenCalledTimes(7 + 12);
   });
 
-  it('pings the ball in the dark, quicker as it closes on the player’s goal', () => {
-    const pings = (vx: number, x: number) => {
+  it('lets the ball be heard in the dark as its air, swelling as it closes on the player’s goal', () => {
+    const air = (vx: number, x: number, phase = 'rally') => {
       const { effects, audio } = makeDirector();
-      const ball = Object.assign(new Ball(), { x, drawX: x, drawY: 250, vx });
+      const ball = Object.assign(new Ball(), { x, drawX: x, drawY: 250, vx, speed: 400 });
       const flow = fakeFlow({
-        phase: 'rally',
+        phase,
         isBallLive: true,
         leadBall: ball,
         balls: [ball],
         activeModifiers: ['darkness'],
       } as Partial<MatchFlow>);
-      for (let t = 0; t < 2; t += 0.02) effects.afterSimulation(0.02, flow);
-      return vi.mocked(audio.sfx.playSonar).mock.calls.length;
+      effects.afterSimulation(0.02, flow);
+      return vi.mocked(audio.sfx.setBallAir).mock.calls.at(-1)![0];
     };
 
-    expect(pings(-300, 100)).toBeGreaterThan(pings(-300, 700));
-    expect(pings(300, 700)).toBe(pings(300, 100));
+    expect(air(-300, 100)!.nearness).toBeGreaterThan(air(-300, 700)!.nearness);
+    // Flying at the CPU it is heard only far off
+    expect(air(300, 700)!.nearness).toBe(0);
+    expect(air(-300, 100)!.x).toBeLessThan(0);
+    // Not while the ball waits for its serve
+    expect(air(-300, 100, 'serving')).toBeNull();
   });
 
-  it('scrapes a player’s paddle coasting on ice, and tinks its hits', () => {
+  it('skates a player’s paddle on ice: pushes off, glides, stops; and tinks its hits', () => {
     const { effects, audio, paddles } = makeDirector();
     const flow = fakeFlow({
       phase: 'rally',
       activeModifiers: ['ice'],
       isPlayerPaddle: (index: number) => index === 0,
     } as Partial<MatchFlow>);
+    const step = (velocity: number, targetY = paddles[0].y + Math.sign(velocity) * 100) => {
+      paddles[0].velocity = velocity;
+      paddles[0].targetY = targetY;
+      effects.afterSimulation(0.02, flow);
+    };
 
-    for (const speed of [500, 400, 300, 200]) {
-      paddles[0].velocity = speed;
-      effects.afterSimulation(0.1, flow);
-    }
-    expect(audio.sfx.playIceScrape).toHaveBeenCalled();
+    step(0);
+    step(300); // off from standing
+    expect(audio.sfx.playSkatePush).toHaveBeenCalledOnce();
+    step(400);
+    expect(vi.mocked(audio.sfx.setSkateGlide).mock.calls.at(-1)![0]).toBeCloseTo(400 / 700);
+
+    step(380, paddles[0].y - 100); // steered back against the slide
+    step(300, paddles[0].y - 100);
+    expect(audio.sfx.playSkateStop).toHaveBeenCalledOnce();
+    step(0);
+    expect(vi.mocked(audio.sfx.setSkateGlide).mock.calls.at(-1)![0]).toBeNull();
+    // The CPU's paddle makes no sound
+    expect(vi.mocked(audio.sfx.playSkatePush).mock.calls.every((call) => call[1]! < 0)).toBe(true);
+
     handle(effects, {
       type: 'paddleHit',
       paddleIndex: 0,

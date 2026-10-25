@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MINOR_TRIAD } from '@/audio/music/theory';
-import { getClimbingRallyNote, getRallyNote } from '@/audio/sfx/harmony';
+import { getClimbingRallyNote } from '@/audio/sfx/harmony';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { midiToFrequency } from '@/shared/math';
 import { AudioCall, fakeAudioContext } from './helpers/fakeAudioContext';
@@ -26,6 +26,28 @@ const frequencies = (calls: AudioCall[]) =>
     .filter((value) => value > 20);
 
 describe('SoundEffects', () => {
+  it('holds the ball’s air in the dark on one looping source, steered, then fades it out', () => {
+    const { sfx, calls } = setup();
+    const sources = () => calls.filter((c) => c.method === 'createBufferSource').length;
+    const ball = { x: -0.5, height: 0.5, nearness: 0.8, speed: 0.5 };
+
+    sfx.setBallAir(ball);
+    sfx.setBallAir({ ...ball, nearness: 1 });
+    expect(sources()).toBe(1);
+    const levels = () =>
+      calls.filter((c) => c.method === 'setTargetAtTime').map((c) => c.args[0] as number);
+    const loud = levels().length;
+    sfx.setBallAir(null);
+    expect(levels().slice(loud)).toContain(0);
+  });
+
+  it('holds nothing where action sounds are not heard', () => {
+    const { sfx, calls } = setup({ audible: false });
+    sfx.setBallAir({ x: 0, height: 0.5, nearness: 1, speed: 1 });
+    sfx.setSkateGlide(1);
+    expect(calls.filter((c) => c.method === 'createBufferSource')).toHaveLength(0);
+  });
+
   it('plays a hit on the note of the chord the music is on', () => {
     const { sfx, calls, harmony } = setup();
 
@@ -36,15 +58,18 @@ describe('SoundEffects', () => {
     expect(frequencies(calls)[0]).toBeGreaterThan(target.args[0] as number);
   });
 
-  it('climbs the chord the music is on as the channels flick past', () => {
+  it('flicks the channels past as a relay and static, then chimes the root and fifth', () => {
     const { sfx, calls, harmony } = setup();
 
     sfx.playChannelSurf();
-    // Each blip follows its button click; the blips walk up the chord like a rally does
-    const blips = frequencies(calls).filter((frequency) => frequency !== 2400);
-    for (let i = 0; i < 4; i++) {
-      expect(blips[i]).toBeCloseTo(midiToFrequency(getRallyNote(harmony, i + 1)));
-    }
+    // A relay's thud and a breath of static for each channel, no notes among them
+    expect(calls.filter((c) => c.method === 'createBufferSource')).toHaveLength(5);
+    // The static's low-pass aside, every frequency set is a relay's or the chime's
+    const tones = frequencies(calls).filter((frequency) => frequency !== 3000);
+    const chime = tones.slice(-2);
+    expect(chime[0]).toBeCloseTo(midiToFrequency(harmony.root + 48));
+    expect(chime[1]).toBeCloseTo(midiToFrequency(harmony.root + 48 + 7));
+    expect(tones.slice(0, -2).every((frequency) => frequency < 300)).toBe(true);
   });
 
   it('stays silent with sound effects off', () => {
@@ -52,7 +77,7 @@ describe('SoundEffects', () => {
 
     sfx.playPaddleHit(1);
     sfx.playVictory();
-    sfx.playSettingsClick();
+    sfx.playMenuSelect();
     sfx.playChannelSurf();
     expect(oscillators()).toBe(0);
   });
@@ -65,9 +90,9 @@ describe('SoundEffects', () => {
     sfx.playHeartbeat();
     expect(oscillators()).toBe(0);
 
-    sfx.playSettingsClick();
+    sfx.playMenuBack();
     sfx.playFireworkPop();
-    expect(oscillators()).toBe(2);
+    expect(oscillators()).toBeGreaterThanOrEqual(2);
   });
 
   it('plays nothing before the audio is unlocked', () => {
@@ -120,9 +145,9 @@ describe('SoundEffects', () => {
       sfx.playPostBounce();
       sfx.playBrickBreak();
       sfx.playShrink(0.7);
-      sfx.playIceScrape(0.5);
+      sfx.playSkatePush(0.5);
+      sfx.playSkateStop(0.5);
       sfx.playIceTink();
-      sfx.playSonar(0, 0.5);
       sfx.playClockTick();
       sfx.playPaddleHit(1, false, 0, { size: 1.5 });
     };

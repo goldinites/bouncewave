@@ -86,7 +86,6 @@ describe('the menus in the classic look', () => {
       ui,
       i18n,
       {
-        playSettingsClick: vi.fn(),
         playMenuBack: vi.fn(),
         playMenuMove: vi.fn(),
         playMenuSelect: vi.fn(),

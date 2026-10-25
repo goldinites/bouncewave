@@ -69,7 +69,6 @@ export interface TranslationSchema {
   diff: string;
   sound: string;
   music: string;
-  on: string;
   off: string;
   lang: string;
   lang_name: string;
@@ -176,7 +175,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     diff: 'DIFFICULTY',
     sound: 'SOUND EFFECTS',
     music: 'MUSIC',
-    on: 'ON',
     off: 'OFF',
     lang: 'LANGUAGE',
     lang_name: 'ENGLISH',
@@ -382,7 +380,6 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     diff: 'СЛОЖНОСТЬ',
     sound: 'ЗВУКОВЫЕ ЭФФЕКТЫ',
     music: 'МУЗЫКА',
-    on: 'ВКЛ',
     off: 'ВЫКЛ',
     lang: 'ЯЗЫК',
     lang_name: 'РУССКИЙ',

@@ -58,6 +58,10 @@ const CSS = `
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+[data-dock] .dbg-section { border: 1px solid var(--dbg-border); border-radius: 5px; padding: 2px 6px; }
+[data-dock] .dbg-section > summary { cursor: pointer; min-height: 26px; line-height: 26px; color: var(--dbg-muted); }
+[data-dock] .dbg-section[open] > summary { color: var(--dbg-text); margin-bottom: 4px; }
+[data-dock] .dbg-section > div { padding-bottom: 4px; }
 [data-dock] .dbg-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; }
 [data-dock] .dbg-muted { color: var(--dbg-muted); }
 [data-dock] .dbg-status {

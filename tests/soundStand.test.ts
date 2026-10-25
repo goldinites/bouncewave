@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { SONGS } from '@/audio/music/songs';
-import { SoundStand, STAND_SOUNDS } from '@/debug/SoundStand';
+import { SoundStand, STAND_SECTIONS, STAND_SOUNDS } from '@/debug/SoundStand';
 import { WHOLE_FORM } from '@/audio/music/Conductor';
 import { MusicEngine } from '@/audio/music/MusicEngine';
 
@@ -114,6 +114,16 @@ describe('SoundStand', () => {
         get<HTMLButtonElement>(`button[data-sound="${sound.name}"]`).click(),
       ).not.toThrow();
     }
+  });
+
+  it('keeps its sounds in sections that fold away, each sound in one', () => {
+    const { get } = setup();
+    const sections = [...document.querySelectorAll('details.dbg-section')];
+    expect(sections).toHaveLength(STAND_SECTIONS.length);
+    expect(sections.every((section) => !(section as HTMLDetailsElement).open)).toBe(true);
+    const names = STAND_SOUNDS.map((sound) => sound.name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(get('button[data-sound="ball in dark"]').closest('details')).toBe(sections[3]);
   });
 
   it('shows the playing song’s form, a segment a step, and plays it through from one clicked', () => {

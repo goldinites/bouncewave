@@ -36,6 +36,14 @@ const METER_FFT_SIZE = 16384;
 // the presence range a little more, so a song's 808 tail doesn't read as loudness
 export const K_WEIGHTING = { LOW_CUT: 38, SHELF_FREQUENCY: 1681, SHELF_GAIN: 4 } as const;
 const SILENCE_DB = -96;
+// The listening stand's phone speaker (5.9): one small speaker plays the sum in mono, nothing
+// below its cut (docs/AUDIO.md, "Микс": ~150 Hz) and little of the top; a rough guide for a mix
+// heard on a laptop, never the phone itself
+const PHONE_SPEAKER = {
+  LOW_CUT: 150, // Hz, two filters deep: a speaker that small has no low end at all
+  HIGH_CUT: 9000, // Hz
+  Q: 0.7,
+} as const;
 
 /** How loud the master is: over the meter's last window, and its loudest sample there. */
 export interface MasterLevels {
@@ -50,8 +58,9 @@ export interface MasterLevels {
  *
  * ```
  * music → hitCarve → hitDuck ─┐
- * sfx ────────────────────────┼─ sum → limiter → clipper → destination
- * menu ───────────────────────┘                        └─ K-weighting → meter
+ * sfx ────────────────────────┼─ sum → limiter → clipper ─┬─ wide ──────────────────────┬─ destination
+ * menu ───────────────────────┘                          └─ phone (mono, band-limited) ┘
+ *                                                        └─ K-weighting → meter
  * ```
  */
 export class Mixer {
@@ -62,6 +71,9 @@ export class Mixer {
   private readonly hitDuck: GainNode;
   private readonly hitCarve: BiquadFilterNode;
   private readonly meter: AnalyserNode;
+  /** The full output, and the phone speaker's stand-in; one of the two is open. */
+  private readonly wide: GainNode;
+  private readonly phone: GainNode;
   private meterData: Float32Array<ArrayBuffer> | null = null;
 
   constructor(context: AudioContext, destination: AudioNode = context.destination) {
@@ -96,7 +108,10 @@ export class Mixer {
     this.menu.connect(sum);
     sum.connect(limiter);
     limiter.connect(clipper.input);
-    clipper.output.connect(destination);
+    this.wide = ac.createGain();
+    clipper.output.connect(this.wide);
+    this.wide.connect(destination);
+    this.phone = this.buildPhoneSpeaker(ac, clipper.output, destination);
 
     const lowCut = ac.createBiquadFilter();
     lowCut.type = 'highpass';
@@ -144,6 +159,35 @@ export class Mixer {
     } catch {
       // Play on uncarved rather than break audio
     }
+  }
+
+  /** The phone speaker's stand-in: the sum in mono, band-limited, silent until switched on. */
+  private buildPhoneSpeaker(ac: AudioContext, from: AudioNode, to: AudioNode): GainNode {
+    const mono = ac.createGain();
+    mono.channelCount = 1;
+    mono.channelCountMode = 'explicit';
+    mono.channelInterpretation = 'speakers';
+    const filters = (['highpass', 'highpass', 'lowpass'] as const).map((type) => {
+      const filter = ac.createBiquadFilter();
+      filter.type = type;
+      filter.frequency.value = type === 'lowpass' ? PHONE_SPEAKER.HIGH_CUT : PHONE_SPEAKER.LOW_CUT;
+      filter.Q.value = PHONE_SPEAKER.Q;
+      return filter;
+    });
+    const out = ac.createGain();
+    out.gain.value = 0;
+    from.connect(mono);
+    const chain: AudioNode[] = [mono, ...filters, out];
+    chain.slice(1).forEach((node, i) => chain[i].connect(node));
+    out.connect(to);
+    return out;
+  }
+
+  /** The listening stand hears the game through a phone's speaker, or as it is. */
+  public setPhoneSpeaker(isOn: boolean): void {
+    const now = this.context.currentTime;
+    this.wide.gain.setTargetAtTime(isOn ? 0 : 1, now, 0.02);
+    this.phone.gain.setTargetAtTime(isOn ? 1 : 0, now, 0.02);
   }
 
   /** The master's level now, K-weighted, for the listening stand. */

@@ -16,8 +16,8 @@ const DEFAULTS: UserSettings = {
   difficulty: DifficultyLevel.NORMAL,
   matchPoints: 5,
   matchBackground: 'random',
-  soundMuted: false,
-  musicMuted: false,
+  soundVolume: 100,
+  musicVolume: 100,
   language: 'en',
 };
 
@@ -33,10 +33,10 @@ describe('SettingsStore', () => {
     const listener = vi.fn();
     store.subscribe(listener);
 
-    store.update({ musicMuted: true });
+    store.update({ musicVolume: 0 });
 
-    expect(store.current).toEqual({ ...DEFAULTS, musicMuted: true });
-    expect(saved).toEqual([{ ...DEFAULTS, musicMuted: true }]);
+    expect(store.current).toEqual({ ...DEFAULTS, musicVolume: 0 });
+    expect(saved).toEqual([{ ...DEFAULTS, musicVolume: 0 }]);
     expect(listener).toHaveBeenCalledWith(store.current);
   });
 
@@ -46,7 +46,7 @@ describe('SettingsStore', () => {
     const unsubscribe = store.subscribe(listener);
 
     unsubscribe();
-    store.update({ soundMuted: true });
+    store.update({ soundVolume: 0 });
 
     expect(listener).not.toHaveBeenCalled();
   });
@@ -56,10 +56,22 @@ describe('SettingsStore', () => {
     const store = new SettingsStore(persistence);
 
     store.cycle('difficulty');
-    store.cycle('soundMuted');
+    store.cycle('soundVolume', -1);
 
     expect(store.current.difficulty).toBe(DifficultyLevel.HARD);
-    expect(store.current.soundMuted).toBe(true);
+    expect(store.current.soundVolume).toBe(90);
     expect(saved).toHaveLength(2);
+  });
+
+  it('steps a volume by tens and holds it at the ends', () => {
+    const store = new SettingsStore(memory({ ...DEFAULTS, musicVolume: 10 }).persistence);
+
+    store.cycle('musicVolume', -1);
+    store.cycle('musicVolume', -1);
+    expect(store.current.musicVolume).toBe(0);
+
+    store.update({ musicVolume: 100 });
+    store.cycle('musicVolume');
+    expect(store.current.musicVolume).toBe(100);
   });
 });
