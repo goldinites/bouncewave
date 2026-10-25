@@ -221,14 +221,8 @@ export const DRUM_PATTERNS = {
     metal: '....o.......o...',
     perc: '..........o.....',
   },
-  // A broken network's heavy pulse (Cyberpunk 2077's "V"): the kick on every beat, the snare on
-  // two and four, the hats few
-  netPulse: {
-    kick: 'X...X...X...X...',
-    snare: '....X.......X...',
-    hat: '..x...x...x...x.',
-    metal: '...........o....',
-  },
+  // A broken network's heavy pulse at its peak (Cyberpunk 2077's "V"): the kick on every beat,
+  // the snare and a clap on two and four, the hats running
   netPulseHot: {
     kick: 'X...X...X...X..x',
     snare: '....X.......X...',
@@ -236,33 +230,12 @@ export const DRUM_PATTERNS = {
     hat: 'xxx.xxx.xxx.xxx.',
     open: '...x.......x....',
   },
-  // Packets lost (Gesaffelstein): the kick on every beat, a clap, the rim's sixteenths with
-  // holes in them
-  packet: {
-    kick: 'X...X...X...X...',
-    clap: '....X.......X...',
-    perc: 'xxx.xx.xxx.x.xx.',
-  },
-  packetHot: {
-    kick: 'X...X...X...X...',
-    clap: '....X.......X...',
-    perc: 'xxx.xx.xxx.x.xx.',
-    hat: 'x.x.x.x.x.x.x.x.',
-    metal: '......o.......x.',
-  },
   // A signal lost (Blade Runner 2049): the kick on one and three, the snare's backbeat, wide
   // and slow
   signal: {
     kick: 'X.......X.......',
     snare: '....X.......X...',
     metal: '..............o.',
-  },
-  signalHot: {
-    kick: 'X.......X.x.....',
-    snare: '....X.......X...',
-    clap: '....x.......x...',
-    hat: 'x.x.x.x.x.x.x.x.',
-    open: '......x.......x.',
   },
   // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
   foundry: {
