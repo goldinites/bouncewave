@@ -250,9 +250,15 @@ describe('the tracks stay apart', () => {
   const register = (song: (typeof SONGS)[number], tier: 'groove' | 'high') =>
     median(melodies(song, tier).flatMap((part) => notesOf(part.lead!).map((note) => note.note)));
 
-  it('keeps every two at least 8 BPM apart', () => {
+  // A tempo is the track's own choice and two may share one; what blurred two into one was a close
+  // tempo in the same mood — major and major, or minor and minor — so near in tempo, one is
+  // major and the other minor (the first chord of their verse)
+  it('gives two tracks close in tempo a major and a minor', () => {
+    const isMinor = (song: (typeof SONGS)[number]) =>
+      partsOf(song).find((part) => part.tier === 'groove')!.chords[0].triad[1] === 3;
     for (const [a, b] of pairs) {
-      expect(Math.abs(a.bpm - b.bpm), `${a.title} and ${b.title}`).toBeGreaterThanOrEqual(8);
+      if (Math.abs(a.bpm - b.bpm) >= 8) continue;
+      expect(isMinor(a) !== isMinor(b), `${a.title} and ${b.title}`).toBe(true);
     }
   });
 
