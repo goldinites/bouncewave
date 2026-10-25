@@ -369,8 +369,8 @@ const FURIN_VALLEY = `. . . . . D6 - - - - - - - - - - | - - - A5 - - - - - - - 
                     | - - - - . . . . . . . . . A5 - - | - - - - - - - - . . . . . . . .`;
 
 // ——— The warehouse's track (5.11): EBM after Front 242 and Nitzer Ebb, chosen of three bases —
-// a bass sequenced in sixteenths marching in C minor, the factory's kit; three melodies over it
-// to choose from, each starting its notes off the beat, as none of the other tracks does ———
+// a bass sequenced in sixteenths marching in C minor, the factory's kit; a hocket on the broken
+// digital lead, its notes off the beat as none of the other tracks starts them ———
 
 /** EBM's sequenced bass: the root in a machine's sixteenths, the octave and the fifth kicking in. */
 const CONVEYOR_BASS = cycle(
@@ -382,23 +382,17 @@ const CONVEYOR_BASS = cycle(
   euclid(12, 16, 1),
 );
 
-/** A, the chant (Nitzer Ebb): one note hammered off the beat, shouted, then a held answer. */
-const CONVEYOR_CHANT = `. . C5 . . C5 . Eb5 . . C5 . G4 . . . | . . C5 . . C5 . Eb5 . . F5 - Eb5 - C5 -
-                      | . . G5 . . G5 . F5 . . Eb5 . C5 . . . | D5 - - - - - - - . . . . . . . .
-                      | . . F5 . . F5 . Ab5 . . F5 . C5 . . . | . . Ab5 . . G5 . F5 . . Eb5 - - - . .
-                      | . . G5 . . G5 . . B4 . D5 . G5 - - - | D5 - - - - - - - B4 - - - . . . .`;
-
-/** B, the call (Front 242): a rising 3+3 figure answered by its fall, peaking on C6 in bar 5. */
-const CONVEYOR_CALL = `C5 - - Eb5 - - G5 - . . . . . . . . | F5 - - Eb5 - - D5 - C5 - - - . . . .
-                     | C5 - - Eb5 - - G5 - . . Bb5 - Ab5 - G5 - | G5 - - - - - - - . . . . . . . .
-                     | Ab5 - - C6 - - Ab5 - . . . . . . . . | G5 - - Ab5 - - F5 - Eb5 - - - . . . .
-                     | D5 - - F5 - - G5 - B4 - - - D5 - - - | G4 - - - - - - - . . . . . . . .`;
-
-/** C, the hocket: notes only on the sixteenths between the beat's, leaping, like a machine's sparks. */
+/** The hocket, the melody: notes only on the sixteenths between the beat's, leaping like a machine's sparks. */
 const CONVEYOR_HOCKET = `. C5 . . . G5 . . . C5 . . . Eb5 . . | . D5 . . . G5 . . . C6 . . Bb5 - - -
                        | . C5 . . . G5 . . . Eb5 . . . F5 . . | G5 - - - - - - - . . . . . . . .
                        | . F5 . . . C6 . . . Ab5 . . . G5 . . | . F5 . . . C6 . . . Eb5 . . D5 - - -
                        | . G5 . . D5 . . B4 . . D5 . . G5 . . | G5 - - - - - - - . . . . . . . .`;
+
+/** Long notes answering the hocket from the second verse, one a bar, the chord's colour held. */
+const CONVEYOR_HOLD = `G4 - - - - - - - - - - - - - - - | Eb4 - - - - - - - - - - - - - - -
+                     | G4 - - - - - - - - - - - - - - - | F4 - - - - - - - - - - - - - - -
+                     | Ab4 - - - - - - - - - - - - - - - | C5 - - - - - - - - - - - - - - -
+                     | B4 - - - - - - - - - - - - - - - | D5 - - - - - - - - - - - - - - -`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -941,109 +935,97 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // The warehouse's melodies (5.11), for the stand: each over the chosen base, its groove and peak
   {
-    // A, the chant
-    title: 'Conveyor Chant',
-    sketch: true,
-    level: -1.5,
+    // EBM after Front 242 and Nitzer Ebb: the night shift in the warehouse. The machines start one
+    // by one — the conveyor's bass, the chains and the steam, then the kick — and the hocket throws
+    // sparks off the beat over the march; a long note answers it from the second verse; the line
+    // stops dead for the shift's siren, and the peak runs the belt at full tilt under brass; the
+    // shift change is the chains and the steam alone over the bass's hum
+    title: 'Night Shift',
     bpm: 112,
     swing: 0,
+    level: -1,
+    scene: 'warehouse',
     kit: 'factory',
+    // A short metal hall; the bass driven into its tear, and pumping under the kick as EBM does
     room: 'plate',
     grit: 8,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    voices: { lead: 'crush', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'shift', 'verse2', 'build', 'chorus'],
     sections: [
       {
-        name: 'hook',
-        tier: 'groove',
+        // The conveyor starts: its bass alone, then the chains and the steam, then the kick
+        name: 'intro',
+        tier: 'calm',
         chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
-        lead: CONVEYOR_CHANT,
         bassLine: CONVEYOR_BASS,
         drums: 'ebm',
         pad: 'none',
-        stabs: 'offbeat',
+        enter: { drums: 4 },
       },
       {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
-        lead: CONVEYOR_CHANT,
-        bassLine: CONVEYOR_BASS,
-        drums: 'ebmHot',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // B, the call
-    title: 'Conveyor Call',
-    sketch: true,
-    level: -1.5,
-    bpm: 112,
-    swing: 0,
-    kit: 'factory',
-    room: 'plate',
-    grit: 8,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
-    sections: [
-      {
-        name: 'hook',
+        name: 'verse',
         tier: 'groove',
-        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
-        lead: CONVEYOR_CALL,
-        bassLine: CONVEYOR_BASS,
-        drums: 'ebm',
-        pad: 'none',
-        stabs: 'offbeat',
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
-        lead: CONVEYOR_CALL,
-        bassLine: CONVEYOR_BASS,
-        drums: 'ebmHot',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // C, the hocket
-    title: 'Conveyor Hocket',
-    sketch: true,
-    level: -1.5,
-    bpm: 112,
-    swing: 0,
-    kit: 'factory',
-    room: 'plate',
-    grit: 8,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G | Cm | Cm | Cm | Cm | Fm | Fm | G | G',
         lead: CONVEYOR_HOCKET,
         bassLine: CONVEYOR_BASS,
         drums: 'ebm',
+        fill: 'roll',
         pad: 'none',
         stabs: 'offbeat',
+        layers: { lead: 0.3 },
       },
       {
-        name: 'hot',
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_HOCKET,
+        counter: CONVEYOR_HOLD,
+        bassLine: CONVEYOR_BASS,
+        drums: 'ebm',
+        fill: 'roll',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, counter: 0.3 },
+      },
+      {
+        // The line stops: two bars of the shift's siren over the drums, then dead silence
+        name: 'build',
+        tier: 'rise',
+        chords: 'G | G',
+        bass: 'pulse16',
+        drums: 'ebm',
+        fill: 'roll',
+        pad: 'hold',
+        hits: { siren: `X${'.'.repeat(31)}` },
+        silence: 4,
+      },
+      {
+        // The belt at full tilt: the hocket over a long note an octave up, brass pushing
+        name: 'chorus',
         tier: 'high',
         chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
         lead: CONVEYOR_HOCKET,
+        counter: transpose(CONVEYOR_HOLD, 12),
         bassLine: CONVEYOR_BASS,
         drums: 'ebmHot',
+        fill: 'roll',
         pad: 'hold',
         stabs: 'push',
+        // The sparks lifted over the brass, so the peak is the brightest part
+        mix: { melody: 2 },
         drop: true,
+      },
+      {
+        // The shift change: no kick, the chains and the steam over the bass's hum, and the
+        // harmony off the belt's road
+        name: 'shift',
+        tier: 'calm',
+        chords: 'Ab | Ab | Bb | Bb | Fm | Fm | G | G',
+        counter: CONVEYOR_HOLD,
+        bass: 'long',
+        drums: 'shift',
+        pad: 'swell',
       },
     ],
   },

@@ -167,6 +167,8 @@ export const DRUM_PATTERNS = {
     hat: '..x...x...x...x.',
     metal: '......o.......x.',
   },
+  // The shift change: the kick gone, the chains and the steam left
+  shift: { clap: '....o.......x...', metal: '..o.......x...o.' },
   ebmHot: {
     kick: 'X.......X.......',
     clap: '....X.......X...',
