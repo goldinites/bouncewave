@@ -1,5 +1,5 @@
 import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
-import { compileSong, SectionDef, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
+import { compileSong, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 
 /*
  * The quick match's three tracks (5.6a, docs/AUDIO.md "Как делаем трек"), each built on a process
@@ -184,36 +184,25 @@ const W2 = `D6 - - - - - - - G5 - - - - - - - | Bb5 - - - A5 - - - G5 - - - - - 
           | - - - - C6 - - - Bb5 - - - F5 - - - | D6 - - - - - - - . . . . . . . .
           | C6 - - - A5 - - - F5 - - - C6 - - - | A5 - - - - - - - . . . . . . . .`;
 
-// ——— Sunset Strip, the 5.10 sketch: the verse an octave down, where its melody was as high as
-// the chorus's; a new answer for its second eight bars and a melody of its own for the second
-// verse; a four-bar build teasing the hook; the chorus brightened by the era's synth brass ———
+// ——— Sunset Strip's verses and build (5.10): the verse an octave down, so the chorus has
+// somewhere to climb, its second eight bars answering off the beat; the second verse's own
+// melody; a four-bar build teasing the hook ———
 
 /** W1 an octave down (F4–D5): the verse sung low, so the chorus has somewhere to climb. */
 const W1_LOW = transpose(W1, -12);
 
-/** The verse's second eight bars (Bb Bb F F Gm Gm Cm7 F7sus4), A: W1's leaps turned upward, to F5. */
-const W1_ANSWER_UP = `F4 - - - - - Bb4 - - - D5 - - - - - | C5 - - - - - - - Bb4 - - - - - - -
-                    | A4 - - - - - C5 - - - F5 - - - - - | D5 - - - - - - - . . F5 E5 D5 . C5 .
-                    | Bb4 - - - - - D5 - - - F5 - - - - - | - - - - Eb5 - - - D5 - - - Bb4 - - -
-                    | C5 - - - Eb5 - - - G5 - - - - - - - | F5 - - - - - - - - - - - . . . .`;
-
-/** B: pushed off the beat, falling and climbing back, a run into the build. */
+/** The verse's second eight bars (Bb Bb F F Gm Gm Cm7 F7sus4): pushed off the beat, falling and
+ * climbing back, a run into the build. */
 const W1_ANSWER_PUSH = `. . D5 - - - C5 - Bb4 - - - - - - - | F4 - - - - - - - G4 - Bb4 - - - - -
                       | . . C5 - - - A4 - F4 - - - - - - - | C5 - - - - - - - D5 - C5 - A4 - - -
                       | . . Bb4 - - - D5 - G4 - - - - - - - | D5 - - - - - - - F5 - D5 - Bb4 - - -
                       | Eb5 - - - - - G5 - C5 - - - - - - - | F5 - - - - - - - - - - - Eb5 D5 C5 -`;
 
-/** The second verse's own melody on the vibraphone (Bb Bb F F Gm Gm Eb Eb), A: 3+3 pushes. */
+/** The second verse's own melody on the vibraphone (Bb Bb F F Gm Gm Eb Eb): 3+3 pushes. */
 const W3_PUSH = `F5 - - D5 - - Bb4 - - - - - - - - - | C5 - - - D5 - - - F5 - - - G5 - F5 -
                | A5 - - F5 - - C5 - - - - - - - - - | D5 - - - C5 - - - A4 - - - - - - -
                | G5 - - D5 - - Bb4 - - - - - - - - - | A4 - - - Bb4 - - - D5 - - - F5 - G5 -
                | Bb5 - - - - - G5 - Eb5 - - - - - - - | F5 - - - Eb5 D5 C5 - Bb4 - - - - - - -`;
-
-/** B: long notes sung down from the top, the track's own gesture, in the middle register. */
-const W3_SUNG = `D5 - - - - - - - F5 - - - - - - - | Bb5 - - - - - - - A5 - G5 - F5 - - -
-               | C5 - - - - - A4 - - - - - - - - - | C5 - D5 - F5 - - - . . . . . . . .
-               | D5 - - - - - - - G5 - - - - - - - | Bb5 - - - - - - - A5 - G5 - D5 - - -
-               | Eb5 - - - - - - - G5 - - - - - - - | F5 - - - Eb5 D5 C5 Bb4 - - - - - - - -`;
 
 /** The build's sax: the hook's head, then a bar's breath, twice (Eb F Eb F). */
 const S3_TEASE = `D6 - - - C6 - Bb5 - | . . . . . . . . | D6 - - - C6 - Bb5 - | . . . . . . . .`;
@@ -537,10 +526,11 @@ const SONG_DEFS: SongDef[] = [
   NEON_CATHEDRAL,
   {
     // After The Midnight and FM-84: a night drive. The engine idles from the first bar — kick,
-    // hats, the bass in eighths under the seven-note arpeggio — then a sixteen-bar verse on the
-    // anthem beat (a kick on one and three, the gated snare on two and four), toms and a reverse
-    // crash into the sax's chorus, a bridge on the sax too, and an outro that fades on the vibraphone.
-    // Cymbals and drums mark the turns, no synth swells
+    // hats, the bass in eighths under the seven-note arpeggio — then a sixteen-bar verse sung low
+    // on the electric piano over the anthem beat (a kick on one and three, the gated snare on two
+    // and four), four bars of the sax teasing the hook into the chorus, where the era's synth
+    // brass pushes under it, a bridge on the sax, the second verse's own tune on the vibraphone,
+    // and an outro that fades on it. Cymbals and drums mark the turns, no synth swells
     title: 'Sunset Strip',
     // Faster than Fuji's dawn by a third of a beat a second: a night drive, not a walk
     bpm: 112,
@@ -574,8 +564,8 @@ const SONG_DEFS: SongDef[] = [
         tier: 'groove',
         // The second pass turns round on Cm7 and F7sus4, leaning on into the build
         chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb | Bb | Bb | F | F | Gm | Gm | Cm7 | F7sus4',
-        // The electric piano drives alone for eight bars; then the passenger's voice joins it
-        lead: W1,
+        // The electric piano low, then its answer pushed off the beat; the passenger's voice joins
+        lead: `${W1_LOW} | ${W1_ANSWER_PUSH}`,
         counter: W1_UNDER,
         arpLine: cycle([...SUNSET_CELLS, ...SUNSET_TURN_CELLS], ARP_RHYTHM.nine),
         // The bass bouncing on its octave, the spring in the drive
@@ -588,10 +578,12 @@ const SONG_DEFS: SongDef[] = [
         sweep: { arp: [0.4, 1.4] },
       },
       {
-        // Two bars of toms under a reverse crash
+        // Four bars: the sax teases the hook's head under a reverse crash, the toms lead in
         name: 'build',
         tier: 'rise',
-        chords: 'Eb | F',
+        chords: 'Eb | F | Eb | F',
+        lead: S3_TEASE,
+        leadVoice: 'sax',
         arp: 'up',
         bass: 'drive',
         drums: 'anthem',
@@ -600,9 +592,9 @@ const SONG_DEFS: SongDef[] = [
         riser: true,
       },
       {
+        // The era's synth brass pushing under the sax, the melody lifted against the beat
         name: 'chorus',
         tier: 'high',
-        // A chord a bar where the verse holds each for two: the harmony speeds up at the peak
         chords: 'Bb | Gm7 | F | Cm7 | Ebmaj7 | Gm7 | Cm7 | Fsus4',
         lead: S3,
         leadVoice: 'sax',
@@ -613,6 +605,8 @@ const SONG_DEFS: SongDef[] = [
         drums: 'anthem',
         fill: 'toms',
         pad: 'hold',
+        stabs: 'push',
+        mix: { melody: 1.5 },
         drop: true,
       },
       {
@@ -631,10 +625,11 @@ const SONG_DEFS: SongDef[] = [
         sweep: { arp: [0.4, 1.4], pads: [0.7, 1.2] },
       },
       {
+        // The second verse's own tune on the vibraphone, in pushes of three
         name: 'verse2',
         tier: 'groove',
         chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
-        lead: W1,
+        lead: W3_PUSH,
         leadVoice: 'vibes',
         arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.eleven),
         bass: 'sync',
@@ -911,134 +906,6 @@ const SONG_DEFS: SongDef[] = [
         drums: 'bonsho',
         feel: 'half',
         pad: 'swell',
-      },
-    ],
-  },
-  {
-    // 5.10's sketch of Sunset Strip, for the stand: verse-b and verse2-b by the stand's part;
-    // never played by the game
-    title: 'Sunset Strip v2',
-    sketch: true,
-    // Faster than Fuji's dawn by a third of a beat a second: a night drive, not a walk
-    bpm: 112,
-    swing: 0,
-    level: -0.5,
-    transitions: 'drums',
-    room: 'night',
-    pump: 0.7,
-    kit: 'outrun',
-    voices: { lead: 'epiano', counter: 'soft', arp: 'arpPulse', bass: 'bassFm', pad: 'strings' },
-    form: ['intro', 'verse', 'build', 'chorus', 'bridge', 'verse2', 'build', 'chorus', 'outro'],
-    sections: [
-      {
-        name: 'intro',
-        tier: 'calm',
-        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
-        arpLine: cycle(SUNSET_CELLS),
-        bass: 'eighths',
-        drums: 'cruise',
-        pad: 'hold',
-        enter: { bass: 2, arp: 4 },
-        sweep: { arp: [0.3, 1.2] },
-      },
-      ...(
-        [
-          ['verse', W1_ANSWER_UP],
-          ['verse-b', W1_ANSWER_PUSH],
-        ] as const
-      ).map(([name, answer]): SectionDef => ({
-        name,
-        tier: 'groove',
-        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb | Bb | Bb | F | F | Gm | Gm | Cm7 | F7sus4',
-        // The electric piano low, then its answer climbing; the passenger's voice under it
-        lead: `${W1_LOW} | ${answer}`,
-        counter: W1_UNDER,
-        arpLine: cycle([...SUNSET_CELLS, ...SUNSET_TURN_CELLS], ARP_RHYTHM.nine),
-        bass: 'eighths',
-        drums: 'anthem',
-        fill: 'toms',
-        pad: 'hold',
-        layers: { lead: 0.3, counter: 0.3 },
-        enter: { counter: 8 },
-        sweep: { arp: [0.4, 1.4] },
-      })),
-      {
-        // Four bars: the sax teases the hook's head under a reverse crash, the toms lead in
-        name: 'build',
-        tier: 'rise',
-        chords: 'Eb | F | Eb | F',
-        lead: S3_TEASE,
-        leadVoice: 'sax',
-        arp: 'up',
-        bass: 'drive',
-        drums: 'anthem',
-        fill: 'toms',
-        pad: 'hold',
-        riser: true,
-      },
-      {
-        // The era's synth brass pushing under the sax, the melody lifted against the beat
-        name: 'chorus',
-        tier: 'high',
-        chords: 'Bb | Gm7 | F | Cm7 | Ebmaj7 | Gm7 | Cm7 | Fsus4',
-        lead: S3,
-        leadVoice: 'sax',
-        counter: S3_THIRDS,
-        enter: { counter: 4 },
-        arpLine: cycle(SUNSET_SOAR_CELLS),
-        bass: 'drive',
-        drums: 'anthem',
-        fill: 'toms',
-        pad: 'hold',
-        stabs: 'push',
-        mix: { melody: 1.5 },
-        drop: true,
-      },
-      {
-        name: 'bridge',
-        tier: 'groove',
-        chords: 'Ebmaj7 | Cm7 | Cm7 | Dm7 | Gm7 | Gm7 | Dm7 | D',
-        // The sax, the era's voice: the koto belongs to Fuji
-        lead: W2,
-        leadVoice: 'sax',
-        arpLine: cycle(SUNSET_DUSK_CELLS, ARP_RHYTHM.eighths),
-        bass: 'walk',
-        drums: 'break',
-        fill: 'stop',
-        pad: 'hold',
-        layers: { lead: 0.3 },
-        sweep: { arp: [0.4, 1.4], pads: [0.7, 1.2] },
-      },
-      ...(
-        [
-          ['verse2', W3_PUSH],
-          ['verse2-b', W3_SUNG],
-        ] as const
-      ).map(([name, lead]): SectionDef => ({
-        name,
-        tier: 'groove',
-        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
-        lead,
-        leadVoice: 'vibes',
-        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.eleven),
-        bass: 'sync',
-        drums: 'anthem',
-        fill: 'toms',
-        pad: 'hold',
-        layers: { lead: 0.3 },
-        sweep: { arp: [0.6, 1.5] },
-      })),
-      {
-        name: 'outro',
-        tier: 'calm',
-        chords: 'Bb | Bb | F | F | Gm | Gm | Eb | Eb',
-        lead: tease(W1),
-        leadVoice: 'vibes',
-        arpLine: cycle(SUNSET_CELLS, ARP_RHYTHM.quarters),
-        bass: 'long',
-        drums: 'none',
-        pad: 'swell',
-        sweep: { arp: [1, 0.3] },
       },
     ],
   },
