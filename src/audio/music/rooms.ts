@@ -76,6 +76,16 @@ export const ROOMS = {
     return: 0.36,
     sends: { pads: 0.45, melody: 0.45, drums: 0.2 },
   },
+  // A wooden dojo at night: a warm, middling answer off the boards that the taiko rings in, the
+  // drums sent as far as the melody
+  hall: {
+    decay: 1.4,
+    preDelay: 0.018,
+    lowCut: 260,
+    highCut: 7500,
+    return: 0.36,
+    sends: { pads: 0.4, melody: 0.3, drums: 0.3 },
+  },
   // An old stone temple: a short, bright answer that hand drums and mallets ring in
   stone: {
     decay: 1.2,

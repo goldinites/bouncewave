@@ -394,8 +394,9 @@ const CONVEYOR_HOLD = `G4 - - - - - - - - - - - - - - - | Eb4 - - - - - - - - - 
                      | Ab4 - - - - - - - - - - - - - - - | C5 - - - - - - - - - - - - - - -
                      | B4 - - - - - - - - - - - - - - - | D5 - - - - - - - - - - - - - - -`;
 
-// ——— The dojo's track, 5.11: the kata's base (a taiko ensemble leading a darksynth, no koto,
-// shakuhachi or shamisen) and three melodies over it to choose from ———
+// ——— The dojo's track (5.11): a black belt's exam, chosen of three bases and seven melodies — a
+// taiko ensemble leading a darksynth in A minor, no koto, shakuhachi or shamisen; a shout of
+// fourths in the verses, a fighting game's theme in the chorus ———
 
 /** The kata's reese: a five-note cell turning over a ten-pulse rhythm, never landing alike. */
 const KATA_BASS = cycle(
@@ -407,29 +408,33 @@ const KATA_BASS = cycle(
   euclid(10, 16),
 );
 
-/** Theme: a fighting game's theme in A harmonic minor, syncopated, climbing to C6 and D6. */
-const KATA_THEME = `A4 - - E5 - - A5 - - - G#5 - A5 - B5 - | C6 - - - B5 - - A5 - - - - - - E5 -
-                  | A4 - - E5 - - A5 - - - G#5 - A5 - D6 - | C6 - - B5 - - G#5 - - - - - E5 - - -
-                  | C6 - - A5 - - C6 - D6 - - - C6 - A5 - | F5 - - - - - - - - - G5 A5 Bb5 - A5 G5
-                  | G#5 - - E5 - - B4 - - - D5 - E5 - - - | B5 - - - - - - - . . . . E5 F5 G#5 -`;
-
-/** Hero: a heroic call in dotted rhythm, falling home through the harmonic minor at the end. */
-const KATA_HERO = `E5 - - E5 A5 - - - B5 - - C6 - - B5 - | A5 - - - - - - - G#5 - - E5 - - - -
-                 | E5 - - E5 A5 - - - B5 - - D6 - - C6 - | B5 - - A5 - - G#5 - A5 - - - - - . .
-                 | C6 - - C6 F5 - - - A5 - - C6 - - D6 - | C6 - - - - - A5 G5 F5 G5 A5 - - - . .
-                 | B5 - - G#5 - - E5 - - - - - D5 - E5 - | G#5 - - - - - - - B5 A5 G#5 F5 E5 - - -`;
-
-/** Kiai: a shout of fourths, A–D–E, answered backwards, growing a note each time it comes. */
+/** The kiai, the verses' melody: a shout of fourths, A–D–E, answered backwards, growing a note each time it comes. */
 const KATA_KIAI = `A4 - . D5 - . E5 - - - - - - - . . | . . . . . . . . E5 - . D5 - . A4 -
                  | A4 - . D5 - . E5 - . G5 - - - - - - | . . . . . . . . G5 - . E5 - . D5 -
                  | A4 - . C5 - . F5 - . A5 - . C6 - - - | - - - - - - - - A5 G5 F5 - C5 - - -
                  | B4 - . E5 - . G#5 - . B5 - - - - - - | . . . . . . . . G#5 - . E5 - . B4 -`;
 
-/** Chant: low, marching on the nagado's own rhythm, a held note left for the drums to answer. */
-const KATA_CHANT = `A4 - . A4 - . C5 - - - B4 - A4 - - - | E4 - - - - - - - . . . . . . . .
-                  | A4 - . A4 - . D5 - - - C5 - B4 - - - | E5 - - - - - - - D5 - C5 - B4 - - -
-                  | C5 - . C5 - . F5 - - - E5 - D5 - - - | C5 - . F5 - . A5 - - - - - . . . .
-                  | G#4 - G#4 - B4 - - - E5 - D5 - B4 - - - | B4 - - - - - - - . . . . E4 F4 G#4 -`;
+/** The verses' answer: a long note in the gap the kiai leaves, below it. */
+const KATA_ANSWER = `. . . . . . . . . . . . . . . . | C5 - - - - - - - . . . . . . . .
+                   | . . . . . . . . . . . . . . . . | B4 - - - - - - - . . . . . . . .
+                   | . . . . . . . . . . . . . . . . | C5 - - - - - - - . . . . . . . .
+                   | . . . . . . . . . . . . . . . . | B4 - - - - - - - . . . . . . . .`;
+
+/** The theme, the chorus: a fighting game's theme in A harmonic minor, its summit D6 in bar 5. */
+const KATA_THEME = `A4 - - E5 - - A5 - - - G#5 - A5 - B5 - | C6 - - - B5 - - A5 - - - - - - E5 -
+                  | A4 - - E5 - - A5 - - - G#5 - A5 - D6 - | C6 - - B5 - - G#5 - - - - - E5 - - -
+                  | C6 - - A5 - - C6 - D6 - - - C6 - A5 - | F5 - - - - - - - - - G5 A5 Bb5 - A5 G5
+                  | G#5 - - E5 - - B4 - - - D5 - E5 - - - | B5 - - - - - - - . . . . E5 F5 G#5 -`;
+
+/** The oroshi into the chorus: the dominant struck ever closer over four bars. */
+const OROSHI_BASS = `E1 - - - E1 - - - E1 - - - E1 - - - | E1 - - E1 - - E1 - - E1 - - E1 - - E1
+                   | E1 - E1 - E1 - E1 - E1 - E1 - E1 - E1 - | E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1`;
+
+/** Mokuso, the meditation: long notes on strings over the harmony the verses never go to. */
+const MOKUSO_HOLD = `F5 - - - - - - - - - - - - - - - | E5 - - - - - - - D5 - - - - - - -
+                   | D5 - - - - - - - - - - - - - - - | F5 - - - - - - - - - - - - - - -
+                   | A5 - - - - - - - - - - - - - - - | G5 - - - - - - - F5 - - - - - - -
+                   | E5 - - - - - - - - - - - - - - - | G#5 - - - - - - - - - - - . . . .`;
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -637,7 +642,7 @@ const SONG_DEFS: SongDef[] = [
         fill: 'toms',
         pad: 'hold',
         layers: { lead: 0.3, counter: 0.3 },
-        enter: { counter: 8 },
+        enter: { pads: 8, counter: 8 },
         sweep: { arp: [0.4, 1.4] },
       },
       {
@@ -1066,144 +1071,110 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // The dojo's melodies over the kata (5.11), for the stand: a groove (hook) and its peak (hot) each
   {
-    // Theme: a fighting game's theme in A harmonic minor, its summit D6 in bar 5
-    title: 'Kata Theme',
-    sketch: true,
-    level: -3.5,
+    // A black belt's exam in the dojo at night, after Kodo's taiko ensembles and Perturbator's
+    // darksynth. The hall fills — the odaiko alone, the sticks and the bell, then the reese; the
+    // student's kiai in the verses, the drums answering it, a long note in its gaps from the
+    // second; the oroshi strikes the dominant ever closer into a beat of silence, and the chorus
+    // is the fighting game's theme over the whole ensemble; mokuso, the meditation, is strings and
+    // the bell over a harmony the verses never reach
+    title: 'Black Belt',
     bpm: 118,
     swing: 0,
+    level: -3,
+    scene: 'dojo',
     kit: 'dojo',
-    room: 'plate',
+    transitions: 'drums',
+    // A wooden hall the taiko rings in; the drums breathe by their own playing, the reese a
+    // little torn
+    room: 'hall',
+    pump: 0.3,
     grit: 6,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_THEME,
-        bassLine: KATA_BASS,
-        drums: 'kata',
-        pad: 'none',
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_THEME,
-        bassLine: KATA_BASS,
-        drums: 'kataHot',
-        fill: 'taiko',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
+    voices: { lead: 'square', counter: 'brass', arp: 'arpPulse', bass: 'bassReese' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'build',
+      'chorus',
+      'mokuso',
+      'verse',
+      'verse2',
+      'build',
+      'chorus',
     ],
-  },
-  {
-    // Hero: a heroic dotted call, falling home through the harmonic minor
-    title: 'Kata Hero',
-    sketch: true,
-    level: -3.5,
-    bpm: 118,
-    swing: 0,
-    kit: 'dojo',
-    room: 'plate',
-    grit: 6,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
     sections: [
       {
-        name: 'hook',
-        tier: 'groove',
+        // Into the hall: the odaiko, the sticks and the bell, then the reese
+        name: 'intro',
+        tier: 'calm',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_HERO,
         bassLine: KATA_BASS,
-        drums: 'kata',
+        drums: 'kataIntro',
         pad: 'none',
+        enter: { bass: 4 },
+        // Drums and a bass alone sit far below the verses: lifted to a calm part's level
+        level: 3,
       },
       {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_HERO,
-        bassLine: KATA_BASS,
-        drums: 'kataHot',
-        fill: 'taiko',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // Kiai: a shout of fourths answered backwards, a note longer each time
-    title: 'Kata Kiai',
-    sketch: true,
-    level: -3.5,
-    bpm: 118,
-    swing: 0,
-    kit: 'dojo',
-    room: 'plate',
-    grit: 6,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
-    sections: [
-      {
-        name: 'hook',
+        name: 'verse',
         tier: 'groove',
         chords: 'Am | Am | Am | Am | F | F | E | E',
         lead: KATA_KIAI,
         bassLine: KATA_BASS,
         drums: 'kata',
-        pad: 'none',
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_KIAI,
-        bassLine: KATA_BASS,
-        drums: 'kataHot',
         fill: 'taiko',
-        pad: 'hold',
-        stabs: 'push',
-        drop: true,
+        pad: 'none',
+        layers: { lead: 0.3 },
       },
-    ],
-  },
-  {
-    // Chant: low, marching on the nagado's rhythm, the drums answering
-    title: 'Kata Chant',
-    sketch: true,
-    level: -3.5,
-    bpm: 118,
-    swing: 0,
-    kit: 'dojo',
-    room: 'plate',
-    grit: 6,
-    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassReese' },
-    sections: [
       {
-        name: 'hook',
+        name: 'verse2',
         tier: 'groove',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_CHANT,
+        lead: KATA_KIAI,
+        counter: KATA_ANSWER,
         bassLine: KATA_BASS,
-        drums: 'kata',
-        pad: 'none',
+        // The hall's second round: chords chopped in the nagado's rhythm, the hats in eighths
+        drums: 'kata2',
+        fill: 'taiko',
+        pad: 'chop',
+        layers: { lead: 0.3, counter: 0.3 },
       },
       {
-        name: 'hot',
+        // The oroshi: the dominant struck ever closer, the shime rolling up, then a beat of ma
+        name: 'build',
+        tier: 'rise',
+        chords: 'E | E | E | E',
+        bassLine: OROSHI_BASS,
+        drums: 'oroshi',
+        pad: 'hold',
+        silence: 4,
+      },
+      {
+        // The theme on the hard-sync lead over the whole ensemble, brass pushing
+        name: 'chorus',
         tier: 'high',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        lead: KATA_CHANT,
+        lead: KATA_THEME,
+        leadVoice: 'sync',
         bassLine: KATA_BASS,
         drums: 'kataHot',
         fill: 'taiko',
         pad: 'hold',
         stabs: 'push',
         drop: true,
+      },
+      {
+        // Mokuso: no nagado, the odaiko once a bar, the bell, strings over Dm and B-flat
+        name: 'mokuso',
+        tier: 'calm',
+        chords: 'Dm | Dm | Bb | Bb | Dm | Dm | E | E',
+        counter: MOKUSO_HOLD,
+        counterVoice: 'strings',
+        bass: 'long',
+        drums: 'mokuso',
+        pad: 'swell',
+        level: 1,
       },
     ],
   },

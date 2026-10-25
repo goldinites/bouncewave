@@ -176,13 +176,21 @@ export const DRUM_PATTERNS = {
     open: '..x...x...x...x.',
     metal: '...o..x....o..X.',
   },
-  // A taiko ensemble's kata (Kodo's "Monochrome"): the shime rolling the ground rhythm, the
-  // nagado's "don" against it, the odaiko once a bar, sticks on the rims, the atarigane's time
+  // A taiko ensemble's kata (Kodo's "Monochrome"): the nagado's "don" and the odaiko once a bar,
+  // sticks on the rims, the atarigane keeping time; then the shime rolling the ground rhythm
+  // under them and the hats in eighths, and the peak with everything doubled
   kata: {
+    kick: 'X..x..X...x.X...',
+    taiko: 'X...............',
+    perc: '...x.......x..x.',
+    metal: '..x...x...x...x.',
+  },
+  kata2: {
     kick: 'X..x..X...x.X...',
     snare: 'x.o.x.ooX.o.x.oo',
     taiko: 'X...............',
-    perc: '...x.......x..x.',
+    hat: 'x.x.x.x.x.x.x.x.',
+    perc: '...x...x...x..x.',
     metal: '..x...x...x...x.',
   },
   kataHot: {
@@ -192,6 +200,26 @@ export const DRUM_PATTERNS = {
     perc: '.x.x...x.x.x..x.',
     metal: 'x.x.x.x.x.x.x.x.',
     open: '..............x.',
+  },
+  // The hall filling: the odaiko once a bar, the sticks and the bell, no nagado yet
+  kataIntro: {
+    taiko: 'X...............',
+    perc: '...x.......x..x.',
+    metal: '..o...o...o...o.',
+  },
+  // The oroshi into the peak: the odaiko on every beat, the sticks in eighths, the shime rolling
+  // up to the drop
+  oroshi: {
+    taiko: 'X...X...X...X...',
+    kick: '..x...x...x...x.',
+    snare: 'o.o.o.o.x.x.xxXX',
+    perc: 'x.x.x.x.x.x.x.x.',
+  },
+  // Mokuso, the meditation: the odaiko once a bar, the bell and a stick between
+  mokuso: {
+    taiko: 'x...............',
+    metal: '....o.......o...',
+    perc: '..........o.....',
   },
   // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
   foundry: {
