@@ -311,7 +311,7 @@ const KOTO_RAIN = `Ab5 - - - F5 - Gb5 F5 | Db5 - - - - - - - | F5 - - - Db5 - Eb
 // the folk songs' scale, no third), long notes each reached by a turn, its phrase ends falling,
 // air between them, the koto answering in its rests; ma — six steps of silence — after the
 // koto's glissando into the chorus; the chorus on Japan's pop "royal road" progression in
-// yonanuki, the shakuhachi in unison with a soft synth over the odaiko's half-time; a valley in the shadow of
+// yonanuki, the shakuhachi in unison with a flute tone over the odaiko's half-time; a valley in the shadow of
 // the in-scale, the darker Japanese mode, with wind chimes and a temple bell ———
 
 /**
@@ -350,7 +350,7 @@ const KAKEAI_LOW = `${KAKEAI_QUESTION}
  * The chorus as Japan's pop writes one (no festival postcard): the "royal road" progression
  * (ōdō shinkō, IV V iii vi, the J-pop and anime chorus's own), its melody in yonanuki — the
  * pentatonic of Japanese popular song, with the third the folk scale leaves out — on the
- * shakuhachi doubled by a soft synth; the koto plucking now and then
+ * shakuhachi doubled by a pure flute tone; the koto plucking now and then
  */
 const DAWN_CHORDS = 'Gmaj7 | A | F#m7 | Bm7 | Gmaj7 | A | D | D';
 
@@ -880,14 +880,14 @@ const SONG_DEFS: SongDef[] = [
         silence: 6,
       },
       {
-        // The shakuhachi on the royal road, a soft synth in unison under it, the odaiko leading
-        // the half-time
+        // The shakuhachi on the royal road, a pure flute tone in unison under it, the odaiko
+        // leading the half-time
         name: 'chorus',
         tier: 'high',
         chords: DAWN_CHORDS,
         lead: SABI_CLIMB,
         counter: SABI_CLIMB,
-        counterVoice: 'soft',
+        counterVoice: 'flute',
         arpLine: KOTO_SPARSE,
         arpVoice: 'koto',
         bass: 'drive',
