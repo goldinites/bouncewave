@@ -612,6 +612,13 @@ export class Arrangement {
         ? { from: last!.note, time: Math.min(song.voices.glide, GLIDE.MAX_TIME) }
         : undefined;
     if (isLead) this.lastLead = { note: melodyNote.note, end: time + duration };
+    // A phrase's end: the song's own lead lets a note before a rest fall
+    const sectionStep = context.bar * STEPS_PER_BAR + context.stepInBar;
+    const isPhraseEnd =
+      isLead &&
+      voice === song.voices.lead &&
+      !context.section.lead?.[sectionStep + melodyNote.steps];
+    const fall = isPhraseEnd ? song.voices.fall : undefined;
 
     this.play.lead(
       voice,
@@ -622,6 +629,7 @@ export class Arrangement {
       this.melody,
       (1800 + I * 2200) * brightness,
       glide,
+      fall,
     );
   }
 

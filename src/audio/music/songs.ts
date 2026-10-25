@@ -327,6 +327,67 @@ const C1_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . A4 
                  | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
                  | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . E5 C#5 B4 A4`;
 
+// ——— Above the Clouds, the 5.10 sketch: the melodies in the yo scale (D E G A B, no third: the
+// scale of Japan's folk songs, where the major pentatonic's F sharp sounded "Eastern" at large),
+// "ma" — a silence as part of the music — before the chorus, the koto's glissando into it, the
+// shakuhachi letting its phrase ends fall, and wind chimes (furin) in the intro and the valley ———
+
+/** V1 in the yo scale (D D Bm7 Bm7 G G Asus4 A): long notes, each reached by a turn; air between phrases. */
+const V1_YO = `A5 - - - - - - - - - - - B5 A5 G5 - | E5 - - - - - - - - - - - . . . .
+             | B5 - - - - - - - A5 - B5 - . . . . | E5 - - - - - - - - - - - D5 E5 D5 -
+             | B4 - - - - - - - - - - - D5 B4 A4 - | G5 - - - - - - - . . . . . . . .
+             | E5 - - - - - - - D5 - - - B4 - A4 - | A4 - - - - - - - . . . . . . . .`;
+
+/** V2, A: V1's question, then an answer climbing to D6, held into the build. */
+const V2_RISE = `A5 - - - - - - - - - - - B5 A5 G5 - | E5 - - - - - - - - - - - . . . .
+               | B5 - - - - - - - A5 - B5 - . . . . | E5 - - - - - - - - - - - D5 E5 D5 -
+               | D5 - - - - - - - - - - - E5 D5 E5 - | B5 - - - - - - - A5 - - - G5 - - -
+               | D6 - - - - - - - - - - - - - B5 - | A5 - - - - - - - - - - - - - - -`;
+
+/** V2, B: V1's question, then an answer that waits (ma) and falls low, the shakuhachi's breath. */
+const V2_LOW = `A5 - - - - - - - - - - - B5 A5 G5 - | E5 - - - - - - - - - - - . . . .
+              | B5 - - - - - - - A5 - B5 - . . . . | E5 - - - - - - - - - - - D5 E5 D5 -
+              | . . . . G5 - - - - - - - E5 - D5 - | B4 - - - - - - - . . . . A4 B4 D5 -
+              | E5 - - - - - - - - - - - D5 - B4 - | A4 - - - - - - - - - - - . . . .`;
+
+/** C1 in the yo scale: the 3+3+2 call to D6, each phrase's end held where it rested. */
+const C1_YO = `D5 - - - - - A5 - - - - - E5 - - - | E5 - - - - - D5 - - - - - - - - -
+             | B4 - - - - - E5 - - - - - D5 - - - | E5 - - - - - D5 - - - - - - - - -
+             | G5 - - - - - D6 - - - - - B5 - - - | A5 - - - - - G5 A5 G5 E5 D5 - - - - -
+             | E5 - - - D5 - - - E5 - - - A5 - - - | A5 - - - - - - - - - - - - - - -`;
+
+/** The koto's shimmer over the chorus, above its melody: five-note cells turning in sixteenths. */
+const C1_SHIMMER = cycle(
+  [
+    { cell: ['A5', 'D6', 'E6', 'D6', 'B5'], bars: 2 },
+    { cell: ['B5', 'D6', 'E6', 'D6', 'A5'], bars: 1 },
+    { cell: ['A5', 'B5', 'E6', 'B5', 'E6'], bars: 1 },
+    { cell: ['B5', 'D6', 'G6', 'D6', 'A5'], bars: 1 },
+    { cell: ['B5', 'D6', 'G6', 'E6', 'D6'], bars: 1 },
+    { cell: ['A5', 'D6', 'E6', 'D6', 'B5'], bars: 1 },
+    { cell: ['A5', 'B5', 'E6', 'B5', 'E6'], bars: 1 },
+  ],
+  euclid(11, 16),
+);
+
+/** The build's koto: the climb's first three bars, then a glissando up the yo scale into the ma. */
+const KOTO_GLISS = [
+  ...KOTO_CLIMB.split('|').slice(0, 3),
+  ' . G4 A4 B4 D5 E5 G5 A5 B5 . . . . . . . ',
+].join('|');
+
+/** Wind chimes at dawn (D D Bm7 Bm7 G G Asus4 A): a high bell now and then, never on the beat. */
+const FURIN_DAWN = `. . . D6 - - - - - - - - - A5 - - | - - - - - B5 - - - - - - - - - -
+                  | . . . . . . . . . . D6 - - - - - | - A5 - - - - - - - - - - - - B5 -
+                  | - - - - - D6 - - - - - - - - - - | . . . . . . . . . . . B5 - G5 - -
+                  | - - - - - - - A5 - - - - - - - - | - - - - - - - - - - - - - E5 - -`;
+
+/** Wind chimes in the valley's shadow, in its in-scale (G A B flat D E flat). */
+const FURIN_VALLEY = `. . . . . D6 - - - - - - - - - - | - - - A5 - - - - - - - - - - . .
+                    | . . . . . . . . . . . Bb5 - - - - | - - - - - - - D6 - - - - - - - -
+                    | . . . . . . G5 - - - - - - - - - | - - - - - - - - - - - Bb5 - - - -
+                    | - - - - . . . . . . . . . A5 - - | - - - - - - - - . . . . . . . .`;
+
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
  * the hottest rallies, and the conductor moves between them as the match heats up and cools
@@ -841,6 +902,120 @@ const SONG_DEFS: SongDef[] = [
         tier: 'calm',
         chords: 'Gsus2 | Gsus2 | Gm | Gm | Ebmaj7 | Ebmaj7 | Dsus4 | Asus4',
         lead: VALLEY_SHADOW,
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+      },
+    ],
+  },
+  {
+    // 5.10's sketch of Above the Clouds, for the stand: its form plays the new parts in order
+    // (verse2-b in place of verse2-a by the stand's part); never played by the game
+    title: 'Above the Clouds v2',
+    sketch: true,
+    bpm: 96,
+    swing: 0,
+    level: -2.5,
+    kit: 'japan',
+    transitions: 'drums',
+    room: 'valley',
+    pump: 0.2,
+    voices: {
+      lead: 'shakuhachi',
+      counter: 'koto',
+      arp: 'pluck',
+      bass: 'bassFm',
+      glide: 0.04,
+      fall: 2,
+    },
+    form: ['intro', 'verse', 'verse2-a', 'build', 'chorus', 'valley'],
+    sections: [
+      {
+        // Dawn on the koto, wind chimes over the pad
+        name: 'intro',
+        tier: 'calm',
+        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
+        lead: tease(V1_YO),
+        leadVoice: 'koto',
+        counter: FURIN_DAWN,
+        counterVoice: 'celesta',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        enter: { lead: 4 },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
+        lead: V1_YO,
+        bass: 'long',
+        drums: 'halftime',
+        fill: 'taiko',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+      },
+      {
+        name: 'verse2-a',
+        tier: 'groove',
+        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
+        lead: V2_RISE,
+        counter: KOTO_DAWN,
+        bass: 'sync',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        layers: { lead: 0.3, counter: 0.2 },
+        enter: { counter: 2 },
+      },
+      {
+        name: 'verse2-b',
+        tier: 'groove',
+        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
+        lead: V2_LOW,
+        counter: KOTO_DAWN,
+        bass: 'sync',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        layers: { lead: 0.3, counter: 0.2 },
+        enter: { counter: 2 },
+      },
+      {
+        // The clappers, the koto's glissando, then ma: six steps of silence before the gong
+        name: 'build',
+        tier: 'rise',
+        chords: 'G | G | Asus4 | A',
+        counter: KOTO_GLISS,
+        bass: 'drive',
+        drums: 'kabuki',
+        pad: 'hold',
+        riser: true,
+        silence: 6,
+      },
+      {
+        // The shakuhachi and the strings in unison, its ends held; the koto shimmering above
+        name: 'chorus',
+        tier: 'high',
+        chords: 'D | Asus4 | Bm7 | Esus4 | Gadd9 | Em7 | Asus4 | A',
+        lead: C1_YO,
+        counter: C1_YO,
+        counterVoice: 'strings',
+        arpLine: C1_SHIMMER,
+        bass: 'drive',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        drop: true,
+      },
+      {
+        // The shakuhachi alone in the in-scale's shadow, wind chimes in the silence
+        name: 'valley',
+        tier: 'calm',
+        chords: 'Gsus2 | Gsus2 | Gm | Gm | Ebmaj7 | Ebmaj7 | Dsus4 | Asus4',
+        lead: VALLEY_SHADOW,
+        counter: FURIN_VALLEY,
+        counterVoice: 'celesta',
         bass: 'long',
         drums: 'none',
         pad: 'swell',
