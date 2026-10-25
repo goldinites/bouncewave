@@ -1,4 +1,4 @@
-import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
+import { additive, cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 
 /*
@@ -435,6 +435,27 @@ const MOKUSO_HOLD = `F5 - - - - - - - - - - - - - - - | E5 - - - - - - - D5 - - 
                    | D5 - - - - - - - - - - - - - - - | F5 - - - - - - - - - - - - - - -
                    | A5 - - - - - - - - - - - - - - - | G5 - - - - - - - F5 - - - - - - -
                    | E5 - - - - - - - - - - - - - - - | G#5 - - - - - - - - - - - . . . .`;
+
+// ——— The broken network's track, 5.11's bases to choose from (no melody yet): dark cyberpunk
+// after Cyberpunk 2077's "V", a straight heavy pulse at 104, nothing Japanese, no half-time ———
+
+/** Packets lost: a seven-note cell turning over eleven pulses of sixteen, notes missing. */
+const PACKET_BASS = cycle(
+  [
+    { cell: ['F#1', 'F#1', 'F#2', 'F#1', 'C#2', 'F#1', 'E2'], bars: 2 },
+    { cell: ['B1', 'B1', 'B2', 'B1', 'F#2', 'B1', 'A1'], bars: 2 },
+    { cell: ['F#1', 'F#1', 'F#2', 'F#1', 'C#2', 'F#1', 'E2'], bars: 2 },
+    { cell: ['G1', 'G1', 'G2', 'G1', 'D2', 'G1', 'F#1'], bars: 1 },
+    { cell: ['C#2', 'C#2', 'C#3', 'C#2', 'G#1', 'C#2', 'B1'], bars: 1 },
+  ],
+  euclid(11, 16, 2),
+);
+
+/** The signal reconnecting: a cell growing a note a bar and falling back, as a link retries. */
+const SIGNAL_ARP = additive(
+  ['B4', 'F#5', 'D5', 'C#5', 'A4', 'E5', 'F#4'],
+  [2, 3, 4, 5, 6, 7, 4, 2],
+);
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -1175,6 +1196,114 @@ const SONG_DEFS: SongDef[] = [
         drums: 'mokuso',
         pad: 'swell',
         level: 1,
+      },
+    ],
+  },
+  // The broken network's bases (5.11), for the stand: a groove (hook) and its peak (hot) each
+  {
+    // "V" from Cyberpunk 2077: a thick torn bass pulsing in eighths, cold chords opening slowly
+    // in C sharp minor, the kick on every beat; the line drops out before the turn
+    title: 'Net Pulse',
+    sketch: true,
+    level: -1.5,
+    bpm: 104,
+    swing: 0,
+    kit: 'dark',
+    room: 'plate',
+    grit: 14,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassSaw' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'C#m | C#m | A | A | E | E | B | B',
+        bass: 'eighths',
+        arp: 'sparse',
+        drums: 'netPulse',
+        pad: 'hold',
+        sweep: { pads: [0.3, 1.2] },
+        glitch: 'dropout',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'C#m | C#m | A | A | E | E | B | B',
+        bass: 'drive',
+        arp: 'triplet',
+        drums: 'netPulseHot',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // Packets lost, after Gesaffelstein's cold techno: an FM bass cycling with notes missing in
+    // F sharp minor, its G a Neapolitan step, rim shots with holes; the beat stutters at the end
+    title: 'Packet Loss',
+    sketch: true,
+    level: -2,
+    bpm: 104,
+    swing: 0,
+    kit: 'dark',
+    room: 'plate',
+    grit: 10,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassFm' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'F#m | F#m | Bm | Bm | F#m | F#m | G | C#',
+        bassLine: PACKET_BASS,
+        drums: 'packet',
+        pad: 'none',
+        glitch: 'stutter',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'F#m | F#m | Bm | Bm | F#m | F#m | G | C#',
+        bassLine: PACKET_BASS,
+        drums: 'packetHot',
+        pad: 'hold',
+        stabs: 'offbeat',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // A signal lost, after Blade Runner 2049 and "V"'s wide side: a growling drone in B minor,
+    // the arpeggio reconnecting a note at a time, static on the line, a rewind into the turn
+    title: 'Signal Lost',
+    sketch: true,
+    bpm: 104,
+    swing: 0,
+    kit: 'dark',
+    room: 'plate',
+    grit: 14,
+    voices: { lead: 'brass', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
+        arpLine: SIGNAL_ARP,
+        bass: 'long',
+        drums: 'signal',
+        pad: 'swell',
+        hits: { radioStatic: `X${'.'.repeat(127)}` },
+        sweep: { arp: [0.4, 1.3] },
+        glitch: 'rewind',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
+        arpLine: SIGNAL_ARP,
+        bass: 'octave',
+        drums: 'signalHot',
+        pad: 'hold',
+        drop: true,
       },
     ],
   },
