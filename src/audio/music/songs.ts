@@ -1447,6 +1447,112 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
+  // The tutorial's bases (5.12), for the stand: an ordinary rally (hook) and the peak (hot)
+  {
+    // Morning Run: A major, a light straight kick, the arpeggio climbing the chord in eighths, a
+    // plain bass in eighths: bright and see-through
+    title: 'Warm-up Run',
+    sketch: true,
+    level: 0.5,
+    bpm: 100,
+    swing: 0,
+    kit: 'synthwave',
+    room: 'plate',
+    pump: 0.3,
+    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'A | A | D | D | F#m | F#m | E | E',
+        arp: 'pulse',
+        bass: 'eighths',
+        drums: 'four',
+        pad: 'hold',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'A | A | D | D | F#m | F#m | E | E',
+        arp: 'up',
+        bass: 'octave',
+        drums: 'drive',
+        pad: 'hold',
+        stabs: 'offbeat',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // Level Up: G major, a little like a game: a square arpeggio in threes over the four beats,
+    // the bass in octaves, claps
+    title: 'Warm-up Level',
+    sketch: true,
+    level: -1,
+    bpm: 100,
+    swing: 0,
+    kit: 'synthwave',
+    room: 'plate',
+    pump: 0.3,
+    voices: { lead: 'soft', counter: 'bell', arp: 'arpPulse', bass: 'bassFm', pad: 'synth' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'G | G | Em | Em | C | C | D | D',
+        arp: 'triplet',
+        bass: 'octave',
+        drums: 'disco',
+        pad: 'hold',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'G | G | Em | Em | C | C | D | D',
+        arp: 'triplet',
+        bass: 'drive',
+        drums: 'disco',
+        pad: 'hold',
+        stabs: 'push',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // Stretch: E major, a relaxed half-time with a clap, the pad chopped in the 80s' rhythm, the
+    // bass syncopated
+    title: 'Warm-up Stretch',
+    sketch: true,
+    level: 1,
+    bpm: 100,
+    swing: 0,
+    kit: 'synthwave',
+    room: 'plate',
+    pump: 0.4,
+    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        arp: 'sparse',
+        bass: 'sync',
+        drums: 'halftime',
+        pad: 'chop',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        arp: 'broken',
+        bass: 'sync',
+        drums: 'four',
+        pad: 'chop',
+        stabs: 'comp',
+        drop: true,
+      },
+    ],
+  },
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);
