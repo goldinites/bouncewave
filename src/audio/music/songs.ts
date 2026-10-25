@@ -475,43 +475,84 @@ const SIGNAL_ECHO = `E4 - - - - - D4 - - - - - C4 - - - | C4 - - - - - - - - - .
                    | E4 - - - - - D4 - - - - - - - - - | D4 - - - - - - - C4 - - - - - . .
                    | B3 - - - - - A3 - - - - - - - - - | . . . . . . . . . . . . . . . .`;
 
-// ——— The menus' track (5.12), bases to choose from (no melody yet): dreamwave at ~84, calling
-// the player in rather than pressing, after Home's "Resonance", Tycho and Boards of Canada ———
-
-/** Resonance: a five-note glitter turning over the four beats, the chord's seventh in it. */
-const MENU_GLITTER = cycle(
-  [
-    { cell: ['D5', 'A5', 'F#5', 'C#6', 'E5'], bars: 2 },
-    { cell: ['B4', 'F#5', 'D5', 'A5', 'C#5'], bars: 2 },
-    { cell: ['G4', 'D5', 'B4', 'F#5', 'A4'], bars: 2 },
-    { cell: ['A4', 'E5', 'C#5', 'G5', 'D5'], bars: 2 },
-  ],
-  ARP_RHYTHM.eighths,
-);
-
-/** Dive: a plucked figure on five pulses of eight, the dorian sixth bright in it. */
-const MENU_DIVE_ARP = cycle(
-  [
-    { cell: ['E5', 'B5', 'D6', 'F#5'], bars: 2 },
-    { cell: ['A5', 'C#6', 'E5', 'F#5'], bars: 2 },
-    { cell: ['E5', 'B5', 'D6', 'G5'], bars: 2 },
-    { cell: ['C5', 'G5', 'B5', 'D5'], bars: 1 },
-    { cell: ['D5', 'A5', 'C6', 'F#5'], bars: 1 },
-  ],
-  euclid(10, 16),
-);
-
-/** Dive: a laid-back bass, late on the beat and leaving room. */
-const MENU_DIVE_BASS = `E2 - - - . . B2 - D3 - . . E2 - . . | E2 - - - . . B2 - . . G2 - A2 - B2 -
-                      | A1 - - - . . E2 - G2 - . . A2 - . . | A1 - - - . . E2 - . . C#2 - D2 - E2 -
-                      | E2 - - - . . B2 - D3 - . . E2 - . . | E2 - - - . . B2 - . . G2 - F#2 - E2 -
-                      | C2 - - - . . G2 - B2 - . . C2 - . . | D2 - - - . . A2 - . . F#2 - D2 - . .`;
+// ——— The menus' track (5.12): dreamwave at ~84, calling the player in rather than pressing;
+// Float, after Boards of Canada, chosen of three bases, and melodies over it to choose from ———
 
 /** Float: a kalimba's cell growing a note a bar and shrinking back, the lydian fourth in it. */
 const MENU_FLOAT_ARP = additive(
   ['F5', 'C6', 'A5', 'D6', 'G5', 'B5', 'E5'],
   [2, 3, 4, 5, 6, 7, 5, 3],
 );
+
+/** Call: a rising arpeggio asks, the lydian B leans up into C; it ends open, on the B. */
+const MENU_CALL = `C4 - - - F4 - - - A4 - - - - - - - | B4 - - - - - C5 - - - - - . . . .
+                  | D4 - - - G4 - - - B4 - - - - - - - | A4 - - - - - - - G4 - - - . . . .
+                  | C5 - - - - - - - B4 C5 D5 - - - - - | C5 - - - - - - - A4 - - - F4 - - -
+                  | E4 - - - - - - - G4 - - - A4 - - - | B4 - - - - - - - - - - - . . . .`;
+
+/** Drift: a few pentatonic notes off the beat and a lot of air, low. */
+const MENU_DRIFT = `. . A3 - - - - - C4 - - - - - . . | D4 - - - - - - - - - - - . . . .
+                   | . . . . . . . . . . G4 - D4 - - - | A3 - - - - - - - . . . . . . . .
+                   | . . C4 - - - - - F4 - - - G4 - A4 - | C5 - - - - - - - - - - - - - . .
+                   | . . . . . . . . . . A4 G4 E4 - . . | . . D4 - - - - - - - - - - - . .`;
+
+/** Breath: each phrase drawn in a sixth up, then let out softly. */
+const MENU_BREATH = `C4 - - - - - A4 - - - - - - - - - | G4 - - - - - - - E4 - - - - - . .
+                    | D4 - - - - - B4 - - - - - - - - - | A4 - - - - - - - G4 - - - - - . .
+                    | E4 - - - - - C5 - - - - - - - - - | B4 - - - A4 - - - G4 - - - A4 - - -
+                    | C4 - - - - - A4 - - - - - G4 A4 G4 - | D4 - - - - - - - - - - - - - . .`;
+
+/**
+ * The menus' base, chosen: Float, after Boards of Canada — F lydian, no drums, a kalimba's
+ * growing cell over a pad swelling backwards; the bloom brings a soft half-time in.
+ */
+const MENU_FLOAT: SongDef = {
+  title: 'Menu Float',
+  sketch: true,
+  level: -1.5,
+  bpm: 84,
+  swing: 0,
+  kit: 'synthwave',
+  room: 'valley',
+  pump: 0.2,
+  // A round, clean bass, as dreamwave's is: under even the mix's own bend
+  grit: -8,
+  voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
+  sections: [
+    {
+      name: 'hook',
+      tier: 'groove',
+      chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+      arpLine: MENU_FLOAT_ARP,
+      arpVoice: 'kalimba',
+      bass: 'long',
+      drums: 'none',
+      pad: 'swell',
+    },
+    {
+      name: 'hot',
+      tier: 'high',
+      chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+      arpLine: MENU_FLOAT_ARP,
+      arpVoice: 'kalimba',
+      bass: 'long',
+      drums: 'halftime',
+      pad: 'hold',
+      drop: true,
+    },
+  ],
+};
+
+/** Float with a melody over it, for the stand: the base (hook) and its bloom (hot). */
+const floatSketch = (title: string, lead: string): SongDef => {
+  const float = MENU_FLOAT;
+  return {
+    ...float,
+    title,
+    voices: { ...float.voices, lead: 'brass' },
+    sections: float.sections.map((section) => ({ ...section, lead })),
+  };
+};
 
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
@@ -1367,120 +1408,11 @@ const SONG_DEFS: SongDef[] = [
       },
     ],
   },
-  // The menus' bases (5.12), for the stand: the base (hook) and how it blooms (hot)
-  {
-    // Resonance, after Home: D major, a five-note glitter on a pluck over a warm pad, a soft
-    // heartbeat, then half-time and the pad held
-    title: 'Menu Resonance',
-    sketch: true,
-    level: 0.5,
-    bpm: 84,
-    swing: 0,
-    kit: 'synthwave',
-    room: 'cathedral',
-    pump: 0.3,
-    // A round, clean bass, as dreamwave's is: under even the mix's own bend
-    grit: -8,
-    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Dmaj7 | Dmaj7 | Bm7 | Bm7 | Gmaj7 | Gmaj7 | A | A',
-        arpLine: MENU_GLITTER,
-        bass: 'long',
-        drums: 'pulse',
-        pad: 'swell',
-        sweep: { arp: [0.4, 1.2] },
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Dmaj7 | Dmaj7 | Bm7 | Bm7 | Gmaj7 | Gmaj7 | A | A',
-        arpLine: MENU_GLITTER,
-        bass: 'octave',
-        drums: 'halftime',
-        pad: 'hold',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // Dive, after Tycho: E dorian, a laid-back broken beat, the bass late and round, a plucked
-    // figure on five pulses of eight
-    title: 'Menu Dive',
-    sketch: true,
-    level: -3,
-    bpm: 84,
-    swing: 0.15,
-    kit: 'night',
-    room: 'studio',
-    pump: 0.2,
-    // A round, clean bass, as dreamwave's is: under even the mix's own bend
-    grit: -8,
-    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Em9 | Em9 | A6 | A6 | Em9 | Em9 | Cmaj7 | D',
-        arpLine: MENU_DIVE_ARP,
-        bassLine: MENU_DIVE_BASS,
-        drums: 'break',
-        pad: 'hold',
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Em9 | Em9 | A6 | A6 | Em9 | Em9 | Cmaj7 | D',
-        arpLine: MENU_DIVE_ARP,
-        bassLine: MENU_DIVE_BASS,
-        drums: 'break',
-        pad: 'hold',
-        stabs: 'offbeat',
-        stabsVoice: 'rhodes',
-        drop: true,
-      },
-    ],
-  },
-  {
-    // Float, after Boards of Canada: F lydian, no drums, a kalimba's growing cell over a pad
-    // swelling backwards; the bloom brings a soft half-time in
-    title: 'Menu Float',
-    sketch: true,
-    level: -1.5,
-    bpm: 84,
-    swing: 0,
-    kit: 'synthwave',
-    room: 'valley',
-    pump: 0.2,
-    // A round, clean bass, as dreamwave's is: under even the mix's own bend
-    grit: -8,
-    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
-    sections: [
-      {
-        name: 'hook',
-        tier: 'groove',
-        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
-        arpLine: MENU_FLOAT_ARP,
-        arpVoice: 'kalimba',
-        bass: 'long',
-        drums: 'none',
-        pad: 'swell',
-      },
-      {
-        name: 'hot',
-        tier: 'high',
-        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
-        arpLine: MENU_FLOAT_ARP,
-        arpVoice: 'kalimba',
-        bass: 'long',
-        drums: 'halftime',
-        pad: 'hold',
-        drop: true,
-      },
-    ],
-  },
+  // The menus' melodies over Float (5.12), for the stand
+  MENU_FLOAT,
+  floatSketch('Menu Float v2', MENU_CALL),
+  floatSketch('Menu Float v3', MENU_DRIFT),
+  floatSketch('Menu Float v4', MENU_BREATH),
 ];
 
 export const SONGS: Song[] = SONG_DEFS.map(compileSong);
