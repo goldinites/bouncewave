@@ -271,46 +271,14 @@ const IRON_STRINGS = `C5 - - - - - - - | Bb4 - - - - - - - | Ab4 - - - - - - - |
 const KOTO_RAIN = `Ab5 - - - F5 - Gb5 F5 | Db5 - - - - - - - | F5 - - - Db5 - Eb5 Db5 | Bb4 - - - - - - -
                  | C5 - - - - - Db5 C5 | Ab4 - - - G4 - F4 - | E5 - - - G5 - - - | C5 - - - - - - -`;
 
-// ——— Above the Clouds (fuji): D major on the Japanese yo pentatonic, 96 BPM. Dawn over the
-// mountain, the clouds below: a shakuhachi's long notes, each reached by a quick turn it slides
-// through, a koto's ostinato, a big pad on open, suspended chords rather than the West's
-// sevenths, the kabuki's clappers striking faster into the festival drums at the peak, and a
-// valley in the shadow of the in-scale, the darker Japanese mode ———
-
-/** The koto's ostinato: four notes of each chord in eighths, two bars each (D Bm7 G Asus4). */
-const KOTO_DAWN = cycle(
-  [
-    { cell: ['D5', 'A4', 'E5', 'A4'], bars: 2 },
-    { cell: ['B4', 'F#4', 'D5', 'F#4'], bars: 2 },
-    { cell: ['G4', 'D5', 'B4', 'D5'], bars: 2 },
-    { cell: ['A4', 'E5', 'D5', 'E5'], bars: 2 },
-  ],
-  euclid(8, 16),
-);
-
-/** The ostinato's last four bars (G Asus4), climbing with the drums into the chorus. */
-const KOTO_CLIMB = cycle(
-  [
-    { cell: ['G4', 'D5', 'B4', 'D5'], bars: 2 },
-    { cell: ['A4', 'E5', 'D5', 'E5'], bars: 2 },
-  ],
-  euclid(8, 16),
-);
-
-/** V1, the verse (D D Bm7 Bm7 G G Asus4 A): long notes, each next one reached by a turn. */
-const V1_DAWN = `A5 - - - - - - - - - - - E5 D5 E5 - | F#5 - - - - - - - - - - - . . . .
-               | B5 - - - - - - - A5 - B5 - . . . . | F#5 - - - - - - - - - - - E5 F#5 E5 -
-               | D5 - - - - - - - - - - - E5 D5 B4 - | G5 - - - - - - - . . . . . . . .
-               | E5 - - - - - - - D5 - - - B4 - A4 - | A4 - - - - - - - . . . . . . . .`;
-
-/**
- * C1, the chorus (D Asus4 Bm7 Esus4 Gadd9 Em7 Asus4 A): a 3+3+2 call climbing the pentatonic to
- * D6, falling home.
- */
-const C1_DAWN = `D5 - - - - - A5 - - - - - F#5 - - - | E5 - - - - - D5 - - - - - . . . .
-               | B4 - - - - - F#5 - - - - - D5 - - - | E5 - - - - - D5 - - - - - B4 - A4 -
-               | G5 - - - - - D6 - - - - - B5 - - - | A5 - - - - - G5 A5 G5 E5 D5 - - - - -
-               | E5 - - - D5 - - - E5 - - - A5 - - - | A5 - - - - - - - . . . . . . . .`;
+// ——— Above the Clouds (fuji): D, 96 BPM, Japan as its own music writes it rather than as a
+// postcard (with the user, 25.10.2026: every token of Japan at once read as a tourist's). Dawn
+// over the mountain, the clouds below: the verses on the shakuhachi in the yo scale (D E G A B,
+// the folk songs' scale, no third), long notes each reached by a turn, its phrase ends falling,
+// air between them, the koto answering in its rests; ma — six steps of silence — after the
+// koto's glissando into the chorus; the chorus on Japan's pop "royal road" progression in
+// yonanuki, the shakuhachi in unison with a synth lead over the odaiko; a valley in the shadow of
+// the in-scale, the darker Japanese mode, with wind chimes and a temple bell ———
 
 /**
  * The valley (Gsus2 Gsus2 Gm Gm Ebmaj7 Ebmaj7 Dsus4 Asus4): the chorus's opening two bars, then
@@ -321,30 +289,13 @@ const VALLEY_SHADOW = `D5 - - - - - A5 - - - - - F#5 - - - | E5 - - - - - D5 - -
                      | G5 - - - - - Eb5 - - - - - D5 - - - | Bb4 - - - - - - - . . . . . . . .
                      | . . . . A4 - - - - - G4 - - - - - | A4 - - - - - - - . . . . . . . .`;
 
-/** The koto answering C1 in its rests: a pentatonic drop of four notes. */
-const C1_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . A4 F#4 E4 D4
-                 | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
-                 | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
-                 | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . E5 C#5 B4 A4`;
-
-// ——— Above the Clouds, the 5.10 sketch: the melodies in the yo scale (D E G A B, no third: the
-// scale of Japan's folk songs, where the major pentatonic's F sharp sounded "Eastern" at large),
-// "ma" — a silence as part of the music — before the chorus, the koto's glissando into it, the
-// shakuhachi letting its phrase ends fall, and wind chimes (furin) in the intro and the valley ———
-
 /** V1 in the yo scale (D D Bm7 Bm7 G G Asus4 A): long notes, each reached by a turn; air between phrases. */
 const V1_YO = `A5 - - - - - - - - - - - B5 A5 G5 - | E5 - - - - - - - - - - - . . . .
              | B5 - - - - - - - A5 - B5 - . . . . | E5 - - - - - - - - - - - D5 E5 D5 -
              | B4 - - - - - - - - - - - D5 B4 A4 - | G5 - - - - - - - . . . . . . . .
              | E5 - - - - - - - D5 - - - B4 - A4 - | A4 - - - - - - - . . . . . . . .`;
 
-/** V2, A: V1's question, then an answer climbing to D6, held into the build. */
-const V2_RISE = `A5 - - - - - - - - - - - B5 A5 G5 - | E5 - - - - - - - - - - - . . . .
-               | B5 - - - - - - - A5 - B5 - . . . . | E5 - - - - - - - - - - - D5 E5 D5 -
-               | D5 - - - - - - - - - - - E5 D5 E5 - | B5 - - - - - - - A5 - - - G5 - - -
-               | D6 - - - - - - - - - - - - - B5 - | A5 - - - - - - - - - - - - - - -`;
-
-/** V2, B: V1's question, then an answer that waits (ma) and falls low, the shakuhachi's breath. */
+/** V2, the second verse: V1's question, then an answer that waits (ma) and falls low. */
 const V2_LOW = `A5 - - - - - - - - - - - B5 A5 G5 - | E5 - - - - - - - - - - - . . . .
               | B5 - - - - - - - A5 - B5 - . . . . | E5 - - - - - - - - - - - D5 E5 D5 -
               | . . . . G5 - - - - - - - E5 - D5 - | B4 - - - - - - - . . . . A4 B4 D5 -
@@ -352,14 +303,11 @@ const V2_LOW = `A5 - - - - - - - - - - - B5 A5 G5 - | E5 - - - - - - - - - - - .
 
 /**
  * The koto answering the shakuhachi (kakeai, the dialogue of Japan's chamber trio): silent while
- * it sings, a phrase of three to five notes in its rests and under its long notes. The first
- * half answers V1's question; the second half each version's answer.
+ * it sings, a phrase of three to five notes in its rests and under its long notes: first V1's
+ * question, then V2's answer.
  */
 const KAKEAI_QUESTION = `. . . . . . D5 E5 A4 - . . . . . . | . . . . . . . . . . . . B4 A4 E4 -
                        | . . . . . . . . . . . . E5 - D5 B4 | . . . . A4 B4 D5 - . . . . . . . .`;
-const KAKEAI_RISE = `${KAKEAI_QUESTION}
-                   | . . . . G4 A4 B4 - . . . . . . . . | . . . . . . . . . . . . . . . .
-                   | . . . . . . E5 D5 A4 - . . . . . . | . . . . . . . . E5 - D5 - B4 - A4 -`;
 const KAKEAI_LOW = `${KAKEAI_QUESTION}
                   | B4 A4 G4 - . . . . . . . . . . . . | . . . . . . . . D5 E5 G5 - . . . .
                   | . . . . A4 B4 D5 - . . . . . . . . | . . . . . . . . . . . . E5 D5 B4 A4`;
@@ -368,18 +316,11 @@ const KAKEAI_LOW = `${KAKEAI_QUESTION}
  * The chorus as Japan's pop writes one (no festival postcard): the "royal road" progression
  * (ōdō shinkō, IV V iii vi, the J-pop and anime chorus's own), its melody in yonanuki — the
  * pentatonic of Japanese popular song, with the third the folk scale leaves out — on the
- * shakuhachi doubled by the track's synth lead, two motifs to choose from; the koto plucking now
- * and then
+ * shakuhachi doubled by the track's synth lead; the koto plucking now and then
  */
 const DAWN_CHORDS = 'Gmaj7 | A | F#m7 | Bm7 | Gmaj7 | A | D | D';
 
-/** A, the hook (sabi): a falling figure turning back up, a leap to D6 the second time. */
-const SABI_FALL = `B5 - - - A5 - - - F#5 - - - A5 - B5 - | E5 - - - - - - - - - - - F#5 E5 D5 -
-                 | F#5 - - - E5 - - - A5 - - - B5 - A5 - | D5 - - - - - - - - - - - . . . .
-                 | B5 - - - A5 - - - F#5 - - - A5 - D6 - | B5 - - - - - - - A5 - B5 - A5 F#5 E5 -
-                 | D5 - - - E5 - - - F#5 - - - E5 - - - | D5 - - - - - - - - - - - - - - -`;
-
-/** B, the climb: rising by steps to D6 in bar 4, then singing home, a ma before the cadence. */
+/** The chorus (sabi): rising by steps to D6 in bar 4, then singing home, a ma before the cadence. */
 const SABI_CLIMB = `D5 - E5 - F#5 - - - A5 - - - - - - - | B5 - - - A5 - - - F#5 - E5 - - - - -
                   | E5 - F#5 - A5 - - - B5 - - - - - - - | D6 - - - B5 - - - A5 - F#5 - - - - -
                   | B5 - - - - - - - A5 B5 A5 F#5 E5 - - - | E5 - - - - - - - . . . . . . . .
@@ -826,12 +767,11 @@ const SONG_DEFS: SongDef[] = [
     ],
   },
   {
-    // Dawn over Fuji, the clouds below: the koto's ostinato and a big pad open it, a shakuhachi
-    // sings long notes reached by quick turns, spacious half-time drums in the verse, the festival
-    // beat (matsuri) — the odaiko's "don", the rim's "ka" — at the chorus, four bars of the
-    // kabuki's clappers striking faster into it, a gong for a crash, and a valley where the
-    // shakuhachi sings alone in the in-scale's shadow. Moving in sixteenths where the match plays,
-    // so 96 BPM never drags a rally
+    // Dawn over Fuji, the clouds below (see the lines above): the koto alone opens it, the
+    // shakuhachi sings the verses over spacious half-time drums, then the festival beat with the
+    // koto answering it; the kabuki's clappers and the koto's glissando climb into a silence,
+    // and the chorus comes in on the royal road; the valley is the shakuhachi alone, wind chimes
+    // and a temple bell. Moving in sixteenths where the match plays, so 96 BPM never drags a rally
     title: 'Above the Clouds',
     bpm: 96,
     swing: 0,
@@ -843,99 +783,7 @@ const SONG_DEFS: SongDef[] = [
     // not pulsing with the drums
     room: 'valley',
     pump: 0.2,
-    // The shakuhachi slides through its turns, as the flute bends its notes with the breath
-    voices: { lead: 'shakuhachi', counter: 'koto', arp: 'pluck', bass: 'bassFm', glide: 0.04 },
-    form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'valley', 'verse2', 'build', 'chorus'],
-    sections: [
-      {
-        name: 'intro',
-        tier: 'calm',
-        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
-        lead: tease(V1_DAWN),
-        counter: KOTO_DAWN,
-        bass: 'long',
-        drums: 'none',
-        pad: 'swell',
-        enter: { lead: 4 },
-      },
-      {
-        name: 'verse',
-        tier: 'groove',
-        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
-        lead: V1_DAWN,
-        bass: 'long',
-        drums: 'halftime',
-        fill: 'taiko',
-        pad: 'hold',
-        layers: { lead: 0.3 },
-      },
-      {
-        // The koto's ostinato joins the shakuhachi, the festival beat underneath
-        name: 'verse2',
-        tier: 'groove',
-        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
-        lead: V1_DAWN,
-        counter: KOTO_DAWN,
-        bass: 'sync',
-        drums: 'matsuri',
-        fill: 'taiko',
-        pad: 'hold',
-        layers: { lead: 0.3, counter: 0.2 },
-        enter: { counter: 2 },
-      },
-      {
-        // Four bars of the kabuki's clappers striking faster over the odaiko, a reverse crash into
-        // the gong
-        name: 'build',
-        tier: 'rise',
-        chords: 'G | G | Asus4 | A',
-        counter: KOTO_CLIMB,
-        bass: 'drive',
-        drums: 'kabuki',
-        fill: 'taiko',
-        pad: 'hold',
-        riser: true,
-      },
-      {
-        name: 'chorus',
-        tier: 'high',
-        // A chord a bar where the verse holds each for two, open and suspended as a koto is tuned,
-        // and up through E the verse never reaches: the sun clearing the peak
-        chords: 'D | Asus4 | Bm7 | Esus4 | Gadd9 | Em7 | Asus4 | A',
-        lead: C1_DAWN,
-        counter: C1_ANSWER,
-        bass: 'drive',
-        drums: 'matsuri',
-        fill: 'taiko',
-        pad: 'hold',
-        drop: true,
-      },
-      {
-        // The drums gone: the shakuhachi alone over the pad, the chorus's opening slowly, and the
-        // valley's shadow — the in-scale on D (D E flat G A B flat), the yo's dark twin: G minor,
-        // E flat, D suspended — before the E of A suspended brings back the dawn
-        name: 'valley',
-        tier: 'calm',
-        chords: 'Gsus2 | Gsus2 | Gm | Gm | Ebmaj7 | Ebmaj7 | Dsus4 | Asus4',
-        lead: VALLEY_SHADOW,
-        bass: 'long',
-        drums: 'none',
-        pad: 'swell',
-      },
-    ],
-  },
-  {
-    // 5.10's sketch of Above the Clouds, for the stand: its form plays the new parts in order
-    // (verse2-b in place of verse2-a by the stand's part); never played by the game
-    title: 'Above the Clouds v2',
-    sketch: true,
-    bpm: 96,
-    swing: 0,
-    level: -2.5,
-    kit: 'japan',
-    transitions: 'drums',
-    room: 'valley',
-    pump: 0.2,
+    // The shakuhachi slides through its turns and lets its phrase ends fall, as a breath does
     voices: {
       lead: 'shakuhachi',
       counter: 'koto',
@@ -944,7 +792,7 @@ const SONG_DEFS: SongDef[] = [
       glide: 0.04,
       fall: 2,
     },
-    form: ['intro', 'verse', 'verse2-a', 'build', 'chorus', 'valley'],
+    form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'valley', 'verse2', 'build', 'chorus'],
     sections: [
       {
         // Dawn on the koto alone over the pad
@@ -970,19 +818,8 @@ const SONG_DEFS: SongDef[] = [
         layers: { lead: 0.3 },
       },
       {
-        name: 'verse2-a',
-        tier: 'groove',
-        chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
-        lead: V2_RISE,
-        counter: KAKEAI_RISE,
-        bass: 'sync',
-        drums: 'matsuri',
-        fill: 'taiko',
-        pad: 'hold',
-        layers: { lead: 0.3, counter: 0.2 },
-      },
-      {
-        name: 'verse2-b',
+        // The festival beat underneath, the koto answering the shakuhachi in its rests
+        name: 'verse2',
         tier: 'groove',
         chords: 'D | D | Bm7 | Bm7 | G | G | Asus4 | A',
         lead: V2_LOW,
@@ -994,7 +831,7 @@ const SONG_DEFS: SongDef[] = [
         layers: { lead: 0.3, counter: 0.2 },
       },
       {
-        // The clappers, the koto's glissando, then ma: six steps of silence before the gong
+        // The clappers, the koto's glissando, then ma: six steps of silence before the chorus
         name: 'build',
         tier: 'rise',
         chords: 'G | G | Asus4 | A',
@@ -1008,22 +845,6 @@ const SONG_DEFS: SongDef[] = [
       {
         // The shakuhachi and the synth lead in unison on the royal road, the odaiko under the beat
         name: 'chorus',
-        tier: 'high',
-        chords: DAWN_CHORDS,
-        lead: SABI_FALL,
-        counter: SABI_FALL,
-        counterVoice: 'pwm',
-        arpLine: KOTO_SPARSE,
-        arpVoice: 'koto',
-        bass: 'drive',
-        drums: 'dawn',
-        fill: 'taiko',
-        pad: 'hold',
-        drop: true,
-      },
-      {
-        // The same, B: the climb
-        name: 'chorus-b',
         tier: 'high',
         chords: DAWN_CHORDS,
         lead: SABI_CLIMB,
