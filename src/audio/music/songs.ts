@@ -1414,4 +1414,56 @@ const SONG_DEFS: SongDef[] = [
   signalSketch('Signal Lost v4', SIGNAL_SIGH_VERSE, SIGNAL_SIGH_CHORUS),
 ];
 
-export const SONGS: Song[] = SONG_DEFS.map(compileSong);
+/** A line of a part, and the octaves it moves by in a sketch. */
+type Shifts = Partial<Record<'lead' | 'counter' | 'arpLine', number>>;
+
+/**
+ * A sketch of a track with some of its lines moved by octaves, to compare with it on the stand:
+ * the parts named, the lines given. Not on any backdrop.
+ */
+const shiftedSketch = (title: string, version: string, parts: Record<string, Shifts>): SongDef => {
+  const def = SONG_DEFS.find((song) => song.title === title)!;
+  return {
+    ...def,
+    title: `${title} ${version}`,
+    sketch: true,
+    scene: undefined,
+    sections: def.sections.map((section) => {
+      const shifted = { ...section };
+      for (const [line, octaves] of Object.entries(parts[section.name] ?? {})) {
+        const notes = section[line as keyof Shifts];
+        if (notes && octaves) shifted[line as keyof Shifts] = transpose(notes, 12 * octaves);
+      }
+      return shifted;
+    }),
+  };
+};
+
+const DOWN = -1;
+const UP = 1;
+
+// The tracks heard too high, their melodies an octave down for the stand (with the user,
+// 26.10.2026): the sax and the vibes of Sunset Strip, the arpeggio rising out of their way;
+// Night Shift's crushed lead; Black Belt's kiai, and its theme as well
+const SHIFTED_SKETCHES: SongDef[] = [
+  shiftedSketch('Sunset Strip', 'v2', {
+    build: { lead: DOWN },
+    chorus: { lead: DOWN, counter: DOWN, arpLine: UP },
+    bridge: { lead: DOWN, arpLine: UP },
+    verse2: { lead: DOWN, arpLine: UP },
+    outro: { lead: DOWN, arpLine: UP },
+  }),
+  shiftedSketch('Night Shift', 'v2', {
+    verse: { lead: DOWN },
+    verse2: { lead: DOWN },
+    chorus: { lead: DOWN, counter: DOWN },
+  }),
+  shiftedSketch('Black Belt', 'v2', { verse: { lead: DOWN }, verse2: { lead: DOWN } }),
+  shiftedSketch('Black Belt', 'v3', {
+    verse: { lead: DOWN },
+    verse2: { lead: DOWN },
+    chorus: { lead: DOWN },
+  }),
+];
+
+export const SONGS: Song[] = [...SONG_DEFS, ...SHIFTED_SKETCHES].map(compileSong);
