@@ -159,6 +159,49 @@ export const DRUM_PATTERNS = {
     hat: 'x.xx.x.xx.x.xx.x',
     perc: '..x....x..x....x',
   },
+  // EBM's march (Front 242, Nitzer Ebb): the kick on one and three, the steam's clap on two and
+  // four, chains on the last eighths
+  ebm: {
+    kick: 'X.......X.......',
+    clap: '....X.......X...',
+    hat: '..x...x...x...x.',
+    metal: '......o.......x.',
+  },
+  ebmHot: {
+    kick: 'X.......X.......',
+    clap: '....X.......X...',
+    hat: 'xxxxxxxxxxxxxxxx',
+    open: '..x...x...x...x.',
+    metal: '...o..x....o..X.',
+  },
+  // A press (Kraftwerk's "Metal on Metal", Einstürzende Neubauten): the kick and the chains in
+  // 3+3+4+3+3, a machine's cycle across the bar's four beats
+  press: {
+    kick: 'X..X..X...X..X..',
+    snare: '....X.......X...',
+    metal: 'x..x..x...x..x..',
+    perc: '.x..x..x.x..x..x',
+  },
+  pressHot: {
+    kick: 'X..X..X...X..X..',
+    snare: '....X.......X...',
+    hat: 'x.x.x.x.x.x.x.x.',
+    metal: 'X..x..X...X..x..',
+    perc: '.x.xx.xx.x.xx.xx',
+  },
+  // Industrial metal's chug (Nine Inch Nails, Rammstein): the kick doubling the bass's stops, a
+  // heavy backbeat
+  furnace: {
+    kick: 'X.X..X.X..X.....',
+    snare: '....X.......X...',
+    hat: 'x...x...x...x...',
+  },
+  furnaceHot: {
+    kick: 'X.X..X.X..X.X.X.',
+    snare: '....X.......X...',
+    hat: 'x.x.x.x.x.x.x.x.',
+    open: '..............X.',
+  },
   // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
   foundry: {
     kick: 'X...X...X...X.x.',
