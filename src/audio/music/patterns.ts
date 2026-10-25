@@ -302,6 +302,8 @@ export const BASS_PATTERNS = {
   pulse16: 'RRRRRRRRRRRRRROA',
   // City pop: a slap line, root and octave dancing around the fifth and third
   funk: 'R..O.R5.R..O3RA.',
+  // No bass: the drums carry the low end on their own (Black Belt's taiko)
+  none: '................',
 } satisfies Record<string, string>;
 
 export type BassPatternName = keyof typeof BASS_PATTERNS;

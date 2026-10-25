@@ -84,13 +84,13 @@ const GLITCH = {
  * - partLevel sets a part above or below the song's grooves (`setPartLevel`): after the
  *   compressor, which would flatten whatever the arrangement adds, so a peak really is louder
  * - the bass is driven into its saturation as hard as the song asks (`setBassGrit`)
- * - pads and melody are raised or lowered against the drums and bass as a part asks
+ * - pads, melody and bass are raised or lowered against the drums as a part asks
  *   (`setPartMix`), before the compressor, so a fuller part pushes the beat back
  * - toneFilter follows the game state (muffled in menus and pause), set per step
  * - the thin gains fade the pads and the melody out on the deciding point (`setDramaLevel`)
  * - tapeDelay sits at 0 ms until a tape stop sweeps it to bend the pitch down
- * - glitchDelay, glitchFilter and glitchGain are the rewinds and drop-outs of a song that breaks down; their
- *   own nodes, so they never overlap the tape stop's automation
+ * - glitchDelay, glitchFilter and glitchGain are the rewinds and drop-outs of a song that breaks
+ *   down; their own nodes, so they never overlap the tape stop's automation
  * - fadeGain fades the music out under a tape stop, independent of the mute gain
  *
  * Parameters are only automated when their value changes: every automation call adds an event
@@ -132,7 +132,7 @@ export class MusicGraph {
   private songLevelDb: number | null = null;
   private readonly partLevel: GainNode;
   private partLevelDb: number | null = null;
-  private partMix = { pads: 0, melody: 0 };
+  private partMix = { pads: 0, melody: 0, bass: 0 };
   /** Share of the full sidechain the song playing asks for. */
   private pumpDepth = 1;
   /** The rooms built: the song playing's, and the next one's or the last one's fading out. */
@@ -410,8 +410,8 @@ export class MusicGraph {
    * The pads' and the melody's levels in dB against the drums and bass, from `time`, as the
    * part playing asks; following the part level's rise and fall. Only acts when they change.
    */
-  public setPartMix(mix: { pads?: number; melody?: number }, time: number): void {
-    for (const bus of ['pads', 'melody'] as const) {
+  public setPartMix(mix: { pads?: number; melody?: number; bass?: number }, time: number): void {
+    for (const bus of ['pads', 'melody', 'bass'] as const) {
       const db = mix[bus] ?? 0;
       if (db === this.partMix[bus]) continue;
       const isRising = db > this.partMix[bus];

@@ -1112,15 +1112,15 @@ const SONG_DEFS: SongDef[] = [
   },
   {
     // A black belt's exam in the dojo at night, after Kodo's taiko ensembles and Perturbator's
-    // darksynth. The hall fills — the odaiko alone, the sticks and the bell, then the reese; the
-    // student's kiai in the verses, the drums answering it, a long note in its gaps from the
-    // second; the oroshi strikes the dominant ever closer into a beat of silence, and the chorus
-    // is the fighting game's theme over the whole ensemble; mokuso, the meditation, is strings and
-    // the bell over a harmony the verses never reach
+    // darksynth. The hall fills — the odaiko alone, the sticks and the bell; the student's kiai
+    // in the verses, the drums answering it, over the taiko alone in the first and with the reese
+    // and a long note in its gaps in the second; the oroshi strikes the dominant ever closer into
+    // a beat of silence, and the chorus is the fighting game's theme over the whole ensemble;
+    // mokuso, the meditation, is strings and the bell over a harmony the verses never reach
     title: 'Black Belt',
     bpm: 118,
     swing: 0,
-    level: -3,
+    level: -1.5,
     scene: 'dojo',
     kit: 'dojo',
     transitions: 'drums',
@@ -1144,23 +1144,23 @@ const SONG_DEFS: SongDef[] = [
     ],
     sections: [
       {
-        // Into the hall: the odaiko, the sticks and the bell, then the reese
+        // Into the hall: the odaiko, the sticks and the bell, the ensemble alone
         name: 'intro',
         tier: 'calm',
         chords: 'Am | Am | Am | Am | F | F | E | E',
-        bassLine: KATA_BASS,
+        bass: 'none',
         drums: 'kataIntro',
         pad: 'none',
-        enter: { bass: 4 },
-        // Drums and a bass alone sit far below the verses: lifted to a calm part's level
-        level: 3,
+        // The drums alone sit far below the verses: lifted to a calm part's level
+        level: 6,
       },
       {
         name: 'verse',
         tier: 'groove',
         chords: 'Am | Am | Am | Am | F | F | E | E',
         lead: KATA_KIAI,
-        bassLine: KATA_BASS,
+        // The taiko carry the low end alone: the reese is saved for the second round
+        bass: 'none',
         drums: 'kata',
         fill: 'taiko',
         pad: 'none',
@@ -1172,6 +1172,7 @@ const SONG_DEFS: SongDef[] = [
         chords: 'Am | Am | Am | Am | F | F | E | E',
         lead: KATA_KIAI,
         counter: KATA_ANSWER,
+        // The reese comes in for the hall's second round, the step up to the oroshi
         bassLine: KATA_BASS,
         // The hall's second round: chords chopped in the nagado's rhythm, the hats in eighths
         drums: 'kata2',
@@ -1201,6 +1202,8 @@ const SONG_DEFS: SongDef[] = [
         fill: 'taiko',
         pad: 'hold',
         stabs: 'push',
+        // The verses, without the reese, sit lower: the peak brought back to stand 3-4 dB above
+        level: -1,
         drop: true,
       },
       {
@@ -1210,10 +1213,11 @@ const SONG_DEFS: SongDef[] = [
         chords: 'Dm | Dm | Bb | Bb | Dm | Dm | E | E',
         counter: MOKUSO_HOLD,
         counterVoice: 'strings',
-        bass: 'long',
+        bass: 'none',
         drums: 'mokuso',
         pad: 'swell',
-        level: 1,
+        // Without the bass's long notes, as quiet as the intro only lifted
+        level: 6,
       },
     ],
   },
@@ -1227,14 +1231,15 @@ const SONG_DEFS: SongDef[] = [
     title: 'Signal Lost',
     bpm: 104,
     swing: 0,
+    level: -0.5,
     scene: 'brokenNet',
     kit: 'net',
     transitions: 'synth',
     // An empty digital space: the melody and the pads drifting in a long, cold tail, the drums
-    // dry and close; the bass torn and pumping as darksynth's does
+    // dry and close; the bass torn and pumping as darksynth's does, held back from the harsh
     room: 'void',
-    pump: 0.8,
-    grit: 14,
+    pump: 0.5,
+    grit: 8,
     voices: { lead: 'pwm', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
     form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'lost', 'verse2', 'build', 'chorus'],
     sections: [
@@ -1250,6 +1255,8 @@ const SONG_DEFS: SongDef[] = [
         hits: { radioStatic: `X${'.'.repeat(127)}` },
         sweep: { arp: [0.4, 1.3] },
         enter: { drums: 4 },
+        // The drone alone under the arpeggio would fill the sub: held back
+        mix: { bass: -4 },
       },
       {
         name: 'verse',
@@ -1262,6 +1269,7 @@ const SONG_DEFS: SongDef[] = [
         pad: 'swell',
         sweep: { arp: [0.4, 1.3] },
         layers: { lead: 0.3 },
+        mix: { bass: -4 },
         glitch: 'dropout',
       },
       {
