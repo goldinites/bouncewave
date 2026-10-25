@@ -54,14 +54,14 @@ export const DRUM_PATTERNS = {
     taiko: '......x.....x.xX',
     perc: '..x.x.....x.x.x.',
   },
-  // A synthwave beat with the odaiko on the strong beats under it: Japan's drum in a pop chorus,
-  // not a festival
+  // The chorus's half-time with the odaiko leading it, the hats running eighths over it: Japan's
+  // drum carrying a pop chorus, neither a festival nor a straight synthwave beat
   dawn: {
-    kick: 'X...x...X...x...',
-    snare: '....X.......X...',
-    hat: '..x...x...x...x.',
+    kick: 'X.........x.....',
+    snare: '........X.......',
+    hat: 'x.x.x.x.x.x.x.x.',
     open: '..............x.',
-    taiko: 'X.......X.......',
+    taiko: 'X.....x.X.......',
   },
   // A temple bell (bonshō), struck once and left to ring; with a half-time feel, every two bars
   bonsho: { metal: 'X...............' },

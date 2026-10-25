@@ -311,7 +311,7 @@ const KOTO_RAIN = `Ab5 - - - F5 - Gb5 F5 | Db5 - - - - - - - | F5 - - - Db5 - Eb
 // the folk songs' scale, no third), long notes each reached by a turn, its phrase ends falling,
 // air between them, the koto answering in its rests; ma — six steps of silence — after the
 // koto's glissando into the chorus; the chorus on Japan's pop "royal road" progression in
-// yonanuki, the shakuhachi in unison with a synth lead over the odaiko; a valley in the shadow of
+// yonanuki, the shakuhachi in unison with a soft synth over the odaiko's half-time; a valley in the shadow of
 // the in-scale, the darker Japanese mode, with wind chimes and a temple bell ———
 
 /**
@@ -350,7 +350,7 @@ const KAKEAI_LOW = `${KAKEAI_QUESTION}
  * The chorus as Japan's pop writes one (no festival postcard): the "royal road" progression
  * (ōdō shinkō, IV V iii vi, the J-pop and anime chorus's own), its melody in yonanuki — the
  * pentatonic of Japanese popular song, with the third the folk scale leaves out — on the
- * shakuhachi doubled by the track's synth lead; the koto plucking now and then
+ * shakuhachi doubled by a soft synth; the koto plucking now and then
  */
 const DAWN_CHORDS = 'Gmaj7 | A | F#m7 | Bm7 | Gmaj7 | A | D | D';
 
@@ -809,7 +809,7 @@ const SONG_DEFS: SongDef[] = [
     title: 'Above the Clouds',
     bpm: 96,
     swing: 0,
-    level: -2.5,
+    level: -2.75,
     scene: 'fuji',
     kit: 'japan',
     transitions: 'drums',
@@ -877,19 +877,22 @@ const SONG_DEFS: SongDef[] = [
         silence: 6,
       },
       {
-        // The shakuhachi and the synth lead in unison on the royal road, the odaiko under the beat
+        // The shakuhachi on the royal road, a soft synth in unison under it, the odaiko leading
+        // the half-time
         name: 'chorus',
         tier: 'high',
         chords: DAWN_CHORDS,
         lead: SABI_CLIMB,
         counter: SABI_CLIMB,
-        counterVoice: 'pwm',
+        counterVoice: 'soft',
         arpLine: KOTO_SPARSE,
         arpVoice: 'koto',
         bass: 'drive',
         drums: 'dawn',
         fill: 'taiko',
         pad: 'hold',
+        // The shakuhachi and the koto lifted over the half-time, so the peak is the brightest part
+        mix: { melody: 2 },
         drop: true,
       },
       {
@@ -913,7 +916,8 @@ const SONG_DEFS: SongDef[] = [
     // never played by the game
     title: 'Sunset Strip v2',
     sketch: true,
-    bpm: 100,
+    // Faster than Fuji's dawn by a third of a beat a second: a night drive, not a walk
+    bpm: 112,
     swing: 0,
     level: -0.5,
     transitions: 'drums',
@@ -991,8 +995,9 @@ const SONG_DEFS: SongDef[] = [
         name: 'bridge',
         tier: 'groove',
         chords: 'Ebmaj7 | Cm7 | Cm7 | Dm7 | Gm7 | Gm7 | Dm7 | D',
+        // The sax, the era's voice: the koto belongs to Fuji
         lead: W2,
-        leadVoice: 'koto',
+        leadVoice: 'sax',
         arpLine: cycle(SUNSET_DUSK_CELLS, ARP_RHYTHM.eighths),
         bass: 'walk',
         drums: 'break',
