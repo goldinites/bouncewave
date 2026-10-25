@@ -350,12 +350,6 @@ const V2_LOW = `A5 - - - - - - - - - - - B5 A5 G5 - | E5 - - - - - - - - - - - .
               | . . . . G5 - - - - - - - E5 - D5 - | B4 - - - - - - - . . . . A4 B4 D5 -
               | E5 - - - - - - - - - - - D5 - B4 - | A4 - - - - - - - - - - - . . . .`;
 
-/** C1 in the yo scale: the 3+3+2 call to D6, each phrase's end held where it rested. */
-const C1_YO = `D5 - - - - - A5 - - - - - E5 - - - | E5 - - - - - D5 - - - - - - - - -
-             | B4 - - - - - E5 - - - - - D5 - - - | E5 - - - - - D5 - - - - - - - - -
-             | G5 - - - - - D6 - - - - - B5 - - - | A5 - - - - - G5 A5 G5 E5 D5 - - - - -
-             | E5 - - - D5 - - - E5 - - - A5 - - - | A5 - - - - - - - - - - - - - - -`;
-
 /**
  * The koto answering the shakuhachi (kakeai, the dialogue of Japan's chamber trio): silent while
  * it sings, a phrase of three to five notes in its rests and under its long notes. The first
@@ -370,14 +364,36 @@ const KAKEAI_LOW = `${KAKEAI_QUESTION}
                   | B4 A4 G4 - . . . . . . . . . . . . | . . . . . . . . D5 E5 G5 - . . . .
                   | . . . . A4 B4 D5 - . . . . . . . . | . . . . . . . . . . . . E5 D5 B4 A4`;
 
-/**
- * The koto under the chorus: on each chord a fifth or a fourth plucked as two strings in quick
- * succession, left to ring; a glissando at the phrases' ends.
+/*
+ * The chorus as a matsuri, a festival: the shinobue — the festival's high bamboo flute — leads
+ * over a drone of open suspended chords on D (no third, no chord a bar), three motifs to choose
+ * from, the koto's tremolo under it.
  */
-const KOTO_PLUCKS = `D4 A4 - - - - - - - - - - - - - - | E4 A4 - - - - - - - - - - - - - -
-                   | D4 B4 - - - - - - - - - - - - - - | E4 B4 - - - - - - - - - - D5 B4 A4 E4
-                   | G4 D5 - - - - - - - - - - - - - - | E4 B4 - - - - - - - - - - - - - -
-                   | A4 E5 - - - - - - - - - - - - - - | E4 A4 - - - - - - . A4 B4 D5 E5 G5 A5 -`;
+const MATSURI_CHORDS = 'Dsus2 | Dsus2 | Dsus4 | Dsus2 | Gsus2 | Gsus2 | Asus4 | Asus4';
+
+/** A, the festival's music (hayashi): repeated notes, leaps of a fourth, a trill falling home. */
+const MATSURI_HAYASHI = `D5 . D5 . G5 - - - A5 . A5 . D6 - - - | B5 A5 B5 A5 G5 - - - E5 - - - D5 - - -
+                       | D5 . D5 . G5 - - - A5 - B5 A5 G5 - - - | E5 - - - - - - - - - - - . . . .
+                       | G5 . G5 . A5 - - - D6 - - - - - - - | B5 A5 B5 A5 B5 - - - A5 - - - G5 - - -
+                       | E5 - - - G5 - - - A5 - - - B5 A5 G5 - | A5 - - - - - - - - - - - - - - -`;
+
+/** B, the flute soaring: long high notes, ornamented, reaching D6 early and singing down from it. */
+const MATSURI_SOAR = `D6 - - - B5 - A5 - G5 - - - A5 - - - | B5 A5 G5 - E5 - - - - - - - . . . .
+                    | D5 - E5 - G5 - - - A5 - - - B5 - - - | D6 - - - - - - - - - - - B5 D6 B5 -
+                    | A5 - - - - - - - G5 A5 G5 E5 D5 - - - | E5 - - - - - - - . . . . D5 E5 G5 -
+                    | A5 - - - - - - - B5 - - - A5 - G5 - | A5 - - - - - - - - - - - - - - -`;
+
+/** C, call and silence: a bar of the flute, a bar for the drums alone, the ma made a rhythm. */
+const MATSURI_CALL = `D5 . G5 . A5 - - - D6 - - - B5 - A5 - | . . . . . . . . . . . . . . . .
+                    | D5 . G5 . A5 - - - B5 - - - G5 - E5 - | . . . . . . . . . . . . . . . .
+                    | G5 . A5 . D6 - - - - - - - B5 A5 B5 - | D6 - - - - - - - . . . . . . . .
+                    | B5 A5 G5 - E5 - G5 - A5 - - - - - - - | . . . . . . . . . . . . . . . .`;
+
+/** The koto's tremolo under the festival: one string struck fast, every other bar, swelling. */
+const KOTO_TREMOLO = `A4 A4 A4 A4 A4 A4 A4 A4 . . . . . . . . | . . . . . . . . . . . . . . . .
+                    | A4 A4 A4 A4 D5 D5 D5 D5 . . . . . . . . | . . . . . . . . . . . . . . . .
+                    | D5 D5 D5 D5 D5 D5 D5 D5 . . . . . . . . | . . . . . . . . . . . . . . . .
+                    | E5 E5 E5 E5 E5 E5 E5 E5 . . . . . . . . | . . . . . . . . A4 B4 D5 E5 G5 A5 . .`;
 
 /**
  * The build's koto: struck on the strong beats under the clappers, then a glissando up the yo
@@ -1002,14 +1018,43 @@ const SONG_DEFS: SongDef[] = [
         silence: 6,
       },
       {
-        // The shakuhachi and the strings in unison, its ends held; the koto plucking under them
+        // The festival: the shinobue's hayashi over the drone, the koto's tremolo under it
         name: 'chorus',
         tier: 'high',
-        chords: 'D | Asus4 | Bm7 | Esus4 | Gadd9 | Em7 | Asus4 | A',
-        lead: C1_YO,
-        counter: C1_YO,
-        counterVoice: 'strings',
-        arpLine: KOTO_PLUCKS,
+        chords: MATSURI_CHORDS,
+        lead: MATSURI_HAYASHI,
+        leadVoice: 'flute',
+        arpLine: KOTO_TREMOLO,
+        arpVoice: 'koto',
+        bass: 'drive',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        drop: true,
+      },
+      {
+        // The festival, B: the shinobue soaring
+        name: 'chorus-b',
+        tier: 'high',
+        chords: MATSURI_CHORDS,
+        lead: MATSURI_SOAR,
+        leadVoice: 'flute',
+        arpLine: KOTO_TREMOLO,
+        arpVoice: 'koto',
+        bass: 'drive',
+        drums: 'matsuri',
+        fill: 'taiko',
+        pad: 'hold',
+        drop: true,
+      },
+      {
+        // The festival, C: a bar of the flute, a bar of the drums
+        name: 'chorus-c',
+        tier: 'high',
+        chords: MATSURI_CHORDS,
+        lead: MATSURI_CALL,
+        leadVoice: 'flute',
+        arpLine: KOTO_TREMOLO,
         arpVoice: 'koto',
         bass: 'drive',
         drums: 'matsuri',
