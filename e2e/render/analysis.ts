@@ -394,9 +394,19 @@ export function melodyStats(
   };
 }
 
-/** The `level` change, in dB to half a dB, that brings a song measured at `loudness` to the target. */
-export function levelChange(loudness: number): number {
-  return Math.round(((ANALYSIS.TARGET_DB - loudness) / ANALYSIS.LEVEL_EFFECT) * 2) / 2;
+/**
+ * Where a song is levelled to: its rally parts to the soundtrack's level, or, for a song of calm
+ * parts only (the menus' own), to where the other songs' calm parts sit, as far under it as
+ * their drop asks at its middle.
+ */
+export const targetFor = (isCalmOnly: boolean): number =>
+  isCalmOnly
+    ? ANALYSIS.TARGET_DB - (ANALYSIS.CALM_DROP[0] + ANALYSIS.CALM_DROP[1]) / 2
+    : ANALYSIS.TARGET_DB;
+
+/** The `level` change, in dB to half a dB, that brings a song measured at `loudness` to `target`. */
+export function levelChange(loudness: number, target: number = ANALYSIS.TARGET_DB): number {
+  return Math.round(((target - loudness) / ANALYSIS.LEVEL_EFFECT) * 2) / 2;
 }
 
 /**
@@ -526,8 +536,10 @@ export interface TrackReport {
   /** The stand's swaps and mutes the render was made with, as written on the command line. */
   options: string;
   parts: PartReport[];
-  /** The parts a rally plays (verses and peaks), what songs are levelled by. */
+  /** The parts a rally plays (verses and peaks), what songs are levelled by; a calm song's all. */
   loudness: number;
+  /** Whether the song has calm parts only (the menus' own), levelled as the calm parts are. */
+  isCalmOnly: boolean;
   hitPart: string;
   hits: HitReport[];
   /** How far apart the renders with and without hits are before the first hit, dB under the music. */
@@ -548,7 +560,8 @@ const percent = (share: number) => `${Math.round(share * 100)}%`;
 /** The report as Markdown, for `renders/<song>/report.md` and for reading in the terminal. */
 export function formatReport(report: TrackReport): string {
   const { parts, hits } = report;
-  const change = levelChange(report.loudness);
+  const target = targetFor(report.isCalmOnly);
+  const change = levelChange(report.loudness, target);
   const dyn = dynamics(parts);
   const lines = [
     `# ${report.title}`,
@@ -559,7 +572,8 @@ export function formatReport(report: TrackReport): string {
     '',
     '## Loudness',
     '',
-    `Rally parts (groove, high): **${report.loudness.toFixed(1)} dB** against ${ANALYSIS.TARGET_DB}: ` +
+    `${report.isCalmOnly ? 'Calm parts, the song has no other' : 'Rally parts (groove, high)'}: ` +
+      `**${report.loudness.toFixed(1)} dB** against ${target}: ` +
       `level ${signed(report.level, 1)} → **${signed(report.level + change, 1)}** (${signed(change, 1)}).`,
     '',
     'Each band in dB against the part as a whole; phone: how much quieter it is with nothing below ' +

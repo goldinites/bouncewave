@@ -220,6 +220,34 @@ describe('Game', () => {
     expect(isPickableScene(renderer.scene as SceneId)).toBe(true);
   });
 
+  it('plays the menus’ own music outside a match, the backdrop’s where one is picked or shown', () => {
+    const { music } = (
+      game as unknown as { audio: { music: { enterPlace(place: unknown): void } } }
+    ).audio;
+    const places = vi.spyOn(music, 'enterPlace');
+    const last = () => places.mock.calls.at(-1)?.[0];
+    buttons()[0].click(); // play
+    expect(last()).toBe('menu');
+    screenButton('QUICK MATCH').click();
+    expect(last()).toBeNull();
+    press('Escape');
+    expect(last()).toBe('menu');
+    screenButton('CHALLENGE').click();
+    expect(last()).toBe('menu');
+    screenButton('FIRST SERVE').click();
+    expect(last()).toBeNull(); // the card shows its challenge's backdrop
+    press('Escape');
+    expect(last()).toBe('menu');
+    press('Escape');
+    screenButton('QUICK MATCH').click();
+    screenButton('START').click();
+    expect(last()).toBeNull();
+    // The pause belongs to the match: its music plays on
+    places.mockClear();
+    press('Escape');
+    expect(places).not.toHaveBeenCalled();
+  });
+
   it('cuts a random backdrop straight in on leaving the setup, no channels flicking past', () => {
     const { renderer } = game as unknown as {
       renderer: { isShowingMystery: boolean; background: { surf: unknown } };
@@ -292,8 +320,14 @@ describe('Game', () => {
 
     it('plays on court, step by step, and its end leads on to a match', () => {
       openNew();
+      const { music } = (
+        game as unknown as { audio: { music: { enterPlace(place: unknown): void } } }
+      ).audio;
+      const places = vi.spyOn(music, 'enterPlace');
       buttons()[0].click(); // play
       screenButton('YES').click();
+      // The tutorial has music of its own
+      expect(places.mock.calls.at(-1)?.[0]).toBe('tutorial');
       expect(isMenuOpen()).toBe(false);
       expect(isPauseButtonShown()).toBe(true);
       // Started is not gone through: left halfway, it is offered again

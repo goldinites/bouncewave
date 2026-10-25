@@ -481,6 +481,8 @@ export class Game {
    */
   public start(): void {
     this.setLandscape(this.isTwoPlayers);
+    // The menus' music gives way to the match's backdrop's, or to the tutorial's own
+    this.audio.music.enterPlace(this.isTutorial ? 'tutorial' : null);
     this.challengeJudge.judge(this.challenge);
     // The scene is set before the match starts: the effects ask for it on its matchStart
     if (this.challenge) {
@@ -597,6 +599,8 @@ export class Game {
     this.isTutorial = false;
     this.profile.update({ tutorial: 'done' });
     this.flow.returnToMenu();
+    // Its end screen is a menu: the menus' music, as on every one outside a match
+    this.audio.music.enterPlace('menu');
     this.uiManager.setPauseButtonVisibility(false);
     this.menuController.showTutorialDone();
   }
@@ -774,6 +778,8 @@ export class Game {
    */
   private onQuickMatchSetup(isShown: boolean): void {
     if (isShown) {
+      // The setup is where a backdrop is picked: its song plays, not the menus'
+      if (this.flow.phase === 'attract') this.audio.music.enterPlace(null);
       this.previewBackground(this.settings.current.matchBackground);
     } else if (this.renderer.isShowingMystery) {
       this.audio.music.enterScene(this.renderer.switchChannel(false));
@@ -789,6 +795,8 @@ export class Game {
    */
   private showMenuScene(scene: SceneId | null): void {
     if (this.flow.phase !== 'attract') return;
+    // The menus have their own music; a challenge's card plays its backdrop's
+    this.audio.music.enterPlace(scene === null ? 'menu' : null);
     const current = this.renderer.scene;
     const isPlayers = isPickableScene(current) && !this.renderer.isShowingMystery;
     if (scene === null ? isPlayers : current === scene) return;

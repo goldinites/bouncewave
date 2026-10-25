@@ -19,6 +19,7 @@ import {
   chordAt,
   LeadVoice,
   MusicLayer,
+  MusicPlace,
   partLevel,
   Section,
   Song,
@@ -259,6 +260,16 @@ export class MusicEngine {
   public enterScene(scene: SceneId): void {
     const isChanging = this.conductor.enterScene(scene);
     // Before the first step there is nothing to finish: start the backdrop's music right away
+    if (isChanging && this.currentStep === 0) this.skipSong();
+  }
+
+  /**
+   * The game went to a place with music of its own (the menus, the tutorial), or left it for the
+   * backdrop's (null): its song comes in at the next bar line.
+   */
+  public enterPlace(place: MusicPlace | null): void {
+    const isChanging = this.conductor.enterPlace(place);
+    // Before the first step there is nothing to finish: start the place's music right away
     if (isChanging && this.currentStep === 0) this.skipSong();
   }
 

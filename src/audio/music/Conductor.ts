@@ -1,4 +1,4 @@
-import { chordAt, Section, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
+import { chordAt, MusicPlace, Section, Song, STEPS_PER_BAR, Tier } from '@/audio/music/score';
 import { Chord } from '@/audio/music/theory';
 import { isPickableScene, SceneId } from '@/shared/scenes';
 
@@ -68,11 +68,15 @@ export class Conductor {
   /** The tier wanted when the next bar was planned, to know a menu's part from the form's. */
   private plannedFor: Tier | null = null;
   private isSongChangeRequested = false;
+  /** Whether the change requested is to a place's music, which comes in at the next bar line. */
+  private isChangeUrgent = false;
   /** Where a skip goes; it overrides every plan until the bar line takes the music there. */
   private skipTarget: Position | null = null;
   /** The backdrop on screen; songs that belong to another one never play. */
   private scene: SceneId | null = null;
-  /** The backdrop's own song, waiting to be the next one picked. */
+  /** The place the game is in, with music of its own; null where the backdrop's plays. */
+  private place: MusicPlace | null = null;
+  /** The backdrop's own song, or the place's, waiting to be the next one picked. */
   private queuedSong: number | null = null;
   private readonly random: () => number;
   /** The listening stand's hold on the music; null while the game leads it. */
@@ -186,6 +190,8 @@ export class Conductor {
    */
   public enterScene(scene: SceneId): boolean {
     this.scene = scene;
+    // A place's music plays on over whatever backdrop comes up behind it
+    if (this.place) return false;
     const own = this.songs.findIndex((song) => song.scene === scene);
     if (own >= 0 && own === this.position.songIndex) {
       this.queuedSong = null;
@@ -197,10 +203,39 @@ export class Conductor {
   }
 
   /**
+   * The game went to a place with music of its own (the menus, the tutorial), or left it for
+   * the backdrop's (null): its song comes in at the next bar line, not waiting for a phrase to
+   * end, so the music answers the screen at once.
+   * @returns whether the song is going to change
+   */
+  public enterPlace(place: MusicPlace | null): boolean {
+    if (place === this.place) return false;
+    this.place = place;
+    const own = place
+      ? this.songs.findIndex((song) => song.place === place && !song.sketch)
+      : this.songs.findIndex((song) => song.scene !== undefined && song.scene === this.scene);
+    // A place with no song of its own yet keeps the backdrop's
+    if (place && own < 0) {
+      this.place = null;
+      return false;
+    }
+    if (own >= 0 && own === this.position.songIndex) {
+      this.queuedSong = null;
+      return false;
+    }
+    this.queuedSong = own >= 0 ? own : null;
+    this.isChangeUrgent = true;
+    this.requestNewSong();
+    return true;
+  }
+
+  /**
    * Jump to another song, picked at random, at the very next bar line (the player asked for
    * it), into a part of the tier the game wants right now.
    */
   public skip(wanted: Tier): void {
+    // A place has one song: nothing to skip to, unless the place's own is still on its way
+    if (this.place && this.queuedSong === null) return;
     this.skipTarget = this.entry(this.pickOtherSong(), wanted);
     this.planned = this.skipTarget;
   }
@@ -232,6 +267,7 @@ export class Conductor {
 
     const canLeave =
       isEnd || (this.barsInSection + 1 >= MIN_BARS[section.tier] && (bar + 1) % PHRASE_BARS === 0);
+    const canChangeSong = canLeave || (this.isChangeUrgent && this.isSongChangeRequested);
     const walk = () => this.at(position.songIndex, this.nextWalkStep(position.step, wanted));
     const willWrap = isEnd && this.nextWalkStep(position.step, wanted) <= position.step;
 
@@ -239,7 +275,8 @@ export class Conductor {
       wanted !== 'high' &&
       !this.pin &&
       section.tier !== 'rise' &&
-      ((this.isSongChangeRequested && canLeave) || (willWrap && this.barsInSong + 1 >= SONG_BARS))
+      ((this.isSongChangeRequested && canChangeSong) ||
+        (willWrap && this.barsInSong + 1 >= SONG_BARS))
     ) {
       this.planned = this.entry(this.pickOtherSong(), wanted);
     } else if (section.tier === 'rise') {
@@ -291,6 +328,7 @@ export class Conductor {
       this.passes.clear();
       this.barsInSong = 0;
       this.isSongChangeRequested = false;
+      this.isChangeUrgent = false;
       this.returnStep = null;
     } else {
       this.barsInSong++;
@@ -401,7 +439,8 @@ export class Conductor {
    * — and, when a skip is already on its way, not that one either, so every press of skip
    * brings a new title. Behind a quick match's backdrop the other quick-match backdrops' songs
    * may follow its own, so a long session there doesn't loop one song; a mode's own backdrop (a
-   * challenge's) keeps its song. Songs for no backdrop play behind any.
+   * challenge's) keeps its song. Songs for no backdrop play behind any; a place's (the menus',
+   * the tutorial's) only there.
    */
   private pickOtherSong(): number {
     if (this.queuedSong !== null) {
@@ -410,6 +449,8 @@ export class Conductor {
       return queued;
     }
 
+    // A place keeps its own song; it comes round again rather than giving way
+    if (this.place) return this.position.songIndex;
     const excluded = new Set([this.position.songIndex, this.skipTarget?.songIndex]);
     const scene = this.scene;
     const isQuickMatch = scene === null || isPickableScene(scene);
@@ -417,7 +458,7 @@ export class Conductor {
     // Sketches are for the stand only. A challenge's backdrop with no song of its own yet
     // borrows any other; a quick match's plays the quick-match songs, as it always does
     const fits = (song: Song) => {
-      if (song.sketch) return false;
+      if (song.sketch || song.place) return false;
       if (song.scene === undefined || (!isQuickMatch && !hasOwn)) return true;
       return song.scene === scene || (isQuickMatch && isPickableScene(song.scene));
     };

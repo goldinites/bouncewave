@@ -119,7 +119,9 @@ offers it, nor does random deal it. Whatever starts a match sets the scene it is
 `switchChannel` for it on `matchStart`.
 
 **A song.** An entry in `SONG_DEFS` (`audio/music/songs.ts`); its `scene` ties it to a background,
-which then plays it first. Its `form` is the order its sections play in; the `Conductor` walks it,
+which then plays it first; its `place` (`menu`, `tutorial`) makes it the music of a place in the
+game instead, played there whatever the backdrop (`Game` calls `music.enterPlace` as the screens
+change), and nowhere else. Its `form` is the order its sections play in; the `Conductor` walks it,
 jumping to a peak (a build and its chorus) only on a hot rally and coming back after. A
 section's `layers` say from what intensity each part comes in; its `feel` (half- or double-time),
 `silence` (a break) and `drop` shape its texture. A part varies each time it comes back

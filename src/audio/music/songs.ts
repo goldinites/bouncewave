@@ -475,6 +475,87 @@ const SIGNAL_ECHO = `E4 - - - - - D4 - - - - - C4 - - - | C4 - - - - - - - - - .
                    | E4 - - - - - D4 - - - - - - - - - | D4 - - - - - - - C4 - - - - - . .
                    | B3 - - - - - A3 - - - - - - - - - | . . . . . . . . . . . . . . . .`;
 
+// ——— The menus' track (5.12): dreamwave at ~84, calling the player in rather than pressing, after
+// Boards of Canada; chosen of three bases and three melodies — F lydian, a kalimba over a pad
+// swelling backwards, and a melody drifting low on a Rhodes with a lot of air ———
+
+/** Float: a kalimba's cell growing a note a bar and shrinking back, the lydian fourth in it. */
+const MENU_FLOAT_ARP = additive(
+  ['F5', 'C6', 'A5', 'D6', 'G5', 'B5', 'E5'],
+  [2, 3, 4, 5, 6, 7, 5, 3],
+);
+
+/** The drift, the melody: a few pentatonic notes off the beat and a lot of air, low. */
+const MENU_DRIFT = `. . A3 - - - - - C4 - - - - - . . | D4 - - - - - - - - - - - . . . .
+                   | . . . . . . . . . . G4 - D4 - - - | A3 - - - - - - - . . . . . . . .
+                   | . . C4 - - - - - F4 - - - G4 - A4 - | C5 - - - - - - - - - - - - - . .
+                   | . . . . . . . . . . A4 G4 E4 - . . | . . D4 - - - - - - - - - - - . .`;
+
+/** The kalimba in the haze: the same growing cell, on D minor's and B-flat's tones, as high. */
+const MENU_HAZE_ARP = cycle(
+  [
+    { cell: ['F5', 'A5', 'D6', 'C6'], bars: 2 },
+    { cell: ['F5', 'A5', 'D6', 'A#5'], bars: 2 },
+    { cell: ['F5', 'A5', 'D6', 'C6'], bars: 2 },
+    { cell: ['G5', 'C6', 'F5', 'C6'], bars: 1 },
+    { cell: ['G5', 'C6', 'E5', 'C6'], bars: 1 },
+  ],
+  ARP_RHYTHM.seven,
+);
+
+/** The strings answering the drift in its rests, long notes between it and the kalimba. */
+const MENU_ANSWER = `. . . . . . . . . . . . . . . . | . . . . . . . . . . . . A4 - - -
+                    | B4 - - - - - - - - - . . . . . . | . . . . . . . . B4 - - - - - - -
+                    | . . . . . . . . . . . . . . . . | . . . . . . . . . . . . . . . .
+                    | C5 - - - - - - - . . . . . . . . | . . . . . . . . B4 - - - - - - -`;
+
+/** The haze, the bridge: the drift's head taken where the lydian F never goes, D minor and B-flat. */
+const MENU_HAZE = `. . A3 - - - - - C4 - - - - - . . | F4 - - - - - - - E4 - - - - - . .
+                  | . . . . . . . . . . F4 - D4 - - - | C4 - - - - - - - . . . . . . . .
+                  | . . D4 - - - - - F4 - - - A4 - C5 - | A4 - - - - - - - - - - - - - . .
+                  | . . . . . . . . . . G4 F4 C4 - . . | . . E4 - - - - - - - - - - - . .`;
+
+// ——— The tutorial's track (5.12): light major synthwave at 100, few layers, chosen of three
+// bases and three melodies — E major, a relaxed half-time, the pad chopped in the 80s' rhythm,
+// and a melody bouncing like the ball on an 8-bit lead ———
+
+/** The arpeggio in a rally: the chord in quarters, an octave over the melody. */
+const WARMUP_QUARTERS = cycle(
+  [
+    { cell: ['E5', 'G#5', 'B5', 'G#5'], bars: 2 },
+    { cell: ['E5', 'G#5', 'C#6', 'G#5'], bars: 2 },
+    { cell: ['E5', 'A5', 'C#6', 'A5'], bars: 2 },
+    { cell: ['F#5', 'B5', 'D#6', 'B5'], bars: 2 },
+  ],
+  ARP_RHYTHM.quarters,
+);
+
+/** The arpeggio at the peak: the chord broken in sixteenths, up and back, as high. */
+const WARMUP_BROKEN = cycle([
+  { cell: ['E5', 'G#5', 'B5', 'E6', 'B5', 'G#5'], bars: 2 },
+  { cell: ['E5', 'G#5', 'C#6', 'E6', 'C#6', 'G#5'], bars: 2 },
+  { cell: ['E5', 'A5', 'C#6', 'E6', 'C#6', 'A5'], bars: 2 },
+  { cell: ['F#5', 'B5', 'D#6', 'F#6', 'D#6', 'B5'], bars: 2 },
+]);
+
+/** The bounce, the verses' melody: hopping between a low note and a high one and back, as the ball does. */
+const WARMUP_BOUNCE = `B3 - G#4 - B3 - G#4 - E4 - - - - - . . | B4 - - - - - - - G#4 - - - - - . .
+                      | C#4 - G#4 - C#4 - G#4 - E4 - - - - - . . | C#5 - - - - - - - B4 - - - - - . .
+                      | E4 - C#5 - E4 - C#5 - B4 - A4 - - - . . | C#5 - - - - - - - - - - - - - . .
+                      | F#4 - B4 - F#4 - B4 - D#5 - - - C#5 - B4 - | B4 - - - - - - - - - - - . . . .`;
+
+/** The rally, the chorus: the bounce's leaps widening from a sixth to an octave, let out in long notes. */
+const WARMUP_RALLY = `B3 - G#4 - B3 - B4 - G#4 - - - - - . . | E4 - - - - - - - - - - - B4 A4 G#4 -
+                     | C#4 - G#4 - C#4 - C#5 - B4 - - - - - . . | G#4 - - - - - - - - - - - . . . .
+                     | E4 - C#5 - E4 - E5 - C#5 - - - - - . . | B4 - - - - - - - A4 - - - - - . .
+                     | F#4 - D#5 - B3 - - - D#5 - - - C#5 - B4 - | C#5 - - - - - - - B4 - - - - - . .`;
+
+/** The cooldown: the rally's first leaps, slow and soft, over chords the verses never reach. */
+const WARMUP_COOLDOWN = `C#4 - A4 - C#4 - - - - - - - . . . . | E4 - - - - - - - - - - - . . . .
+                        | D#4 - B4 - D#4 - - - - - - - . . . . | F#4 - - - - - - - - - - - . . . .
+                        | E4 - - - C#5 - - - - - - - . . . . | G#4 - - - - - - - - - - - . . . .
+                        | F#4 - - - D#5 - - - - - - - . . . . | . . . . . . . . . . . . . . . .`;
+
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
  * the hottest rallies, and the conductor moves between them as the match heats up and cools
@@ -1326,6 +1407,177 @@ const SONG_DEFS: SongDef[] = [
         drums: 'none',
         pad: 'swell',
         hits: { radioStatic: `X${'.'.repeat(63)}` },
+      },
+    ],
+  },
+  {
+    // The menus at night, after Boards of Canada and Home: the game on standby, its screen
+    // glowing in the dark, calling the player back. The pad swells in backwards, the kalimba
+    // reconnects a note at a time, the bass under it; the drift comes in low on a Rhodes with a
+    // lot of air; a soft half-time blooms under it, the strings answering its rests; the haze
+    // takes its head to D minor and B-flat, where the lydian F never goes, a heartbeat under it;
+    // and round again. Calm all through: the menus play nothing else
+    title: 'Standby',
+    bpm: 84,
+    level: 4.5,
+    swing: 0,
+    place: 'menu',
+    kit: 'synthwave',
+    transitions: 'synth',
+    room: 'haze',
+    pump: 0.2,
+    // A round, clean bass, as dreamwave's is: under even the mix's own bend
+    grit: -8,
+    voices: { lead: 'rhodes', counter: 'strings', arp: 'pluck', bass: 'bassFm', pad: 'reverse' },
+    form: ['glow', 'drift', 'bloom', 'haze', 'drift', 'bloom'],
+    sections: [
+      {
+        // The screen comes on: the pad swelling in backwards, the kalimba, then the bass
+        name: 'glow',
+        tier: 'calm',
+        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+        arpLine: MENU_FLOAT_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        enter: { arp: 2, bass: 4 },
+        // The long clean bass alone under the pad would fill the sub: held back
+        mix: { bass: -4 },
+      },
+      {
+        name: 'drift',
+        tier: 'calm',
+        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+        lead: MENU_DRIFT,
+        arpLine: MENU_FLOAT_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        mix: { bass: -4 },
+      },
+      {
+        // A soft half-time under the drift, the strings answering its rests
+        name: 'bloom',
+        tier: 'calm',
+        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+        lead: MENU_DRIFT,
+        counter: MENU_ANSWER,
+        arpLine: MENU_FLOAT_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'hold',
+        mix: { bass: -4 },
+      },
+      {
+        // The drift's head on a soft lead in D minor and B-flat, a heartbeat under it
+        name: 'haze',
+        tier: 'calm',
+        chords: 'Dm7 | Dm7 | Bbmaj7 | Bbmaj7 | Dm7 | Dm7 | Csus4 | C',
+        lead: MENU_HAZE,
+        leadVoice: 'soft',
+        arpLine: MENU_HAZE_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'pulse',
+        pad: 'swell',
+        // The heartbeat and the bass's root under it stand out of the drift's quiet: brought down
+        level: -2.5,
+      },
+    ],
+  },
+  {
+    // A warm-up on the Range in the morning: the learner's first rallies. The pad chopped in the
+    // 80s' rhythm and a soft pulse, the arpeggio, then the bass; the bounce hops like the ball on
+    // an 8-bit lead over a relaxed half-time, then over a straight beat; a short climb, and the
+    // chorus is the rally, the leaps widening to an octave, a modest peak; the cooldown takes
+    // its first leaps softly to chords the verses never reach. Few layers all through
+    title: 'Warm-up',
+    bpm: 100,
+    level: 1.5,
+    swing: 0,
+    place: 'tutorial',
+    kit: 'synthwave',
+    transitions: 'drums',
+    // A small dry room: nothing blurs what the learner hears
+    room: 'studio',
+    pump: 0.4,
+    voices: { lead: 'chip', counter: 'soft', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
+    form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'cooldown', 'verse', 'build', 'chorus'],
+    sections: [
+      {
+        // The pad chopped and a soft pulse, the arpeggio, then the bass
+        name: 'intro',
+        tier: 'calm',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        arpLine: WARMUP_QUARTERS,
+        bass: 'long',
+        drums: 'pulse',
+        pad: 'chop',
+        enter: { arp: 2, bass: 4 },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        lead: WARMUP_BOUNCE,
+        arpLine: WARMUP_QUARTERS,
+        bass: 'sync',
+        drums: 'halftime',
+        pad: 'chop',
+        layers: { lead: 0.3 },
+      },
+      {
+        // The beat goes straight, the pad held under it
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        lead: WARMUP_BOUNCE,
+        arpLine: WARMUP_QUARTERS,
+        bass: 'octave',
+        drums: 'four',
+        pad: 'hold',
+        layers: { lead: 0.3 },
+      },
+      {
+        // A short climb into the chorus
+        name: 'build',
+        tier: 'rise',
+        chords: 'A | A | B | B',
+        bass: 'eighths',
+        drums: 'four',
+        fill: 'roll',
+        pad: 'hold',
+        riser: true,
+      },
+      {
+        // The rally on the 8-bit lead, the arpeggio broken in sixteenths over a straight drive
+        name: 'chorus',
+        tier: 'high',
+        chords: 'E | E | C#m | C#m | A | A | B | B',
+        lead: WARMUP_RALLY,
+        arpLine: WARMUP_BROKEN,
+        bass: 'sync',
+        drums: 'drive',
+        // Held, not chopped, under the straight beat: the peak's only so many voices
+        pad: 'hold',
+        drop: true,
+      },
+      {
+        // The cooldown: no beat, the rally's first leaps on a soft lead
+        name: 'cooldown',
+        tier: 'calm',
+        chords: 'F#m7 | F#m7 | G#m7 | G#m7 | Amaj7 | Amaj7 | B | B',
+        lead: WARMUP_COOLDOWN,
+        leadVoice: 'soft',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        // The long bass alone would fill the sub and stand as loud as the verses: held back
+        mix: { bass: -4 },
+        level: -2,
       },
     ],
   },

@@ -12,6 +12,9 @@ import { Chord, parseChord, parseNote } from '@/audio/music/theory';
 import { FxHitId } from '@/audio/samples/percussion';
 import { SceneId } from '@/shared/scenes';
 
+/** A place in the game with music of its own, whatever the backdrop: the menus, the tutorial. */
+export type MusicPlace = 'menu' | 'tutorial';
+
 export const STEPS_PER_BAR = 16;
 
 /**
@@ -224,6 +227,11 @@ export interface SongDef {
    * backdrop comes up. Songs without one play behind any backdrop.
    */
   scene?: SceneId;
+  /**
+   * The place in the game this song is the music of, behind no backdrop: the menus outside a
+   * match, or the tutorial. It plays all the while the game is there, and nowhere else.
+   */
+  place?: MusicPlace;
   /**
    * The order the song's sections play in, by name; a section may come more than once. The
    * conductor walks it, jumping to its peaks (builds and choruses) only on a hot rally. The
