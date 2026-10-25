@@ -475,6 +475,44 @@ const SIGNAL_ECHO = `E4 - - - - - D4 - - - - - C4 - - - | C4 - - - - - - - - - .
                    | E4 - - - - - D4 - - - - - - - - - | D4 - - - - - - - C4 - - - - - . .
                    | B3 - - - - - A3 - - - - - - - - - | . . . . . . . . . . . . . . . .`;
 
+// ——— The menus' track (5.12), bases to choose from (no melody yet): dreamwave at ~84, calling
+// the player in rather than pressing, after Home's "Resonance", Tycho and Boards of Canada ———
+
+/** Resonance: a five-note glitter turning over the four beats, the chord's seventh in it. */
+const MENU_GLITTER = cycle(
+  [
+    { cell: ['D5', 'A5', 'F#5', 'C#6', 'E5'], bars: 2 },
+    { cell: ['B4', 'F#5', 'D5', 'A5', 'C#5'], bars: 2 },
+    { cell: ['G4', 'D5', 'B4', 'F#5', 'A4'], bars: 2 },
+    { cell: ['A4', 'E5', 'C#5', 'G5', 'D5'], bars: 2 },
+  ],
+  ARP_RHYTHM.eighths,
+);
+
+/** Dive: a plucked figure on five pulses of eight, the dorian sixth bright in it. */
+const MENU_DIVE_ARP = cycle(
+  [
+    { cell: ['E5', 'B5', 'D6', 'F#5'], bars: 2 },
+    { cell: ['A5', 'C#6', 'E5', 'F#5'], bars: 2 },
+    { cell: ['E5', 'B5', 'D6', 'G5'], bars: 2 },
+    { cell: ['C5', 'G5', 'B5', 'D5'], bars: 1 },
+    { cell: ['D5', 'A5', 'C6', 'F#5'], bars: 1 },
+  ],
+  euclid(10, 16),
+);
+
+/** Dive: a laid-back bass, late on the beat and leaving room. */
+const MENU_DIVE_BASS = `E2 - - - . . B2 - D3 - . . E2 - . . | E2 - - - . . B2 - . . G2 - A2 - B2 -
+                      | A1 - - - . . E2 - G2 - . . A2 - . . | A1 - - - . . E2 - . . C#2 - D2 - E2 -
+                      | E2 - - - . . B2 - D3 - . . E2 - . . | E2 - - - . . B2 - . . G2 - F#2 - E2 -
+                      | C2 - - - . . G2 - B2 - . . C2 - . . | D2 - - - . . A2 - . . F#2 - D2 - . .`;
+
+/** Float: a kalimba's cell growing a note a bar and shrinking back, the lydian fourth in it. */
+const MENU_FLOAT_ARP = additive(
+  ['F5', 'C6', 'A5', 'D6', 'G5', 'B5', 'E5'],
+  [2, 3, 4, 5, 6, 7, 5, 3],
+);
+
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
  * the hottest rallies, and the conductor moves between them as the match heats up and cools
@@ -1326,6 +1364,114 @@ const SONG_DEFS: SongDef[] = [
         drums: 'none',
         pad: 'swell',
         hits: { radioStatic: `X${'.'.repeat(63)}` },
+      },
+    ],
+  },
+  // The menus' bases (5.12), for the stand: the base (hook) and how it blooms (hot)
+  {
+    // Resonance, after Home: D major, a five-note glitter on a pluck over a warm pad, a soft
+    // heartbeat, then half-time and the pad held
+    title: 'Menu Resonance',
+    sketch: true,
+    level: 0.5,
+    bpm: 84,
+    swing: 0,
+    kit: 'synthwave',
+    room: 'cathedral',
+    pump: 0.3,
+    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassSaw', pad: 'synth' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Dmaj7 | Dmaj7 | Bm7 | Bm7 | Gmaj7 | Gmaj7 | A | A',
+        arpLine: MENU_GLITTER,
+        bass: 'long',
+        drums: 'pulse',
+        pad: 'swell',
+        sweep: { arp: [0.4, 1.2] },
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Dmaj7 | Dmaj7 | Bm7 | Bm7 | Gmaj7 | Gmaj7 | A | A',
+        arpLine: MENU_GLITTER,
+        bass: 'octave',
+        drums: 'halftime',
+        pad: 'hold',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // Dive, after Tycho: E dorian, a laid-back broken beat, the bass late and round, a plucked
+    // figure on five pulses of eight
+    title: 'Menu Dive',
+    sketch: true,
+    level: -4,
+    bpm: 84,
+    swing: 0.15,
+    kit: 'night',
+    room: 'studio',
+    pump: 0.2,
+    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassFm', pad: 'synth' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Em9 | Em9 | A6 | A6 | Em9 | Em9 | Cmaj7 | D',
+        arpLine: MENU_DIVE_ARP,
+        bassLine: MENU_DIVE_BASS,
+        drums: 'break',
+        pad: 'hold',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Em9 | Em9 | A6 | A6 | Em9 | Em9 | Cmaj7 | D',
+        arpLine: MENU_DIVE_ARP,
+        bassLine: MENU_DIVE_BASS,
+        drums: 'break',
+        pad: 'hold',
+        stabs: 'offbeat',
+        stabsVoice: 'rhodes',
+        drop: true,
+      },
+    ],
+  },
+  {
+    // Float, after Boards of Canada: F lydian, no drums, a kalimba's growing cell over a pad
+    // swelling backwards; the bloom brings a soft half-time in
+    title: 'Menu Float',
+    sketch: true,
+    level: -1.5,
+    bpm: 84,
+    swing: 0,
+    kit: 'synthwave',
+    room: 'valley',
+    pump: 0.2,
+    voices: { lead: 'soft', counter: 'bell', arp: 'pluck', bass: 'bassSaw', pad: 'reverse' },
+    sections: [
+      {
+        name: 'hook',
+        tier: 'groove',
+        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+        arpLine: MENU_FLOAT_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+      },
+      {
+        name: 'hot',
+        tier: 'high',
+        chords: 'Fmaj7 | Fmaj7 | G | G | Fmaj7 | Fmaj7 | Am7 | G',
+        arpLine: MENU_FLOAT_ARP,
+        arpVoice: 'kalimba',
+        bass: 'long',
+        drums: 'halftime',
+        pad: 'hold',
+        drop: true,
       },
     ],
   },
