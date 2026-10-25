@@ -159,6 +159,97 @@ export const DRUM_PATTERNS = {
     hat: 'x.xx.x.xx.x.xx.x',
     perc: '..x....x..x....x',
   },
+  // EBM's march (Front 242, Nitzer Ebb): the kick on one and three, the steam's clap on two and
+  // four, chains on the last eighths
+  ebm: {
+    kick: 'X.......X.......',
+    clap: '....X.......X...',
+    hat: '..x...x...x...x.',
+    metal: '......o.......x.',
+  },
+  // The shift change: the kick gone, the chains and the steam left
+  shift: { clap: '....o.......x...', metal: '..o.......x...o.' },
+  ebmHot: {
+    kick: 'X.......X.......',
+    clap: '....X.......X...',
+    hat: 'xxxxxxxxxxxxxxxx',
+    open: '..x...x...x...x.',
+    metal: '...o..x....o..X.',
+  },
+  // A taiko ensemble's kata (Kodo's "Monochrome"): the nagado's "don" and the odaiko once a bar,
+  // sticks on the rims, the atarigane keeping time; then the shime rolling the ground rhythm
+  // under them and the hats in eighths, and the peak with everything doubled
+  kata: {
+    kick: 'X..x..X...x.X...',
+    taiko: 'X...............',
+    perc: '...x.......x..x.',
+    metal: '..x...x...x...x.',
+  },
+  kata2: {
+    kick: 'X..x..X...x.X...',
+    snare: 'x.o.x.ooX.o.x.oo',
+    taiko: 'X...............',
+    hat: 'x.x.x.x.x.x.x.x.',
+    perc: '...x...x...x..x.',
+    metal: '..x...x...x...x.',
+  },
+  kataHot: {
+    kick: 'X..x..X.X.x.X.x.',
+    snare: 'xoxoxoxoXoxoxoxX',
+    taiko: 'X.......X.....x.',
+    perc: '.x.x...x.x.x..x.',
+    metal: 'x.x.x.x.x.x.x.x.',
+    open: '..............x.',
+  },
+  // The hall filling: the odaiko once a bar, the sticks and the bell, no nagado yet
+  kataIntro: {
+    taiko: 'X...............',
+    perc: '...x.......x..x.',
+    metal: '..o...o...o...o.',
+  },
+  // The oroshi into the peak: the odaiko on every beat, the sticks in eighths, the shime rolling
+  // up to the drop
+  oroshi: {
+    taiko: 'X...X...X...X...',
+    kick: '..x...x...x...x.',
+    snare: 'o.o.o.o.x.x.xxXX',
+    perc: 'x.x.x.x.x.x.x.x.',
+  },
+  // Mokuso, the meditation: the odaiko once a bar, the bell and a stick between
+  mokuso: {
+    taiko: 'x...............',
+    metal: '....o.......o...',
+    perc: '..........o.....',
+  },
+  // A broken network's heavy pulse at its peak (Cyberpunk 2077's "V"): the kick on every beat,
+  // the snare and a clap on two and four, the hats running
+  netPulseHot: {
+    kick: 'X...X...X...X..x',
+    snare: '....X.......X...',
+    clap: '....X.......X..x',
+    hat: 'xxx.xxx.xxx.xxx.',
+    open: '...x.......x....',
+  },
+  // A signal lost (Blade Runner 2049): the kick on one and three, the snare's backbeat, wide
+  // and slow
+  signal: {
+    kick: 'X.......X.......',
+    snare: '....X.......X...',
+    metal: '..............o.',
+  },
+  // The second verse: a push before three, the hats in broken sixteenths
+  signal2: {
+    kick: 'X.......X.x.....',
+    snare: '....X.......X...',
+    hat: 'x.xxx.x.x.xxx.x.',
+    metal: '..............o.',
+  },
+  // The network collapsing into the peak: the kick on every beat, the snare rolling up
+  collapse: {
+    kick: 'X...X...X...X...',
+    snare: 'o.o.o.o.x.x.xxXX',
+    hat: 'xxxxxxxxxxxxxxxx',
+  },
   // A factory floor: the drive with metal struck on the off-beats and a rim ticking between
   foundry: {
     kick: 'X...X...X...X.x.',
@@ -211,6 +302,8 @@ export const BASS_PATTERNS = {
   pulse16: 'RRRRRRRRRRRRRROA',
   // City pop: a slap line, root and octave dancing around the fifth and third
   funk: 'R..O.R5.R..O3RA.',
+  // No bass: the drums carry the low end on their own (Black Belt's taiko)
+  none: '................',
 } satisfies Record<string, string>;
 
 export type BassPatternName = keyof typeof BASS_PATTERNS;
@@ -251,7 +344,7 @@ export const PAD_CHOP = 'x.x.xx.x.x.xx.x.';
 
 /**
  * Signal faults on the whole mix, over a section's last bar (16 steps), for a song that
- * breaks down: x cuts the music out for that step, as a dropped connection does; r rewinds
+ * breaks down: x drops the signal for that step, the music sinking to a muffled trace; r rewinds
  * the tape from that step, the pitch sagging and then shrieking up, over the steps marked -
  * after it; . plays as written.
  */

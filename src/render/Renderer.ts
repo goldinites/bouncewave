@@ -255,6 +255,11 @@ export class Renderer {
     return this.background.isShowingMystery;
   }
 
+  /** Whether channels are flicking past in static right now, on the way to the match's. */
+  public get isSurfing(): boolean {
+    return this.background.isSurfing;
+  }
+
   /** The player's choice of background, which every switchChannel goes to from now on. */
   public chooseBackground(choice: BackgroundChoice): void {
     this.background.choose(choice === 'random' ? null : choice);

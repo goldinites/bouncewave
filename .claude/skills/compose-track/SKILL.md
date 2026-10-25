@@ -29,7 +29,7 @@ and a choice, never with a finished track written blind.
   and a register no other track has (`docs/AUDIO.md`, step 2) — not a pickup run climbing into a
   long note, which every 5.6a melody leaned on. Keep the melody clear of the arpeggio's
   register, above it or below it. Lead `brass`, no glide.
-- `npm test` must pass: the strong-beat rule, the C4–D6 register, the ranges.
+- `npm test` must pass: the strong-beat rule, the E3–D6 register (under C4, check the render: the pads and the phone), the ranges.
 - Ask which melodies, and on which lead sound: give stand links with `&lead=<voice>` (voices in
   `src/audio/music/score.ts`, `LeadVoice`) to hear one melody on several.
 
@@ -43,11 +43,11 @@ and a choice, never with a finished track written blind.
   moves material into one key.
 - Replace the backdrop's previous track (same `scene`); remove the sketches and their unused
   constants.
-- Keep it apart from every track there is (`docs/AUDIO.md`, "Разнообразие"; the tests in
-  "the tracks stay apart" check most of it): a tempo at least 8 BPM off, its own beat at the
-  peak, lead voices, key and mode, register, and its own melodic rhythm — where its notes start —
-  and intervals, not the dialect the first four share. Check it already at the bases and the
-  melodies, not only once the track is built.
+- Keep it from sounding like another track (`docs/AUDIO.md`, "Разнообразие"): one shared thing —
+  a voice, a frame, a tempo, a kit — is fine; what blurs two tracks is the melody and the
+  chorus's sound together with the rest. The test "the tracks stay apart" adds up what a pair
+  shares; the chorus's whole sound only the ear hears, so compare the sketches with the other
+  tracks on the stand from the bases and melodies on, not only once the track is built.
 - Render it (`npm run render -- <id>`, `docs/AUDIO.md` "Рендер") and look before the user
   listens: level it to −25 dB as the report says; fix what the pictures and numbers show — mud
   or an empty band in the spectrogram, the melody and the arpeggio sharing a register (white on

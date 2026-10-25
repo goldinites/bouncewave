@@ -166,7 +166,7 @@ test('renders every pitched instrument at every root, its loops seamless', async
       const { PITCHED_SAMPLES } = (await import(
         /* @vite-ignore */ source('pitched.ts')
       )) as typeof import('../src/audio/samples/pitched');
-      const { EXTRA_LEADS } = (await import(
+      const { EXTRA_LEADS, LOW_TWINS } = (await import(
         /* @vite-ignore */ source('leads.ts')
       )) as typeof import('../src/audio/samples/leads');
       const { EXTRA_PITCHED } = (await import(
@@ -175,10 +175,14 @@ test('renders every pitched instrument at every root, its loops seamless', async
       const bank = new SampleBank();
       await bank.renderPitched(rate, PITCHED_SAMPLES);
       // The wider palette is checked too, in a bank of its own: it is rendered only when a song
-      // plays it or the stand asks, so it doesn't count toward the game's memory
+      // plays it or the stand asks, so it doesn't count toward the game's memory; so are the
+      // leads' low twins, at the roots under their own
       const auditions = new SampleBank();
-      await auditions.renderPitched(rate, { ...EXTRA_LEADS, ...EXTRA_PITCHED });
-      const recipes = { ...PITCHED_SAMPLES, ...EXTRA_LEADS, ...EXTRA_PITCHED };
+      const twins = Object.fromEntries(
+        Object.values(LOW_TWINS).map(({ id, recipe }) => [id, recipe]),
+      );
+      await auditions.renderPitched(rate, { ...EXTRA_LEADS, ...EXTRA_PITCHED, ...twins });
+      const recipes = { ...PITCHED_SAMPLES, ...EXTRA_LEADS, ...EXTRA_PITCHED, ...twins };
       const notes = Object.entries(recipes).flatMap(([id, recipe]) =>
         recipe.roots.map((root) => {
           const note = (bank.pickNote(id, root) ?? auditions.pickNote(id, root))!;

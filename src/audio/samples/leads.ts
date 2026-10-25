@@ -1,5 +1,5 @@
 import { LeadVoice } from '@/audio/music/score';
-import { LOOP, LOOPED } from '@/audio/samples/pitched';
+import { LOOP, LOOPED, PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { PitchedRecipe, RENDER_RATE } from '@/audio/samples/SampleBank';
 import {
   cents,
@@ -17,6 +17,10 @@ import {
 
 // The melodies sit between G4 and D6: four roots cover it within three semitones
 const ROOTS = [65, 71, 77, 83];
+// A melody may go as low as E3: the roots under a lead's own are its low twin's, rendered apart,
+// only for a song that goes below them, so the voices of every other song take no more memory
+const LOW_ROOTS = [53, 59]; // F3, B3, under the extra leads' F4
+const CORE_LOW_ROOTS = [52]; // E3, under the core leads' A#3
 // The hard-sync wave: its slave oscillator runs this many times faster than the master and
 // restarts with it, the bright, nasal tone of the 80s sync lead
 const SYNC_RATIO = 2.6;
@@ -414,4 +418,36 @@ export const EXTRA_LEAD_FOR: Partial<Record<LeadVoice, ExtraLeadId>> = {
   strings: 'leadStrings',
   chip: 'leadChip',
   crush: 'leadCrush',
+};
+
+/** The rendered sound each lead voice plays: the core palette's, else an extra lead. */
+export const LEAD_SAMPLE_FOR: Partial<Record<LeadVoice, PitchedSampleId | ExtraLeadId>> = {
+  saw: 'supersaw',
+  square: 'squareLead',
+  pluck: 'pluck',
+  ...EXTRA_LEAD_FOR,
+};
+
+/** A lead sound's low twin: the same sound at the roots under its own, playing the notes below. */
+export interface LowTwin {
+  id: string;
+  /** Notes under this are the twin's: under the lowest root the lead's own sound stretches to. */
+  below: number;
+  recipe: PitchedRecipe;
+}
+
+const twinOf = (id: string, recipe: PitchedRecipe, roots: number[]): LowTwin => ({
+  id: `${id}Low`,
+  below: recipe.roots[0] - 3,
+  recipe: { ...recipe, roots },
+});
+
+/** Every lead sound's low twin, by the lead sound's id. */
+export const LOW_TWINS: Record<string, LowTwin> = {
+  supersaw: twinOf('supersaw', PITCHED_SAMPLES.supersaw, CORE_LOW_ROOTS),
+  squareLead: twinOf('squareLead', PITCHED_SAMPLES.squareLead, CORE_LOW_ROOTS),
+  pluck: twinOf('pluck', PITCHED_SAMPLES.pluck, CORE_LOW_ROOTS),
+  ...Object.fromEntries(
+    Object.entries(EXTRA_LEADS).map(([id, recipe]) => [id, twinOf(id, recipe, LOW_ROOTS)]),
+  ),
 };

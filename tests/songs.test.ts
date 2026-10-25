@@ -3,22 +3,26 @@ import { LeadVoice, MelodyNote, SongDef, STEPS_PER_BAR } from '@/audio/music/sco
 import { SONGS } from '@/audio/music/songs';
 import { PAD_SOUND } from '@/audio/music/palette';
 import { DRUM_PATTERNS } from '@/audio/music/patterns';
-import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
+import {
+  EXTRA_LEAD_FOR,
+  EXTRA_LEADS,
+  ExtraLeadId,
+  LEAD_SAMPLE_FOR,
+  LOW_TWINS,
+} from '@/audio/samples/leads';
 import { PITCHED_SAMPLES, PitchedSampleId } from '@/audio/samples/pitched';
 import { isSceneId } from '@/shared/scenes';
 
 // The lead voices played from rendered instruments, and how far a note may sit from a root
-const SAMPLED: Partial<Record<LeadVoice, PitchedSampleId>> = {
-  saw: 'supersaw',
-  square: 'squareLead',
-  pluck: 'pluck',
-};
-/** The roots a lead voice is rendered at, from the core palette or the extra leads. */
+/** The roots a lead voice is rendered at: its sound's own, from the core palette or the extra leads, and its low twin's. */
 const rootsOf = (voice: LeadVoice): number[] | null => {
-  const core = SAMPLED[voice];
-  if (core) return PITCHED_SAMPLES[core].roots;
-  const extra = EXTRA_LEAD_FOR[voice];
-  return extra ? EXTRA_LEADS[extra].roots : null;
+  const id = LEAD_SAMPLE_FOR[voice];
+  if (!id) return null;
+  const own =
+    id in EXTRA_LEADS
+      ? EXTRA_LEADS[id as ExtraLeadId].roots
+      : PITCHED_SAMPLES[id as PitchedSampleId].roots;
+  return [...LOW_TWINS[id].recipe.roots, ...own];
 };
 const STRETCH = 3; // semitones: further, a note played from its root starts to sound stretched
 
@@ -178,27 +182,6 @@ describe('the soundtrack', () => {
     }
   });
 
-  // Three tracks built on one template sounded like one song (5.6a): each builds its own frame
-  it('gives no two songs the same form, intro, beat at the peak or way up to it', () => {
-    // A sketch has no frame yet, only a hook and its peak
-    const frames = SONGS.filter((song) => !song.sketch).map((song) => {
-      const sections = song.form.map((index) => song.sections[index]);
-      const intro = sections[0];
-      const peak = sections.find((s) => s.tier === 'high')!;
-      const build = sections.find((s) => s.tier === 'rise')!;
-      return {
-        form: sections.map((s) => `${s.tier}:${s.bars}`).join(' '),
-        intro: `${intro.bars} ${intro.drums} ${intro.bass ?? 'line'} ${!!intro.arpLine} ${intro.pad}`,
-        beat: `${peak.drums} ${song.kit ?? 'synthwave'}`,
-        build: `${build.bars} ${build.drums} ${build.riser} ${song.transitions ?? 'synth'}`,
-      };
-    });
-    for (const key of ['form', 'intro', 'beat', 'build'] as const) {
-      const values = frames.map((frame) => frame[key]);
-      expect(new Set(values).size, key).toBe(values.length);
-    }
-  });
-
   // The game has no voices (docs/AUDIO.md, decided 22.10.2026): no vocals, no choirs, no human
   // sounds, by synthesis or by recording
   it('sings with no voice: no choir or vocal in the palette', () => {
@@ -231,102 +214,111 @@ describe('the soundtrack', () => {
   });
 });
 
-// Tracks heard one after another must not sound like one tune (with the user, 25.10.2026: Above
-// the Clouds and Sunset Strip at 96 and 100 BPM, both a major pop chorus on a synth lead, read as
-// one song). Each check below is a way two of them came to sound alike; docs/AUDIO.md,
-// "Разнообразие", lists them and what the tests can't yet see
+// Tracks heard one after another must not sound like one tune (with the user, 25.10.2026): Above
+// the Clouds and Sunset Strip blurred into one by their melodies and the sound of their choruses.
+// One shared thing — a voice, a frame, a tempo — is fine; a track is too like another when most of
+// what the ear hears coincides at once, the melody and the chorus weighing most
+// (docs/AUDIO.md, "Разнообразие")
 describe('the tracks stay apart', () => {
+  type Track = (typeof SONGS)[number];
   const notesOf = (line: readonly (MelodyNote | null)[]) =>
     line.filter((note): note is MelodyNote => note !== null);
   const tracks = SONGS.filter((song) => !song.sketch);
   const pairs = tracks.flatMap((a, i) => tracks.slice(i + 1).map((b) => [a, b] as const));
-  const partsOf = (song: (typeof SONGS)[number]) => [
-    ...new Set(song.form.map((i) => song.sections[i])),
-  ];
-  const melodies = (song: (typeof SONGS)[number], tier: 'groove' | 'high') =>
-    partsOf(song).filter((part) => part.tier === tier && part.lead);
+  const partsOf = (song: Track) => [...new Set(song.form.map((i) => song.sections[i]))];
+  const part = (song: Track, tier: 'groove' | 'high') =>
+    partsOf(song).find((section) => section.tier === tier)!;
+  const melodies = (song: Track) =>
+    partsOf(song).filter((s) => (s.tier === 'groove' || s.tier === 'high') && s.lead);
+  const cosine = (a: number[], b: number[]) =>
+    a.reduce((sum, x, i) => sum + x * b[i], 0) / (Math.hypot(...a) * Math.hypot(...b));
   const median = (values: number[]) =>
     [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
-  const register = (song: (typeof SONGS)[number], tier: 'groove' | 'high') =>
-    median(melodies(song, tier).flatMap((part) => notesOf(part.lead!).map((note) => note.note)));
 
-  it('keeps every two at least 8 BPM apart', () => {
-    for (const [a, b] of pairs) {
-      expect(Math.abs(a.bpm - b.bpm), `${a.title} and ${b.title}`).toBeGreaterThanOrEqual(8);
+  /** Where in the bar the melodies' notes start. */
+  const onsets = (song: Track) => {
+    const counts = Array<number>(STEPS_PER_BAR).fill(0);
+    for (const section of melodies(song)) {
+      section.lead!.forEach((note, step) => {
+        if (note) counts[step % STEPS_PER_BAR]++;
+      });
     }
-  });
-
-  // The same beat under two peaks makes them one dance, whatever its name
-  it('gives no two peaks the same kick and snare', () => {
-    const beats = tracks.map((song) => {
-      const peak = partsOf(song).find((part) => part.tier === 'high')!;
-      const beat = DRUM_PATTERNS[peak.drums] as { kick?: string; snare?: string; clap?: string };
-      return `${beat.kick ?? ''}/${beat.snare ?? beat.clap ?? ''}/${peak.feel ?? ''}`;
-    });
-    expect(new Set(beats).size).toBe(beats.length);
-  });
-
-  // A melody's sound is half of it: a voice sings the verses or the chorus of one track only
-  it('gives the verses and choruses of each its own lead voices', () => {
-    const owner = new Map<LeadVoice, string>();
-    for (const song of tracks) {
-      for (const part of [...melodies(song, 'groove'), ...melodies(song, 'high')]) {
-        const voice = part.leadVoice ?? song.voices.lead;
-        const other = owner.get(voice);
-        expect(
-          other === undefined || other === song.title,
-          `${voice}: ${song.title}, ${other}`,
-        ).toBe(true);
-        owner.set(voice, song.title);
+    return counts;
+  };
+  /** How the melodies move: leaps and steps down, repeats, steps and leaps up. */
+  const intervals = (song: Track) => {
+    const counts = Array<number>(7).fill(0);
+    for (const section of melodies(song)) {
+      const notes = notesOf(section.lead!);
+      for (let i = 1; i < notes.length; i++) {
+        const d = notes[i].note - notes[i - 1].note;
+        counts[d <= -5 ? 0 : d <= -3 ? 1 : d < 0 ? 2 : d === 0 ? 3 : d <= 2 ? 4 : d <= 4 ? 5 : 6]++;
       }
     }
-  });
-
-  // Two melodies on the same notes, as long, sound in one key and one mode
-  it('sings each in its own key and mode', () => {
-    const profile = (song: (typeof SONGS)[number]) => {
-      const weights = Array<number>(12).fill(0);
-      for (const part of [...melodies(song, 'groove'), ...melodies(song, 'high')]) {
-        for (const note of notesOf(part.lead!)) weights[note.note % 12] += note.steps;
-      }
-      return weights;
-    };
-    const cosine = (a: number[], b: number[]) =>
-      a.reduce((sum, x, i) => sum + x * b[i], 0) / (Math.hypot(...a) * Math.hypot(...b));
-    for (const [a, b] of pairs) {
-      expect(cosine(profile(a), profile(b)), `${a.title} and ${b.title}`).toBeLessThan(0.9);
+    return counts;
+  };
+  /** The melodies' notes by pitch class, weighted by length: the key and mode they sing in. */
+  const keyOf = (song: Track) => {
+    const weights = Array<number>(12).fill(0);
+    for (const section of melodies(song)) {
+      for (const note of notesOf(section.lead!)) weights[note.note % 12] += note.steps;
     }
-  });
+    return weights;
+  };
+  const register = (song: Track, tier: 'groove' | 'high') =>
+    median(notesOf(part(song, tier).lead ?? []).map((note) => note.note));
+  const beatOf = (song: Track) => {
+    const peak = part(song, 'high');
+    const beat = DRUM_PATTERNS[peak.drums] as { kick?: string; snare?: string; clap?: string };
+    return `${beat.kick ?? ''}/${beat.snare ?? beat.clap ?? ''}/${peak.feel ?? ''}`;
+  };
+  const isMinor = (song: Track) => part(song, 'groove').chords[0].triad[1] === 3;
+  const frameOf = (song: Track) =>
+    song.form.map((i) => `${song.sections[i].tier}:${song.sections[i].bars}`).join(' ');
 
-  // Where a melody's notes start is its rhythm, its accent: the four tracks made by 25.10.2026 share
-  // one, which the user kept (docs/AUDIO.md, "Разнообразие"); every track after them starts its
-  // notes its own way, apart from each of them and from each other
-  it('gives every track after the first four a rhythm of its own', () => {
-    const kept = ['Neon Cathedral', 'Sunset Strip', 'Kabukicho Rain', 'Above the Clouds'];
-    const onsets = (song: (typeof SONGS)[number]) => {
-      const counts = Array<number>(STEPS_PER_BAR).fill(0);
-      for (const part of [...melodies(song, 'groove'), ...melodies(song, 'high')]) {
-        part.lead!.forEach((note, step) => {
-          if (note) counts[step % STEPS_PER_BAR]++;
-        });
-      }
-      return counts;
-    };
-    const cosine = (a: number[], b: number[]) =>
-      a.reduce((sum, x, i) => sum + x * b[i], 0) / (Math.hypot(...a) * Math.hypot(...b));
-    for (const [a, b] of pairs) {
-      if (kept.includes(a.title) && kept.includes(b.title)) continue;
-      expect(cosine(onsets(a), onsets(b)), `${a.title} and ${b.title}`).toBeLessThan(0.9);
-    }
-  });
+  // What the ear takes two tracks to share, and how much each counts: the melody (its rhythm, its
+  // moves, its register) and the chorus's sound (its voice, its beat) the most
+  const SHARED: { name: string; weight: number; isShared: (a: Track, b: Track) => boolean }[] = [
+    { name: 'melodic rhythm', weight: 2, isShared: (a, b) => cosine(onsets(a), onsets(b)) >= 0.9 },
+    {
+      name: 'melodic moves',
+      weight: 1,
+      isShared: (a, b) => cosine(intervals(a), intervals(b)) >= 0.95,
+    },
+    {
+      name: 'register',
+      weight: 1,
+      isShared: (a, b) =>
+        Math.abs(register(a, 'groove') - register(b, 'groove')) < 3 &&
+        Math.abs(register(a, 'high') - register(b, 'high')) < 3,
+    },
+    {
+      name: 'chorus voice',
+      weight: 2,
+      isShared: (a, b) =>
+        (part(a, 'high').leadVoice ?? a.voices.lead) ===
+        (part(b, 'high').leadVoice ?? b.voices.lead),
+    },
+    { name: 'peak beat', weight: 1.5, isShared: (a, b) => beatOf(a) === beatOf(b) },
+    { name: 'key', weight: 1, isShared: (a, b) => cosine(keyOf(a), keyOf(b)) >= 0.9 },
+    { name: 'mood', weight: 1, isShared: (a, b) => isMinor(a) === isMinor(b) },
+    { name: 'tempo', weight: 1.5, isShared: (a, b) => Math.abs(a.bpm - b.bpm) < 8 },
+    { name: 'frame', weight: 0.5, isShared: (a, b) => frameOf(a) === frameOf(b) },
+  ];
+  // Of the 11.5 the weights add up to, two tracks sharing this much sound like one. Set by the
+  // ear: Above the Clouds and Sunset Strip as the user heard them blur (25.10.2026: one melodic
+  // rhythm and moves, both major, 96 and 100 BPM) came to 5.5; Neon Cathedral and Kabukicho Rain,
+  // heard apart, share 5 (rhythm, moves, register, both minor, 16 BPM between them)
+  const TOO_ALIKE = 5.5;
 
-  // Each sings somewhere of its own (docs/AUDIO.md, "Треки сейчас"): not in the same register in
-  // both its verses and its chorus as another
-  it('sings each in a register of its own, in its verses or its chorus', () => {
+  it('never lets two sound like one: the melody, the chorus and the rest at once', () => {
     for (const [a, b] of pairs) {
-      const verses = Math.abs(register(a, 'groove') - register(b, 'groove'));
-      const choruses = Math.abs(register(a, 'high') - register(b, 'high'));
-      expect(Math.max(verses, choruses), `${a.title} and ${b.title}`).toBeGreaterThanOrEqual(3);
+      const shared = SHARED.filter((thing) => thing.isShared(a, b));
+      const score = shared.reduce((sum, thing) => sum + thing.weight, 0);
+      expect(
+        score,
+        `${a.title} and ${b.title}: ${shared.map((t) => t.name).join(', ')}`,
+      ).toBeLessThan(TOO_ALIKE);
     }
   });
 });

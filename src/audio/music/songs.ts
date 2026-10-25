@@ -1,4 +1,4 @@
-import { cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
+import { additive, cycle, euclid, Stretch, transpose } from '@/audio/music/compose';
 import { compileSong, Song, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 
 /*
@@ -368,6 +368,113 @@ const FURIN_VALLEY = `. . . . . D6 - - - - - - - - - - | - - - A5 - - - - - - - 
                     | . . . . . . G5 - - - - - - - - - | - - - - - - - - - - - Bb5 - - - -
                     | - - - - . . . . . . . . . A5 - - | - - - - - - - - . . . . . . . .`;
 
+// ——— The warehouse's track (5.11): EBM after Front 242 and Nitzer Ebb, chosen of three bases —
+// a bass sequenced in sixteenths marching in C minor, the factory's kit; a hocket on the broken
+// digital lead, its notes off the beat as none of the other tracks starts them ———
+
+/** EBM's sequenced bass: the root in a machine's sixteenths, the octave and the fifth kicking in. */
+const CONVEYOR_BASS = cycle(
+  [
+    { cell: ['C2', 'C2', 'C3', 'C2', 'G1', 'C2', 'C2', 'Bb1'], bars: 4 },
+    { cell: ['F1', 'F1', 'F2', 'F1', 'C2', 'F1', 'F1', 'Eb2'], bars: 2 },
+    { cell: ['G1', 'G1', 'G2', 'G1', 'D2', 'G1', 'B1', 'D2'], bars: 2 },
+  ],
+  euclid(12, 16, 1),
+);
+
+/** The hocket, the melody: notes only on the sixteenths between the beat's, leaping like a machine's sparks, low and heavy. */
+const CONVEYOR_HOCKET = `. C4 . . . G4 . . . C4 . . . Eb4 . . | . D4 . . . G4 . . . C5 . . Bb4 - - -
+                       | . C4 . . . G4 . . . Eb4 . . . F4 . . | G4 - - - - - - - . . . . . . . .
+                       | . F4 . . . C5 . . . Ab4 . . . G4 . . | . F4 . . . C5 . . . Eb4 . . D4 - - -
+                       | . G4 . . D4 . . B3 . . D4 . . G4 . . | G4 - - - - - - - . . . . . . . .`;
+
+/** Long notes answering the hocket from the second verse, one a bar, the chord's colour held. */
+const CONVEYOR_HOLD = `G4 - - - - - - - - - - - - - - - | Eb4 - - - - - - - - - - - - - - -
+                     | G4 - - - - - - - - - - - - - - - | F4 - - - - - - - - - - - - - - -
+                     | Ab4 - - - - - - - - - - - - - - - | C5 - - - - - - - - - - - - - - -
+                     | B4 - - - - - - - - - - - - - - - | D5 - - - - - - - - - - - - - - -`;
+
+// ——— The dojo's track (5.11): a black belt's exam, chosen of three bases and seven melodies — a
+// taiko ensemble leading a darksynth in A minor, no koto, shakuhachi or shamisen; a shout of
+// fourths in the verses, a fighting game's theme in the chorus ———
+
+/** The kata's reese: a five-note cell turning over a ten-pulse rhythm, never landing alike. */
+const KATA_BASS = cycle(
+  [
+    { cell: ['A1', 'A1', 'E2', 'A2', 'G2'], bars: 4 },
+    { cell: ['F1', 'F1', 'C2', 'F2', 'E2'], bars: 2 },
+    { cell: ['E1', 'E1', 'B1', 'E2', 'G#1'], bars: 2 },
+  ],
+  euclid(10, 16),
+);
+
+/** The kiai, the verses' melody: a shout of fourths, A–D–E, low, answered backwards, growing a note each time it comes. */
+const KATA_KIAI = `A3 - . D4 - . E4 - - - - - - - . . | . . . . . . . . E4 - . D4 - . A3 -
+                 | A3 - . D4 - . E4 - . G4 - - - - - - | . . . . . . . . G4 - . E4 - . D4 -
+                 | A3 - . C4 - . F4 - . A4 - . C5 - - - | - - - - - - - - A4 G4 F4 - C4 - - -
+                 | B3 - . E4 - . G#4 - . B4 - - - - - - | . . . . . . . . G#4 - . E4 - . B3 -`;
+
+/** The verses' answer: a long note in the gap the kiai leaves, above it. */
+const KATA_ANSWER = `. . . . . . . . . . . . . . . . | C5 - - - - - - - . . . . . . . .
+                   | . . . . . . . . . . . . . . . . | B4 - - - - - - - . . . . . . . .
+                   | . . . . . . . . . . . . . . . . | C5 - - - - - - - . . . . . . . .
+                   | . . . . . . . . . . . . . . . . | B4 - - - - - - - . . . . . . . .`;
+
+/** The theme, the chorus: a fighting game's theme in A harmonic minor, its summit D6 in bar 5. */
+const KATA_THEME = `A4 - - E5 - - A5 - - - G#5 - A5 - B5 - | C6 - - - B5 - - A5 - - - - - - E5 -
+                  | A4 - - E5 - - A5 - - - G#5 - A5 - D6 - | C6 - - B5 - - G#5 - - - - - E5 - - -
+                  | C6 - - A5 - - C6 - D6 - - - C6 - A5 - | F5 - - - - - - - - - G5 A5 Bb5 - A5 G5
+                  | G#5 - - E5 - - B4 - - - D5 - E5 - - - | B5 - - - - - - - . . . . E5 F5 G#5 -`;
+
+/** The oroshi into the chorus: the dominant struck ever closer over four bars. */
+const OROSHI_BASS = `E1 - - - E1 - - - E1 - - - E1 - - - | E1 - - E1 - - E1 - - E1 - - E1 - - E1
+                   | E1 - E1 - E1 - E1 - E1 - E1 - E1 - E1 - | E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1 E1`;
+
+/** Mokuso, the meditation: long notes on strings over the harmony the verses never go to. */
+const MOKUSO_HOLD = `F5 - - - - - - - - - - - - - - - | E5 - - - - - - - D5 - - - - - - -
+                   | D5 - - - - - - - - - - - - - - - | F5 - - - - - - - - - - - - - - -
+                   | A5 - - - - - - - - - - - - - - - | G5 - - - - - - - F5 - - - - - - -
+                   | E5 - - - - - - - - - - - - - - - | G#5 - - - - - - - - - - - . . . .`;
+
+// ——— The broken network's track (5.11): dark cyberpunk after Cyberpunk 2077's "V" and Blade
+// Runner 2049, chosen of three bases and three melodies — a growling drone in B minor, a straight
+// heavy pulse at 104, nothing Japanese and no half-time; low melodies under a cold arpeggio ———
+
+/**
+ * The signal reconnecting: a cell growing a note a bar and falling back, as a link retries; high
+ * and cold, far above the low melody.
+ */
+const SIGNAL_ARP = additive(
+  ['B5', 'F#6', 'D6', 'C#6', 'A5', 'E6', 'F#5'],
+  [2, 3, 4, 5, 6, 7, 4, 2],
+);
+
+/** Net Pulse's arpeggio at the peak: the chord's root, fifth and tenth, three against four, high. */
+const SIGNAL_TRIPLET = cycle([
+  { cell: ['B5', 'F#5', 'D6'], bars: 2 },
+  { cell: ['G5', 'D6', 'B5'], bars: 2 },
+  { cell: ['E5', 'B5', 'G5'], bars: 2 },
+  { cell: ['F#5', 'C#6', 'A#5'], bars: 2 },
+]);
+
+/** The lament, the verses' melody: low, falling a step at a time from D4, each phrase starting lower. */
+const SIGNAL_LAMENT = `D4 - - - - - - - - - - - C#4 D4 C#4 - | B3 - - - - - - - - - - - . . . .
+                     | B3 - - - - - - - A3 - - - - - - - | G3 - - - - - - - - - - - F#3 E3 F#3 -
+                     | E4 - - - - - - - D4 - - - - - - - | B3 - - - - - - - A3 - - - G3 - - -
+                     | C#4 - - - - - - - - - - - B3 - A#3 - | F#3 - - - - - - - - - - - - - . .`;
+
+/** The sighs, the chorus: a note a step above the chord on the downbeat falling onto it, in 3+3+2. */
+const SIGNAL_SIGHS = `E4 - - - - - D4 - - - - - C#4 - - - | B3 - - - - - - - . . A#3 B3 C#4 - - -
+                    | A3 - - - - - G3 - - - - - B3 - - - | D4 - - - - - - - - - - - . . . .
+                    | E4 - - - - - - - - - - - D4 C#4 D4 - | A3 - - - - - G3 - - - . . B3 - G3 -
+                    | G#3 - - - - - F#3 - - - - - C#4 - - - | A#3 - - - - - - - - - - - - - . .`;
+
+/** The connection lost: the sighs' head, slow and quiet, over the C and A minor the verses never reach. */
+const SIGNAL_ECHO = `E4 - - - - - D4 - - - - - C4 - - - | C4 - - - - - - - - - . . . . . .
+                   | B3 - - - - - A3 - - - - - - - - - | C4 - - - - - - - - - - - . . . .
+                   | E4 - - - - - D4 - - - - - - - - - | D4 - - - - - - - C4 - - - - - . .
+                   | B3 - - - - - A3 - - - - - - - - - | . . . . . . . . . . . . . . . .`;
+
 /**
  * The soundtrack. Every song has a calm part for the menus, parts to play over and a peak for
  * the hottest rallies, and the conductor moves between them as the match heats up and cools
@@ -574,7 +681,7 @@ const SONG_DEFS: SongDef[] = [
         fill: 'toms',
         pad: 'hold',
         layers: { lead: 0.3, counter: 0.3 },
-        enter: { counter: 8 },
+        enter: { pads: 8, counter: 8 },
         sweep: { arp: [0.4, 1.4] },
       },
       {
@@ -906,6 +1013,319 @@ const SONG_DEFS: SongDef[] = [
         drums: 'bonsho',
         feel: 'half',
         pad: 'swell',
+      },
+    ],
+  },
+  {
+    // EBM after Front 242 and Nitzer Ebb: the night shift in the warehouse. The machines start one
+    // by one — the conveyor's bass, the chains and the steam, then the kick — and the hocket throws
+    // sparks off the beat over the march; a long note answers it from the second verse; the line
+    // stops dead for the shift's siren, and the peak runs the belt at full tilt under brass; the
+    // shift change is the chains and the steam alone over the bass's hum
+    title: 'Night Shift',
+    bpm: 112,
+    swing: 0,
+    level: -1,
+    scene: 'warehouse',
+    kit: 'factory',
+    // A short metal hall; the bass driven into its tear, and pumping under the kick as EBM does
+    room: 'plate',
+    grit: 8,
+    voices: { lead: 'crush', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'shift', 'verse2', 'build', 'chorus'],
+    sections: [
+      {
+        // The conveyor starts: its bass alone, then the chains and the steam, then the kick
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        bassLine: CONVEYOR_BASS,
+        drums: 'ebm',
+        pad: 'none',
+        enter: { drums: 4 },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G | Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_HOCKET,
+        bassLine: CONVEYOR_BASS,
+        drums: 'ebm',
+        fill: 'roll',
+        pad: 'none',
+        stabs: 'offbeat',
+        layers: { lead: 0.3 },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_HOCKET,
+        counter: CONVEYOR_HOLD,
+        bassLine: CONVEYOR_BASS,
+        drums: 'ebm',
+        fill: 'roll',
+        pad: 'hold',
+        stabs: 'offbeat',
+        layers: { lead: 0.3, counter: 0.3 },
+      },
+      {
+        // The line stops: two bars of the shift's siren over the drums, then dead silence
+        name: 'build',
+        tier: 'rise',
+        chords: 'G | G',
+        bass: 'pulse16',
+        drums: 'ebm',
+        fill: 'roll',
+        pad: 'hold',
+        hits: { siren: `X${'.'.repeat(31)}` },
+        silence: 4,
+      },
+      {
+        // The belt at full tilt: the hocket under the long note, brass pushing
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
+        lead: CONVEYOR_HOCKET,
+        counter: CONVEYOR_HOLD,
+        bassLine: CONVEYOR_BASS,
+        drums: 'ebmHot',
+        fill: 'roll',
+        pad: 'hold',
+        stabs: 'push',
+        // The sparks lifted over the brass, so the peak is the brightest part
+        mix: { melody: 2 },
+        drop: true,
+      },
+      {
+        // The shift change: no kick, the chains and the steam over the bass's hum, and the
+        // harmony off the belt's road
+        name: 'shift',
+        tier: 'calm',
+        chords: 'Ab | Ab | Bb | Bb | Fm | Fm | G | G',
+        counter: CONVEYOR_HOLD,
+        bass: 'long',
+        drums: 'shift',
+        pad: 'swell',
+      },
+    ],
+  },
+  {
+    // A black belt's exam in the dojo at night, after Kodo's taiko ensembles and Perturbator's
+    // darksynth. The hall fills — the odaiko alone, the sticks and the bell; the student's kiai
+    // in the verses, the drums answering it, over the taiko alone in the first and with the reese
+    // and a long note in its gaps in the second; the oroshi strikes the dominant ever closer into
+    // a beat of silence, and the chorus is the fighting game's theme over the whole ensemble;
+    // mokuso, the meditation, is strings and the bell over a harmony the verses never reach
+    title: 'Black Belt',
+    bpm: 118,
+    swing: 0,
+    level: -1.5,
+    scene: 'dojo',
+    kit: 'dojo',
+    transitions: 'drums',
+    // A wooden hall the taiko rings in; the drums breathe by their own playing, the reese a
+    // little torn
+    room: 'hall',
+    pump: 0.3,
+    grit: 6,
+    voices: { lead: 'square', counter: 'brass', arp: 'arpPulse', bass: 'bassReese' },
+    form: [
+      'intro',
+      'verse',
+      'verse2',
+      'build',
+      'chorus',
+      'mokuso',
+      'verse',
+      'verse2',
+      'build',
+      'chorus',
+    ],
+    sections: [
+      {
+        // Into the hall: the odaiko, the sticks and the bell, the ensemble alone
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        bass: 'none',
+        drums: 'kataIntro',
+        pad: 'none',
+        // The drums alone sit far below the verses: lifted to a calm part's level
+        level: 6,
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_KIAI,
+        // The taiko carry the low end alone: the reese is saved for the second round
+        bass: 'none',
+        drums: 'kata',
+        fill: 'taiko',
+        pad: 'none',
+        layers: { lead: 0.3 },
+      },
+      {
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_KIAI,
+        counter: KATA_ANSWER,
+        // The reese comes in for the hall's second round, the step up to the oroshi
+        bassLine: KATA_BASS,
+        // The hall's second round: chords chopped in the nagado's rhythm, the hats in eighths
+        drums: 'kata2',
+        fill: 'taiko',
+        pad: 'chop',
+        layers: { lead: 0.3, counter: 0.3 },
+      },
+      {
+        // The oroshi: the dominant struck ever closer, the shime rolling up, then a beat of ma
+        name: 'build',
+        tier: 'rise',
+        chords: 'E | E | E | E',
+        bassLine: OROSHI_BASS,
+        drums: 'oroshi',
+        pad: 'hold',
+        silence: 4,
+      },
+      {
+        // The theme on the hard-sync lead over the whole ensemble, brass pushing
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Am | Am | Am | Am | F | F | E | E',
+        lead: KATA_THEME,
+        leadVoice: 'sync',
+        bassLine: KATA_BASS,
+        drums: 'kataHot',
+        fill: 'taiko',
+        pad: 'hold',
+        stabs: 'push',
+        // The verses, without the reese, sit lower: the peak brought back to stand 3-4 dB above
+        level: -1,
+        drop: true,
+      },
+      {
+        // Mokuso: no nagado, the odaiko once a bar, the bell, strings over Dm and B-flat
+        name: 'mokuso',
+        tier: 'calm',
+        chords: 'Dm | Dm | Bb | Bb | Dm | Dm | E | E',
+        counter: MOKUSO_HOLD,
+        counterVoice: 'strings',
+        bass: 'none',
+        drums: 'mokuso',
+        pad: 'swell',
+        // Without the bass's long notes, as quiet as the intro only lifted
+        level: 6,
+      },
+    ],
+  },
+  {
+    // The finale, where the world loses its connection, after Cyberpunk 2077's "V" and Blade
+    // Runner 2049: the last transmission. Static, then the arpeggio reconnecting alone over the
+    // drone; the lament falling low in the verses, the line dropping out, then stuttering with the
+    // beat filling in; the network collapses into a rewind and the chorus is the sighs over Net
+    // Pulse's peak, the kick on every beat; then the connection is lost — static, the sighs'
+    // head echoing over chords the verses never reach — and it comes back
+    title: 'Signal Lost',
+    bpm: 104,
+    swing: 0,
+    level: -0.5,
+    scene: 'brokenNet',
+    kit: 'net',
+    transitions: 'synth',
+    // An empty digital space: the melody and the pads drifting in a long, cold tail, the drums
+    // dry and close; the bass torn and pumping as darksynth's does, held back from the harsh
+    room: 'void',
+    pump: 0.5,
+    grit: 8,
+    voices: { lead: 'pwm', counter: 'square', arp: 'arpPulse', bass: 'bassGrowl' },
+    form: ['intro', 'verse', 'verse2', 'build', 'chorus', 'lost', 'verse2', 'build', 'chorus'],
+    sections: [
+      {
+        // Static on the line, the arpeggio reconnecting over the drone, then the beat
+        name: 'intro',
+        tier: 'calm',
+        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
+        arpLine: SIGNAL_ARP,
+        bass: 'long',
+        drums: 'signal',
+        pad: 'swell',
+        hits: { radioStatic: `X${'.'.repeat(127)}` },
+        sweep: { arp: [0.4, 1.3] },
+        enter: { drums: 4 },
+        // The drone alone under the arpeggio would fill the sub: held back
+        mix: { bass: -4 },
+      },
+      {
+        name: 'verse',
+        tier: 'groove',
+        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
+        lead: SIGNAL_LAMENT,
+        arpLine: SIGNAL_ARP,
+        bass: 'long',
+        drums: 'signal',
+        pad: 'swell',
+        sweep: { arp: [0.4, 1.3] },
+        layers: { lead: 0.3 },
+        mix: { bass: -4 },
+        glitch: 'dropout',
+      },
+      {
+        // The beat filling in, the bass in octaves, the line stuttering at the end
+        name: 'verse2',
+        tier: 'groove',
+        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
+        lead: SIGNAL_LAMENT,
+        arpLine: SIGNAL_ARP,
+        bass: 'octave',
+        drums: 'signal2',
+        pad: 'hold',
+        // The octave bass pumping under the kick sits below the first verse: lifted over it
+        level: 2.5,
+        layers: { lead: 0.3 },
+        glitch: 'stutter',
+      },
+      {
+        // The network collapses: the bass in sixteenths, the snare rolling, a rewind into the peak
+        name: 'build',
+        tier: 'rise',
+        chords: 'G | F#',
+        bass: 'pulse16',
+        drums: 'collapse',
+        pad: 'hold',
+        riser: true,
+        glitch: 'rewind',
+      },
+      {
+        // The sighs on a saw over Net Pulse's peak: the bass driving, the arpeggio three against
+        // four, the kick on every beat, brass pushing
+        name: 'chorus',
+        tier: 'high',
+        chords: 'Bm | Bm | G | G | Em | Em | F# | F#',
+        lead: SIGNAL_SIGHS,
+        leadVoice: 'saw',
+        arpLine: SIGNAL_TRIPLET,
+        bass: 'drive',
+        drums: 'netPulseHot',
+        pad: 'hold',
+        stabs: 'push',
+        // Lifted over the verses, whose pumping octave bass is as loud
+        level: 0.5,
+        drop: true,
+      },
+      {
+        // The connection lost: no beat, static, the sighs' head echoing softly over C and A minor
+        name: 'lost',
+        tier: 'calm',
+        chords: 'C | C | Am | Am | C | C | Am | Am',
+        lead: SIGNAL_ECHO,
+        leadVoice: 'soft',
+        bass: 'long',
+        drums: 'none',
+        pad: 'swell',
+        hits: { radioStatic: `X${'.'.repeat(63)}` },
       },
     ],
   },

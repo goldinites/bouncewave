@@ -335,6 +335,20 @@ describe('Instruments with rendered notes', () => {
     expect(count('createBufferSource')).toBe(9);
   });
 
+  it('plays a lead’s low notes from its low twin, its own roots while the twin isn’t rendered', () => {
+    const { play, graph, pickNote } = setup(true);
+    play.lead('pwm', 55, 0, 1, 0.08, graph.melody, 3000);
+    play.lead('pwm', 67, 0, 1, 0.08, graph.melody, 3000);
+    expect(pickNote.mock.calls.map(([id]) => id)).toEqual(['leadPwmLow', 'leadPwm']);
+
+    pickNote.mockClear();
+    pickNote.mockImplementation((id) =>
+      id === 'leadPwm' ? { buffer: buffer([0.5]), rate: 1, loop: null } : null,
+    );
+    play.lead('pwm', 55, 0, 1, 0.08, graph.melody, 3000);
+    expect(pickNote.mock.calls.map(([id]) => id)).toEqual(['leadPwmLow', 'leadPwm']);
+  });
+
   it('falls back to the live synths until the instruments are rendered', () => {
     const { play, graph, count } = setup(false);
 

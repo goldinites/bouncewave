@@ -38,18 +38,13 @@ export interface TutorialTexts {
 /** The controls screen (in the settings): each row's name, and how keys or a touch do it. */
 export interface ControlsTexts {
   title: string;
-  /** The heading over the shots. */
-  shots: string;
   rows: Record<ControlId, { name: string; keys: string; touch: string }>;
 }
 
-/** The controls screen's rows, the controls' and then the shots'. */
-export const CONTROL_ROWS = {
-  controls: ['paddle', 'pause', 'fullscreen', 'music', 'twoPlayers'],
-  shots: ['perfect', 'angle', 'aim', 'overdrive'],
-} as const;
+/** The controls screen's rows: the buttons alone (the shots are the tutorial's to teach). */
+export const CONTROL_ROWS = ['paddle', 'pause', 'fullscreen', 'music', 'twoPlayers'] as const;
 
-export type ControlId = (typeof CONTROL_ROWS)[keyof typeof CONTROL_ROWS][number];
+export type ControlId = (typeof CONTROL_ROWS)[number];
 
 /** A challenge's name, and what it takes to pass it and what sets its match apart. */
 export type ChallengeDescription = [name: string, goal: string];
@@ -106,7 +101,7 @@ export interface TranslationSchema {
   /** Wiping the statistics: the button, and what it asks before it does. */
   resetStats: string;
   resetStatsConfirm: string;
-  /** Local multiplayer, on the main menu. */
+  /** A match of two on one device, on the main menu. */
   multiplayer: string;
   /** Two players on one device: the setup's title, and how each steers under it. */
   twoPlayers: string;
@@ -236,33 +231,12 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     },
     controls: {
       title: 'CONTROLS',
-      shots: 'SHOTS',
       rows: {
         paddle: { name: 'Paddle', keys: 'W/S · ↑/↓ · mouse', touch: 'Slide a finger' },
         pause: { name: 'Pause', keys: 'P · Esc · right click', touch: 'The ❚❚ button' },
         fullscreen: { name: 'Fullscreen', keys: 'F', touch: 'Install the app' },
         music: { name: 'Music', keys: 'M', touch: 'In the settings' },
         twoPlayers: { name: 'Two players', keys: 'W/S and ↑/↓', touch: 'Each on their half' },
-        perfect: {
-          name: 'Perfect hit',
-          keys: 'Off the middle: a faster ball',
-          touch: 'Off the middle: a faster ball',
-        },
-        angle: {
-          name: 'Angle',
-          keys: 'Off an end: a steeper return',
-          touch: 'Off an end: a steeper return',
-        },
-        aim: {
-          name: 'Aim',
-          keys: 'Perfect on the move: goes your way',
-          touch: 'Perfect on the move: goes your way',
-        },
-        overdrive: {
-          name: 'Overdrive',
-          keys: '3 perfect in a row: a power shot',
-          touch: '3 perfect in a row: a power shot',
-        },
       },
     },
     background: 'BACKGROUND',
@@ -281,7 +255,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     statByDifficulty: 'WINS BY DIFFICULTY',
     resetStats: 'RESET',
     resetStatsConfirm: 'SURE? RESET',
-    multiplayer: 'MULTIPLAYER',
+    multiplayer: '2 PLAYERS',
     twoPlayers: '2 PLAYERS',
     twoPlayersHint: 'Left: W/S, right: arrows. On a touch screen, each on their own half',
     player1Wins: 'PLAYER 1 WINS',
@@ -441,33 +415,12 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     },
     controls: {
       title: 'УПРАВЛЕНИЕ',
-      shots: 'ПРИЁМЫ',
       rows: {
         paddle: { name: 'Ракетка', keys: 'W/S · ↑/↓ · мышь', touch: 'Веди пальцем' },
         pause: { name: 'Пауза', keys: 'P · Esc · правая кнопка', touch: 'Кнопка ❚❚' },
         fullscreen: { name: 'Полный экран', keys: 'F', touch: 'Установи приложение' },
         music: { name: 'Музыка', keys: 'M', touch: 'В настройках' },
         twoPlayers: { name: 'Двое', keys: 'W/S и ↑/↓', touch: 'Каждый на своей половине' },
-        perfect: {
-          name: 'Идеальный удар',
-          keys: 'Серединой: мяч быстрее',
-          touch: 'Серединой: мяч быстрее',
-        },
-        angle: {
-          name: 'Угол',
-          keys: 'Краем: отскок круче',
-          touch: 'Краем: отскок круче',
-        },
-        aim: {
-          name: 'Прицел',
-          keys: 'Идеальный на ходу: мяч, куда ведёшь',
-          touch: 'Идеальный на ходу: мяч, куда ведёшь',
-        },
-        overdrive: {
-          name: 'Overdrive',
-          keys: '3 идеальных подряд: удар мощнее',
-          touch: '3 идеальных подряд: удар мощнее',
-        },
       },
     },
     background: 'ФОН',
@@ -486,7 +439,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     statByDifficulty: 'ПОБЕДЫ ПО СЛОЖНОСТИ',
     resetStats: 'СБРОСИТЬ',
     resetStatsConfirm: 'ТОЧНО СБРОСИТЬ?',
-    multiplayer: 'МУЛЬТИПЛЕЕР',
+    multiplayer: '2 ИГРОКА',
     twoPlayers: '2 ИГРОКА',
     twoPlayersHint: 'Левый — W/S, правый — стрелки. На сенсорном экране — каждый на своей половине',
     // In English, as the finale's YOU WIN is

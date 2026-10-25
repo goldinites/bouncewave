@@ -2,7 +2,7 @@ import { effect, ReadonlySignal, signal, untracked } from '@preact/signals-core'
 import { h } from 'preact';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
-import { CONTROL_ROWS, ControlId, LANGUAGES, TRANSLATIONS } from '@/i18n/translations';
+import { CONTROL_ROWS, LANGUAGES, TRANSLATIONS } from '@/i18n/translations';
 import { ChallengeVerdict } from '@/match/ChallengeJudge';
 import {
   CHALLENGE_IDS,
@@ -934,8 +934,8 @@ export class MenuController {
   }
 
   /**
-   * The controls and the shots, as the device plays them: keys and a mouse, or a finger. Opened
-   * from the settings, so from the pause too.
+   * The controls, as the device plays them: keys and a mouse, or a finger. Opened from the
+   * settings, so from the pause too.
    */
   private controlsScreen(): ScreenEntry {
     return {
@@ -943,16 +943,15 @@ export class MenuController {
       view: () => {
         const texts = this.i18n.t('controls');
         const how = isTouchFirst() ? 'touch' : 'keys';
-        const rows = (ids: readonly ControlId[]) =>
-          ids.map((id) => ({ label: texts.rows[id].name, value: texts.rows[id][how] }));
+        const rows = CONTROL_ROWS.map((id) => ({
+          label: texts.rows[id].name,
+          value: texts.rows[id][how],
+        }));
         return {
           title: texts.title,
           subtitle: '',
           body: h(StatsScreen, {
-            sections: [
-              { rows: rows(CONTROL_ROWS.controls) },
-              { heading: texts.shots, rows: rows(CONTROL_ROWS.shots) },
-            ],
+            sections: [{ rows }],
             backLabel: this.i18n.t('back'),
             onBack: this.back,
             variant: 'controls',

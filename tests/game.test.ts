@@ -88,7 +88,7 @@ describe('Game', () => {
   it('opens on the main menu, with the title the page shows', () => {
     expect(isMenuOpen()).toBe(true);
     expect($('#gameTitle').textContent).toBe('BOUNCEWAVE');
-    expect(labels()).toEqual(['PLAY', 'MULTIPLAYER', 'STATISTICS', 'SETTINGS']);
+    expect(labels()).toEqual(['PLAY', '2 PLAYERS', 'STATISTICS', 'SETTINGS']);
     expect(isPauseButtonShown()).toBe(false);
   });
 
@@ -103,7 +103,7 @@ describe('Game', () => {
     expect($('#gameTitle').textContent).toBe('GAME MODE');
     press('Escape');
     expect($('#gameTitle').textContent).toBe('BOUNCEWAVE');
-    expect(labels()).toEqual(['PLAY', 'MULTIPLAYER', 'STATISTICS', 'SETTINGS']);
+    expect(labels()).toEqual(['PLAY', '2 PLAYERS', 'STATISTICS', 'SETTINGS']);
   });
 
   it('starts a match from PLAY, and pauses and resumes it with Esc', () => {

@@ -29,7 +29,7 @@ First to 10 points wins.
 | Music on/off | `M`               | Settings     |
 | Fullscreen   | `F`               | —            |
 
-**Two players** on one device (**Multiplayer** on the main menu): the left one steers with `W` `S`, the right one with `↑` `↓`; on a touch screen each drags on their own half of the court.
+**Two players** on one device (**2 Players** on the main menu): the left one steers with `W` `S`, the right one with `↑` `↓`; on a touch screen each drags on their own half of the court.
 
 Menus work with the arrow keys, `Enter` and `Esc`. Difficulty, music, sound effects and language are in **Settings**.
 

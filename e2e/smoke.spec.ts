@@ -123,10 +123,10 @@ test('opens a tutorial move on a card that fits the court', async ({ page }) => 
   await page.waitForTimeout(SETTLE_MS);
 });
 
-test('plays a match of two from MULTIPLAYER, both steering at once', async ({ page }) => {
+test('plays a match of two from 2 PLAYERS, both steering at once', async ({ page }) => {
   await page.goto('');
 
-  await button(page, 'MULTIPLAYER').click();
+  await button(page, '2 PLAYERS').click();
   await expect(choice(page, 'POINTS')).toBeVisible();
   await expectOnCourt(page, button(page, 'START'));
   await button(page, 'START').click();

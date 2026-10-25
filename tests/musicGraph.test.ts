@@ -71,21 +71,38 @@ describe('MusicGraph', () => {
     expect(fades(1)).toBe(2);
   });
 
-  it('brings the music back after a drop-out, and a rewind back to its pitch', () => {
+  it('brings the music back after a break, a lost signal and a rewind', () => {
     const { ctx, calls } = fakeAudioContext(10);
     const graph = new MusicGraph(ctx);
 
+    // A break stops dead
     graph.cutOut(12, 0.5);
-    const [comeBack] = callsOf(calls, 'linearRampToValueAtTime').slice(-1);
-    expect(comeBack.args).toEqual([1, 12.5]);
+    const gainRamps = () => callsOf(calls, 'linearRampToValueAtTime');
+    expect(gainRamps().map((c) => c.args)).toEqual([
+      [0, 12.004],
+      [1, 12.5],
+    ]);
 
-    graph.rewind(13, 1);
+    // A lost signal sinks to a muffled trace, never to silence, and comes back open
+    graph.dropSignal(13, 0.3);
+    const [sink, comeBack] = gainRamps().slice(-2);
+    expect(sink.args[0]).toBeGreaterThan(0);
+    expect(comeBack.args).toEqual([1, 13.3]);
+    const [muffle, open] = callsOf(calls, 'exponentialRampToValueAtTime').slice(-2);
+    expect(muffle.args[0]).toBeLessThan(1000);
+    expect(open.args).toEqual([20000, 13.3]);
+
+    // The rewind bends the pitch and lands back on it, without a jump at either end
+    graph.rewind(14, 1);
     const [curve] = callsOf(calls, 'setValueCurveAtTime').slice(-1);
     const values = curve.args[0] as Float32Array;
-    expect(curve.args.slice(1)).toEqual([13, 1]);
+    expect(curve.args.slice(1)).toEqual([14, 1]);
     expect(values[0]).toBe(0);
     expect(values[values.length - 1]).toBeCloseTo(0);
-    expect(Math.max(...values)).toBeGreaterThan(0.1);
+    expect(Math.max(...values)).toBeGreaterThan(0.05);
+    const steps = values.slice(1).map((v, i) => Math.abs(v - values[i]));
+    expect(steps[0]).toBeLessThan(0.002);
+    expect(steps[steps.length - 1]).toBeLessThan(0.002);
   });
 
   describe('rooms', () => {

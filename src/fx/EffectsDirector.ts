@@ -318,10 +318,11 @@ export class EffectsDirector {
       case 'matchStart':
         // Every match is played on another backdrop, found by flicking through the channels:
         // its own, if it asks for one, else the player's. A restart is the same match again, on
-        // the backdrop (and to the song) it was being played on
+        // the backdrop (and to the song) it was being played on. The old set is heard only when
+        // it is seen: staying on the same backdrop, or cutting over with reduced motion, is silent
         if (!this.isRestart()) {
           this.audio.music.enterScene(this.renderer.switchChannel(true, this.matchScene()));
-          this.audio.sfx.playChannelSurf();
+          if (this.renderer.isSurfing) this.audio.sfx.playChannelSurf();
         }
         this.renderer.addFlash(FLASH.START);
         this.paddleFx.reset();

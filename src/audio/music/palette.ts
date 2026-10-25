@@ -1,7 +1,7 @@
 import { KITS, KitName } from '@/audio/music/kits';
 import { BassVoice, LeadVoice, PadVoice, Song, StabVoice } from '@/audio/music/score';
 import { EXTRA_PITCHED, ExtraPitchedId } from '@/audio/samples/extra';
-import { EXTRA_LEAD_FOR, EXTRA_LEADS } from '@/audio/samples/leads';
+import { EXTRA_LEADS, LEAD_SAMPLE_FOR, LOW_TWINS } from '@/audio/samples/leads';
 import { EXTRA_DRUMS, FX_HITS } from '@/audio/samples/percussion';
 import { PitchedSampleId } from '@/audio/samples/pitched';
 import { PitchedRecipe, SampleRecipe } from '@/audio/samples/SampleBank';
@@ -34,6 +34,7 @@ const isExtraPitched = (id: string): id is ExtraPitchedId => id in EXTRA_PITCHED
 /** Every sound of the wider palette: the ones rendered on demand, and so the ones freed. */
 export const LAZY_SOUND_IDS: readonly string[] = [
   ...Object.keys(EXTRA_LEADS),
+  ...Object.values(LOW_TWINS).map((twin) => twin.id),
   ...Object.keys(EXTRA_PITCHED),
   ...Object.keys(EXTRA_DRUMS),
   ...Object.keys(FX_HITS),
@@ -71,9 +72,18 @@ export function soundsFor(
     overrides.lead,
     ...song.sections.flatMap((s) => [s.leadVoice, s.counterVoice, s.arpVoice]),
   ];
+  // A song whose melodies go under a lead's roots gets the lead's low twin too
+  const lowest = Math.min(
+    ...song.sections.flatMap((s) =>
+      [...(s.lead ?? []), ...(s.counter ?? [])].flatMap((note) => (note ? [note.note] : [])),
+    ),
+  );
   for (const voice of leads) {
-    const id = voice && EXTRA_LEAD_FOR[voice];
-    if (id) pitched[id] = EXTRA_LEADS[id];
+    const id = voice && LEAD_SAMPLE_FOR[voice];
+    if (!id) continue;
+    if (id in EXTRA_LEADS) pitched[id] = EXTRA_LEADS[id as keyof typeof EXTRA_LEADS];
+    const twin = LOW_TWINS[id];
+    if (twin && lowest < twin.below) pitched[twin.id] = twin.recipe;
   }
   const tones = [
     overrides.bass ?? song.voices.bass,

@@ -292,7 +292,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     expect(actions.onStartQuickMatch).toHaveBeenCalledOnce();
   });
 
-  it('sets up two players from MULTIPLAYER: background and points, no difficulty', () => {
+  it('sets up two players from 2 PLAYERS: background and points, no difficulty', () => {
     const { menu, screenButtons, labels, title, subtitle, keyButtons, calls } = setup('ru');
     menu.showMainMenu();
     screenButtons()[1].click(); // multiplayer
@@ -306,7 +306,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     keyButtons()[2].click();
     expect(calls).toEqual(['unlock', 'unlock', 'two players']);
     expect(menu.goBack()).toBe(true);
-    expect(screenButtons()[1].textContent).toBe('МУЛЬТИПЛЕЕР'); // back on the main menu
+    expect(screenButtons()[1].textContent).toBe('2 ИГРОКА'); // back on the main menu
   });
 
   it('names the winner at the end of a match of two', () => {
@@ -329,7 +329,7 @@ describe('the PLAY menu and the setup, in the menus', () => {
     expect(menu.goBack()).toBe(true);
     expect(screenButtons().map((b) => b.textContent)).toEqual([
       'PLAY',
-      'MULTIPLAYER',
+      '2 PLAYERS',
       'STATISTICS',
       'SETTINGS',
     ]);

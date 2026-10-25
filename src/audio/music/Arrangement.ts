@@ -360,7 +360,7 @@ export class Arrangement {
     let steps = 1;
     while (pattern[s + steps] === hold) steps++;
     if (fault === 'x') {
-      this.graph.cutOut(time, steps * stepDuration);
+      this.graph.dropSignal(time, steps * stepDuration);
     } else {
       this.graph.rewind(time, steps * stepDuration);
     }

@@ -184,6 +184,11 @@ export class BackgroundRenderer {
     return this._isShowingMystery;
   }
 
+  /** Whether channels are flicking past in static right now, on the way to the match's. */
+  public get isSurfing(): boolean {
+    return this.surf !== null;
+  }
+
   /** Whether a developer pinned the background on screen. */
   public get isPinned(): boolean {
     return this._isPinned;

@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AudioSpectrum } from '@/render/backgrounds/AudioSpectrum';
 import { BrokenNetBackground } from '@/render/backgrounds/BrokenNetBackground';
 import { BackgroundRenderer } from '@/render/BackgroundRenderer';
+import { seededRandom } from '@/shared/random';
 import { isPickableScene } from '@/shared/scenes';
 import { fakeContext } from './helpers/fakeContext';
 
@@ -43,6 +44,12 @@ const runUntilTwoOpen = (background: BrokenNetBackground) => {
 };
 
 describe('BrokenNetBackground', () => {
+  // The errors' timing is random: seeded, a run sees the same windows every time, rather than
+  // now and then none open together within the time the tests wait
+  beforeEach(() => {
+    vi.spyOn(Math, 'random').mockImplementation(seededRandom(7));
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     document.documentElement.lang = '';

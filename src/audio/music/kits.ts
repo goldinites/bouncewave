@@ -75,6 +75,21 @@ export const KITS = {
     perc: 'rim',
     impact: 'impact',
   },
+  // The broken network's: the dark kit with a punchy kick in place of the distorted one, which on
+  // every beat of the peak buried the paddle hits; the synth cymbal for the crash
+  net: {
+    kick: 'kickPunch',
+    snare: 'snareGated',
+    clap: 'clap',
+    hat: 'hat',
+    open: 'open',
+    crash: 'synthCymbal',
+    tom: 'tom',
+    taiko: 'taiko',
+    metal: 'clang',
+    perc: 'rim',
+    impact: 'impact',
+  },
   // Neon Cathedral's: the dark kit with a timpani tuned to E for its kick, the cathedral's
   // orchestra, round where the distorted kick pounded
   cathedral: {
@@ -131,7 +146,7 @@ export const KITS = {
     perc: 'shaker',
     impact: 'impact',
   },
-  // Japan (fuji, dojo): the great odaiko for the taiko, a plain crash, the gong a temple bell
+  // Japan (fuji): the great odaiko for the taiko, a plain crash, the gong a temple bell
   // (metal), wood for the rest
   japan: {
     kick: 'kickPunch',
@@ -145,6 +160,20 @@ export const KITS = {
     taiko: 'odaiko',
     metal: 'gong',
     perc: 'woodblock',
+  },
+  // The dojo's taiko ensemble: the nagado for the kick and the odaiko over it, the shime's crack
+  // for the snare, the sticks on the rims, the atarigane keeping time where a kit's metal would
+  dojo: {
+    kick: 'taiko',
+    snare: 'shime',
+    clap: 'hyoshigi',
+    hat: 'hat',
+    open: 'open',
+    crash: 'crash',
+    tom: 'tom',
+    taiko: 'odaiko',
+    metal: 'atarigane',
+    perc: 'ka',
   },
   // The jungle: hand drums — congas for the toms, bongos for the percussion, the udu's deep
   // bend for the big drum — and a rain stick for the crash

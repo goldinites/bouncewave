@@ -111,7 +111,7 @@ describe('the menus in the classic look', () => {
   it('offers only a quick match and a match of two, straight from the main menu', () => {
     const { menu, labels } = setup('classic');
     menu.showMainMenu();
-    expect(labels()).toEqual(['QUICK MATCH', 'MULTIPLAYER', 'STATISTICS', 'SETTINGS']);
+    expect(labels()).toEqual(['QUICK MATCH', '2 PLAYERS', 'STATISTICS', 'SETTINGS']);
   });
 
   it('sets either match up without a backdrop to choose', () => {
