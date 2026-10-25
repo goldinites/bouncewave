@@ -382,11 +382,11 @@ const CONVEYOR_BASS = cycle(
   euclid(12, 16, 1),
 );
 
-/** The hocket, the melody: notes only on the sixteenths between the beat's, leaping like a machine's sparks. */
-const CONVEYOR_HOCKET = `. C5 . . . G5 . . . C5 . . . Eb5 . . | . D5 . . . G5 . . . C6 . . Bb5 - - -
-                       | . C5 . . . G5 . . . Eb5 . . . F5 . . | G5 - - - - - - - . . . . . . . .
-                       | . F5 . . . C6 . . . Ab5 . . . G5 . . | . F5 . . . C6 . . . Eb5 . . D5 - - -
-                       | . G5 . . D5 . . B4 . . D5 . . G5 . . | G5 - - - - - - - . . . . . . . .`;
+/** The hocket, the melody: notes only on the sixteenths between the beat's, leaping like a machine's sparks, low and heavy. */
+const CONVEYOR_HOCKET = `. C4 . . . G4 . . . C4 . . . Eb4 . . | . D4 . . . G4 . . . C5 . . Bb4 - - -
+                       | . C4 . . . G4 . . . Eb4 . . . F4 . . | G4 - - - - - - - . . . . . . . .
+                       | . F4 . . . C5 . . . Ab4 . . . G4 . . | . F4 . . . C5 . . . Eb4 . . D4 - - -
+                       | . G4 . . D4 . . B3 . . D4 . . G4 . . | G4 - - - - - - - . . . . . . . .`;
 
 /** Long notes answering the hocket from the second verse, one a bar, the chord's colour held. */
 const CONVEYOR_HOLD = `G4 - - - - - - - - - - - - - - - | Eb4 - - - - - - - - - - - - - - -
@@ -408,13 +408,13 @@ const KATA_BASS = cycle(
   euclid(10, 16),
 );
 
-/** The kiai, the verses' melody: a shout of fourths, A–D–E, answered backwards, growing a note each time it comes. */
-const KATA_KIAI = `A4 - . D5 - . E5 - - - - - - - . . | . . . . . . . . E5 - . D5 - . A4 -
-                 | A4 - . D5 - . E5 - . G5 - - - - - - | . . . . . . . . G5 - . E5 - . D5 -
-                 | A4 - . C5 - . F5 - . A5 - . C6 - - - | - - - - - - - - A5 G5 F5 - C5 - - -
-                 | B4 - . E5 - . G#5 - . B5 - - - - - - | . . . . . . . . G#5 - . E5 - . B4 -`;
+/** The kiai, the verses' melody: a shout of fourths, A–D–E, low, answered backwards, growing a note each time it comes. */
+const KATA_KIAI = `A3 - . D4 - . E4 - - - - - - - . . | . . . . . . . . E4 - . D4 - . A3 -
+                 | A3 - . D4 - . E4 - . G4 - - - - - - | . . . . . . . . G4 - . E4 - . D4 -
+                 | A3 - . C4 - . F4 - . A4 - . C5 - - - | - - - - - - - - A4 G4 F4 - C4 - - -
+                 | B3 - . E4 - . G#4 - . B4 - - - - - - | . . . . . . . . G#4 - . E4 - . B3 -`;
 
-/** The verses' answer: a long note in the gap the kiai leaves, below it. */
+/** The verses' answer: a long note in the gap the kiai leaves, above it. */
 const KATA_ANSWER = `. . . . . . . . . . . . . . . . | C5 - - - - - - - . . . . . . . .
                    | . . . . . . . . . . . . . . . . | B4 - - - - - - - . . . . . . . .
                    | . . . . . . . . . . . . . . . . | C5 - - - - - - - . . . . . . . .
@@ -1162,12 +1162,12 @@ const SONG_DEFS: SongDef[] = [
         silence: 4,
       },
       {
-        // The belt at full tilt: the hocket over a long note an octave up, brass pushing
+        // The belt at full tilt: the hocket under the long note, brass pushing
         name: 'chorus',
         tier: 'high',
         chords: 'Cm | Cm | Cm | Cm | Fm | Fm | G | G',
         lead: CONVEYOR_HOCKET,
-        counter: transpose(CONVEYOR_HOLD, 12),
+        counter: CONVEYOR_HOLD,
         bassLine: CONVEYOR_BASS,
         drums: 'ebmHot',
         fill: 'roll',
@@ -1414,56 +1414,4 @@ const SONG_DEFS: SongDef[] = [
   signalSketch('Signal Lost v4', SIGNAL_SIGH_VERSE, SIGNAL_SIGH_CHORUS),
 ];
 
-/** A line of a part, and the octaves it moves by in a sketch. */
-type Shifts = Partial<Record<'lead' | 'counter' | 'arpLine', number>>;
-
-/**
- * A sketch of a track with some of its lines moved by octaves, to compare with it on the stand:
- * the parts named, the lines given. Not on any backdrop.
- */
-const shiftedSketch = (title: string, version: string, parts: Record<string, Shifts>): SongDef => {
-  const def = SONG_DEFS.find((song) => song.title === title)!;
-  return {
-    ...def,
-    title: `${title} ${version}`,
-    sketch: true,
-    scene: undefined,
-    sections: def.sections.map((section) => {
-      const shifted = { ...section };
-      for (const [line, octaves] of Object.entries(parts[section.name] ?? {})) {
-        const notes = section[line as keyof Shifts];
-        if (notes && octaves) shifted[line as keyof Shifts] = transpose(notes, 12 * octaves);
-      }
-      return shifted;
-    }),
-  };
-};
-
-const DOWN = -1;
-const UP = 1;
-
-// The tracks heard too high, their melodies an octave down for the stand (with the user,
-// 26.10.2026): the sax and the vibes of Sunset Strip, the arpeggio rising out of their way;
-// Night Shift's crushed lead; Black Belt's kiai, and its theme as well
-const SHIFTED_SKETCHES: SongDef[] = [
-  shiftedSketch('Sunset Strip', 'v2', {
-    build: { lead: DOWN },
-    chorus: { lead: DOWN, counter: DOWN, arpLine: UP },
-    bridge: { lead: DOWN, arpLine: UP },
-    verse2: { lead: DOWN, arpLine: UP },
-    outro: { lead: DOWN, arpLine: UP },
-  }),
-  shiftedSketch('Night Shift', 'v2', {
-    verse: { lead: DOWN },
-    verse2: { lead: DOWN },
-    chorus: { lead: DOWN, counter: DOWN },
-  }),
-  shiftedSketch('Black Belt', 'v2', { verse: { lead: DOWN }, verse2: { lead: DOWN } }),
-  shiftedSketch('Black Belt', 'v3', {
-    verse: { lead: DOWN },
-    verse2: { lead: DOWN },
-    chorus: { lead: DOWN },
-  }),
-];
-
-export const SONGS: Song[] = [...SONG_DEFS, ...SHIFTED_SKETCHES].map(compileSong);
+export const SONGS: Song[] = SONG_DEFS.map(compileSong);
