@@ -151,9 +151,12 @@ each on their bus, then the limiter. In the music, an instrument plays on its st
 (`drums`, `bass`, `pads`, `melody`), which gives it its saturation, sidechain and sends; an action
 sound plays on `sfx` (`menu` for menus), and a strong one dips the music (`Mixer.duckMusic`).
 
-**An instrument.** A recipe in `audio/samples/` (a graph built in an offline context, rendered once
-per variant into the `SampleBank` when the audio starts); its live synth in `Instruments` plays
-until it is rendered. A drum is a role in a kit (`audio/music/kits.ts`): a song picks its `kit`,
+**An instrument.** A recipe in `audio/samples/`: a graph built in an offline context, rendered per
+variant into the `SampleBank`, one sound at a time, giving the main thread back between them. The
+action sounds and the transitions are rendered as the audio starts and kept all session; a song's
+own instruments (`soundsFor`, `audio/music/palette.ts`) are rendered for the song playing and the
+one coming up, after the action sounds (`SampleBank.holdUntil`), and released once neither needs
+them (`unneeded`). Its live synth in `Instruments` plays until it is rendered. A drum is a role in a kit (`audio/music/kits.ts`): a song picks its `kit`,
 the arrangement asks for roles. A pitched instrument is rendered at a few roots and played from
 the nearest at the right speed, through a live envelope and filter; a sustained one loops, its
 oscillators tuned to whole cycles of the loop (`tune`) so the join is seamless. A transition
@@ -275,7 +278,7 @@ once (`flow.giveSkills`) and counts their uses in the match. A CPU plays its ski
 does: they go off from its play (its swings spin the ball, Reflex judges by its level's top
 speed, `controller.topSpeed`), and what they tell their owner reaches it through
 `controller.onSkillUse` (its Analyzer's read sharpens its eye; nothing of it is drawn). A
-challenge's modifier (4.5) joins the same hooks.
+modifier joins the same hooks.
 
 **A modifier** (docs/CHALLENGES.md). A rule of the match in `rules.modifiers`: its id in
 `MODIFIER_IDS` (`match/modifiers/Modifier.ts`) and its maker in `MODIFIERS`
@@ -308,6 +311,23 @@ story, the career, the classic look) are loaded with `import()` behind its flags
 of theirs in the arcade build. Flags are read only at the root (`app/boot.ts`, `Game`, the
 menus); `match/` knows nothing of editions.
 
+## The stands
+
+Pages in `e2e/` served by the dev server and never built, each running the game's own code —
+simulation, effects, `Renderer`, mixer — with `Math.random` seeded before anything is imported, so
+every run gives the same frames:
+
+| Stand        | What it does                                                                                     | Run by                                  |
+| ------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| `e2e/stand`  | draws one background the same way every time                                                     | `npm run test:visual`                   |
+| `e2e/bench`  | plays every background AI against AI and times the frame against `e2e/frameBudget.ts`            | `npm run test:perf`                     |
+| `e2e/render` | plays a song's whole form offline through the mixer and turns it into pictures and numbers       | `npm run render` (`scripts/render.mjs`) |
+| `e2e/impact` | a scripted rally filmed frame by frame around each kind of hit, the replay included              | `npm run render:impact`                 |
+| `e2e/video`  | a video of `e2e/video/videos.ts`: shots cut on the song's bars, sound rendered offline, −14 LUFS | `npm run video` (`scripts/video.mjs`)   |
+
+The filming stands play their rallies with `e2e/shared/ScriptedController.ts`: a paddle that
+meets the ball at the spot on its face the script asks for, or lets it past.
+
 ## Rules of thumb
 
 - Randomness in the simulation is injected (`random` in `MatchFlow`, the AI, `Ball.serve`), so a
@@ -319,7 +339,7 @@ menus); `match/` knows nothing of editions.
   `prefers-reduced-motion`; everything works on a phone in either orientation.
 - Every paddle that charges Overdrive draws its meter (`flow.overdriveCharges`): a person's, and
   a CPU's at a level that does where the rules let it (`rules.cpuOverdrive`, the quick match).
-  A match of two (`flow.twoPlayers`) ends in a win, the winner named; otherwise, outside the
+  A match of two (`flow.isTwoPlayer`) ends in a win, the winner named; otherwise, outside the
   match, the left side is still taken to be the player: whose win the finale and the menus show.
 - If a feature needs `Game.ts`, `MatchFlow.ts`, `RenderFrame` and `EffectsDirector` changed all at
   once, a building block is missing: add it first, then the feature.

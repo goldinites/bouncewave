@@ -149,6 +149,33 @@ async function inTurns<T, R>(items: readonly T[], start: (item: T) => Promise<R>
   return Promise.all(started);
 }
 
+/**
+ * Offline renders under way at once. A song's seventy-odd takes all rendering together finished
+ * together, and the browser handed their buffers to the main thread back to back: the more sounds
+ * a song has, the longer the page went without a frame (Neon Cathedral ~5 ms past the timer's own
+ * lateness here, ~90 on a CI runner). Eight at a time hold it at that lateness, the song's render
+ * taking about as long as before.
+ */
+const MAX_RENDERS = 8;
+
+let rendering = 0;
+const waiting: (() => void)[] = [];
+
+/** Runs `job` once fewer than `MAX_RENDERS` are under way, in a task of its own. */
+async function inSlot<T>(job: () => Promise<T>): Promise<T> {
+  if (rendering >= MAX_RENDERS) await new Promise<void>((resolve) => waiting.push(resolve));
+  else rendering++;
+  try {
+    // The slot was handed over from a finished job's task: this one is built in its own
+    await yieldToMain();
+    return await job();
+  } finally {
+    const next = waiting.shift();
+    if (next) next();
+    else rendering--;
+  }
+}
+
 /** A string's hash, so each sound's variants have seeds of their own. */
 function hash(text: string): number {
   let h = 2166136261;
@@ -190,7 +217,7 @@ export class SampleBank {
     if (pending.length === 0) return;
     await this.gate;
 
-    // Each take built in a task of its own, all of them rendering together
+    // Each take built in a task of its own, up to `MAX_RENDERS` rendering together
     await inTurns(pending, ([id, recipe]) => this.renderSound(rate, Offline, id, recipe)).catch(
       () => {
         // A sound that failed to render stays on its live synth
@@ -207,19 +234,21 @@ export class SampleBank {
     recipe: SampleRecipe,
   ): Promise<void> {
     const takes = Array.from({ length: recipe.variants }, (_, variant) => variant);
-    const variants = await inTurns(takes, async (variant) => {
-      const at = Math.min(rate, recipe.maxRate ?? rate);
-      const ctx = new Offline(1, Math.ceil(recipe.duration * at), at);
-      recipe.build(ctx, seededRandom(hash(`${id}:${variant}`)));
-      const buffer = await renderOffline(ctx);
-      // Renders finishing together would be scaled all in one go
-      await yieldToMain();
-      if (recipe.reverse) {
-        for (let c = 0; c < buffer.numberOfChannels; c++) buffer.getChannelData(c).reverse();
-      }
-      normalise(buffer, recipe.level ?? 0);
-      return buffer;
-    });
+    const variants = await inTurns(takes, (variant) =>
+      inSlot(async () => {
+        const at = Math.min(rate, recipe.maxRate ?? rate);
+        const ctx = new Offline(1, Math.ceil(recipe.duration * at), at);
+        recipe.build(ctx, seededRandom(hash(`${id}:${variant}`)));
+        const buffer = await renderOffline(ctx);
+        // Renders finishing together would be scaled all in one go
+        await yieldToMain();
+        if (recipe.reverse) {
+          for (let c = 0; c < buffer.numberOfChannels; c++) buffer.getChannelData(c).reverse();
+        }
+        normalise(buffer, recipe.level ?? 0);
+        return buffer;
+      }),
+    );
     this.buffers.set(id, variants);
   }
 
@@ -232,7 +261,7 @@ export class SampleBank {
     if (pending.length === 0) return;
     await this.gate;
 
-    // Each root built in a task of its own, all of them rendering together
+    // Each root built in a task of its own, up to `MAX_RENDERS` rendering together
     await inTurns(pending, ([id, recipe]) =>
       this.renderInstrument(rate, Offline, id, recipe),
     ).catch(() => {
@@ -248,26 +277,28 @@ export class SampleBank {
     id: string,
     recipe: PitchedRecipe,
   ): Promise<void> {
-    const roots = await inTurns(recipe.roots, async (root): Promise<RenderedRoot> => {
-      const loop = recipe.loop;
-      const tune = loop
-        ? (hz: number) => Math.max(1, Math.round(hz * loop.length)) / loop.length
-        : (hz: number) => hz;
-      const frequency = tune(midiToFrequency(root));
-      const at = Math.min(rate, recipe.maxRate ?? rate);
-      const ctx = new Offline(recipe.channels ?? 1, Math.ceil(recipe.duration * at), at);
-      recipe.build(ctx, seededRandom(hash(`${id}:${root}`)), frequency, tune);
-      const buffer = await renderOffline(ctx);
-      // Renders finishing together would be scaled all in one go
-      await yieldToMain();
-      normalise(buffer, recipe.level ?? 0);
-      return {
-        root,
-        buffer,
-        frequency,
-        loop: loop ? { start: loop.start, end: loop.start + loop.length } : null,
-      };
-    });
+    const roots = await inTurns(recipe.roots, (root) =>
+      inSlot(async (): Promise<RenderedRoot> => {
+        const loop = recipe.loop;
+        const tune = loop
+          ? (hz: number) => Math.max(1, Math.round(hz * loop.length)) / loop.length
+          : (hz: number) => hz;
+        const frequency = tune(midiToFrequency(root));
+        const at = Math.min(rate, recipe.maxRate ?? rate);
+        const ctx = new Offline(recipe.channels ?? 1, Math.ceil(recipe.duration * at), at);
+        recipe.build(ctx, seededRandom(hash(`${id}:${root}`)), frequency, tune);
+        const buffer = await renderOffline(ctx);
+        // Renders finishing together would be scaled all in one go
+        await yieldToMain();
+        normalise(buffer, recipe.level ?? 0);
+        return {
+          root,
+          buffer,
+          frequency,
+          loop: loop ? { start: loop.start, end: loop.start + loop.length } : null,
+        };
+      }),
+    );
     this.roots.set(id, roots);
   }
 
