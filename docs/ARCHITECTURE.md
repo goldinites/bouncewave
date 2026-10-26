@@ -234,7 +234,8 @@ buttons (skipping the disabled ones and those with `tabIndex` -1) and any other 
 A new kind of player (a replay, a remote player) is a new `PaddleController`.
 
 **A look.** The whole game's presentation, a `Look` (`shared/look.ts`): neon, or the classic
-look `ClassicSwitch` (`easterEgg/`) turns on and off from the main menu only. `Game` follows its
+look `ClassicSwitch` (`easterEgg/`) turns on and off from the main menu only, in a build whose
+`FEATURES` (`app/features.ts`) have it (off for now: ROADMAP 8.2). `Game` follows its
 signal and hands the look to the `Renderer` (the classic one draws its own flat `ClassicScene` and
 shows no effects: `renderer.showsEffects`), the `UIManager` (the menus' chrome, `classic.css`) and
 the `AudioEngine` (which music `playMusic` plays), and plays its matches as Pong was: no Overdrive

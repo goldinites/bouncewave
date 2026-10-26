@@ -1,6 +1,7 @@
 import { effect, untracked } from '@preact/signals-core';
 import { FixedStep } from '@/app/FixedStep';
 import { MatchReplay } from '@/app/MatchReplay';
+import { Features, FEATURES } from '@/app/features';
 import { MenuBackdrops } from '@/app/MenuBackdrops';
 import { ChallengeSession } from '@/app/sessions/ChallengeSession';
 import { QuickMatchSession } from '@/app/sessions/QuickMatchSession';
@@ -151,8 +152,13 @@ export class Game {
   /**
    * @param profile the player's profile, loaded before the game starts (`app/boot.ts`); read
    * from this browser's storage when left out
+   * @param features what this build offers (`app/features.ts`)
    */
-  constructor(canvas: HTMLCanvasElement, profile: ProfileStore = new ProfileStore()) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    profile: ProfileStore = new ProfileStore(),
+    features: Features = FEATURES,
+  ) {
     this.profile = profile;
     this.settings = new SettingsStore(profile.settings);
     this.i18n = new I18nManager(this.settings.current.language);
@@ -299,11 +305,11 @@ export class Game {
       skillsOf: (owner) => this.skillsOf(owner),
     };
 
-    // The classic look comes and goes only on the main menu. Taps on the title are the phone's
-    // way in; a mouse has the Konami code's keyboard to hand
+    // The classic look comes and goes only on the main menu, in a build that has it. Taps on the
+    // title are the phone's way in; a mouse has the Konami code's keyboard to hand
     const title = document.getElementById('gameTitle');
     this.classicSwitch = new ClassicSwitch(
-      () => this.menuController.isOnMainMenu,
+      () => features.classicLook && this.menuController.isOnMainMenu,
       window.matchMedia('(pointer: coarse)').matches ? title : null,
     );
 

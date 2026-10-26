@@ -165,7 +165,16 @@ describe('Game', () => {
     expect(choice('BACKGROUND')).toBe('LASERS');
   });
 
-  it('plays the classic look as Pong was: no Overdrive meter, no skills', () => {
+  it('leaves the classic look out of a build without it: the Konami code does nothing', () => {
+    for (const code of KONAMI) press(code);
+    expect(labels()).toEqual(['PLAY', '2 PLAYERS', 'STATISTICS', 'SETTINGS']);
+  });
+
+  it('plays the classic look as Pong was, in a build that has it: no Overdrive, no skills', () => {
+    game.dispose();
+    document.body.innerHTML = BODY;
+    game = new Game($<HTMLCanvasElement>('#gameCanvas'), undefined, { classicLook: true });
+    game.init();
     const flow = (game as unknown as { flow: MatchFlow }).flow;
     play();
     expect(flow.overdriveCharges[0]).toBe(0);
