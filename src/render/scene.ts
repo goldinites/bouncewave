@@ -97,12 +97,20 @@ export interface Squash {
   amount: number;
 }
 
+/** The point that won the match shown again, slowed, in cinema bars (app/MatchReplay). */
+export interface ReplayView {
+  /** REPLAY, in the player's language. */
+  label: string;
+}
+
 /** Everything the renderer needs to draw (and animate toward) one frame, by who reads it. */
 export interface RenderFrame {
   court: CourtView;
   hud: HudView;
   drama: DramaView;
   particles: ParticleView;
+  /** The replay being shown instead of the match; null when it is the match. */
+  replay: ReplayView | null;
   analyser: AnalyserNode | null;
   isRotated: boolean;
 }

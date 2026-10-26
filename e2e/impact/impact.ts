@@ -5,8 +5,9 @@
  *
  * The left (cyan) paddle plays the player's side with Overdrive on: plain hits while the ball
  * speeds up, three perfect hits that charge the meter, then the power shot, which the right
- * (pink) paddle lets past for the goal. Each paddle meets the ball at the spot on its face the
- * script asks for. The randomness is seeded, so every run films the same frames.
+ * (pink) paddle lets past for the goal. The goal wins the match, and its replay (app/MatchReplay)
+ * is filmed too, a frame in every REPLAY_EVERY. Each paddle meets the ball at the spot on its face
+ * the script asks for. The randomness is seeded, so every run films the same frames.
  *
  * Exposes `window.renderImpact({ scene })`, which plays the rally on that background and resolves
  * to one contact sheet per moment (close up around the contact, and the whole screen) and a short
@@ -35,6 +36,8 @@ const FILM = { PRE: 3, POST: 13, COLUMNS: 4 } as const;
 const CLOSE_UP = { WIDTH: 300, HEIGHT: 190 } as const;
 const WHOLE_SCALE = 0.5;
 const LABEL = { HEIGHT: 18, FONT: '12px monospace' } as const;
+// The replay is filmed a frame in this many, as long as it runs
+const REPLAY_EVERY = 16;
 
 // Where on its face each paddle meets the ball, in [-1, 1] of its half-height: within the
 // perfect zone (STANDARD_PADDLE.perfectZone, 0.2) a perfect hit, off it a plain one at an angle
@@ -58,6 +61,9 @@ interface Moment {
   y: number;
   /** Whole-screen frames, the PRE before it first, in order. */
   frames: HTMLCanvasElement[];
+  /** Frames apart on the sheet (the replay's), and how many come before it; 1 and FILM.PRE if not said. */
+  step?: number;
+  pre?: number;
 }
 
 export interface ImpactResult {
@@ -79,6 +85,7 @@ const { MatchFlow } = await import('@/match/MatchFlow');
 const { Paddle } = await import('@/match/Paddle');
 const { predictArrival } = await import('@/match/AiController');
 const { firstTo, STANDARD_RULES } = await import('@/match/rules');
+const { MatchReplay } = await import('@/app/MatchReplay');
 const { EffectsDirector } = await import('@/fx/EffectsDirector');
 const { ParticleSystem } = await import('@/fx/ParticleSystem');
 const { Renderer } = await import('@/render/Renderer');
@@ -160,18 +167,26 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
 
   const pending: MatchEvent[] = [];
   const random = Math.random;
-  const flow = new MatchFlow({
+  const replay = new MatchReplay({
+    renderer,
+    paddles: () => paddles,
+    time: () => flow.time,
+    isEnabled: () => true,
+    label: () => 'REPLAY',
+  });
+  const flow: InstanceType<typeof MatchFlow> = new MatchFlow({
     paddles,
     ball: new Ball(),
     input: { pollPlayerMovement: () => {} },
     getDifficulty: () => DifficultyLevel.HARD,
-    onEvent: (event) => {
-      effects.handle(event);
-      pending.push(event);
-    },
+    onEvent: (event) =>
+      replay.route(event, (published) => {
+        effects.handle(published);
+        pending.push(published);
+      }),
     random,
   });
-  flow.startMatch({ ...STANDARD_RULES, winningScores: firstTo(99), rallyPressure: false }, [
+  flow.startMatch({ ...STANDARD_RULES, winningScores: firstTo(1), rallyPressure: false }, [
     { controller: left, overdrive: true },
     { controller: right, overdrive: false },
   ]);
@@ -259,6 +274,7 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
     particles,
     analyser: null,
     isRotated: false,
+    replay: null,
   };
 
   /** The frame as the game builds it (app/Game.ts, buildRenderFrame), for the state now. */
@@ -302,12 +318,26 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
   const recent: HTMLCanvasElement[] = [];
   const filming: Moment[] = [];
   const filmed: Moment[] = [];
+  const replayed: Moment = {
+    id: 'replay',
+    title: 'Replay of the winning point',
+    x: 0,
+    y: 0,
+    frames: [],
+    step: REPLAY_EVERY,
+    pre: 0,
+  };
+  let replayFrame = 0;
   for (let i = 0; i < MAX_FRAMES; i++) {
     effects.beforeSimulation(FRAME, flow);
     const dt = FRAME * effects.timeScale;
-    for (let s = 0; s < Math.round(dt / STEP); s++) flow.update(STEP);
+    if (!replay.isHolding) {
+      for (let s = 0; s < Math.round(dt / STEP); s++) flow.update(STEP);
+    }
     effects.afterSimulation(dt, flow);
     flow.interpolate(1);
+    replay.record(flow);
+    replay.update(FRAME);
 
     for (const event of pending.splice(0)) {
       const moment = momentOf(event);
@@ -315,10 +345,12 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
     }
 
     refreshFrame();
-    renderer.update(FRAME, frame);
-    renderer.render(frame, FRAME);
+    const shown = replay.isShowing ? replay.frame(frame) : frame;
+    renderer.update(FRAME, shown);
+    renderer.render(shown, FRAME);
 
     const shot = copyOf(canvas);
+    if (replay.isShowing && replayFrame++ % REPLAY_EVERY === 0) replayed.frames.push(shot);
     recent.push(shot);
     if (recent.length > FILM.PRE) recent.shift();
     for (const moment of [...filming]) {
@@ -328,8 +360,9 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
         filmed.push(moment);
       }
     }
-    if (isRallyOver && filming.length === 0) break;
+    if (isRallyOver && filming.length === 0 && !replay.isHolding) break;
   }
+  if (replayed.frames.length > 0) filmed.push(replayed);
   renderer.dispose();
   if (!isRallyOver) throw new Error(`The scripted rally on ${scene} never reached its goal`);
 
@@ -337,7 +370,7 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
   const images: Record<string, string> = {};
   const lines = [`# Impact on ${scene}`, ''];
   for (const moment of filmed) {
-    images[`${moment.id}-close.png`] = sheet(moment, scale, true);
+    if (moment.id !== 'replay') images[`${moment.id}-close.png`] = sheet(moment, scale, true);
     images[`${moment.id}-whole.png`] = sheet(moment, scale, false);
     lines.push(`- **${moment.id}**: ${moment.title}`);
   }
@@ -377,7 +410,7 @@ function sheet(moment: Moment, scale: number, isCloseUp: boolean): string {
   moment.frames.forEach((frame, index) => {
     const x = (index % FILM.COLUMNS) * cellWidth;
     const y = LABEL.HEIGHT + Math.floor(index / FILM.COLUMNS) * (cellHeight + LABEL.HEIGHT);
-    const number = index - FILM.PRE;
+    const number = (index - (moment.pre ?? FILM.PRE)) * (moment.step ?? 1);
     ctx.fillStyle = number === 0 ? '#ffe53b' : '#aaa';
     ctx.fillText(
       `${number > 0 ? '+' : ''}${number}  ${Math.round(number * FRAME * 1000)} ms`,

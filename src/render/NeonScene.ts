@@ -15,7 +15,9 @@ import {
 } from '@/render/SkillRenderer';
 import { Ball } from '@/match/Ball';
 import { OVERDRIVE } from '@/match/Overdrive';
+import { gameFont } from '@/shared/fonts';
 import { approach, clamp } from '@/shared/math';
+import { COLORS } from '@/shared/palette';
 
 // Lightweight scene dimming behind the menus and the pause
 const MENU_DIM_RGB = '8, 2, 26';
@@ -24,6 +26,9 @@ const VIGNETTE = { RGB: '4, 0, 14', MAX_ALPHA: 0.6 } as const;
 const SHAKE_FROM = 0.2; // px; a weaker shake isn't worth moving the court for
 const FLASH_ALPHA = 0.25; // of a full flash
 const TIME_WARP_FADE = 14; // 1/s the slowed world's cast comes and goes at
+// A replay's cinema bars along the court's long edges (its short ones on a phone held upright, which
+// turns the court), px thick, and its label with a blinking dot (steady for less motion)
+const REPLAY_BARS = { SIZE: 26, ALPHA: 0.85, FONT: 15, BLINK: 3 } as const; // px, -, px, Hz
 // A turbo ball's heat: none at the serve's speed, full this much faster (px/s)
 const TURBO_HEAT = { FROM: 380, SPAN: 520 } as const;
 
@@ -458,6 +463,43 @@ function neonLayers(
         c.fillStyle = vignette;
         fillScreen(c);
         c.globalAlpha = 1;
+      },
+    },
+    {
+      id: 'replay',
+      space: 'screen',
+      render: (c, { replay, court, isRotated }) => {
+        if (!replay) return;
+        const { SIZE, ALPHA, FONT, BLINK } = REPLAY_BARS;
+        c.fillStyle = `rgba(0, 0, 0, ${ALPHA})`;
+        if (isRotated) {
+          c.fillRect(0, 0, SIZE, COURT.HEIGHT);
+          c.fillRect(COURT.WIDTH - SIZE, 0, SIZE, COURT.HEIGHT);
+        } else {
+          c.fillRect(0, 0, COURT.WIDTH, SIZE);
+          c.fillRect(0, COURT.HEIGHT - SIZE, COURT.WIDTH, SIZE);
+        }
+        c.save();
+        if (isRotated) {
+          c.translate(COURT.WIDTH - SIZE / 2, COURT.HEIGHT / 2);
+          c.rotate(Math.PI / 2);
+        } else {
+          c.translate(COURT.WIDTH / 2, SIZE / 2);
+        }
+        const isLit = isMotionReduced() || Math.sin(court.time * BLINK * 2 * Math.PI) > -0.3;
+        c.font = gameFont(700, FONT);
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillStyle = COLORS.WHITE;
+        c.fillText(replay.label, 0, 1);
+        // A recording's red dot, before the word
+        if (isLit) {
+          c.fillStyle = COLORS.RED;
+          c.beginPath();
+          c.arc(-c.measureText(replay.label).width / 2 - FONT * 0.8, 0, FONT * 0.3, 0, 2 * Math.PI);
+          c.fill();
+        }
+        c.restore();
       },
     },
     {

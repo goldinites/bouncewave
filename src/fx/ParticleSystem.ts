@@ -114,6 +114,14 @@ export class ParticleSystem {
     this.ripples.push({ x, y, age: 0, strength, isUpright, color });
   }
 
+  /** Everything gone at once. */
+  public clear(): void {
+    this.particles.length = 0;
+    this.rings.length = 0;
+    this.flares.length = 0;
+    this.ripples.length = 0;
+  }
+
   public update(dt: number): void {
     const particles = this.particles;
     for (let i = particles.length - 1; i >= 0; i--) {

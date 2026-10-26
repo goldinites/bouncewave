@@ -174,6 +174,7 @@ function bench(scene: string) {
       particles,
       analyser: null,
       isRotated: false,
+      replay: null,
     };
     const renderStart = performance.now();
     renderer.update(FRAME, frame);

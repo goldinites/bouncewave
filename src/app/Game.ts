@@ -1,5 +1,6 @@
 import { effect, untracked } from '@preact/signals-core';
 import { FixedStep } from '@/app/FixedStep';
+import { MatchReplay } from '@/app/MatchReplay';
 import { MenuBackdrops } from '@/app/MenuBackdrops';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
@@ -140,6 +141,8 @@ export class Game {
   /** Cuts frame times into the match's fixed simulation steps. */
   private readonly simulation = new FixedStep();
   private readonly effects: EffectsDirector;
+  /** The point that won the match, shown again slowed before the finale when worth it. */
+  private readonly replay: MatchReplay;
   private readonly fpsMeter: FpsMeter;
   private readonly backgroundMenu: BackgroundMenu;
   /** Switches the skill prototypes on and off, and counts their uses in the match on court. */
@@ -258,7 +261,18 @@ export class Game {
       },
       onToggleFullscreen: () => this.toggleFullscreen(),
       onToggleMusic: () => this.toggleMusic(),
-      onPress: () => this.flow.skipFinale(),
+      // A press skips the replay first, then the finale
+      onPress: () => {
+        if (!this.replay.skip()) this.flow.skipFinale();
+      },
+    });
+
+    this.replay = new MatchReplay({
+      renderer: this.renderer,
+      paddles: () => this.paddles,
+      time: () => this.flow.time,
+      isEnabled: () => this.renderer.showsEffects && !this.isTutorial,
+      label: () => this.i18n.t('replay'),
     });
 
     this.effects = new EffectsDirector({
@@ -298,7 +312,8 @@ export class Game {
       ball: this.ball,
       input: this.inputHandler,
       getDifficulty: () => this.settings.current.difficulty,
-      onEvent: (event) => this.matchEvents.emit(event),
+      // The finale's start waits while the point that won it is replayed
+      onEvent: (event) => this.replay.route(event, (e) => this.matchEvents.emit(e)),
     });
 
     // The classic look comes and goes only on the main menu. Taps on the title are the phone's
@@ -737,10 +752,15 @@ export class Game {
       const dt = realDt * this.effects.timeScale;
       // The match runs in whole steps of a fixed length; the effects, which only decorate it,
       // follow the frame's own smooth time
-      this.simulation.advance(dt, (step) => this.flow.update(step));
+      // A replay holds the match where its finale starts; the goal's own effects play on
+      if (!this.replay.isHolding) this.simulation.advance(dt, (step) => this.flow.update(step));
       this.effects.afterSimulation(dt, this.flow);
     }
     this.flow.interpolate(this.simulation.alpha);
+    if (!isPaused) {
+      this.replay.record(this.flow);
+      this.replay.update(realDt);
+    }
 
     this.menuBackdrops.update(realDt);
 
@@ -773,7 +793,8 @@ export class Game {
             this.challenge ? CHALLENGES[this.challenge].goal : null,
           );
     this.conditionBar.update(condition, !this.isConditionOnCourt);
-    const frame = this.buildRenderFrame(condition);
+    const live = this.buildRenderFrame(condition);
+    const frame = this.replay.isShowing ? this.replay.frame(live) : live;
     if (!isPaused) {
       this.renderer.update(realDt, frame);
     }
@@ -867,7 +888,8 @@ export class Game {
     // In a match, the match's level (a challenge sets its own); behind the menus, the chosen one
     const difficulty = this.flow.isDemo ? this.settings.current.difficulty : this.flow.difficulty;
     return {
-      gameState: this.flow.gameState,
+      // Muffled while the winning point is replayed, as behind the pause
+      gameState: this.replay.isShowing ? 'paused' : this.flow.gameState,
       serveTime: this.flow.serveTime,
       // The music builds with the fastest ball on court
       ballSpeed: Math.max(...this.flow.balls.map((b) => b.speed)),
@@ -925,6 +947,7 @@ export class Game {
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),
       isRotated: this.isPortraitView,
+      replay: null,
     };
   }
 

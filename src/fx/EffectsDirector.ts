@@ -375,20 +375,8 @@ export class EffectsDirector {
     const charged = (flow.overdriveStreaks ?? []).map(
       (streak) => flow.phase !== 'finale' && (streak ?? 0) >= OVERDRIVE.CHARGE,
     );
-    this.paddleFx.update(dt, this.paddles, this.particles, sparkRally, charged);
-    this.squash.update(dt);
-    for (let i = 0; i < this.whiteHot.length; i++) {
-      this.whiteHot[i] = Math.max(0, this.whiteHot[i] - dt / IMPACT.WHITE_HOT);
-    }
+    this.animate(dt, flow.isBallLive ? flow.balls : [], sparkRally, charged);
     this.followPowerSound(dt);
-
-    // Every ball burns with the climax; a power shot burns like the full climax
-    if (flow.isBallLive) {
-      for (const ball of flow.balls) {
-        const emberLevel = Math.max(this.climax.level, ball.isPowerShot ? 1 : 0);
-        if (emberLevel > 0.05) this.emitClimaxEmbers(dt, emberLevel, ball);
-      }
-    }
 
     for (const shot of this.fireworks?.update(dt) ?? []) {
       this.particles.burst(shot.x, shot.y, shot.color, BURST.FIREWORK_COUNT, BURST.FIREWORK_SPEED);
@@ -399,6 +387,31 @@ export class EffectsDirector {
     }
 
     this.particles.update(dt);
+  }
+
+  /**
+   * Moves what the effects draw on by `dt` s, the particles excepted: the paddles' glow, recoil
+   * and sparks, the balls' squash and heat, the embers off burning `balls` (those in flight). The
+   * match's frame calls it, and a replay (app/MatchReplay) on balls of its own.
+   * @param charged whether each paddle's Overdrive is charged
+   */
+  public animate(
+    dt: number,
+    balls: readonly Ball[],
+    rally: number,
+    charged: readonly boolean[] = [],
+  ): void {
+    this.balls = balls.length > 0 ? balls : this.balls;
+    this.paddleFx.update(dt, this.paddles, this.particles, rally, charged);
+    this.squash.update(dt);
+    for (let i = 0; i < this.whiteHot.length; i++) {
+      this.whiteHot[i] = Math.max(0, this.whiteHot[i] - dt / IMPACT.WHITE_HOT);
+    }
+    // Every ball burns with the climax; a power shot burns like the full climax
+    for (const ball of balls) {
+      const emberLevel = Math.max(this.climax.level, ball.isPowerShot ? 1 : 0);
+      if (emberLevel > 0.05) this.emitClimaxEmbers(dt, emberLevel, ball);
+    }
   }
 
   /**
