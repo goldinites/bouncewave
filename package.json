@@ -21,7 +21,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "icons": "pwa-assets-generator && pwa-assets-generator --config pwa-assets.favicon.config.ts && node scripts/splash.mjs",
-    "render:impact": "node scripts/impact.mjs"
+    "render:impact": "node scripts/impact.mjs",
+    "video": "node scripts/video.mjs",
+    "size": "node scripts/size.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -31,6 +33,7 @@
     "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
+    "ffmpeg-static": "^5.3.0",
     "globals": "^17.13.0",
     "happy-dom": "^21.0.1",
     "prettier": "^3.9.10",

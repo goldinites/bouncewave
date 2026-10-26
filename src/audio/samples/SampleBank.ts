@@ -116,6 +116,39 @@ function normalise(buffer: AudioBuffer, level: number): void {
   }
 }
 
+/**
+ * Lets the main thread draw a frame and take input before going on: building a sound's graph is
+ * done there, and a song's dozens built in one go held it for a tenth of a second, a stutter in
+ * the middle of a match (ROADMAP 7.2f). The renders themselves run on the audio thread meanwhile.
+ */
+function yieldToMain(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof MessageChannel === 'undefined') {
+      setTimeout(resolve, 0);
+      return;
+    }
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      resolve();
+    };
+    channel.port2.postMessage(null);
+  });
+}
+
+/**
+ * `start` for each of `items` in a task of its own, the main thread let go between them, all of
+ * them under way together; resolves with their results in order.
+ */
+async function inTurns<T, R>(items: readonly T[], start: (item: T) => Promise<R>): Promise<R[]> {
+  const started: Promise<R>[] = [];
+  for (const item of items) {
+    await yieldToMain();
+    started.push(start(item));
+  }
+  return Promise.all(started);
+}
+
 /** A string's hash, so each sound's variants have seeds of their own. */
 function hash(text: string): number {
   let h = 2166136261;
@@ -137,6 +170,16 @@ export class SampleBank {
   private firstStarted: number | null = null;
   /** Milliseconds from the first render's start to the last one's end, for the listening stand. */
   public renderTime = 0;
+  /** What renders asked for from now on wait for: the sounds that must come first. */
+  private gate: Promise<unknown> = Promise.resolve();
+
+  /**
+   * Renders asked for from now on start once `first` is done (the action sounds: the first hit
+   * comes within seconds, a song's instruments have their live synths meanwhile).
+   */
+  public holdUntil(first: Promise<unknown>): void {
+    this.gate = first.catch(() => {});
+  }
 
   /** Renders every recipe not rendered yet; resolves when they all are. */
   public async render(rate: number, recipes: Record<string, SampleRecipe>): Promise<void> {
@@ -145,28 +188,39 @@ export class SampleBank {
     const pending = this.claim(recipes);
     // Nothing new to render: the time it took stays as it was
     if (pending.length === 0) return;
+    await this.gate;
 
-    await Promise.all(
-      pending.map(async ([id, recipe]) => {
-        const variants = await Promise.all(
-          Array.from({ length: recipe.variants }, async (_, variant) => {
-            const at = Math.min(rate, recipe.maxRate ?? rate);
-            const ctx = new Offline(1, Math.ceil(recipe.duration * at), at);
-            recipe.build(ctx, seededRandom(hash(`${id}:${variant}`)));
-            const buffer = await renderOffline(ctx);
-            if (recipe.reverse) {
-              for (let c = 0; c < buffer.numberOfChannels; c++) buffer.getChannelData(c).reverse();
-            }
-            normalise(buffer, recipe.level ?? 0);
-            return buffer;
-          }),
-        );
-        this.buffers.set(id, variants);
-      }),
-    ).catch(() => {
-      // A sound that failed to render stays on its live synth
-    });
+    // Each take built in a task of its own, all of them rendering together
+    await inTurns(pending, ([id, recipe]) => this.renderSound(rate, Offline, id, recipe)).catch(
+      () => {
+        // A sound that failed to render stays on its live synth
+      },
+    );
     this.finished();
+  }
+
+  /** Renders one sound, every variant of it, into the bank. */
+  private async renderSound(
+    rate: number,
+    Offline: OfflineContextClass,
+    id: string,
+    recipe: SampleRecipe,
+  ): Promise<void> {
+    const takes = Array.from({ length: recipe.variants }, (_, variant) => variant);
+    const variants = await inTurns(takes, async (variant) => {
+      const at = Math.min(rate, recipe.maxRate ?? rate);
+      const ctx = new Offline(1, Math.ceil(recipe.duration * at), at);
+      recipe.build(ctx, seededRandom(hash(`${id}:${variant}`)));
+      const buffer = await renderOffline(ctx);
+      // Renders finishing together would be scaled all in one go
+      await yieldToMain();
+      if (recipe.reverse) {
+        for (let c = 0; c < buffer.numberOfChannels; c++) buffer.getChannelData(c).reverse();
+      }
+      normalise(buffer, recipe.level ?? 0);
+      return buffer;
+    });
+    this.buffers.set(id, variants);
   }
 
   /** Renders every pitched instrument not rendered yet, root by root. */
@@ -176,35 +230,45 @@ export class SampleBank {
     const pending = this.claim(recipes);
     // Nothing new to render: the time it took stays as it was
     if (pending.length === 0) return;
+    await this.gate;
 
-    await Promise.all(
-      pending.map(async ([id, recipe]) => {
-        const roots = await Promise.all(
-          recipe.roots.map(async (root): Promise<RenderedRoot> => {
-            const loop = recipe.loop;
-            const tune = loop
-              ? (hz: number) => Math.max(1, Math.round(hz * loop.length)) / loop.length
-              : (hz: number) => hz;
-            const frequency = tune(midiToFrequency(root));
-            const at = Math.min(rate, recipe.maxRate ?? rate);
-            const ctx = new Offline(recipe.channels ?? 1, Math.ceil(recipe.duration * at), at);
-            recipe.build(ctx, seededRandom(hash(`${id}:${root}`)), frequency, tune);
-            const buffer = await renderOffline(ctx);
-            normalise(buffer, recipe.level ?? 0);
-            return {
-              root,
-              buffer,
-              frequency,
-              loop: loop ? { start: loop.start, end: loop.start + loop.length } : null,
-            };
-          }),
-        );
-        this.roots.set(id, roots);
-      }),
+    // Each root built in a task of its own, all of them rendering together
+    await inTurns(pending, ([id, recipe]) =>
+      this.renderInstrument(rate, Offline, id, recipe),
     ).catch(() => {
       // An instrument that failed to render stays on its live synth
     });
     this.finished();
+  }
+
+  /** Renders one pitched instrument, root by root, into the bank. */
+  private async renderInstrument(
+    rate: number,
+    Offline: OfflineContextClass,
+    id: string,
+    recipe: PitchedRecipe,
+  ): Promise<void> {
+    const roots = await inTurns(recipe.roots, async (root): Promise<RenderedRoot> => {
+      const loop = recipe.loop;
+      const tune = loop
+        ? (hz: number) => Math.max(1, Math.round(hz * loop.length)) / loop.length
+        : (hz: number) => hz;
+      const frequency = tune(midiToFrequency(root));
+      const at = Math.min(rate, recipe.maxRate ?? rate);
+      const ctx = new Offline(recipe.channels ?? 1, Math.ceil(recipe.duration * at), at);
+      recipe.build(ctx, seededRandom(hash(`${id}:${root}`)), frequency, tune);
+      const buffer = await renderOffline(ctx);
+      // Renders finishing together would be scaled all in one go
+      await yieldToMain();
+      normalise(buffer, recipe.level ?? 0);
+      return {
+        root,
+        buffer,
+        frequency,
+        loop: loop ? { start: loop.start, end: loop.start + loop.length } : null,
+      };
+    });
+    this.roots.set(id, roots);
   }
 
   /**

@@ -27,23 +27,25 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 
 ## Layers and their dependencies
 
-| Directory              | Owns                                                                     | May import                                          |
-| ---------------------- | ------------------------------------------------------------------------ | --------------------------------------------------- |
-| `shared/`              | palette, math, fonts, scene ids, `EventBus`                              | nothing in the project                              |
-| `match/`               | rules, simulation, AI, paddles, balls, sides                             | `match/`, `shared/`                                 |
-| `settings/`            | the player's settings and quick-match setup                              | `match/`, `i18n/` (language), `shared/`             |
-| `profile/`             | everything saved between visits: versions, migrations, statistics        | `settings/`, `match/` (events), `shared/`           |
-| `i18n/`                | texts in every language                                                  | `match/` (difficulty, modes)                        |
-| `input/`               | keyboard, pointer, touch, portrait rotation                              | `match/`, `shared/`                                 |
-| `audio/`               | the AudioContext, procedural music, sound effects                        | `match/`, `shared/`                                 |
-| `render/`              | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays    | `match/`, `shared/`                                 |
-| `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax    | `match/`, `render/`, `audio/`, `shared/`            |
-| `ui/`                  | menus as Preact screens on a stack, challenge condition, boot screen     | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
-| `debug/`, `easterEgg/` | FPS overlay, developer menus, the sound stand; the classic look's switch | `audio/`, `shared/`                                 |
-| `app/`                 | `Game` (composition root, frame loop), sessions, `FixedStep`, replay     | anything                                            |
+| Directory    | Owns                                                                  | May import                                                                             |
+| ------------ | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `shared/`    | palette, math, fonts, scene ids, `EventBus`                           | nothing in the project                                                                 |
+| `match/`     | rules, simulation, AI, paddles, balls, sides                          | `match/`, `shared/`                                                                    |
+| `settings/`  | the player's settings and quick-match setup                           | `match/`, `i18n/` (language), `shared/`                                                |
+| `profile/`   | everything saved between visits: versions, migrations, statistics     | `settings/`, `match/` (events), `shared/`                                              |
+| `i18n/`      | texts in every language                                               | `match/` (difficulty, modes), `shared/` (scenes)                                       |
+| `input/`     | keyboard, pointer, touch, portrait rotation                           | `match/`, `shared/`                                                                    |
+| `audio/`     | the AudioContext, procedural music, sound effects                     | `match/`, `shared/`                                                                    |
+| `render/`    | the canvas: backgrounds, court, paddles, balls, HUD, camera, overlays | `match/`, `shared/`                                                                    |
+| `fx/`        | effects reacting to the match: shake, flash, particles, drama, climax | `match/`, `render/`, `audio/`, `shared/`                                               |
+| `ui/`        | menus as Preact screens on a stack, challenge condition, boot screen  | `match/`, `audio/`, `settings/`, `profile/` (progress, statistics), `i18n/`, `shared/` |
+| `debug/`     | FPS overlay, developer menus, the sound stand                         | `match/` (the stand's finale), `audio/`, `shared/`                                     |
+| `easterEgg/` | the classic look's switch                                             | `audio/`, `shared/`                                                                    |
+| `app/`       | `Game` (composition root, frame loop), sessions, `FixedStep`, replay  | anything                                                                               |
 
-The rules that matter most are checked by `tests/architecture.test.ts`: `match/` imports only
-`match/` and `shared/`, and `shared/` imports nothing from the project.
+`tests/architecture.test.ts` checks every row (its `LAYERS` is this table), dynamic imports
+included, and that every directory of `src/` has one; a new layer or a new dependency is a change
+to both.
 
 `render/` never imports `fx/` (checked too): the effects drive the `Renderer` (shake, flash, stage
 effects) and fill in the particles, whose types (`render/particles.ts`) belong to what draws them.
@@ -205,7 +207,8 @@ the profile's `tutorial`.
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
 in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/menus/ModeMenus.ts`).
-The PLAY menu lists it, switched off until `isPlayable`; picking it (`ModeMenus.pick`) opens
+The PLAY menu lists it if the build offers it (`FEATURES`, `app/features.ts`: the story is off for
+now), switched off until `isPlayable`; picking it (`ModeMenus.pick`) opens
 its screen. What plays it is a `Session` (`app/sessions/Session.ts`): it starts its match and
 its restarts (rules, line-up, level) and answers what depends on the mode — its backdrop and
 music, the line over the court, whether it counts in the statistics, whether its winning point
@@ -234,7 +237,8 @@ buttons (skipping the disabled ones and those with `tabIndex` -1) and any other 
 A new kind of player (a replay, a remote player) is a new `PaddleController`.
 
 **A look.** The whole game's presentation, a `Look` (`shared/look.ts`): neon, or the classic
-look `ClassicSwitch` (`easterEgg/`) turns on and off from the main menu only. `Game` follows its
+look `ClassicSwitch` (`easterEgg/`) turns on and off from the main menu only, in a build whose
+`FEATURES` (`app/features.ts`) have it (off for now: ROADMAP 8.2). `Game` follows its
 signal and hands the look to the `Renderer` (the classic one draws its own flat `ClassicScene` and
 shows no effects: `renderer.showsEffects`), the `UIManager` (the menus' chrome, `classic.css`) and
 the `AudioEngine` (which music `playMusic` plays), and plays its matches as Pong was: no Overdrive
@@ -287,7 +291,7 @@ shared paddle list grows and shrinks, as the balls do). Layers are in `ModifierR
 developers, `?mods=wind,darkness` and the debug overlay's modifier menu play quick matches with
 them.
 
-**Planned, not there yet** (see the roadmap): story scenes as typed data, without Ink (8.1).
+**Planned, not there yet** (see the roadmap): story scenes as typed data, without Ink (9.1).
 
 ## Starting up and the builds
 
@@ -297,7 +301,12 @@ developer tools (`debug/DebugTools.ts`: the dock, its menus, the sound stand) ar
 own, loaded the first time they are asked for (`?debug`, F3, a link to the sound stand); the FPS
 line and the errors it reports are always there. `npm run build` builds for GitHub Pages
 (`/bouncewave/`, installable, offline); `npm run build:portal` builds for a web game portal
-(`dist-portal/`, relative paths, no service worker).
+(`dist-portal/`, relative paths, no service worker). Both are the arcade edition. **Planned**
+(ROADMAP 8.2): the edition becomes a build mode (`arcade`, `steam`) that `FEATURES` is derived
+from, so what an edition lacks is dropped at build time, and the Steam edition's modules (the
+story, the career, the classic look) are loaded with `import()` behind its flags, leaving no chunk
+of theirs in the arcade build. Flags are read only at the root (`app/boot.ts`, `Game`, the
+menus); `match/` knows nothing of editions.
 
 ## Rules of thumb
 

@@ -3,8 +3,6 @@ import { MusicState } from '@/audio/music/intensity';
 import { MusicEngine } from '@/audio/music/MusicEngine';
 import { Ps1MusicEngine } from '@/audio/music/Ps1MusicEngine';
 import { ACTION_PITCHED, ACTION_SAMPLES } from '@/audio/samples/actions';
-import { DRUM_SAMPLES } from '@/audio/samples/drums';
-import { PITCHED_SAMPLES } from '@/audio/samples/pitched';
 import { TRANSITION_SAMPLES } from '@/audio/samples/transitions';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
@@ -208,15 +206,15 @@ export class AudioEngine {
       this.applyVolumes();
       if (this.isPhoneSpeaker) this.mixer.setPhoneSpeaker(true);
       // Rendered off the frame, in the background; the live synths play until they are ready.
-      // The action sounds first, the first hit comes within seconds; then the drums: they are
-      // small, and every song needs them from its first bar
+      // The action sounds first, the first hit comes within seconds; then the transitions,
+      // which every song plays. A song's own instruments are rendered by the music for the song
+      // playing and the one coming up (audio/music/palette.ts), and freed after
       const rate = ac.sampleRate;
-      void this.samples
+      const actions = this.samples
         .render(rate, ACTION_SAMPLES)
-        .then(() => this.samples.renderPitched(rate, ACTION_PITCHED))
-        .then(() => this.samples.render(rate, DRUM_SAMPLES))
-        .then(() => this.samples.renderPitched(rate, PITCHED_SAMPLES))
-        .then(() => this.samples.render(rate, TRANSITION_SAMPLES));
+        .then(() => this.samples.renderPitched(rate, ACTION_PITCHED));
+      this.samples.holdUntil(actions);
+      void this.samples.render(rate, TRANSITION_SAMPLES);
     }
     this.music.init(ac, this.mixer.music, this.samples);
     this.classicMusic.init(ac, this.mixer.music);

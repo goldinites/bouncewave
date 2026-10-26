@@ -100,7 +100,7 @@ export class ChallengeMenus {
   /**
    * A challenge's card: its name and its description (which says what sets its match apart), START
    * and BACK. A passed one is marked so, and can be played again. Its reward (money) joins it with
-   * the economy (stage 9).
+   * the economy (stage 10).
    */
   private card(challenge: ChallengeId): ScreenEntry {
     const { i18n, challenges, actions, back } = this.ctx;

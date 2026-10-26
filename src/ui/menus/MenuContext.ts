@@ -2,6 +2,7 @@ import { ReadonlySignal } from '@preact/signals-core';
 import { I18nManager } from '@/i18n/I18nManager';
 import { ChallengeVerdict } from '@/match/ChallengeJudge';
 import { ChallengeId } from '@/match/challenges';
+import { ModeId } from '@/match/modes';
 import { ChallengeProgress } from '@/profile/ChallengeProgress';
 import { Statistics } from '@/profile/Statistics';
 import { SettingsStore } from '@/settings/SettingsStore';
@@ -48,6 +49,8 @@ export interface GameMenuActions {
   onStartTwoPlayers?: () => void;
   /** Starts the tutorial (step 4.8). */
   onStartTutorial?: () => void;
+  /** Whether this build offers a mode on the PLAY menu at all; every one when left out. */
+  isModeOffered?: (mode: ModeId) => boolean;
   /**
    * Whether PLAY offers the tutorial first: to someone who has neither gone through it nor turned
    * it down. Never when left out.

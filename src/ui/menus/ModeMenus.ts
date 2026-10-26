@@ -19,9 +19,11 @@ export const MODE_COLORS: Record<ModeId, ButtonColor> = {
 export class ModeMenus {
   constructor(private readonly ctx: MenuContext) {}
 
-  /** The PLAY menu: a button per mode, those not playable yet switched off. */
+  /**
+   * The PLAY menu: a button per mode this build offers, those not playable yet switched off.
+   */
   public play(): ScreenEntry {
-    const { i18n, back } = this.ctx;
+    const { i18n, actions, back } = this.ctx;
     return {
       id: 'play',
       scene: null,
@@ -29,7 +31,7 @@ export class ModeMenus {
         title: i18n.t('mode'),
         subtitle: '',
         body: h(PlayMenu, {
-          modes: MODE_IDS.map((id) => ({
+          modes: MODE_IDS.filter((id) => actions.isModeOffered?.(id) ?? true).map((id) => ({
             id,
             name: i18n.getModeName(id),
             color: MODE_COLORS[id],

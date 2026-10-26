@@ -5,7 +5,7 @@ import { resolve } from 'path';
 import { BACKGROUND } from './src/shared/palette';
 
 /**
- * `npm run build:portal` (mode `portal`) builds the game for a web game portal (ROADMAP 8.7) into
+ * `npm run build:portal` (mode `portal`) builds the game for a web game portal (ROADMAP 8.12) into
  * dist-portal/: paths relative to wherever the portal serves it, in its frame, and no service
  * worker (the portal hosts and updates the game; installing it is the GitHub Pages build's).
  */

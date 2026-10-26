@@ -279,7 +279,9 @@ describe('AiController', () => {
   });
 });
 
-describe('AI balance', () => {
+// Thousands of shots played out step by step: about a second each, several times that under
+// coverage's instrumentation (npm run coverage)
+describe('AI balance', { timeout: 20_000 }, () => {
   /** Share of edge-of-paddle shots at `speed` (top speed by default) the CPU returns. */
   const edgeShotReturnRate = (
     level: DifficultyLevel,

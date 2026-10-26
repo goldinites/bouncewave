@@ -2,10 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { Arrangement } from '@/audio/music/Arrangement';
 import { Instruments } from '@/audio/music/Instruments';
 import { MusicGraph } from '@/audio/music/MusicGraph';
+import { KITS } from '@/audio/music/kits';
 import { LAZY_SOUND_IDS, soundsFor, unneeded } from '@/audio/music/palette';
 import { PAD_CHOP } from '@/audio/music/patterns';
 import { compileSong, SectionDef, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
+import { ACTION_PITCHED, ACTION_SAMPLES } from '@/audio/samples/actions';
+import { TRANSITION_SAMPLES } from '@/audio/samples/transitions';
 import { DifficultyLevel } from '@/match/difficulty';
 import { fakeAudioContext } from './helpers/fakeAudioContext';
 
@@ -34,14 +37,27 @@ const song = (def: Partial<SongDef>, section: Partial<SectionDef> = {}) =>
   });
 
 describe('the palette a song needs rendered', () => {
-  it('is the extra sounds it plays, and none of the core ones', () => {
+  it('is every sound it plays, core and wider palette alike, and the brass of its fanfare', () => {
     const { pitched, oneShots } = soundsFor(song({}));
+    // The arpeggio and counter play live (square, bell): nothing rendered for them
     expect(Object.keys(pitched).sort()).toEqual(
-      ['bassSlap', 'leadMarimba', 'padReverse', 'stabRhodes'].sort(),
+      ['bassSlap', 'brass', 'leadMarimba', 'padReverse', 'stabRhodes'].sort(),
     );
     expect(Object.keys(oneShots).sort()).toEqual(
-      ['gong', 'hyoshigi', 'odaiko', 'siren', 'woodblock'].sort(),
+      [...new Set<string>([...Object.values(KITS.japan), 'siren'])].sort(),
     );
+  });
+
+  it('never takes the action sounds or the transitions, which stay rendered', () => {
+    for (const song of SONGS) {
+      const { pitched, oneShots } = soundsFor(song);
+      for (const id of [...Object.keys(pitched), ...Object.keys(oneShots)]) {
+        expect(id in TRANSITION_SAMPLES || id in ACTION_SAMPLES || id in ACTION_PITCHED, id).toBe(
+          false,
+        );
+        expect(LAZY_SOUND_IDS).toContain(id);
+      }
+    }
   });
 
   it('takes in the stand’s swaps', () => {
@@ -49,15 +65,27 @@ describe('the palette a song needs rendered', () => {
       { voices: { lead: 'saw', counter: 'bell', arp: 'square', bass: 'bassSaw' }, kit: undefined },
       { stabs: undefined, stabsVoice: undefined, hits: undefined },
     );
-    expect(soundsFor(plain)).toEqual({ pitched: {}, oneShots: {} });
+    const own = soundsFor(plain);
+    expect(Object.keys(own.pitched).sort()).toEqual(['bassSaw', 'brass', 'pad', 'supersaw']);
     const swapped = soundsFor(plain, {
       lead: 'harp',
       bass: 'bassGrowl',
       pad: 'reverse',
       kit: 'factory',
     });
-    expect(Object.keys(swapped.pitched).sort()).toEqual(['bassGrowl', 'leadHarp', 'padReverse']);
-    expect(Object.keys(swapped.oneShots).sort()).toEqual(['chain', 'steam', 'synthCymbal']);
+    expect(Object.keys(swapped.pitched).sort()).toEqual([
+      'bassGrowl',
+      'brass',
+      'leadHarp',
+      'padReverse',
+      'supersaw',
+    ]);
+    expect(Object.keys(swapped.oneShots)).toEqual(
+      expect.arrayContaining(['chain', 'steam', 'synthCymbal']),
+    );
+    expect(Object.keys(swapped.oneShots).sort()).toEqual(
+      [...new Set(Object.values(KITS.factory))].sort(),
+    );
   });
 
   it('takes the leads’ low twins only for a song whose melody goes under D4', () => {
@@ -67,15 +95,15 @@ describe('the palette a song needs rendered', () => {
     const low = soundsFor(song({}, { lead: bars('E4', 'G3') }));
     expect(low.pitched).toHaveProperty('leadMarimbaLow');
     expect(low.pitched.leadMarimbaLow.roots.every((root) => root < 62)).toBe(true);
-    // A core lead's twin, the core sound itself already rendered
+    // A core lead's twin, with the lead
     const saw = { lead: 'saw', counter: 'bell', arp: 'square', bass: 'bassSlap' } as const;
     const core = soundsFor(song({ voices: saw }, { lead: bars('E4', 'E3') }));
     expect(core.pitched).toHaveProperty('supersawLow');
-    expect(core.pitched).not.toHaveProperty('supersaw');
+    expect(core.pitched).toHaveProperty('supersaw');
   });
 });
 
-describe('the wider palette’s sounds freed', () => {
+describe('the songs’ sounds freed', () => {
   it('are those neither the song playing nor the next one plays', () => {
     const rain = SONGS.find((s) => s.title === 'Kabukicho Rain')!;
     const fuji = SONGS.find((s) => s.title === 'Above the Clouds')!;

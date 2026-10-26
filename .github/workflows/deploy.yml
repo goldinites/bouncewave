@@ -95,6 +95,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      # What a player downloads before the first frame, and the whole build, against their budget
+      # (scripts/size.mjs); the sizes go on the run's summary
+      - name: Build size
+        run: npm run size
+
       - name: Upload artifact
         if: github.ref_type == 'tag'
         uses: actions/upload-pages-artifact@v4

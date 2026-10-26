@@ -140,11 +140,11 @@ test('plays a match of two from 2 PLAYERS, both steering at once', async ({ page
   await page.keyboard.up('ArrowDown');
 });
 
-test('lists the modes behind PLAY, the ones still to come switched off', async ({ page }) => {
+test('lists the modes behind PLAY, the story left out of this build', async ({ page }) => {
   await page.goto('');
 
   await openModes(page);
-  await expect(button(page, 'STORY')).toBeDisabled();
+  await expect(button(page, 'STORY')).toHaveCount(0);
   await expect(button(page, 'CHALLENGE')).toBeEnabled();
   await expect(button(page, 'QUICK MATCH')).toBeEnabled();
   // Down to BACK, on the court in every orientation (on a portrait phone both are turned)

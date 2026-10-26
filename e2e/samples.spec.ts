@@ -299,8 +299,9 @@ test('renders every transition: swells build to their end, the rest die away', a
   expect(report.bytes).toBeLessThan(TRANSITIONS_MEMORY);
 });
 
-// The whole palette's memory (docs/AUDIO.md, "Бюджеты"): the core rendered at the first touch,
-// plus what the songs in play add, walking every song in turn as a long session does
+// The whole palette's memory (docs/AUDIO.md, "Бюджеты"): the action sounds and transitions
+// rendered at the first touch, plus the sounds of the songs in play, walking every song in turn
+// as a long session does
 const PALETTE_MEMORY = 24 * 1024 * 1024; // bytes
 
 test('keeps every rendered sound within budget through a session of every song', async ({
@@ -312,10 +313,6 @@ test('keeps every rendered sound within budget through a session of every song',
       (await import(/* @vite-ignore */ `/bouncewave/src/audio/${path}`)) as T;
     const { SampleBank } =
       await load<typeof import('../src/audio/samples/SampleBank')>('samples/SampleBank.ts');
-    const { DRUM_SAMPLES } =
-      await load<typeof import('../src/audio/samples/drums')>('samples/drums.ts');
-    const { PITCHED_SAMPLES } =
-      await load<typeof import('../src/audio/samples/pitched')>('samples/pitched.ts');
     const { TRANSITION_SAMPLES } =
       await load<typeof import('../src/audio/samples/transitions')>('samples/transitions.ts');
     const { ACTION_PITCHED, ACTION_SAMPLES } =
@@ -325,13 +322,11 @@ test('keeps every rendered sound within budget through a session of every song',
       await load<typeof import('../src/audio/music/palette')>('music/palette.ts');
     const rate = 48000;
     const bank = new SampleBank();
-    await bank.render(rate, DRUM_SAMPLES);
-    await bank.renderPitched(rate, PITCHED_SAMPLES);
     await bank.render(rate, TRANSITION_SAMPLES);
     await bank.render(rate, ACTION_SAMPLES);
     await bank.renderPitched(rate, ACTION_PITCHED);
-    const core = bank.bytes;
-    let peak = core;
+    const kept = bank.bytes;
+    let peak = kept;
     let peakAt = '';
     // Twice round, so the first songs come back after the last
     const order = [...SONGS, ...SONGS];
@@ -348,12 +343,96 @@ test('keeps every rendered sound within budget through a session of every song',
         peakAt = `${playing.title} → ${next.title}`;
       }
     }
-    return { core, peak, peakAt };
+    return { kept, peak, peakAt };
   });
   test.info().annotations.push({
     type: 'palette',
-    description: `core ${(report.core / 1048576).toFixed(1)} MB, peak ${(report.peak / 1048576).toFixed(1)} MB at ${report.peakAt}`,
+    description: `kept ${(report.kept / 1048576).toFixed(1)} MB, peak ${(report.peak / 1048576).toFixed(1)} MB at ${report.peakAt}`,
   });
-  console.log(report);
+  console.info(report);
   expect(report.peak).toBeLessThan(PALETTE_MEMORY);
+});
+
+// A song's own instruments are rendered just before it plays, during a match too (docs/AUDIO.md,
+// "Бюджеты": 500 ms on a phone), scaled as the drums' is for a CI runner. Meanwhile the page
+// must keep drawing: no stretch of the main thread longer than a few frames
+const SONG_RENDER_MS = 1500;
+const SONG_LONGEST_STALL_MS = 80; // built all at once, a song's sounds held it ~110 ms here
+// A CI runner's timers come late now and then on their own (garbage collection, the other worker
+// on the same cores: 80–110 ms on any song), so each song is rendered a few times and judged by
+// its best take: a stall the code makes comes back every time, one from the runner does not
+const SONG_TAKES = 3;
+
+test("renders each song's instruments within budget, the page still drawing", async ({ page }) => {
+  await page.goto('./');
+  const report = await page.evaluate(async (songTakes: number) => {
+    const source = (path: string) => `/bouncewave/src/audio/${path}`;
+    const { SampleBank } = (await import(
+      /* @vite-ignore */ source('samples/SampleBank.ts')
+    )) as typeof import('../src/audio/samples/SampleBank');
+    const { soundsFor } = (await import(
+      /* @vite-ignore */ source('music/palette.ts')
+    )) as typeof import('../src/audio/music/palette');
+    const { SONGS } = (await import(
+      /* @vite-ignore */ source('music/songs.ts')
+    )) as typeof import('../src/audio/music/songs');
+    const { ACTION_PITCHED, ACTION_SAMPLES } = (await import(
+      /* @vite-ignore */ source('samples/actions.ts')
+    )) as typeof import('../src/audio/samples/actions');
+    // The game renders the action sounds at start-up, so no song is ever the first render of a
+    // page; the first one pays for warming the offline audio up (~150 ms on a CI runner, which
+    // the first song measured would be blamed for)
+    const warm = new SampleBank();
+    await warm.render(48000, ACTION_SAMPLES);
+    await warm.renderPitched(48000, ACTION_PITCHED);
+    /** The longest the main thread was held while `during` ran: a timer that should tick every
+     * few ms, and how late it came (frames don't run in a page nobody sees). */
+    const longestStall = async (during: () => Promise<unknown>) => {
+      let longest = 0;
+      let last = performance.now();
+      const watch = setInterval(() => {
+        const now = performance.now();
+        longest = Math.max(longest, now - last);
+        last = now;
+      }, 4);
+      await during();
+      clearInterval(watch);
+      return longest;
+    };
+    // The timer's own lateness with nothing to do, to tell the renders' stalls from it
+    const idle = await longestStall(() => new Promise((resolve) => setTimeout(resolve, 200)));
+    const songs = [];
+    for (const song of SONGS) {
+      const { pitched, oneShots } = soundsFor(song);
+      const takes = [];
+      for (let take = 0; take < songTakes; take++) {
+        const bank = new SampleBank();
+        const longest = await longestStall(() =>
+          Promise.all([bank.renderPitched(48000, pitched), bank.render(48000, oneShots)]),
+        );
+        takes.push({ renderTime: bank.renderTime, longest, bytes: bank.bytes });
+      }
+      songs.push({
+        title: song.title,
+        renderTime: Math.min(...takes.map((t) => t.renderTime)),
+        longest: Math.min(...takes.map((t) => t.longest)),
+        bytes: takes[0].bytes,
+      });
+    }
+    return { idle, songs };
+  }, SONG_TAKES);
+  for (const { title, renderTime, longest } of report.songs) {
+    expect(renderTime, title).toBeLessThan(SONG_RENDER_MS);
+    expect(longest, `${title} stalls the page`).toBeLessThan(SONG_LONGEST_STALL_MS);
+  }
+  test.info().annotations.push({
+    type: 'songs',
+    description: [
+      `idle ${report.idle.toFixed(0)} ms`,
+      ...report.songs.map(
+        ({ title, renderTime, longest, bytes }) =>
+          `${title}: ${(bytes / 1048576).toFixed(2)} MB, ${renderTime.toFixed(0)} ms, stall ${longest.toFixed(0)} ms`,
+      ),
+    ].join('; '),
+  });
 });
