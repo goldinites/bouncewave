@@ -273,7 +273,7 @@ shared paddle list grows and shrinks, as the balls do). Layers are in `ModifierR
 developers, `?mods=wind,darkness` and the debug overlay's modifier menu play quick matches with
 them.
 
-**Planned, not there yet** (see the roadmap): story scenes as typed data, without Ink (7.1).
+**Planned, not there yet** (see the roadmap): story scenes as typed data, without Ink (8.1).
 
 ## Rules of thumb
 
