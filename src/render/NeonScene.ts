@@ -435,6 +435,7 @@ function neonLayers(
               streak,
               drama.meterSpent[i] ?? 0,
               isMotionReduced() ? 0 : (meters.gains[i] ?? 0),
+              view.overdriveCapacities?.[i],
             );
           }
         });

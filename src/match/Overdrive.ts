@@ -1,6 +1,7 @@
 /** Overdrive: perfect hits in a row charge the player's next hit into a power shot. */
 export const OVERDRIVE = {
-  CHARGE: 3, // perfect hits in a row to charge it
+  CHARGE: 3, // perfect hits in a row to charge it, whatever the meter holds
+  CAPACITY: 3, // charges a meter holds unless its owner's implants grow it (up to 5, stage 9)
   BOOST: 0.6, // extra speed share of the power shot, fading out...
   BOOST_DURATION: 1.4, // ...over this many seconds
 } as const;
@@ -19,8 +20,10 @@ export class Overdrive {
   private _charge = 0;
   private _streak = 0;
   private hasCore = false;
+  /** Charges it holds: OVERDRIVE.CAPACITY, or more with a grown implants' core. */
+  private _capacity: number = OVERDRIVE.CAPACITY;
 
-  /** Charges on the meter, up to OVERDRIVE.CHARGE: the energy implants spend. */
+  /** Charges on the meter, up to its capacity: the energy implants spend. */
   public get charge(): number {
     return this._charge;
   }
@@ -32,6 +35,23 @@ export class Overdrive {
 
   public get isCharged(): boolean {
     return this._streak >= OVERDRIVE.CHARGE;
+  }
+
+  /** Charges it holds. */
+  public get capacity(): number {
+    return this._capacity;
+  }
+
+  /** Whether it holds all the charges it can. */
+  public get isFull(): boolean {
+    return this._charge >= this._capacity;
+  }
+
+  /** Makes it hold `capacity` charges (a match's participant brings it); what is over is lost. */
+  public useCapacity(capacity: number): void {
+    this._capacity = capacity;
+    this._charge = Math.min(this._charge, capacity);
+    this._streak = Math.min(this._streak, this._charge);
   }
 
   /** Whether it has an implants' core: its charges are energy, lost one at a time. */
@@ -54,7 +74,7 @@ export class Overdrive {
       return true;
     }
     if (isPerfect) {
-      this._charge = Math.min(OVERDRIVE.CHARGE, this._charge + 1);
+      this._charge = Math.min(this._capacity, this._charge + 1);
       this._streak = Math.min(this._charge, this._streak + 1);
     } else {
       this._charge = this.hasCore ? Math.max(0, this._charge - 1) : 0;
@@ -77,7 +97,7 @@ export class Overdrive {
 
   /** Gives back `charges` of energy, as far as the meter holds them; the streak stays as it is. */
   public restore(charges: number): void {
-    this._charge = Math.min(OVERDRIVE.CHARGE, this._charge + charges);
+    this._charge = Math.min(this._capacity, this._charge + charges);
   }
 
   public reset(): void {

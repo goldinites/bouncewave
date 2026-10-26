@@ -107,6 +107,8 @@ export interface Participant {
   readonly perfect?: boolean;
   /** The paddle they play with; the standard one when left out. */
   readonly paddle?: PaddleSpec;
+  /** Charges their Overdrive meter holds; OVERDRIVE.CAPACITY when left out. */
+  readonly meter?: number;
   /** What they can do beyond the base game (match/skills/); none when left out. */
   readonly skills?: readonly SkillId[];
 }
@@ -211,7 +213,7 @@ export class MatchFlow {
 
   /**
    * Each paddle's Overdrive meter, in the order of the match's paddles: its charges,
-   * 0..OVERDRIVE.CHARGE, or null where it has none (the CPU's, every one under rules without
+   * 0 to its capacity, or null where it has none (the CPU's, every one under rules without
    * Overdrive, and in the demo).
    */
   public get overdriveCharges(): (number | null)[] {
@@ -224,6 +226,11 @@ export class MatchFlow {
    */
   public get overdriveStreaks(): (number | null)[] {
     return this.overdrives.map((overdrive, i) => (this.hasOverdrive(i) ? overdrive.streak : null));
+  }
+
+  /** The charges each paddle's meter holds, in order. */
+  public get overdriveCapacities(): number[] {
+    return this.overdrives.map((overdrive) => overdrive.capacity);
   }
 
   /** Whether each paddle's meter has an implants' core (its charges are energy), in order. */
@@ -660,6 +667,7 @@ export class MatchFlow {
       this.paddles[i].perfectZoneScale = 1;
       this.paddles[i].hasPerfectZone = lineup[i].perfect ?? true;
       this.overdrives[i].useCore(skills.some((id) => IMPLANTS.includes(id)));
+      this.overdrives[i].useCapacity(lineup[i].meter ?? OVERDRIVE.CAPACITY);
       lineup[i].controller.useSkills?.(skills);
     });
     this.skills.use(

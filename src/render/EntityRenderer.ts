@@ -293,14 +293,17 @@ export class EntityRenderer {
 
   /**
    * Where each segment of a paddle's Overdrive meter stands: stacked along its goal side, filled
-   * from the bottom up. Whatever the look draws them as.
+   * from the bottom up, as many as it holds. Whatever the look draws them as.
    */
-  public static meterSegments(paddle: Paddle): { x: number; y: number }[] {
+  public static meterSegments(
+    paddle: Paddle,
+    capacity: number = OVERDRIVE.CAPACITY,
+  ): { x: number; y: number }[] {
     const { GAP, SEGMENT } = OVERDRIVE_METER;
     const x =
       paddle.side === 0 ? paddle.x - GAP - SEGMENT.WIDTH : paddle.x + paddle.spec.width + GAP;
-    const columnHeight = OVERDRIVE.CHARGE * SEGMENT.HEIGHT + (OVERDRIVE.CHARGE - 1) * SEGMENT.GAP;
-    return Array.from({ length: OVERDRIVE.CHARGE }, (_, i) => ({
+    const columnHeight = capacity * SEGMENT.HEIGHT + (capacity - 1) * SEGMENT.GAP;
+    return Array.from({ length: capacity }, (_, i) => ({
       x,
       y: paddle.drawY + columnHeight / 2 - SEGMENT.HEIGHT - i * (SEGMENT.HEIGHT + SEGMENT.GAP),
     }));
@@ -312,6 +315,7 @@ export class EntityRenderer {
   /**
    * The player's Overdrive meter: segments along the goal side of their paddle, glowing.
    * @param gain how brightly the charge just gained still flares, in [0, 1]
+   * @param capacity the charges it holds
    */
   public static renderOverdriveMeter(
     ctx: CanvasRenderingContext2D,
@@ -321,6 +325,7 @@ export class EntityRenderer {
     streak: number = charge,
     spent = 0,
     gain = 0,
+    capacity: number = OVERDRIVE.CAPACITY,
   ): void {
     const { SEGMENT, HALO, PULSE_SPEED, ENERGY_ALPHA } = OVERDRIVE_METER;
     const isFull = streak >= OVERDRIVE.CHARGE;
@@ -328,7 +333,7 @@ export class EntityRenderer {
     const color = isFull ? COLORS.YELLOW : paddle.color;
 
     ctx.save();
-    this.meterSegments(paddle).forEach(({ x, y }, i) => {
+    this.meterSegments(paddle, capacity).forEach(({ x, y }, i) => {
       const isLit = i < charge;
       if (i === charge && spent > 0) {
         // The charge the core just lost (spent, or to a hit that wasn't perfect): a white flare
