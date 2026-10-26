@@ -51,9 +51,6 @@ const POWER_HIT = PLAIN_HITS + 4;
 
 type MatchEvent = import('@/match/MatchFlow').MatchEvent;
 type RenderFrame = import('@/render/scene').RenderFrame;
-type Paddle = import('@/match/Paddle').Paddle;
-type Ball = import('@/match/Ball').Ball;
-type PaddleController = import('@/match/PaddleController').PaddleController;
 
 /** One moment filmed: what it was, and where on court it happened. */
 interface Moment {
@@ -85,7 +82,6 @@ const { COURT, PADDLE } = await import('@/match/config');
 const { DifficultyLevel } = await import('@/match/difficulty');
 const { MatchFlow } = await import('@/match/MatchFlow');
 const { Paddle } = await import('@/match/Paddle');
-const { predictArrival } = await import('@/match/AiController');
 const { firstTo, STANDARD_RULES } = await import('@/match/rules');
 const { MatchReplay } = await import('@/app/MatchReplay');
 const { EffectsDirector } = await import('@/fx/EffectsDirector');
@@ -93,6 +89,7 @@ const { ParticleSystem } = await import('@/fx/ParticleSystem');
 const { Renderer } = await import('@/render/Renderer');
 const { gameFont } = await import('@/shared/fonts');
 const { COLORS } = await import('@/shared/palette');
+const { ScriptedController } = await import('../shared/ScriptedController');
 
 await document.fonts.load(gameFont(700, 16));
 
@@ -101,42 +98,6 @@ const silence: object = new Proxy(() => undefined, {
   get: (_target, key) => (key === 'then' ? undefined : silence),
   apply: () => undefined,
 });
-
-/** Meets the ball at the spot on the paddle's face that `offsetFor` asks for, hit by hit. */
-class ScriptedController implements PaddleController {
-  constructor(private readonly offsetFor: () => number | null) {}
-
-  public steer(paddle: Paddle, ball: Ball): void {
-    const isComing = paddle.side === 0 ? ball.vx < 0 : ball.vx > 0;
-    if (!isComing) {
-      paddle.setTargetY(COURT.HEIGHT / 2);
-      return;
-    }
-    // Where the ball's centre will be as its edge touches the face
-    const face =
-      paddle.side === 0 ? paddle.x + paddle.spec.width + ball.radius : paddle.x - ball.radius;
-    const arrival = predictArrival(face, ball.x, ball.y, ball.vx, ball.vy, ball.radius);
-    const offset = this.offsetFor();
-    // No offset: the paddle lets the ball past, as far from it as it can get
-    const target =
-      offset === null
-        ? arrival.y < COURT.HEIGHT / 2
-          ? COURT.HEIGHT
-          : 0
-        : // The paddle takes the ball on its side away from the nearer wall, never pinned to it
-          arrival.y - (Math.sign(arrival.y - COURT.HEIGHT / 2) * offset * paddle.spec.height) / 2;
-    paddle.setTargetY(target);
-  }
-
-  public topSpeed(paddle: Paddle): number {
-    return PADDLE.KEYBOARD_SPEED * paddle.spec.speed;
-  }
-
-  public onServe(): void {}
-  public onIncomingShot(): void {}
-  public onPoint(): void {}
-  public reset(): void {}
-}
 
 /** Plays the scripted rally on `scene` and films its moments. */
 async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult> {
