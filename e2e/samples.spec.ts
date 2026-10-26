@@ -372,6 +372,15 @@ test("renders each song's instruments within budget, the page still drawing", as
     const { SONGS } = (await import(
       /* @vite-ignore */ source('music/songs.ts')
     )) as typeof import('../src/audio/music/songs');
+    const { ACTION_PITCHED, ACTION_SAMPLES } = (await import(
+      /* @vite-ignore */ source('samples/actions.ts')
+    )) as typeof import('../src/audio/samples/actions');
+    // The game renders the action sounds at start-up, so no song is ever the first render of a
+    // page; the first one pays for warming the offline audio up (~150 ms on a CI runner, which
+    // the first song measured would be blamed for)
+    const warm = new SampleBank();
+    await warm.render(48000, ACTION_SAMPLES);
+    await warm.renderPitched(48000, ACTION_PITCHED);
     /** The longest the main thread was held while `during` ran: a timer that should tick every
      * few ms, and how late it came (frames don't run in a page nobody sees). */
     const longestStall = async (during: () => Promise<unknown>) => {
