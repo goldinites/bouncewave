@@ -411,3 +411,21 @@ describe('action sounds with the music’s heat', () => {
     expect(hitVolume(1) / hitVolume(0)).toBeCloseTo(dbToGain(7), 2);
   });
 });
+
+describe('Mixer output', () => {
+  it('shuts everything at once when the game is hidden, and opens it again over a moment', () => {
+    const { ctx, calls } = fakeAudioContext();
+    const mixer = new Mixer(ctx);
+    const before = calls.length;
+
+    mixer.silence(true);
+    const shut = calls.slice(before);
+    // At once, not eased: nothing already on its way out may still be heard
+    expect(callsOf(shut, 'setValueAtTime').map((c) => c.args[0])).toEqual([0]);
+    expect(callsOf(shut, 'setTargetAtTime')).toHaveLength(0);
+
+    const opened = calls.length;
+    mixer.silence(false);
+    expect(callsOf(calls.slice(opened), 'setTargetAtTime').map((c) => c.args[0])).toEqual([1]);
+  });
+});

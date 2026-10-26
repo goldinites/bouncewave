@@ -57,15 +57,19 @@ export class AudioEngine {
       () => this.music.getHeat(),
     );
 
-    // Silence the whole audio graph while the tab is hidden (the game pauses itself separately)
+    // Silence the whole audio graph while the tab is hidden (the game pauses itself separately):
+    // shut at its output first, so nothing already on its way out is heard as the app goes (a
+    // stray echo of the game as a phone's app was closed), then stopped; opened again as it comes
+    // back
     document.addEventListener(
       'visibilitychange',
       () => {
         if (!this.audioContext) return;
         if (document.hidden) {
-          this.audioContext.suspend();
+          this.mixer?.silence(true);
+          void this.audioContext.suspend();
         } else if (!this.isStandPaused) {
-          this.audioContext.resume();
+          void this.audioContext.resume().then(() => this.mixer?.silence(false));
         }
       },
       { signal: this.listeners.signal },
@@ -108,7 +112,9 @@ export class AudioEngine {
     this.isStandPaused = isPaused;
     if (!this.audioContext) return;
     if (isPaused) void this.audioContext.suspend();
-    else if (!document.hidden) void this.audioContext.resume();
+    else if (!document.hidden) {
+      void this.audioContext.resume().then(() => this.mixer?.silence(false));
+    }
   }
 
   /** The listening stand hears the game through a phone's speaker (Mixer), or as it is. */
@@ -185,7 +191,13 @@ export class AudioEngine {
     // falls back to after a call or the app switcher, and only a gesture's resume() clears it.
     // The stand's pause holds it stopped, whatever gesture comes
     if (ac.state !== 'running' && !this.isStandPaused) {
-      void ac.resume().catch(() => {});
+      // Its output was shut as the game was hidden: open, now that a gesture brings it back
+      void ac
+        .resume()
+        .then(() => {
+          if (!document.hidden) this.mixer?.silence(false);
+        })
+        .catch(() => {});
       // iOS keeps a resumed context silent until a sound is started inside a gesture, so the
       // music stayed mute until the first paddle hit. A one-sample silent buffer is enough
       this.playSilence(ac);
