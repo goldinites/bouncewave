@@ -3,6 +3,7 @@ import { PaddleEffects } from '@/fx/PaddleEffects';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { COURT, PADDLE } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
+import { COLORS } from '@/shared/palette';
 
 describe('PaddleEffects whip', () => {
   const setup = () => {
@@ -57,5 +58,37 @@ describe('PaddleEffects whip', () => {
     expect(Math.abs(angles[0])).toBeLessThan(peak / 3);
     expect(Math.min(...angles)).toBeGreaterThanOrEqual(0);
     expect(angles.at(-1)).toBe(0);
+  });
+});
+
+describe('PaddleEffects on a hit and a charged Overdrive', () => {
+  const paddles = () => [
+    new Paddle(0, PADDLE.OFFSET_X, '#19f0ff'),
+    new Paddle(1, COURT.WIDTH - PADDLE.OFFSET_X - PADDLE.WIDTH, '#ff2bd6'),
+  ];
+
+  it('knocks a hit paddle back and lets it spring home, never past where it stood', () => {
+    const fx = new PaddleEffects(2);
+    const court = paddles();
+    fx.onHit(0, 6);
+    const recoils: number[] = [];
+    for (let t = 0; t < 0.4; t += 1 / 240) {
+      fx.update(1 / 240, court, new ParticleSystem(), 0);
+      recoils.push(fx.recoil[0]);
+    }
+    expect(Math.max(...recoils)).toBeCloseTo(6, 0);
+    expect(Math.min(...recoils)).toBeGreaterThanOrEqual(0);
+    expect(recoils.at(-1)).toBe(0);
+    expect(fx.recoil[1]).toBe(0);
+  });
+
+  it('sheds yellow sparks off a paddle only while its Overdrive is charged', () => {
+    const fx = new PaddleEffects(2);
+    const court = paddles();
+    const sparks = new ParticleSystem();
+    for (let t = 0; t < 1; t += 1 / 60) fx.update(1 / 60, court, sparks, 0, [true, false]);
+    const yellow = sparks.particles.filter((p) => p.color === COLORS.YELLOW);
+    expect(yellow.length).toBeGreaterThan(0);
+    expect(yellow.every((p) => Math.abs(p.x - court[0].x) < 60)).toBe(true);
   });
 });

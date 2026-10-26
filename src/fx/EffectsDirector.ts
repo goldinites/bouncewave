@@ -11,6 +11,7 @@ import { COURT, HIT_STOP } from '@/match/config';
 import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { getSpeedHeat } from '@/match/heat';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
+import { OVERDRIVE } from '@/match/Overdrive';
 import { Paddle } from '@/match/Paddle';
 import { STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Side } from '@/match/side';
@@ -351,7 +352,11 @@ export class EffectsDirector {
     this.followBallInDark(flow);
     this.followClock(flow);
     const sparkRally = flow.phase === 'finale' ? 0 : flow.rally;
-    this.paddleFx.update(dt, this.paddles, this.particles, sparkRally);
+    // A charged Overdrive sparks off its paddle until the shot is played
+    const charged = (flow.overdriveStreaks ?? []).map(
+      (streak) => flow.phase !== 'finale' && (streak ?? 0) >= OVERDRIVE.CHARGE,
+    );
+    this.paddleFx.update(dt, this.paddles, this.particles, sparkRally, charged);
     this.squash.update(dt);
     for (let i = 0; i < this.whiteHot.length; i++) {
       this.whiteHot[i] = Math.max(0, this.whiteHot[i] - dt / IMPACT.WHITE_HOT);

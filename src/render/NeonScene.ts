@@ -14,6 +14,7 @@ import {
   TrailPoint,
 } from '@/render/SkillRenderer';
 import { Ball } from '@/match/Ball';
+import { OVERDRIVE } from '@/match/Overdrive';
 import { approach, clamp } from '@/shared/math';
 
 // Lightweight scene dimming behind the menus and the pause
@@ -307,7 +308,18 @@ function neonLayers(
               : 0;
           // Knocked back by a hit, but not for a player who asked for less motion
           const recoil = isMotionReduced() ? 0 : (drama.paddleRecoil[i] ?? 0);
-          EntityRenderer.renderPaddle(c, paddle, drama.paddleGlow[i], pulse, tilt, mark, recoil);
+          // A charged Overdrive crackles along its paddle, the shot waiting to be played
+          const isCharged = charge !== null && streak >= OVERDRIVE.CHARGE;
+          EntityRenderer.renderPaddle(
+            c,
+            paddle,
+            drama.paddleGlow[i],
+            pulse,
+            tilt,
+            mark,
+            recoil,
+            isCharged,
+          );
           if (charge !== null && !state.finalSign) {
             EntityRenderer.renderOverdriveMeter(
               c,

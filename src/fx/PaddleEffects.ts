@@ -1,6 +1,7 @@
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { Paddle } from '@/match/Paddle';
 import { randomRange } from '@/shared/math';
+import { COLORS } from '@/shared/palette';
 
 const GLOW_DECAY = 4; // 1/s, from a fresh hit (1) to unlit (0)
 // A charge lost from an implants' core (spent, or to a hit that wasn't perfect): the segment
@@ -20,6 +21,8 @@ const WHIP = {
 // A hit knocks the paddle back toward its own goal and it springs straight back: out to the
 // push in PEAK s, home again by ~6 × PEAK, never past where it stood
 const RECOIL = { PEAK: 0.025 } as const;
+// A charged Overdrive sheds yellow sparks off its paddle, RATE a second, from anywhere along it
+const CHARGED_SPARKS = { RATE: 16, SPEED: 90, LIFE: 0.5, SIZE: [1.5, 3] } as const; // px/s, s, px
 
 /**
  * Paddle neon: a glow that flares on every hit and fades, and the sparks a paddle sheds
@@ -121,6 +124,7 @@ export class PaddleEffects {
     paddles: readonly Paddle[],
     particles: ParticleSystem,
     rally: number,
+    charged: readonly boolean[] = [],
   ): void {
     this.fit(paddles.length);
     paddles.forEach((paddle, i) => {
@@ -129,6 +133,7 @@ export class PaddleEffects {
       this.springBack(i, dt);
       this.recoilBack(i, dt);
       this.emitSparks(dt, paddle, particles, rally);
+      if (charged[i]) this.emitCharge(dt, paddle, particles);
     });
   }
 
@@ -185,6 +190,24 @@ export class PaddleEffects {
     if (t > 8) {
       this.push[i] = 0;
       this._recoil[i] = 0;
+    }
+  }
+
+  /** A charged Overdrive's sparks: yellow, thrown off all along the paddle. */
+  private emitCharge(dt: number, paddle: Paddle, particles: ParticleSystem): void {
+    const count = Math.floor(CHARGED_SPARKS.RATE * dt + Math.random());
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = CHARGED_SPARKS.SPEED * (0.4 + Math.random());
+      particles.addParticle({
+        x: paddle.x + Math.random() * paddle.spec.width,
+        y: paddle.y + (Math.random() - 0.5) * paddle.spec.height,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: CHARGED_SPARKS.LIFE,
+        color: Math.random() < 0.7 ? COLORS.YELLOW : COLORS.WHITE,
+        size: randomRange(CHARGED_SPARKS.SIZE[0], CHARGED_SPARKS.SIZE[1]),
+      });
     }
   }
 

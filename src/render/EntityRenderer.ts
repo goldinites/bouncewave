@@ -1,5 +1,5 @@
 import { Flare, Particle, ShockwaveRing } from '@/render/particles';
-import { Ball } from '@/match/Ball';
+import { Ball, Point } from '@/match/Ball';
 import { OVERDRIVE } from '@/match/Overdrive';
 import { getRallyHeat } from '@/match/heat';
 import { Paddle } from '@/match/Paddle';
@@ -12,6 +12,32 @@ const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
 // A squashed ball: flattened along its axis by this share of its squash, widened across it by
 // SPREAD of that (the plasma keeps roughly its area)
 const SQUASH_SHAPE = { FLATTEN: 0.45, SPREAD: 0.6 } as const;
+// The ball's trail (6.3): one ribbon through where it has been, tapering from TAIL to HEAD of
+// its radius across; a soft wide glow and a bright core inside it. A faster ball's trail is
+// longer by itself (it is so many seconds of flight) and brighter, by its speed's heat
+const TRAIL = {
+  TAIL: 0.12,
+  HEAD: 0.9,
+  GLOW_WIDTH: 1.6, // × the core's width
+  GLOW_ALPHA: 0.28,
+  CORE_ALPHA: 0.55,
+  HEAT_ALPHA: 0.35, // more of both at full heat
+} as const;
+// Speed is read off the ball: from the serve's speed (FROM, px/s) to FROM + SPAN it stretches
+// along its flight by up to ALONG and thins across by ACROSS
+const SPEED_LOOK = { FROM: 380, SPAN: 720, ALONG: 0.32, ACROSS: 0.1 } as const;
+// The power shot's heavy ball: a wider ribbon burning yellow into pink, and BOLTS of lightning
+// crackling off it out to REACH × its radius, redrawn each frame
+const POWER_BALL = {
+  TRAIL_WIDTH: 1.3,
+  BOLTS: 3,
+  REACH: 2.6,
+  BOLT_WIDTH: 1.6, // px
+  JITTER: 0.35, // × the radius, each kink
+} as const;
+// A charged Overdrive crackles along its paddle: BOLTS of lightning between points on its edges,
+// redrawn every frame, so the player feels the shot waiting before they play it
+const CHARGED = { BOLTS: 2, JITTER: 5, WIDTH: 1.4, KINKS: 6 } as const; // px, px
 // A wave's wake: the soft glow inside its front, this much as bright as the front
 const WAKE_ALPHA = 0.22;
 // A spark's streak: as long as STREAK s of its flight, at least a dot
@@ -47,7 +73,8 @@ export class EntityRenderer {
    @param overdrivePulse > 0 while the paddle's Overdrive is charged: its core pulses yellow
    @param tilt radians it leans by, about its center, positive clockwise
    @param perfectMark how brightly its perfect zone is marked, in [0, 1] (the tutorial); 0 for none
-   @param recoil px it is knocked back toward its own goal by a hit */
+   @param recoil px it is knocked back toward its own goal by a hit
+   @param isCharged its Overdrive is charged: lightning crackles along it */
   public static renderPaddle(
     ctx: CanvasRenderingContext2D,
     paddle: Paddle,
@@ -56,6 +83,7 @@ export class EntityRenderer {
     tilt = 0,
     perfectMark = 0,
     recoil = 0,
+    isCharged = false,
   ): void {
     const { width, height } = paddle.spec;
     const topY = paddle.drawY - height / 2;
@@ -85,6 +113,8 @@ export class EntityRenderer {
     this.roundRect(ctx, paddle.x + width / 2 - 2, topY + 8, 4, height - 16, 2);
     ctx.fill();
 
+    if (isCharged) this.drawCharge(ctx, paddle, topY);
+
     if (perfectMark > 0) {
       const zone = paddle.spec.perfectZone * height; // the zone, both halves
       ctx.globalAlpha = perfectMark;
@@ -103,6 +133,102 @@ export class EntityRenderer {
     }
 
     ctx.restore();
+  }
+
+  /** Lightning crackling between points on a charged paddle's edges, anew every frame. */
+  private static drawCharge(ctx: CanvasRenderingContext2D, paddle: Paddle, topY: number): void {
+    const { width, height } = paddle.spec;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = CHARGED.WIDTH;
+    for (let i = 0; i < CHARGED.BOLTS; i++) {
+      const fromY = topY + Math.random() * height;
+      const toY = topY + Math.random() * height;
+      const sideX = (edge: number) => paddle.x + (edge < 0.5 ? -1 : width + 1);
+      ctx.globalAlpha = 0.5 + 0.5 * Math.random();
+      ctx.strokeStyle = i % 2 === 0 ? COLORS.YELLOW : COLORS.WHITE;
+      this.drawBolt(
+        ctx,
+        sideX(Math.random()),
+        fromY,
+        sideX(Math.random()),
+        toY,
+        CHARGED.JITTER,
+        CHARGED.KINKS,
+      );
+    }
+    ctx.restore();
+  }
+
+  /** A jagged line of lightning from one point to another, kinked `kinks` times by up to `jitter` px. */
+  private static drawBolt(
+    ctx: CanvasRenderingContext2D,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    jitter: number,
+    kinks: number,
+  ): void {
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    for (let k = 1; k < kinks; k++) {
+      const t = k / kinks;
+      ctx.lineTo(
+        fromX + (toX - fromX) * t + (Math.random() - 0.5) * 2 * jitter,
+        fromY + (toY - fromY) * t + (Math.random() - 0.5) * 2 * jitter,
+      );
+    }
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+  }
+
+  /**
+   * The trail: one ribbon through the points the ball has passed and on to where it is drawn,
+   * tapering to the tail, filled with a gradient that fades toward the tail.
+   */
+  private static drawTrail(
+    ctx: CanvasRenderingContext2D,
+    points: readonly Point[],
+    radius: number,
+    widthScale: number,
+    color: (alpha: number) => string,
+    alpha: number,
+  ): void {
+    const count = points.length;
+    if (count < 2) return;
+    const left: Point[] = [];
+    const right: Point[] = [];
+    for (let i = 0; i < count; i++) {
+      const before = points[Math.max(0, i - 1)];
+      const after = points[Math.min(count - 1, i + 1)];
+      const dx = after.x - before.x;
+      const dy = after.y - before.y;
+      const length = Math.hypot(dx, dy) || 1;
+      const t = i / (count - 1);
+      const half = radius * widthScale * (TRAIL.TAIL + (TRAIL.HEAD - TRAIL.TAIL) * t);
+      const nx = (-dy / length) * half;
+      const ny = (dx / length) * half;
+      left.push({ x: points[i].x + nx, y: points[i].y + ny });
+      right.push({ x: points[i].x - nx, y: points[i].y - ny });
+    }
+    const tail = points[0];
+    const head = points[count - 1];
+    const headLeft = left[count - 1];
+    const gradient = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
+    gradient.addColorStop(0, color(0));
+    gradient.addColorStop(1, color(alpha));
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.moveTo(left[0].x, left[0].y);
+    for (let i = 1; i < count; i++) ctx.lineTo(left[i].x, left[i].y);
+    // Rounded off ahead, round the ball, rather than ending in square shoulders
+    const side = Math.atan2(headLeft.y - head.y, headLeft.x - head.x);
+    const half = Math.hypot(headLeft.x - head.x, headLeft.y - head.y);
+    ctx.arc(head.x, head.y, half, side, side - Math.PI, true);
+    for (let i = count - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+    ctx.closePath();
+    ctx.fill();
   }
 
   /** How brightly a marked perfect zone shows at `time`: throbbing, or steady for less motion. */
@@ -245,19 +371,44 @@ export class EntityRenderer {
     const x = ball.drawX;
     const y = ball.drawY;
 
-    // Fading ball trail: one color, faded through globalAlpha (on top of the serve's fade)
-    const baseAlpha = ctx.globalAlpha;
-    const trailAlpha = 0.22 + rallyIntensity * 0.2;
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = `hsl(${hue}, ${glowSat}%, ${lit}%)`;
-    ball.trail.forEach((point, index) => {
-      const alpha = (index + 1) / ball.trail.length;
-      ctx.globalAlpha = baseAlpha * alpha * trailAlpha;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, currentRadius * (0.35 + 0.55 * alpha), 0, TWO_PI);
-      ctx.fill();
-    });
-    ctx.globalAlpha = baseAlpha;
+    // How fast it flies, against the serve's speed: read off its trail and its stretch
+    const flight = ball.speed * ball.speedMultiplier;
+    const speedHeat = Math.min(1, Math.max(0, (flight - SPEED_LOOK.FROM) / SPEED_LOOK.SPAN));
+    const isPower = ball.isPowerShot;
+
+    // The trail: a ribbon in the ball's colour (a power shot's burning yellow into pink), a soft
+    // wide glow under a bright core, on top of the serve's fade
+    if (serveTime <= 0) {
+      const points = [...ball.trail, { x, y }];
+      const widthScale = isPower ? POWER_BALL.TRAIL_WIDTH : 1;
+      const heat = TRAIL.HEAT_ALPHA * speedHeat;
+      ctx.globalCompositeOperation = 'lighter';
+      const glow = (alpha: number) =>
+        isPower
+          ? `hsla(330, 100%, 62%, ${alpha})`
+          : `hsla(${hue + 10}, ${glowSat}%, ${lit - 12}%, ${alpha})`;
+      const core = (alpha: number) =>
+        isPower ? `hsla(48, 100%, 70%, ${alpha})` : `hsla(${hue}, ${glowSat}%, ${lit}%, ${alpha})`;
+      this.drawTrail(
+        ctx,
+        points,
+        currentRadius,
+        widthScale * TRAIL.GLOW_WIDTH,
+        glow,
+        TRAIL.GLOW_ALPHA + heat,
+      );
+      this.drawTrail(ctx, points, currentRadius, widthScale, core, TRAIL.CORE_ALPHA + heat);
+    }
+
+    // The faster it flies, the more it stretches along its flight
+    if (speedHeat > 0 && serveTime <= 0) {
+      const heading = Math.atan2(ball.vy, ball.vx);
+      ctx.translate(x, y);
+      ctx.rotate(heading);
+      ctx.scale(1 + SPEED_LOOK.ALONG * speedHeat, 1 - SPEED_LOOK.ACROSS * speedHeat);
+      ctx.rotate(-heading);
+      ctx.translate(-x, -y);
+    }
 
     // Struck, the ball flattens against what struck it, and stretches as it springs back
     if (squash && squash.amount !== 0) {
@@ -325,6 +476,26 @@ export class EntityRenderer {
         arcAngle + 2.2,
       );
       ctx.stroke();
+    }
+
+    // A power shot's ball is heavy with it: lightning crackles off it all the way
+    if (isPower && serveTime <= 0) {
+      ctx.lineWidth = POWER_BALL.BOLT_WIDTH;
+      for (let k = 0; k < POWER_BALL.BOLTS; k++) {
+        const angle = Math.random() * TWO_PI;
+        const reach = currentRadius * POWER_BALL.REACH * (0.6 + 0.4 * Math.random());
+        ctx.globalAlpha = 0.6 + 0.4 * Math.random();
+        ctx.strokeStyle = k % 2 === 0 ? COLORS.YELLOW : COLORS.WHITE;
+        this.drawBolt(
+          ctx,
+          x + Math.cos(angle) * currentRadius * 0.8,
+          y + Math.sin(angle) * currentRadius * 0.8,
+          x + Math.cos(angle) * reach,
+          y + Math.sin(angle) * reach,
+          currentRadius * POWER_BALL.JITTER,
+          4,
+        );
+      }
     }
     ctx.restore();
   }
