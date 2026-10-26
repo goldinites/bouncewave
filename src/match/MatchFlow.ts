@@ -3,6 +3,7 @@ import { Ball } from '@/match/Ball';
 import { Brick, CourtConditions } from '@/match/court';
 import { ModifierHost, ModifierId, ModifierMoment } from '@/match/modifiers/Modifier';
 import { HALVES, SECOND_PADDLE_STEP } from '@/match/modifiers/modifiers';
+import { ModifierSchedule, UpcomingModifier } from '@/match/modifiers/ModifierSchedule';
 import { ModifierSet } from '@/match/modifiers/ModifierSet';
 import { BALL, COURT, HIT_STOP } from '@/match/config';
 import { DifficultyConfig, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
@@ -19,7 +20,8 @@ import { PaddleSpec, STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Physics, PhysicsEvent } from '@/match/Physics';
 import { isOvertimeAt } from '@/match/overtime';
 import { cpuRank, paceAt } from '@/match/ramp';
-import { isDecidingPoint, MatchRules, STANDARD_RULES } from '@/match/rules';
+import { Decision, FinaleReason, Referee } from '@/match/Referee';
+import { MatchRules, STANDARD_RULES } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
 import { IMPLANTS, ShotRead, SkillHost, SkillId, SkillUse } from '@/match/skills/Skill';
 import { SkillSet, TimeWarp } from '@/match/skills/SkillSet';
@@ -48,8 +50,7 @@ export const FINALE = {
  */
 export type MatchPhase = 'attract' | 'serving' | 'rally' | 'paused' | 'finale';
 
-/** What decided a match: a side's winning score, the clock running out, or the rally goal. */
-export type FinaleReason = 'points' | 'time' | 'rally';
+export type { FinaleReason } from '@/match/Referee';
 
 export type MatchEvent =
   | { type: 'matchStart' }
@@ -131,9 +132,10 @@ export interface MatchFlowDeps {
 }
 
 /**
- * The rules and timing of a match: phases, serves, scoring, the finale timer, and the
- * simulation step (input, AI, physics). It knows nothing about sound or pixels; it reports
- * what happened through `onEvent` and the presentation reacts.
+ * The play of a match: phases, serves, the finale timer, and the simulation step (input, AI,
+ * physics). The score and when the match is over are its `Referee`'s; which modifiers are in
+ * play as it goes on, its `ModifierSchedule`'s. It knows nothing about sound or pixels; it
+ * reports what happened through `onEvent` and the presentation reacts.
  */
 export class MatchFlow {
   private _phase: MatchPhase = 'attract';
@@ -156,14 +158,10 @@ export class MatchFlow {
   private readonly overdrives: Overdrive[];
   /** The skills of the paddles in the match being played. */
   private readonly skills = new SkillSet();
-  /** Points each side has won in the match being played (or just finished). */
-  private readonly _scores: [number, number] = [0, 0];
-  /** The rules of the match being played (or last played); set by startMatch. */
-  private _rules: MatchRules = STANDARD_RULES;
+  /** Keeps the score and says when the match is over, as its rules have it. */
+  private readonly referee = new Referee();
   /** The level the match being played (or just finished) is at; null in the demo. */
   private matchDifficulty: DifficultyLevel | null = null;
-  /** Seconds left on the match clock; null without one, or in the demo. */
-  private _timeLeft: number | null = null;
   private readonly paddles: Paddle[];
   /** How many paddles there are between matches: the ones the match was given. */
   private readonly basePaddles: number;
@@ -171,10 +169,10 @@ export class MatchFlow {
   private readonly _court = new CourtConditions();
   /** The modifiers of the match being played. */
   private readonly modifiers = new ModifierSet();
-  /** Those in play right now: the rules' own, and the rotation's turn (Chaos). */
+  /** Which modifiers are in play as the match goes on: the rules' own, a rotation's turn. */
+  private readonly schedule = new ModifierSchedule();
+  /** Those in play right now. */
   private _activeModifiers: readonly ModifierId[] = [];
-  /** The rotation's modifiers in the order dealt for this match. */
-  private rotation: ModifierId[] = [];
   /** Every ball on court: the first is the one given, the rest the rules' extra balls. */
   private readonly _balls: Ball[];
   private readonly input: PlayerInput;
@@ -261,15 +259,15 @@ export class MatchFlow {
   /** Whether paddle `index` charges Overdrive: in a real match, if it and the rules have it. */
   private hasOverdrive(index: number): boolean {
     const participant = this.lineup[index];
-    if (this.isDemo || !this._rules.overdrive || !participant) return false;
+    if (this.isDemo || !this.rules.overdrive || !participant) return false;
     // A CPU charges it on its own account, at a level that does, where the rules let it
-    const isCpus = this._rules.cpuOverdrive && (participant.controller.chargesOverdrive ?? false);
+    const isCpus = this.rules.cpuOverdrive && (participant.controller.chargesOverdrive ?? false);
     return participant.overdrive || isCpus;
   }
 
   /** Points each side has won in the match being played (or just finished). */
   public get scores(): Scores {
-    return [this._scores[0], this._scores[1]];
+    return this.referee.scores;
   }
 
   public get rally(): number {
@@ -293,8 +291,9 @@ export class MatchFlow {
     return 'play';
   }
 
+  /** The rules of the match being played (or last played). */
   public get rules(): MatchRules {
-    return this._rules;
+    return this.referee.rules;
   }
 
   /**
@@ -315,19 +314,17 @@ export class MatchFlow {
 
   /** Whether a long rally goes to overtime in this match. */
   private get hasOvertime(): boolean {
-    return (
-      !this.isDemo && this._rules.rallyPressure && DIFFICULTY_CONFIGS[this.difficulty].overtime
-    );
+    return !this.isDemo && this.rules.rallyPressure && DIFFICULTY_CONFIGS[this.difficulty].overtime;
   }
 
   /** Seconds left on the match clock; null when the match has none (and in the demo). */
   public get timeLeft(): number | null {
-    return this._timeLeft;
+    return this.referee.timeLeft;
   }
 
   /** Both sides are one point from winning under the match's rules. */
   public get isDecidingPoint(): boolean {
-    return isDecidingPoint(this._scores, this._rules);
+    return this.referee.isDecidingPoint;
   }
 
   /** A real match is being played right now (not demo, paused or finished). */
@@ -349,15 +346,8 @@ export class MatchFlow {
    * The rotation's next modifier and the points until it takes over (Chaos), shown ahead; null
    * without a rotation, and in the demo.
    */
-  public get upcomingModifier(): { readonly id: ModifierId; readonly inPoints: number } | null {
-    const rotation = this._rules.rotation;
-    if (this.isDemo || !rotation) return null;
-    const played = this._scores[0] + this._scores[1];
-    const turn = Math.floor(played / rotation.points);
-    return {
-      id: this.rotation[(turn + 1) % this.rotation.length],
-      inPoints: (turn + 1) * rotation.points - played,
-    };
+  public get upcomingModifier(): UpcomingModifier | null {
+    return this.isDemo ? null : this.schedule.upcoming(this.referee.played);
   }
 
   /** Every ball on court, the first one first. */
@@ -465,7 +455,7 @@ export class MatchFlow {
     this.useLineup(this.demoLineup);
     this.useBalls(1);
     this.matchDifficulty = null;
-    this._timeLeft = null;
+    this.referee.stop();
     this._phase = 'attract';
     this.serve(1, SERVE_DELAY.DEMO);
   }
@@ -487,16 +477,15 @@ export class MatchFlow {
     if (rules.rotation?.modifiers.includes('twoOpponents')) {
       throw new Error('Two opponents changes who plays: it cannot take a turn in a rotation');
     }
-    this._rules = rules;
+    this.referee.start(rules);
     this.matchDifficulty = difficulty;
-    this._timeLeft = rules.timeLimit;
     this.modifiers.end();
     this.useLineup(
       rules.modifiers.includes('twoOpponents') ? this.withSecondOpponent(lineup) : lineup,
     );
     this.useBalls(rules.balls);
-    this.rotation = this.deal(rules.rotation?.modifiers ?? []);
-    this._activeModifiers = this.modifiersAt(0);
+    this.schedule.start(rules, this.random);
+    this._activeModifiers = this.schedule.at(0);
     this.modifiers.use(this._activeModifiers, this.modifierHost());
     this.emit({ type: 'matchStart' });
     this.resetScores();
@@ -557,10 +546,10 @@ export class MatchFlow {
     }
 
     // The clock runs through serves and rallies alike: a lost point costs the time of the serve
-    if (this._timeLeft !== null && this._phase !== 'attract') {
-      this._timeLeft = Math.max(0, this._timeLeft - dt);
-      if (this._timeLeft === 0) {
-        this.endOnTime();
+    if (this._phase !== 'attract') {
+      const decision = this.referee.tick(dt, this.playerSide);
+      if (decision) {
+        this.beginFinale(decision, this.leadBall.y);
         return;
       }
     }
@@ -646,11 +635,11 @@ export class MatchFlow {
     if (this.isDemo) return DIFFICULTY_CONFIGS[this.getDifficulty()];
 
     const level = DIFFICULTY_CONFIGS[this.difficulty];
-    const config = this._rules.pace ? { ...level, ...this._rules.pace } : level;
-    const ramp = this._rules.cpuRamp;
+    const { pace, cpuRamp: ramp } = this.rules;
+    const config = pace ? { ...level, ...pace } : level;
     if (!ramp) return config;
     // The CPU's opponent is the player (the left side when no one plays)
-    const opponentPoints = this._scores[this.playerSide ?? 0];
+    const opponentPoints = this.referee.scores[this.playerSide ?? 0];
     return { ...config, ...paceAt(cpuRank(this.difficulty, ramp, opponentPoints)) };
   }
 
@@ -805,10 +794,8 @@ export class MatchFlow {
         });
 
         // A rally long enough wins the match for the player (the left side when no one plays)
-        const { rallyGoal } = this._rules;
-        if (!this.isDemo && rallyGoal !== null && this._rally >= rallyGoal) {
-          this.beginFinale(this.playerSide ?? 0, ball.y, 'rally');
-        }
+        const decision = this.isDemo ? null : this.referee.hit(this._rally, this.playerSide);
+        if (decision) this.beginFinale(decision, ball.y);
         break;
       }
       case 'score':
@@ -830,12 +817,12 @@ export class MatchFlow {
       return;
     }
 
-    this._scores[scorer]++;
+    const decision = this.referee.point(scorer);
     this.lineup.forEach(({ controller }, i) => controller.onPoint(this.paddles[i], scorer));
     this.emit({ type: 'score', scoringPlayerIndex: scorer, y, isDemo: false });
 
-    if (this._scores[scorer] >= this._rules.winningScores[scorer]) {
-      this.beginFinale(scorer, y, 'points');
+    if (decision) {
+      this.beginFinale(decision, y);
       return;
     }
 
@@ -844,46 +831,16 @@ export class MatchFlow {
     this.serve(nextServe, SERVE_DELAY.NORMAL);
   }
 
-  /** `modifiers` in an order dealt with the match's randomness, so a seed replays it. */
-  private deal(modifiers: readonly ModifierId[]): ModifierId[] {
-    const order = [...modifiers];
-    for (let i = order.length - 1; i > 0; i--) {
-      const j = Math.floor(this.random() * (i + 1));
-      [order[i], order[j]] = [order[j], order[i]];
-    }
-    return order;
-  }
-
-  /** The modifiers the rules have in play once `played` points (both sides') are played. */
-  private modifiersAt(played: number): readonly ModifierId[] {
-    const rotation = this._rules.rotation;
-    if (!rotation || this.rotation.length === 0) return this._rules.modifiers;
-    const turn = Math.floor(played / rotation.points) % this.rotation.length;
-    return [...this._rules.modifiers, this.rotation[turn]];
-  }
-
-  /** The rotation's next modifier takes over once its points are played (Chaos). */
+  /** The schedule's next modifiers take over once their points are played (Chaos). */
   private takeTurn(): void {
-    const now = this.modifiersAt(this._scores[0] + this._scores[1]);
+    const now = this.schedule.at(this.referee.played);
     if (now.every((id, i) => this._activeModifiers[i] === id)) return;
     this._activeModifiers = now;
     this.modifiers.use(now, this.modifierHost());
   }
 
-  /**
-   * The match clock has run out: the match ends where it stands, mid-rally or not. As the rules
-   * say, the side ahead wins (on a level score the player loses), or the player's opponent does
-   * whatever the score. With no player, the right side stands for the opponent.
-   */
-  private endOnTime(): void {
-    const [left, right] = this._scores;
-    const opponent = otherSide(this.playerSide ?? 0);
-    const winner: Side =
-      this._rules.timeUp === 'opponent' || left === right ? opponent : left > right ? 0 : 1;
-    this.beginFinale(winner, this.leadBall.y, 'time');
-  }
-
-  private beginFinale(winner: Side, ballY: number, reason: FinaleReason): void {
+  /** The referee has decided the match: its finale plays, the ball last seen at `ballY`. */
+  private beginFinale({ winner, reason }: Decision, ballY: number): void {
     this._phase = 'finale';
     this.finaleWinner = winner;
     this.finaleElapsed = 0;
@@ -896,7 +853,7 @@ export class MatchFlow {
       type: 'finaleStart',
       winnerIndex: winner,
       ballY,
-      scores: [...this._scores],
+      scores: [...this.referee.scores],
       reason,
     });
   }
@@ -908,7 +865,7 @@ export class MatchFlow {
     this.useLineup(this.demoLineup);
     this.useBalls(1);
 
-    this.emit({ type: 'gameOver', winnerIndex: winner, scores: [...this._scores] });
+    this.emit({ type: 'gameOver', winnerIndex: winner, scores: [...this.referee.scores] });
     this.serve(winner === 0 ? 1 : -1, SERVE_DELAY.GAME_OVER);
   }
 
@@ -919,7 +876,7 @@ export class MatchFlow {
     });
     // Both sides get ready for the point; whoever a ball is served to reads it like any shot
     this.lineup.forEach(({ controller }, i) => {
-      controller.onServe(this.paddles[i], this.scores, this._rules);
+      controller.onServe(this.paddles[i], this.scores, this.rules);
     });
     this._balls.forEach((ball) => this.shotAt(ball.vx > 0 ? 1 : 0, SHOT_THREAT.NORMAL, ball, 0));
     this.skills.onServe();
@@ -931,7 +888,7 @@ export class MatchFlow {
   }
 
   private resetScores(): void {
-    this._scores.fill(0);
+    this.referee.resetScores();
     this.paddles.forEach((p) => p.resetPosition());
     for (const { controller } of [...this.demoLineup, ...this.lineup]) controller.reset();
     this.overdrives.forEach((o) => o.reset());
