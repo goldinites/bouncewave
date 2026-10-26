@@ -38,10 +38,13 @@ export interface TutorialTexts {
 /** The controls screen (in the settings): each row's name, and how keys or a touch do it. */
 export interface ControlsTexts {
   title: string;
-  rows: Record<ControlId, { name: string; keys: string; touch: string }>;
+  rows: Record<ControlId, { name: string; keys: string }>;
 }
 
-/** The controls screen's rows: the buttons alone (the shots are the tutorial's to teach). */
+/**
+ * The controls screen's rows, on a computer: the keys alone (the shots are the tutorial's to
+ * teach; a phone has no such screen).
+ */
 export const CONTROL_ROWS = ['paddle', 'pause', 'fullscreen', 'music', 'twoPlayers'] as const;
 
 export type ControlId = (typeof CONTROL_ROWS)[number];
@@ -83,6 +86,8 @@ export interface TranslationSchema {
   modes: Record<ModeId, string>;
   tutorial: TutorialTexts;
   controls: ControlsTexts;
+  /** Under the settings' title on a phone, while the game isn't installed. */
+  installHint: string;
   /** The quick match's setup: its title is the mode's name; its options and start button. */
   background: string;
   points: string;
@@ -232,14 +237,15 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       doneTitle: 'WELL PLAYED!',
       doneText: 'Now for a real match',
     },
+    installHint: 'Install the game to play full screen',
     controls: {
       title: 'CONTROLS',
       rows: {
-        paddle: { name: 'Paddle', keys: 'W/S · ↑/↓ · mouse', touch: 'Slide a finger' },
-        pause: { name: 'Pause', keys: 'P · Esc · right click', touch: 'The ❚❚ button' },
-        fullscreen: { name: 'Fullscreen', keys: 'F', touch: 'Install the app' },
-        music: { name: 'Music', keys: 'M', touch: 'In the settings' },
-        twoPlayers: { name: 'Two players', keys: 'W/S and ↑/↓', touch: 'Each on their half' },
+        paddle: { name: 'Paddle', keys: 'W/S · ↑/↓ · mouse' },
+        pause: { name: 'Pause', keys: 'P · Esc · right click' },
+        fullscreen: { name: 'Fullscreen', keys: 'F' },
+        music: { name: 'Music', keys: 'M' },
+        twoPlayers: { name: 'Two players', keys: 'W/S and ↑/↓' },
       },
     },
     background: 'BACKGROUND',
@@ -417,14 +423,15 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
       doneTitle: 'ГОТОВО!',
       doneText: 'Теперь — настоящий матч',
     },
+    installHint: 'Установи игру — будет полный экран',
     controls: {
       title: 'УПРАВЛЕНИЕ',
       rows: {
-        paddle: { name: 'Ракетка', keys: 'W/S · ↑/↓ · мышь', touch: 'Веди пальцем' },
-        pause: { name: 'Пауза', keys: 'P · Esc · правая кнопка', touch: 'Кнопка ❚❚' },
-        fullscreen: { name: 'Полный экран', keys: 'F', touch: 'Установи приложение' },
-        music: { name: 'Музыка', keys: 'M', touch: 'В настройках' },
-        twoPlayers: { name: 'Двое', keys: 'W/S и ↑/↓', touch: 'Каждый на своей половине' },
+        paddle: { name: 'Ракетка', keys: 'W/S · ↑/↓ · мышь' },
+        pause: { name: 'Пауза', keys: 'P · Esc · правая кнопка' },
+        fullscreen: { name: 'Полный экран', keys: 'F' },
+        music: { name: 'Музыка', keys: 'M' },
+        twoPlayers: { name: 'Двое', keys: 'W/S и ↑/↓' },
       },
     },
     background: 'ФОН',
