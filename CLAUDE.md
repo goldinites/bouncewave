@@ -23,6 +23,7 @@ screens, an installable offline PWA. Played at https://goldinites.github.io/boun
 npm run dev           # http://localhost:3000/bouncewave/ (base path is /bouncewave/)
 npm test              # vitest, happy-dom
 npx tsc --noEmit -p . # types (npm run build also builds)
+npm run build:portal  # the build for a web game portal: dist-portal/, relative paths, no service worker
 npm run lint
 npm run format:check  # prettier, Markdown included; npm run format fixes
 npm run test:e2e      # Playwright smoke: desktop, phone portrait and landscape (CI runs it too)

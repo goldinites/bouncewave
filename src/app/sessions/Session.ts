@@ -1,5 +1,5 @@
 import { MusicPlace } from '@/audio/music/score';
-import { SkillOwner } from '@/debug/SkillMenu';
+import type { SkillOwner } from '@/debug/SkillMenu';
 import { I18nManager } from '@/i18n/I18nManager';
 import { InputHandler } from '@/input/InputHandler';
 import { ChallengeId } from '@/match/challenges';

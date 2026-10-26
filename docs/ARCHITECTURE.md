@@ -289,6 +289,16 @@ them.
 
 **Planned, not there yet** (see the roadmap): story scenes as typed data, without Ink (8.1).
 
+## Starting up and the builds
+
+`index.ts` waits for `app/boot.ts` (the player's profile; a portal's SDK starts there first, its
+saves coming asynchronously), then builds the `Game`, which takes the profile it is given. The
+developer tools (`debug/DebugTools.ts`: the dock, its menus, the sound stand) are a chunk of their
+own, loaded the first time they are asked for (`?debug`, F3, a link to the sound stand); the FPS
+line and the errors it reports are always there. `npm run build` builds for GitHub Pages
+(`/bouncewave/`, installable, offline); `npm run build:portal` builds for a web game portal
+(`dist-portal/`, relative paths, no service worker).
+
 ## Rules of thumb
 
 - Randomness in the simulation is injected (`random` in `MatchFlow`, the AI, `Ball.serve`), so a

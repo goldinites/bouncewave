@@ -1,4 +1,5 @@
 dist
+dist-portal
 node_modules
 coverage
 package-lock.json
