@@ -153,6 +153,9 @@ describe('the PLAY menu and the setup, in the menus', () => {
 
   afterEach(() => {
     managers.splice(0).forEach((manager) => manager.dispose());
+    // The page these tests build would otherwise stay for the screens' tests to find, whichever
+    // order they run in
+    document.body.innerHTML = '';
   });
 
   const setup = (language: 'en' | 'ru' = 'en') => {
@@ -386,6 +389,10 @@ describe('telling the game the quick match setup is on screen', () => {
     document.body.innerHTML = `
       <div id="gameUI"></div><h1 id="gameTitle"></h1><p id="gameSubtitle"></p>
       <div id="gameScreen"></div><button id="pauseButton"></button>`;
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
   });
 
   it('says so as it opens and as it gives way, not as it is redrawn', () => {
