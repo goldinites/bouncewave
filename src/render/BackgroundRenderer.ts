@@ -14,7 +14,7 @@ import { clamp } from '@/shared/math';
 import { isPickableScene, SceneId } from '@/shared/scenes';
 
 // The share of its dark veil a backdrop sheds on a full beat (6.5)
-const BEAT_BREATH = 0.45;
+const BEAT_BREATH = 0.25;
 // Dark tint over the background so the court reads clearly on top of it
 const OVERLAY_TINT_RGB = '10, 2, 32';
 

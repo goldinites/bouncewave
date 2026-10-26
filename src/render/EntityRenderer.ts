@@ -21,7 +21,7 @@ const TRAIL = {
   GLOW_WIDTH: 1.6, // × the core's width
   GLOW_ALPHA: 0.28,
   CORE_ALPHA: 0.55,
-  HEAT_ALPHA: 0.35, // more of both at full heat
+  HEAT_ALPHA: 0.2, // more of both at full heat
 } as const;
 // Speed is read off the ball: from the serve's speed (FROM, px/s) to FROM + SPAN it stretches
 // along its flight by up to ALONG and thins across by ACROSS
@@ -37,7 +37,10 @@ const POWER_BALL = {
 } as const;
 // A charged Overdrive crackles along its paddle: BOLTS of lightning between points on its edges,
 // redrawn every frame, so the player feels the shot waiting before they play it
-const CHARGED = { BOLTS: 2, JITTER: 5, WIDTH: 1.4, KINKS: 6 } as const; // px, px
+const CHARGED = { BOLTS: 2, JITTER: 5, WIDTH: 1.4, KINKS: 6, RATE: 10 } as const; // px, px, -, -, Hz
+// What flickers changes in steps, RATE a second, rather than every frame: a light that changes 60
+// times a second where the player looks tires the eyes (6.8); an arc sparks about this often
+const FLICKER = { OUT_RATE: 12, BOLT_RATE: 20 } as const; // Hz
 // A wave's wake: the soft glow inside its front, this much as bright as the front
 const WAKE_ALPHA = 0.22;
 // A spark's streak: as long as STREAK s of its flight, at least a dot
@@ -79,7 +82,8 @@ export class EntityRenderer {
    @param isCharged its Overdrive is charged: lightning crackles along it
    @param out how far it is shorted out by the point it just lost, in [0, 1]: dimmed, flickering
    unless `isSteady` (less motion)
-   @param isSteady dimmed without the flicker */
+   @param isSteady dimmed without the flicker
+   @param time s, for what flickers on it to step with */
   public static renderPaddle(
     ctx: CanvasRenderingContext2D,
     paddle: Paddle,
@@ -91,13 +95,14 @@ export class EntityRenderer {
     isCharged = false,
     out = 0,
     isSteady = false,
+    time = 0,
   ): void {
     const { width, height } = paddle.spec;
     const topY = paddle.drawY - height / 2;
 
     ctx.save();
     if (out > 0.01) {
-      const flicker = isSteady ? 0.5 : Math.random();
+      const flicker = isSteady ? 0.5 : steppedRandom(time, FLICKER.OUT_RATE, paddle.side)();
       ctx.globalAlpha = 1 - out * (0.3 + 0.35 * flicker);
     }
     if (recoil !== 0) ctx.translate(paddle.side === 0 ? -recoil : recoil, 0);
@@ -125,7 +130,7 @@ export class EntityRenderer {
     this.roundRect(ctx, paddle.x + width / 2 - 2, topY + 8, 4, height - 16, 2);
     ctx.fill();
 
-    if (isCharged) this.drawCharge(ctx, paddle, topY);
+    if (isCharged) this.drawCharge(ctx, paddle, topY, time);
 
     if (perfectMark > 0) {
       const zone = paddle.spec.perfectZone * height; // the zone, both halves
@@ -148,25 +153,32 @@ export class EntityRenderer {
   }
 
   /** Lightning crackling between points on a charged paddle's edges, anew every frame. */
-  private static drawCharge(ctx: CanvasRenderingContext2D, paddle: Paddle, topY: number): void {
+  private static drawCharge(
+    ctx: CanvasRenderingContext2D,
+    paddle: Paddle,
+    topY: number,
+    time: number,
+  ): void {
     const { width, height } = paddle.spec;
+    const random = steppedRandom(time, CHARGED.RATE, paddle.side);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineWidth = CHARGED.WIDTH;
     for (let i = 0; i < CHARGED.BOLTS; i++) {
-      const fromY = topY + Math.random() * height;
-      const toY = topY + Math.random() * height;
+      const fromY = topY + random() * height;
+      const toY = topY + random() * height;
       const sideX = (edge: number) => paddle.x + (edge < 0.5 ? -1 : width + 1);
-      ctx.globalAlpha = 0.5 + 0.5 * Math.random();
+      ctx.globalAlpha = 0.35 + 0.3 * random();
       ctx.strokeStyle = i % 2 === 0 ? COLORS.YELLOW : COLORS.WHITE;
       this.drawBolt(
         ctx,
-        sideX(Math.random()),
+        sideX(random()),
         fromY,
-        sideX(Math.random()),
+        sideX(random()),
         toY,
         CHARGED.JITTER,
         CHARGED.KINKS,
+        random,
       );
     }
     ctx.restore();
@@ -181,14 +193,15 @@ export class EntityRenderer {
     toY: number,
     jitter: number,
     kinks: number,
+    random: () => number,
   ): void {
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
     for (let k = 1; k < kinks; k++) {
       const t = k / kinks;
       ctx.lineTo(
-        fromX + (toX - fromX) * t + (Math.random() - 0.5) * 2 * jitter,
-        fromY + (toY - fromY) * t + (Math.random() - 0.5) * 2 * jitter,
+        fromX + (toX - fromX) * t + (random() - 0.5) * 2 * jitter,
+        fromY + (toY - fromY) * t + (random() - 0.5) * 2 * jitter,
       );
     }
     ctx.lineTo(toX, toY);
@@ -387,10 +400,8 @@ export class EntityRenderer {
     const glowSat = Math.min(100, sat + 35) * (1 - white);
     const plainLit = 88 - rallyIntensity * 18 + climax * 8;
     const lit = plainLit + (97 - plainLit) * white;
-    const flicker =
-      0.92 +
-      Math.sin(time * (23 + climax * 17)) * 0.05 * (1 + climax * 1.5) +
-      Math.random() * 0.04 * (1 + climax * 3);
+    // The plasma breathes smoothly: no random flicker frame to frame on what the eye follows
+    const flicker = 0.92 + Math.sin(time * (23 + climax * 17)) * 0.05 * (1 + climax * 1.5);
 
     const currentRadius =
       serveTime > 0 ? ball.radius * (1 + 0.2 * Math.sin(time * 20)) : ball.radius;
@@ -506,11 +517,12 @@ export class EntityRenderer {
 
     // A power shot's ball is heavy with it: lightning crackles off it all the way
     if (isPower && serveTime <= 0) {
+      const random = steppedRandom(time, FLICKER.BOLT_RATE, 7);
       ctx.lineWidth = POWER_BALL.BOLT_WIDTH;
       for (let k = 0; k < POWER_BALL.BOLTS; k++) {
-        const angle = Math.random() * TWO_PI;
-        const reach = currentRadius * POWER_BALL.REACH * (0.6 + 0.4 * Math.random());
-        ctx.globalAlpha = 0.6 + 0.4 * Math.random();
+        const angle = random() * TWO_PI;
+        const reach = currentRadius * POWER_BALL.REACH * (0.6 + 0.4 * random());
+        ctx.globalAlpha = 0.5 + 0.3 * random();
         ctx.strokeStyle = k % 2 === 0 ? COLORS.YELLOW : COLORS.WHITE;
         this.drawBolt(
           ctx,
@@ -520,6 +532,7 @@ export class EntityRenderer {
           y + Math.sin(angle) * reach,
           currentRadius * POWER_BALL.JITTER,
           4,
+          random,
         );
       }
     }
@@ -631,4 +644,19 @@ export class EntityRenderer {
       ctx.rect(x, y, w, h);
     }
   }
+}
+
+/**
+ * Randomness that holds still between steps: the same numbers for every frame within one
+ * 1/`rate` s step of `time`, others in the next. `salt` keeps two things apart in the same step.
+ */
+function steppedRandom(time: number, rate: number, salt: number): () => number {
+  let seed = (Math.floor(time * rate) * 2654435761 + salt * 97) >>> 0;
+  return () => {
+    seed = (seed + 0x6d2b79f5) >>> 0;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }

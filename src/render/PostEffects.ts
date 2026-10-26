@@ -2,12 +2,10 @@
 // of the canvas's size, and that shrunk to 1/FAR, is a soft blur of it for free; added back as
 // light, NEAR_ALPHA and FAR_ALPHA strong. Drawn afresh rather than read back off the frame, which
 // would stall the canvas (~9 ms a frame on the bench)
-const BLOOM = { NEAR: 6, FAR: 14, NEAR_ALPHA: 0.4, FAR_ALPHA: 0.3 } as const;
+const BLOOM = { NEAR: 6, FAR: 14, NEAR_ALPHA: 0.35, FAR_ALPHA: 0.25 } as const;
 // A light CRT: a dark scanline every LINE canvas px, DARK strong, and the corners dimmed by
 // VIGNETTE; the lines run across the screen however the court is turned
 const CRT = { LINE: 3, DARK: 0.07, VIGNETTE: 0.28 } as const;
-// Chromatic aberration on a big moment: red and cyan fringes split ALPHA strong
-const ABERRATION = { ALPHA: 0.45 } as const;
 
 /** What the post-processing draws this frame. */
 export interface PostState {
@@ -133,26 +131,27 @@ export class PostEffects {
     ctx.fillRect(0, 0, width, height);
   }
 
-  /** The picture's red and cyan pulled `px` apart, over the picture itself. */
+  /**
+   * The picture's red pulled `px` aside from its green and blue: taken out where it is and put
+   * back shifted, so the picture is no brighter for it (adding coloured copies on top lit the whole
+   * screen up for a moment, a flash).
+   */
   private drawAberration(ctx: CanvasRenderingContext2D, px: number): void {
     const { width, height } = ctx.canvas;
     const split = (this.split = fit(this.split, width, height));
     if (!split) return;
+    // The red alone, shifted
+    split.globalCompositeOperation = 'copy';
+    split.drawImage(ctx.canvas, 0, 0);
+    split.globalCompositeOperation = 'multiply';
+    split.fillStyle = '#ff0000';
+    split.fillRect(0, 0, width, height);
+    // Out of the picture where it was, back in where it goes
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = '#00ffff';
+    ctx.fillRect(0, 0, width, height);
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = ABERRATION.ALPHA;
-    for (const [color, dx] of [
-      ['#ff0000', px],
-      ['#00ffff', -px],
-    ] as const) {
-      split.globalCompositeOperation = 'copy';
-      split.drawImage(ctx.canvas, 0, 0);
-      // Only that colour of the picture is kept
-      split.globalCompositeOperation = 'multiply';
-      split.fillStyle = color;
-      split.fillRect(0, 0, width, height);
-      ctx.drawImage(split.canvas, dx, 0);
-    }
-    ctx.globalAlpha = 1;
+    ctx.drawImage(split.canvas, px, 0);
     ctx.globalCompositeOperation = 'source-over';
   }
 }

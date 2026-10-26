@@ -227,7 +227,7 @@ export class Renderer {
     this.kick.age = 0;
   }
 
-  /** A power shot's impact frame: the whole picture inverted for `duration` s, a frame or two. */
+  /** A power shot's impact frame: the court in shadow under what is struck for `duration` s, a frame or two. */
   public addImpactFrame(duration: number): void {
     if (!this.showsEffects || this.reducedMotion.matches) return;
     this.impactFrame = Math.max(this.impactFrame, duration);

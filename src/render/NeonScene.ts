@@ -33,10 +33,12 @@ const REPLAY_BARS = { SIZE: 26, ALPHA: 0.85, FONT: 15, BLINK: 3 } as const; // p
 // Light the game throws onto the backdrop (6.5): each ball's own glow, BALL px across and ALPHA
 // strong (more as it speeds up, a power shot's yellow), and the hits' bursts of light, LIGHT
 // strong at their height
-const COURT_LIGHT = { BALL: 110, BALL_ALPHA: 0.1, BALL_SPEED_ALPHA: 0.08, LIGHT: 0.22 } as const;
+const COURT_LIGHT = { BALL: 110, BALL_ALPHA: 0.06, BALL_SPEED_ALPHA: 0.04, LIGHT: 0.18 } as const;
 // The layers drawn again for the bloom: what glows on the court, and nothing that moves on as it
 // is drawn (a layer that follows time by being drawn would go twice as fast)
 const GLOWING_LAYERS = new Set(['ripples', 'paddles', 'balls', 'particles']);
+// How deep the power shot's impact frame drops the court into shadow
+const IMPACT_SHADOW = 0.3;
 // 1/s a charge gained on a meter settles at, from its flare
 const METER_GAIN_DECAY = 4;
 // How hard a hit's kick thumps the backdrop, against a shake of the same px
@@ -354,6 +356,19 @@ function neonLayers(
       render: (c, { court }) => ModifierRenderer.renderBricks(c, court.conditions.bricks),
     },
     {
+      // A power shot's impact frame: for a frame or two the backdrop and the court drop into
+      // shadow under what is struck (the paddles, the ball, the sparks, drawn after), the moment
+      // held. Darker, never brighter: a negative of the dark court flashed the whole screen white
+      id: 'impactFrame',
+      space: 'court',
+      render: (c, _frame, { isImpactFrame }) => {
+        if (!isImpactFrame) return;
+        c.fillStyle = `rgba(0, 0, 0, ${IMPACT_SHADOW})`;
+        // Past the court's edges: the kick has moved it
+        c.fillRect(-COURT.WIDTH, -COURT.HEIGHT, COURT.WIDTH * 3, COURT.HEIGHT * 3);
+      },
+    },
+    {
       id: 'hud',
       space: 'court',
       render: (c, frame, state) => {
@@ -409,6 +424,7 @@ function neonLayers(
             isCharged,
             drama.paddleOut[i] ?? 0,
             isMotionReduced(),
+            court.time,
           );
           if (charge !== null && !state.finalSign) {
             EntityRenderer.renderOverdriveMeter(
@@ -584,18 +600,6 @@ function neonLayers(
           c.fill();
         }
         c.restore();
-      },
-    },
-    {
-      // A power shot's impact frame: the whole picture turned to its negative for a frame or two
-      id: 'impactFrame',
-      space: 'screen',
-      render: (c, _frame, { isImpactFrame }) => {
-        if (!isImpactFrame) return;
-        c.globalCompositeOperation = 'difference';
-        c.fillStyle = '#ffffff';
-        fillScreen(c);
-        c.globalCompositeOperation = 'source-over';
       },
     },
     {

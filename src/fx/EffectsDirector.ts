@@ -39,7 +39,7 @@ const SHAKE = {
 // Screen flash per event; a hit flashes where it struck instead (IMPACT)
 const FLASH = {
   START: 1.0,
-  SCORE: 0.3,
+  SCORE: 0.15,
   FIREWORK: 0.25,
   FINALE_WIN: 0.9,
 } as const;
@@ -58,7 +58,7 @@ const IMPACT = {
   FLARE: { MIN: 14, MAX: 22, PERFECT: 46, POWER: 34 },
   FLARE_FOR: 0.06, // s after the hit-stop
   // The light a hit throws onto the backdrop (6.5): px across, gone in LIGHT_FOR s
-  LIGHT: { MIN: 160, MAX: 240, PERFECT: 320, POWER: 400 },
+  LIGHT: { MIN: 160, MAX: 240, PERFECT: 280, POWER: 300 },
   LIGHT_FOR: 0.35, // s
   // A perfect hit is told from a plain one at a glance: a star glint's rays reaching GLINT px
   // across the flare, the ball burning white-hot for WHITE_HOT s,
@@ -74,7 +74,7 @@ const IMPACT = {
   // screen; a thin front with a soft wake behind it, so it never hides the ball
   PERFECT_RING: { SPEED: 900, DECAY: 2.2, WIDTH: 3, WAKE: 16 },
   POWER_RINGS: { SPEED: 820, INNER_SPEED: 560, DECAY: 4.5, WIDTH: 4 },
-  // The power shot's impact frame: the picture in negative for a frame or two, then its colours
+  // The power shot's impact frame: the court in shadow under it for a frame or two, then its colours
   // split ABERRATION px apart, closing over ABERRATION_FOR s
   IMPACT_FRAME: 0.035, // s
   ABERRATION: 5, // px
@@ -114,7 +114,7 @@ const GOAL = {
   SPREAD: 2.2, // rad, the cone the sparks spray back into the court
   WAVE_SPEED: 620,
   WAVE_WAKE: 22, // px
-  LIGHT: 460, // px across, thrown on the backdrop for LIGHT_FOR s
+  LIGHT: 320, // px across, thrown on the backdrop for LIGHT_FOR s
   LIGHT_FOR: 0.6,
   ABERRATION: 4, // px the colours split, closing over ABERRATION_FOR s
   ABERRATION_FOR: 0.25,
@@ -610,7 +610,7 @@ export class EffectsDirector {
 
   /**
    * An Overdrive goes off: on top of the hit, a white-hot blast the way the ball went, two rings,
-   * the picture's negative for a frame, and its sound landing out of a hush as the ball leaves.
+   * the court in shadow for a frame, and its sound landing out of a hush as the ball leaves.
    */
   private onPowerShot(hit: Extract<MatchEvent, { type: 'paddleHit' }>): void {
     const { POWER_SPARKS, POWER_RINGS } = IMPACT;

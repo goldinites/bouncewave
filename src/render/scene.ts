@@ -131,7 +131,7 @@ export interface SceneState {
   flash: number;
   /** Where a hit has knocked the court to, px: it is pushed the way the ball was struck. */
   kick: { x: number; y: number };
-  /** Whether this frame is a power shot's impact frame: the whole picture inverted. */
+  /** Whether this frame is a power shot's impact frame: the court in shadow under what is struck. */
   isImpactFrame: boolean;
   /** Whether the bloom is drawn: only at the sharpest resolution, frames running fast enough. */
   bloom: boolean;

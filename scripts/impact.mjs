@@ -4,7 +4,8 @@
 //
 // - <moment>-close.png — the frames around a moment, close up around the contact;
 // - <moment>-whole.png — the same frames, the whole screen at half size (shake, flash);
-// - report.md — what each moment was: its speed and rally.
+// - report.md — what each moment was (its speed and rally), and how hard the run is on the eyes:
+//   the flashes in it, by the measure games are checked with (WCAG 2.3.1, simplified).
 //
 // The moments: a plain hit slow and fast, a perfect hit, the perfect hit that fills Overdrive,
 // the power shot, a wall bounce and the goal. The randomness is seeded: every run films the same
