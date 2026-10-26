@@ -14,7 +14,7 @@ export interface Decision {
  * Keeps the score of a match and says when it is over, as its rules have it: on points, when the
  * clock runs out, or when a rally reaches its goal. It decides; `MatchFlow` plays the decision
  * out (the finale, the next serve). Whatever changes how a match is won mid-way (a story fight's
- * script, stage 8) changes it here.
+ * script, stage 9) changes it here.
  */
 export class Referee {
   private _rules: MatchRules = STANDARD_RULES;

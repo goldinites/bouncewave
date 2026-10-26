@@ -460,7 +460,7 @@ export class Game {
   }
 
   /**
-   * Keeps a passed challenge in the profile (its reward comes with the money, stage 9) and shows
+   * Keeps a passed challenge in the profile (its reward comes with the money, stage 10) and shows
    * the attempt's result in place of the game-over menu.
    */
   private recordVerdict(verdict: ChallengeVerdict): void {

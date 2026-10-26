@@ -11,7 +11,7 @@ export interface UpcomingModifier {
  * Which modifiers a match has in play as it goes on: the rules' own all along, and a rotation's
  * in turn on top of them (Chaos), each for so many points, in an order dealt with the match's
  * randomness so a seed replays it. Whatever else switches modifiers mid-match (a story fight's
- * phases, stage 8) is another schedule of the same kind.
+ * phases, stage 9) is another schedule of the same kind.
  */
 export class ModifierSchedule {
   private rules: MatchRules | null = null;

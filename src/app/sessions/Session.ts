@@ -23,7 +23,7 @@ export interface SessionContext {
 }
 
 /**
- * What is being played: a quick match, two people's, a challenge, the tutorial (and in stage 8 the
+ * What is being played: a quick match, two people's, a challenge, the tutorial (and in stage 9 the
  * story). It starts its match and its restarts, and answers whatever about the match depends on
  * the mode, so `Game` never asks which mode it is. It lasts from the match's start until the
  * player leaves for the menus.

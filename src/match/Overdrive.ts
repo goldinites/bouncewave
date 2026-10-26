@@ -1,7 +1,7 @@
 /** Overdrive: perfect hits in a row charge the player's next hit into a power shot. */
 export const OVERDRIVE = {
   CHARGE: 3, // perfect hits in a row to charge it, whatever the meter holds
-  CAPACITY: 3, // charges a meter holds unless its owner's implants grow it (up to 5, stage 9)
+  CAPACITY: 3, // charges a meter holds unless its owner's implants grow it (up to 5, stage 10)
   BOOST: 0.6, // extra speed share of the power shot, fading out...
   BOOST_DURATION: 1.4, // ...over this many seconds
 } as const;
