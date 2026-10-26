@@ -8,8 +8,8 @@ export interface GameMode {
 
 /**
  * Every mode, in the order the PLAY menu lists them. A new mode is an entry here and its name in
- * both languages; the compiler insists on the name. The story (stage 7) is on the menu before it
- * is playable.
+ * both languages; the compiler insists on the name. The story (stage 9) is not playable yet, and
+ * no build offers it on the menu for now (app/features.ts).
  */
 export const MODES = {
   story: { isPlayable: false },

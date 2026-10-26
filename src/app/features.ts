@@ -8,6 +8,12 @@ export interface Features {
    * PONG is Atari's mark; the Steam edition brings it back as a homage.
    */
   readonly classicLook: boolean;
+  /**
+   * The story: its mode on the PLAY menu. Off for now (ROADMAP 8.2): the web edition has no
+   * story, and until the story is made its button would only be a promise; the Steam edition
+   * brings it.
+   */
+  readonly story: boolean;
 }
 
-export const FEATURES: Features = { classicLook: false };
+export const FEATURES: Features = { classicLook: false, story: false };

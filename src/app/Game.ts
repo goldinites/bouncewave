@@ -335,6 +335,7 @@ export class Game {
             }),
           ),
         isTutorialOffered: () => this.profile.current.tutorial === null,
+        isModeOffered: (mode) => mode !== 'story' || features.story,
         onDeclineTutorial: () => this.profile.update({ tutorial: 'skipped' }),
         isChallengeMatch: () => (this.session?.challenge ?? null) !== null,
         isTwoPlayerMatch: () => this.session?.isTwoPlayers ?? false,

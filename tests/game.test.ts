@@ -165,6 +165,11 @@ describe('Game', () => {
     expect(choice('BACKGROUND')).toBe('LASERS');
   });
 
+  it('leaves the story off the PLAY menu of a build without it', () => {
+    buttons()[0].click(); // play
+    expect(labels()).toEqual(['QUICK MATCH', 'CHALLENGE', 'TUTORIAL', 'BACK']);
+  });
+
   it('leaves the classic look out of a build without it: the Konami code does nothing', () => {
     for (const code of KONAMI) press(code);
     expect(labels()).toEqual(['PLAY', '2 PLAYERS', 'STATISTICS', 'SETTINGS']);
@@ -173,7 +178,10 @@ describe('Game', () => {
   it('plays the classic look as Pong was, in a build that has it: no Overdrive, no skills', () => {
     game.dispose();
     document.body.innerHTML = BODY;
-    game = new Game($<HTMLCanvasElement>('#gameCanvas'), undefined, { classicLook: true });
+    game = new Game($<HTMLCanvasElement>('#gameCanvas'), undefined, {
+      classicLook: true,
+      story: false,
+    });
     game.init();
     const flow = (game as unknown as { flow: MatchFlow }).flow;
     play();

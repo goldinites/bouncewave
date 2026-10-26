@@ -205,7 +205,8 @@ the profile's `tutorial`.
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
 in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/menus/ModeMenus.ts`).
-The PLAY menu lists it, switched off until `isPlayable`; picking it (`ModeMenus.pick`) opens
+The PLAY menu lists it if the build offers it (`FEATURES`, `app/features.ts`: the story is off for
+now), switched off until `isPlayable`; picking it (`ModeMenus.pick`) opens
 its screen. What plays it is a `Session` (`app/sessions/Session.ts`): it starts its match and
 its restarts (rules, line-up, level) and answers what depends on the mode — its backdrop and
 music, the line over the court, whether it counts in the statistics, whether its winning point
