@@ -9,12 +9,10 @@ import { TutorialSession } from '@/app/sessions/TutorialSession';
 import { TwoPlayerSession } from '@/app/sessions/TwoPlayerSession';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
-import { BackgroundMenu } from '@/debug/BackgroundMenu';
-import { DebugDock, DockPanel } from '@/debug/DebugDock';
+import type { DebugTools } from '@/debug/DebugTools';
 import { FpsMeter } from '@/debug/FpsMeter';
-import { ModifierMenu } from '@/debug/ModifierMenu';
-import { SkillMenu, SkillOwner } from '@/debug/SkillMenu';
-import { SoundStand } from '@/debug/SoundStand';
+import type { SkillOwner } from '@/debug/SkillMenu';
+import { STAND_PARAMS } from '@/debug/standParams';
 import { ClassicSwitch } from '@/easterEgg/ClassicSwitch';
 import { EffectsDirector } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
@@ -59,8 +57,8 @@ const MAX_FRAME_DT = 0.033;
  */
 export class Game {
   /** Everything saved between visits; the settings are its first part. */
-  private readonly profile = new ProfileStore();
-  private readonly settings = new SettingsStore(this.profile.settings);
+  private readonly profile: ProfileStore;
+  private readonly settings: SettingsStore;
   /** Asks the browser to keep the profile once a match has been played. */
   private readonly storagePersistence = new StoragePersistence();
   /** Counts the player's finished matches into the profile. */
@@ -129,13 +127,13 @@ export class Game {
   /** The point that won the match, shown again slowed before the finale when worth it. */
   private readonly replay: MatchReplay;
   private readonly fpsMeter: FpsMeter;
-  private readonly backgroundMenu: BackgroundMenu;
-  /** Switches the skill prototypes on and off, and counts their uses in the match on court. */
-  private readonly skillMenu: SkillMenu;
-  /** Switches the match modifiers on and off for the next quick match. */
-  private readonly modifierMenu: ModifierMenu;
-  private readonly soundStand: SoundStand;
-  private readonly debugDock: DebugDock;
+  /**
+   * The developer tools under the FPS line, loaded on their own the first time a developer asks
+   * for them (?debug, F3, a link to the sound stand); null until then.
+   */
+  private debugTools: DebugTools | null = null;
+  private isLoadingDebugTools = false;
+  private isDisposed = false;
   /** How often each skill went off in the match on court, for the skill menu. */
   private readonly skillUses = new Map<SkillId, [number, number]>();
   /** The background the debug overlay last showed, to notice when the next match changes it. */
@@ -150,7 +148,13 @@ export class Game {
   private readonly listeners = new AbortController();
   private readonly unsubscribeSettings: () => void;
 
-  constructor(canvas: HTMLCanvasElement) {
+  /**
+   * @param profile the player's profile, loaded before the game starts (`app/boot.ts`); read
+   * from this browser's storage when left out
+   */
+  constructor(canvas: HTMLCanvasElement, profile: ProfileStore = new ProfileStore()) {
+    this.profile = profile;
+    this.settings = new SettingsStore(profile.settings);
     this.i18n = new I18nManager(this.settings.current.language);
 
     this.paddles = [
@@ -189,29 +193,13 @@ export class Game {
     this.pinnedSkills.cpu = skillsIn('cpuSkills');
     // ?mods=wind,darkness plays every quick match with those modifiers
     this.pinnedModifiers = (params.get('mods') ?? '').split(',').filter(isModifierId);
-    this.backgroundMenu = new BackgroundMenu(
-      (scene) => this.pickBackground(scene),
-      this.renderer.scenes,
-    );
-    this.skillMenu = new SkillMenu(SKILL_IDS, this.pinnedSkills, (owner, skills) =>
-      this.chooseSkills(owner, skills.filter(isSkillId)),
-    );
-    this.modifierMenu = new ModifierMenu(MODIFIER_IDS, this.pinnedModifiers, (modifiers) => {
-      this.pinnedModifiers = modifiers.filter(isModifierId);
+    // The FPS line heads the developer tools, which come the first time it is shown; a link to
+    // the sound stand (?song=neon-cathedral&part=chorus) brings them too, to hold the music there
+    this.fpsMeter = new FpsMeter((isVisible) => {
+      if (isVisible) this.loadDebugTools();
+      else this.debugTools?.setVisible(false);
     });
-    // ?song=neon-cathedral&part=chorus&mute=drums holds the music there (the listening stand)
-    this.soundStand = new SoundStand(this.audio);
-    // The FPS meter heads one dock of the tools, a tab each, so none crowds another or the court
-    let debugDock: DebugDock | null = null;
-    this.fpsMeter = new FpsMeter((isVisible) => debugDock?.setVisible(isVisible));
-    debugDock = new DebugDock(this.fpsMeter.element, [
-      this.panel('bg', this.backgroundMenu),
-      this.panel('skills', this.skillMenu),
-      this.panel('mods', this.modifierMenu),
-      this.panel('sound', this.soundStand),
-    ]);
-    debugDock.setVisible(this.fpsMeter.isShown);
-    this.debugDock = debugDock;
+    if (STAND_PARAMS.some((param) => params.has(param))) this.loadDebugTools();
     // The music opens with the song of whichever backdrop comes up first
     this.audio.music.enterScene(this.renderer.scene);
     // Behind the menus the backdrops give way one to the next with the menus' song
@@ -567,7 +555,7 @@ export class Game {
       uses[this.flow.isPlayerPaddle(event.paddleIndex) ? 0 : 1]++;
       this.skillUses.set(event.skill, uses);
     } else return;
-    this.skillMenu.setCounts(this.skillUses);
+    this.debugTools?.setSkillCounts(this.skillUses);
   }
 
   /**
@@ -734,17 +722,41 @@ export class Game {
   }
 
   /**
+   * Loads the developer tools, once: a chunk of their own, so a player never downloads them.
+   * They open on what the game has on show.
+   */
+  private loadDebugTools(): void {
+    if (this.isLoadingDebugTools) return;
+    this.isLoadingDebugTools = true;
+    import('@/debug/DebugTools')
+      .then(({ DebugTools }) => {
+        if (this.isDisposed) return;
+        const tools = new DebugTools({
+          header: this.fpsMeter.element,
+          audio: this.audio,
+          scenes: this.renderer.scenes,
+          pickBackground: (scene) => this.pickBackground(scene),
+          skills: SKILL_IDS,
+          pinnedSkills: this.pinnedSkills,
+          chooseSkills: (owner, skills) => this.chooseSkills(owner, skills.filter(isSkillId)),
+          modifiers: MODIFIER_IDS,
+          pinnedModifiers: this.pinnedModifiers,
+          chooseModifiers: (modifiers) => {
+            this.pinnedModifiers = modifiers.filter(isModifierId);
+          },
+        });
+        tools.setVisible(this.fpsMeter.isShown);
+        tools.setScene(this.renderer.scene);
+        tools.setSkillCounts(this.skillUses);
+        this.debugTools = tools;
+      })
+      .catch((error: unknown) => this.fpsMeter.reportError(error));
+  }
+
+  /**
    * Shows the dynamic resolution, the last challenge verdict and the background in the ?debug
    * overlay and its menu.
    */
-  /** A debug tool as a tab of the dock. */
-  private panel(
-    name: string,
-    tool: { element: HTMLElement; setVisible(isVisible: boolean): void },
-  ): DockPanel {
-    return { name, element: tool.element, setVisible: (isVisible) => tool.setVisible(isVisible) };
-  }
-
   private showDebugDetail(): void {
     this.debugScene = this.renderer.scene;
     const verdict = this.lastVerdict;
@@ -752,7 +764,7 @@ export class Game {
       ? ` · ${verdict.challenge} ${verdict.isPassed ? 'passed' : 'failed'} ${verdict.progress}/${verdict.target}`
       : '';
     this.fpsMeter.setDetail(`res ×${this.renderer.pixelRatio.toFixed(2)}${attempt}`);
-    this.backgroundMenu.setCurrent(this.renderer.scene);
+    this.debugTools?.setScene(this.renderer.scene);
   }
 
   /**
@@ -906,10 +918,7 @@ export class Game {
     this.renderer.dispose();
     this.audio.dispose();
     this.fpsMeter.dispose();
-    this.backgroundMenu.dispose();
-    this.skillMenu.dispose();
-    this.modifierMenu.dispose();
-    this.soundStand.dispose();
-    this.debugDock.dispose();
+    this.debugTools?.dispose();
+    this.isDisposed = true;
   }
 }
