@@ -707,6 +707,11 @@
     width: max-content;
     max-width: 88%;
   }
+
+  /* The controls kept in from the screen's edges, as the settings they open from are */
+  .stats--controls {
+    max-width: 82%;
+  }
 }
 
 /* A tutorial step's card, over the paused match: the move on a small court, why and how, then
