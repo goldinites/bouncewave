@@ -59,15 +59,18 @@ those modifiers (ids in `src/match/modifiers/Modifier.ts`), also switched in the
 ## Architecture
 
 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** has the layers, what may import what, one frame
-step by step, the match's building blocks and how to add each kind of thing (background, song,
-setting, paddle, rules, lineup, a listener to the match). Read it before adding a feature.
+step by step, the match's building blocks, how to add each kind of thing (background, song,
+setting, paddle, rules, lineup, mode, screen, skill, modifier, a listener to the match), the
+builds and the stands in `e2e/`. Read it before adding a feature.
 
-`src/app/Game.ts` is the composition root and the frame loop. `src/match/` is the game itself
+`src/app/Game.ts` is the composition root and the frame loop; what is played is a `Session`
+(`app/sessions/`), which `Game` holds without asking which mode it is. `src/match/` is the game itself
 (rules, simulation, AI); `fx/`, `render/`, `audio/`, `ui/` present it; `input/` feeds it;
 `settings/`, `i18n/` serve everything; `profile/` saves what outlasts a visit (versioned, with
 migrations); `shared/` imports nothing from the project.
 
-Rules that keep it clean (the first two are enforced by `tests/architecture.test.ts`):
+Rules that keep it clean (`tests/architecture.test.ts` checks every layer's imports against the
+table in `docs/ARCHITECTURE.md`):
 
 - `match/` imports only `match/` and `shared/`; `shared/` imports nothing from the project.
 - The match reports through `MatchEvent`s on `Game`'s `matchEvents` (`shared/EventBus.ts`);
@@ -91,7 +94,7 @@ Rules that keep it clean (the first two are enforced by `tests/architecture.test
 - Every paddle that charges Overdrive draws its meter (`flow.overdriveCharges`): a person's,
   and in a quick match the CPU's at Hard and Insane (`rules.cpuOverdrive`); the classic look has
   no Overdrive and no skills at all. In a match of two
-  (`Game`'s `isTwoPlayers`, `flow.isTwoPlayer`) the end names the winner and is always a win;
+  (the session's `isTwoPlayers`, `flow.isTwoPlayer`) the end names the winner and is always a win;
   otherwise outside the match the left side is still taken to be the player (whose win the
   finale and menus show).
 
