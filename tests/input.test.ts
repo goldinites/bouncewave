@@ -141,6 +141,27 @@ describe('InputHandler', () => {
     handler.dispose();
   });
 
+  it('still presses a button tapped quickly again, a setting’s arrow stepped fast', () => {
+    const { handler } = makeHandler();
+    const button = document.createElement('button');
+    const onClick = vi.fn();
+    button.addEventListener('click', onClick);
+    document.body.appendChild(button);
+    const tap = () => {
+      const touchEnd = new Event('touchend', { bubbles: true, cancelable: true });
+      button.dispatchEvent(touchEnd);
+      // The browser's own click follows a touch only if its end wasn't cancelled
+      if (!touchEnd.defaultPrevented) button.click();
+    };
+
+    tap();
+    tap();
+    tap();
+    expect(onClick).toHaveBeenCalledTimes(3);
+    button.remove();
+    handler.dispose();
+  });
+
   it('never lets a pinch start zooming the page', () => {
     const { handler } = makeHandler();
     const pinch = new Event('gesturestart', { cancelable: true });
