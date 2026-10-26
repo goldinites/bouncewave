@@ -794,7 +794,7 @@ export class Game {
           );
     this.conditionBar.update(condition, !this.isConditionOnCourt);
     const live = this.buildRenderFrame(condition);
-    const frame = this.replay.isShowing ? this.replay.frame(live) : live;
+    const frame = this.replay.isHolding ? this.replay.frame(live) : live;
     if (!isPaused) {
       this.renderer.update(realDt, frame);
     }
@@ -946,6 +946,7 @@ export class Game {
       },
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),
+      beat: this.audio.music.getBeat(),
       isRotated: this.isPortraitView,
       replay: null,
     };

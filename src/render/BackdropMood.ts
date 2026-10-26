@@ -9,7 +9,7 @@ const LIGHTS = {
   CLIMAX_MAX: 0.6,
   CELEBRATION_MAX: 1,
   CLIMAX_SURGE: 0.2, // on the climax drop
-  GOAL_SURGE: 0.5, // as a point is scored
+  GOAL_SURGE: 0.3, // as a point is scored
   CELEBRATION_SURGE: 1.0,
   SURGE_DECAY: 1.5, // 1/s
   EASE: 2.55, // 1/s toward the brightness the moment calls for

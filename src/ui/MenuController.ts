@@ -137,6 +137,12 @@ const MODE_COLORS: Record<ModeId, ButtonColor> = {
 export const isTouchFirst = (): boolean =>
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
+/** Whether the game runs installed, as an app of its own (full screen on a phone). */
+const isInstalled = (): boolean =>
+  typeof window !== 'undefined' &&
+  (window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches);
+
 /** Whether the court is turned for a portrait phone (as InputHandler.isRotated has it). */
 const isCourtTurned = (): boolean =>
   typeof window !== 'undefined' &&
@@ -906,22 +912,31 @@ export class MenuController {
       id: 'settings',
       view: () => {
         const settings = this.settings.current;
+        const isTouch = isTouchFirst();
         return {
           title: this.i18n.t('settings'),
-          subtitle: '',
+          // A phone plays full screen once the game is installed: the one thing worth telling
+          // there that the game doesn't show by itself
+          subtitle: isTouch && !isInstalled() ? this.i18n.t('installHint') : '',
           body: h(SettingsScreen, {
             items: [
               ...SETTINGS_MENU.map((entry) => ({
                 kind: 'choice' as const,
                 ...this.choiceOf(entry, settings),
               })),
-              {
-                kind: 'link' as const,
-                id: 'controls',
-                label: this.i18n.t('controls').title,
-                color: 'yellow' as const,
-                onClick: () => this.open(this.controlsScreen()),
-              },
+              // The keys, on a computer: a finger's controls are plain to see, and the tutorial
+              // and the two players' setup tell what isn't
+              ...(isTouch
+                ? []
+                : [
+                    {
+                      kind: 'link' as const,
+                      id: 'controls',
+                      label: this.i18n.t('controls').title,
+                      color: 'yellow' as const,
+                      onClick: () => this.open(this.controlsScreen()),
+                    },
+                  ]),
             ],
             previousLabel: this.i18n.t('previousChoice'),
             nextLabel: this.i18n.t('nextChoice'),
@@ -933,19 +948,15 @@ export class MenuController {
     });
   }
 
-  /**
-   * The controls, as the device plays them: keys and a mouse, or a finger. Opened from the
-   * settings, so from the pause too.
-   */
+  /** The keys and the mouse, on a computer. Opened from the settings, so from the pause too. */
   private controlsScreen(): ScreenEntry {
     return {
       id: 'controls',
       view: () => {
         const texts = this.i18n.t('controls');
-        const how = isTouchFirst() ? 'touch' : 'keys';
         const rows = CONTROL_ROWS.map((id) => ({
           label: texts.rows[id].name,
-          value: texts.rows[id][how],
+          value: texts.rows[id].keys,
         }));
         return {
           title: texts.title,

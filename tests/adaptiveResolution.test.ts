@@ -39,6 +39,13 @@ describe('AdaptiveResolution', () => {
     }
   });
 
+  it('is at its best (and draws the bloom) only until frames run slow', () => {
+    const resolution = new AdaptiveResolution(2, 0.75);
+    expect(resolution.isAtBest).toBe(true);
+    run(resolution, 30, WARMUP + 1500);
+    expect(resolution.isAtBest).toBe(false);
+  });
+
   it('keeps a display with no headroom to adapt at a fixed ratio', () => {
     const resolution = new AdaptiveResolution(0.75, 0.75);
     expect(run(resolution, 40, 10000)).toBe(0);

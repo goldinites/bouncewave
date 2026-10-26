@@ -4,6 +4,7 @@ import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
+import { PostEffects } from '@/render/PostEffects';
 import { DARKNESS, Flash, ModifierRenderer } from '@/render/ModifierRenderer';
 import { RenderFrame, Scene, SceneState } from '@/render/scene';
 import {
@@ -29,6 +30,19 @@ const TIME_WARP_FADE = 14; // 1/s the slowed world's cast comes and goes at
 // A replay's cinema bars along the court's long edges (its short ones on a phone held upright, which
 // turns the court), px thick, and its label with a blinking dot (steady for less motion)
 const REPLAY_BARS = { SIZE: 26, ALPHA: 0.85, FONT: 15, BLINK: 3 } as const; // px, -, px, Hz
+// Light the game throws onto the backdrop (6.5): each ball's own glow, BALL px across and ALPHA
+// strong (more as it speeds up, a power shot's yellow), and the hits' bursts of light, LIGHT
+// strong at their height
+const COURT_LIGHT = { BALL: 110, BALL_ALPHA: 0.06, BALL_SPEED_ALPHA: 0.04, LIGHT: 0.18 } as const;
+// The layers drawn again for the bloom: what glows on the court, and nothing that moves on as it
+// is drawn (a layer that follows time by being drawn would go twice as fast)
+const GLOWING_LAYERS = new Set(['ripples', 'paddles', 'balls', 'particles']);
+// How deep the power shot's impact frame drops the court into shadow
+const IMPACT_SHADOW = 0.3;
+// 1/s a charge gained on a meter settles at, from its flare
+const METER_GAIN_DECAY = 4;
+// How hard a hit's kick thumps the backdrop, against a shake of the same px
+const KICK_THUMP = 1.5;
 // A turbo ball's heat: none at the serve's speed, full this much faster (px/s)
 const TURBO_HEAT = { FROM: 380, SPAN: 520 } as const;
 
@@ -53,6 +67,7 @@ export interface Layer {
 export class NeonScene implements Scene {
   private readonly layers: readonly Layer[];
   private readonly isMotionReduced: () => boolean;
+  private readonly post = new PostEffects();
 
   /**
    * @param ctx the canvas the scene draws on, to build its gradients once
@@ -68,6 +83,8 @@ export class NeonScene implements Scene {
   }
 
   public render(ctx: CanvasRenderingContext2D, frame: RenderFrame, state: SceneState): void {
+    // The court's units in canvas px, as the renderer scales them
+    const scale = ctx.canvas.width / COURT.WIDTH;
     // Camera: everything up to the screen overlays zooms in on the ball
     ctx.save();
     this.applyZoom(ctx, frame);
@@ -82,6 +99,25 @@ export class NeonScene implements Scene {
     this.renderSpace('court', ctx, frame, state);
     ctx.restore();
     ctx.restore();
+
+    // What glows on the court, again, for the bloom; not in the dark, where it would show the ball
+    const glow =
+      state.bloom && !frame.court.modifiers.includes('darkness')
+        ? this.post.beginGlow(ctx.canvas, scale)
+        : null;
+    if (glow) {
+      this.applyZoom(glow, frame);
+      glow.translate(state.kick.x, state.kick.y);
+      for (const layer of this.layers) {
+        if (GLOWING_LAYERS.has(layer.id)) layer.render(glow, frame, state);
+      }
+    }
+
+    // The finish over the picture, under the screen's overlays (the dimming, the flash)
+    this.post.apply(ctx, {
+      aberration: state.aberration,
+      isRotated: frame.isRotated,
+    });
 
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
@@ -172,7 +208,20 @@ function neonLayers(
       view.sideLabels,
       view.isConditionOnCourt,
       view.overtimeText,
+      court.rally,
     );
+  };
+
+  // A charge gained on a meter flares and settles over 1 / METER_GAIN_DECAY s
+  const meters = { charges: [] as (number | null)[], gains: [] as number[] };
+  const followMeters = (charges: readonly (number | null)[], realDt: number) => {
+    charges.forEach((charge, i) => {
+      const before = meters.charges[i] ?? null;
+      const gain = Math.max(0, (meters.gains[i] ?? 0) - realDt * METER_GAIN_DECAY);
+      meters.gains[i] = charge !== null && before !== null && charge > before ? 1 : gain;
+    });
+    meters.charges = [...charges];
+    meters.gains.length = charges.length;
   };
 
   // In the dark, a ball flashes wherever it bounces (it turns around, up or down or across)
@@ -229,10 +278,39 @@ function neonLayers(
           c,
           frame.analyser,
           frame.court.time,
-          state.shake,
+          // A hit's kick thumps the backdrop as a shake does
+          Math.max(state.shake, Math.hypot(state.kick.x, state.kick.y) * KICK_THUMP),
           frame.isRotated,
           state.mood,
+          frame.beat,
+          !isMotionReduced(),
         ),
+    },
+    {
+      // The light the game throws on the backdrop: the balls', and the hits'. Not in the dark,
+      // where it would show where the ball is
+      id: 'courtLight',
+      space: 'backdrop',
+      render: (c, { court, particles }) => {
+        if (court.modifiers.includes('darkness')) return;
+        const isBanded = court.modifiers.includes('invisibleBand');
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        if (court.serveTime <= 0) {
+          for (const ball of court.balls) {
+            if (isBanded && ModifierRenderer.isInBand(ball.drawX)) continue;
+            const heat = clamp((ball.speed - TURBO_HEAT.FROM) / TURBO_HEAT.SPAN, 0, 1);
+            const alpha = COURT_LIGHT.BALL_ALPHA + COURT_LIGHT.BALL_SPEED_ALPHA * heat;
+            const color = ball.isPowerShot ? COLORS.YELLOW : COLORS.WHITE;
+            drawLight(c, ball.drawX, ball.drawY, COURT_LIGHT.BALL, color, alpha);
+          }
+        }
+        for (const light of particles.lights) {
+          const alpha = COURT_LIGHT.LIGHT * light.life;
+          drawLight(c, light.x, light.y, light.radius, light.color, alpha);
+        }
+        c.restore();
+      },
     },
     { id: 'court', space: 'court', render: (c) => CourtRenderer.render(c) },
     {
@@ -278,6 +356,19 @@ function neonLayers(
       render: (c, { court }) => ModifierRenderer.renderBricks(c, court.conditions.bricks),
     },
     {
+      // A power shot's impact frame: for a frame or two the backdrop and the court drop into
+      // shadow under what is struck (the paddles, the ball, the sparks, drawn after), the moment
+      // held. Darker, never brighter: a negative of the dark court flashed the whole screen white
+      id: 'impactFrame',
+      space: 'court',
+      render: (c, _frame, { isImpactFrame }) => {
+        if (!isImpactFrame) return;
+        c.fillStyle = `rgba(0, 0, 0, ${IMPACT_SHADOW})`;
+        // Past the court's edges: the kick has moved it
+        c.fillRect(-COURT.WIDTH, -COURT.HEIGHT, COURT.WIDTH * 3, COURT.HEIGHT * 3);
+      },
+    },
+    {
       id: 'hud',
       space: 'court',
       render: (c, frame, state) => {
@@ -294,6 +385,13 @@ function neonLayers(
         followWarp(frame, state);
         if (!isMotionReduced()) SkillRenderer.renderAfterimages(c, afterimages);
       },
+    },
+    {
+      // Follows the meters' charges, to flare one as it is gained; draws nothing itself, so the
+      // paddles' layer can be drawn again for the bloom without following them twice
+      id: 'meters',
+      space: 'court',
+      render: (_c, { hud: view }, { realDt }) => followMeters(view.overdriveCharges, realDt),
     },
     {
       // Each person's paddle carries their Overdrive meter (only in a match that has Overdrive)
@@ -326,6 +424,7 @@ function neonLayers(
             isCharged,
             drama.paddleOut[i] ?? 0,
             isMotionReduced(),
+            court.time,
           );
           if (charge !== null && !state.finalSign) {
             EntityRenderer.renderOverdriveMeter(
@@ -335,6 +434,7 @@ function neonLayers(
               court.time,
               streak,
               drama.meterSpent[i] ?? 0,
+              isMotionReduced() ? 0 : (meters.gains[i] ?? 0),
             );
           }
         });
@@ -503,18 +603,6 @@ function neonLayers(
       },
     },
     {
-      // A power shot's impact frame: the whole picture turned to its negative for a frame or two
-      id: 'impactFrame',
-      space: 'screen',
-      render: (c, _frame, { isImpactFrame }) => {
-        if (!isImpactFrame) return;
-        c.globalCompositeOperation = 'difference';
-        c.fillStyle = '#ffffff';
-        fillScreen(c);
-        c.globalCompositeOperation = 'source-over';
-      },
-    },
-    {
       id: 'flash',
       space: 'screen',
       render: (c, _frame, { flash }) => {
@@ -524,4 +612,22 @@ function neonLayers(
       },
     },
   ];
+}
+
+/** A pool of `color` light `radius` px across at (x, y), `alpha` strong at its heart. */
+function drawLight(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  color: string,
+  alpha: number,
+): void {
+  if (alpha <= 0.005) return;
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, color);
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.globalAlpha = Math.min(1, alpha);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
 }

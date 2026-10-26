@@ -181,7 +181,8 @@ export class InputHandler implements PlayerInput {
     // iOS zooms in on a quick double tap and on a pinch, ignoring the viewport's no-zoom, and
     // the page's touch-action: none then leaves no gesture to zoom back out. So the second tap
     // of a pair never becomes a double tap, and a pinch never starts. Steering is unaffected:
-    // it runs on pointer events, which fire before this
+    // it runs on pointer events, which fire before this. Stopping the double tap stops the tap's
+    // click too, so a button tapped quickly again (a setting's arrow) is pressed here instead
     let lastTouchEnd = -Infinity;
     window.addEventListener(
       'touchend',
@@ -189,7 +190,11 @@ export class InputHandler implements PlayerInput {
         // iOS lets a touch start audio only once it ends: pointerdown above is too early, and
         // the context it creates or resumes there stays silent
         this.callbacks.onUnlockAudio();
-        if (e.timeStamp - lastTouchEnd < DOUBLE_TAP_MS) e.preventDefault();
+        if (e.timeStamp - lastTouchEnd < DOUBLE_TAP_MS) {
+          e.preventDefault();
+          const button = (e.target as Element | null)?.closest?.('button');
+          if (button && !button.disabled) button.click();
+        }
         lastTouchEnd = e.timeStamp;
       },
       { signal, passive: false },

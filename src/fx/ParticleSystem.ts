@@ -1,4 +1,4 @@
-import { Flare, Particle, Ripple, RIPPLE_LIFE, ShockwaveRing } from '@/render/particles';
+import { Flare, Light, Particle, Ripple, RIPPLE_LIFE, ShockwaveRing } from '@/render/particles';
 import { randomRange, TWO_PI } from '@/shared/math';
 
 const PARTICLE_LIFE_DECAY = 1.8;
@@ -37,6 +37,7 @@ export class ParticleSystem {
   public rings: ShockwaveRing[] = [];
   public flares: Flare[] = [];
   public ripples: Ripple[] = [];
+  public lights: Light[] = [];
 
   public addParticle(p: Particle): void {
     if (this.particles.length < MAX_PARTICLES) this.particles.push(p);
@@ -105,6 +106,11 @@ export class ParticleSystem {
     this.flares.push({ x, y, radius, life: 1, decay: 1 / duration, color, spikes });
   }
 
+  /** Light thrown onto the backdrop at (x, y), `radius` px, gone in `duration` s. */
+  public light(x: number, y: number, radius: number, color: string, duration: number): void {
+    this.lights.push({ x, y, radius, life: 1, decay: 1 / duration, color });
+  }
+
   /**
    * A wall struck at `x`, its rail's middle at `y`, `strength` in [0, 1]; or, `isUpright`, a goal
    * line at `x` struck at `y`, in `color`.
@@ -120,6 +126,7 @@ export class ParticleSystem {
     this.rings.length = 0;
     this.flares.length = 0;
     this.ripples.length = 0;
+    this.lights.length = 0;
   }
 
   public update(dt: number): void {
@@ -146,6 +153,12 @@ export class ParticleSystem {
     for (let i = flares.length - 1; i >= 0; i--) {
       flares[i].life -= dt * flares[i].decay;
       if (flares[i].life <= 0) removeAt(flares, i);
+    }
+
+    const lights = this.lights;
+    for (let i = lights.length - 1; i >= 0; i--) {
+      lights[i].life -= dt * lights[i].decay;
+      if (lights[i].life <= 0) removeAt(lights, i);
     }
 
     for (const ripple of this.ripples) ripple.age += dt;

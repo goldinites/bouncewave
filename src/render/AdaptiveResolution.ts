@@ -62,6 +62,11 @@ export class AdaptiveResolution {
     return this.levels[this.level];
   }
 
+  /** Whether it draws at the sharpest ratio: frames have not run slow (or have recovered). */
+  public get isAtBest(): boolean {
+    return this.level === 0;
+  }
+
   /**
    * @param frameMs wall-clock time since the previous frame
    * @returns true when the pixel ratio changed and the canvas has to be resized

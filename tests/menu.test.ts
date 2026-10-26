@@ -316,6 +316,24 @@ describe('settings menu', () => {
     expect(document.getElementById('gameTitle')?.textContent).toBe('SETTINGS');
   });
 
+  it('has no controls screen on a phone, and tells it to install the game for full screen', () => {
+    const matchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      ...matchMedia(query),
+      matches: query === '(pointer: coarse)',
+    })) as typeof window.matchMedia;
+    try {
+      const { menu, buttons } = setup();
+      menu.showSettingsMenu();
+      expect(buttons().map((b) => text(b))).not.toContain('CONTROLS');
+      expect(document.getElementById('gameSubtitle')?.textContent).toBe(
+        'Install the game to play full screen',
+      );
+    } finally {
+      window.matchMedia = matchMedia;
+    }
+  });
+
   it('leaves the difficulty to the quick match, out of the settings', () => {
     const { menu, buttons } = setup();
     menu.showMainMenu();

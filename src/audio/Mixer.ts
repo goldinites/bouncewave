@@ -31,6 +31,8 @@ const HIT_CARVE = {
 // The breath before an Overdrive (6.2): the music drops out under its hit-stop, so the shot
 // lands out of a moment's hush
 const HUSH = { DEPTH: -14, ATTACK: 0.006 } as const; // dB, s (time constant)
+// s, the time constant the sound comes back over once the game is shown again
+const OUTPUT_RETURN = 0.04;
 // Under an Overdrive the dip holds longer and comes back slowly, leaving its tail room to ring
 const LONG_DUCK = { HOLD: 0.3, RELEASE: 0.4 } as const; // s
 // About 0.37 s at 44.1 kHz: long enough for a level that doesn't flicker with every beat
@@ -61,7 +63,7 @@ export interface MasterLevels {
  *
  * ```
  * music → hitCarve → hitDuck ─┐
- * sfx ────────────────────────┼─ sum → limiter → clipper ─┬─ wide ──────────────────────┬─ destination
+ * sfx ────────────────────────┼─ sum → limiter → clipper ─┬─ wide ──────────────────────┬─ output → destination
  * menu ───────────────────────┘                          └─ phone (mono, band-limited) ┘
  *                                                        └─ K-weighting → meter
  * ```
@@ -77,6 +79,8 @@ export class Mixer {
   /** The full output, and the phone speaker's stand-in; one of the two is open. */
   private readonly wide: GainNode;
   private readonly phone: GainNode;
+  /** The very last gain before the speakers: shut at once when the game is hidden (`silence`). */
+  private readonly output: GainNode;
   private meterData: Float32Array<ArrayBuffer> | null = null;
 
   constructor(context: AudioContext, destination: AudioNode = context.destination) {
@@ -111,10 +115,12 @@ export class Mixer {
     this.menu.connect(sum);
     sum.connect(limiter);
     limiter.connect(clipper.input);
+    this.output = ac.createGain();
+    this.output.connect(destination);
     this.wide = ac.createGain();
     clipper.output.connect(this.wide);
-    this.wide.connect(destination);
-    this.phone = this.buildPhoneSpeaker(ac, clipper.output, destination);
+    this.wide.connect(this.output);
+    this.phone = this.buildPhoneSpeaker(ac, clipper.output, this.output);
 
     const lowCut = ac.createBiquadFilter();
     lowCut.type = 'highpass';
@@ -161,6 +167,24 @@ export class Mixer {
       gain.setTargetAtTime(1, now + duration, HIT_DUCK.RELEASE);
     } catch {
       // Play on unhushed rather than break audio
+    }
+  }
+
+  /**
+   * Shuts everything off at once, or opens it again over a moment. Hidden (the app put away or
+   * closed), the game stops its audio clock; but what was already on its way to the speakers, the
+   * echo's and the reverb's tails with it, could still be heard as it went, a stray burst of the
+   * game. Shut first, nothing is left to be heard.
+   */
+  public silence(isSilent: boolean): void {
+    const now = this.context.currentTime;
+    try {
+      const gain = this.output.gain;
+      gain.cancelScheduledValues(now);
+      if (isSilent) gain.setValueAtTime(0, now);
+      else gain.setTargetAtTime(1, now, OUTPUT_RETURN);
+    } catch {
+      // Left as it is rather than break audio
     }
   }
 

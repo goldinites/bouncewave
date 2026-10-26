@@ -187,9 +187,14 @@ export class MatchReplay {
     return true;
   }
 
-  /** The match's frame, with the replay in its place: its court, effects, camera and bars. */
+  /**
+   * The match's frame while it is held: through the goal's beat, with the ball that went in gone
+   * rather than frozen past the goal line; then with the replay in its place: its court, effects,
+   * camera and bars.
+   */
   public frame(live: RenderFrame): RenderFrame {
-    const effects = this.effects!;
+    const effects = this.effects;
+    if (!this.isShown || !effects) return { ...live, court: { ...live.court, balls: [] } };
     return {
       ...live,
       court: {

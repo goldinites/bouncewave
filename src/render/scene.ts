@@ -112,6 +112,8 @@ export interface RenderFrame {
   /** The replay being shown instead of the match; null when it is the match. */
   replay: ReplayView | null;
   analyser: AnalyserNode | null;
+  /** How hard the music's beat is landing now, in [0, 1]; null without the music's beat to hand. */
+  beat: number | null;
   isRotated: boolean;
 }
 
@@ -129,8 +131,12 @@ export interface SceneState {
   flash: number;
   /** Where a hit has knocked the court to, px: it is pushed the way the ball was struck. */
   kick: { x: number; y: number };
-  /** Whether this frame is a power shot's impact frame: the whole picture inverted. */
+  /** Whether this frame is a power shot's impact frame: the court in shadow under what is struck. */
   isImpactFrame: boolean;
+  /** Whether the bloom is drawn: only at the sharpest resolution, frames running fast enough. */
+  bloom: boolean;
+  /** px the colours split by on a big moment (chromatic aberration); 0 for none. */
+  aberration: number;
   /** The backdrop's mood (BackdropMood). */
   mood: BackgroundMood;
   /** Wall-clock seconds since the last frame, paused frames included. */

@@ -36,6 +36,8 @@ const FILM = { PRE: 3, POST: 13, COLUMNS: 4 } as const;
 const CLOSE_UP = { WIDTH: 300, HEIGHT: 190 } as const;
 const WHOLE_SCALE = 0.5;
 const LABEL = { HEIGHT: 18, FONT: '12px monospace' } as const;
+// The beat the backdrop breathes with, in place of the music's
+const STAND_BPM = 120;
 // The replay is filmed a frame in this many, as long as it runs
 const REPLAY_EVERY = 16;
 
@@ -273,6 +275,7 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
     },
     particles,
     analyser: null,
+    beat: 0,
     isRotated: false,
     replay: null,
   };
@@ -289,6 +292,8 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
       rally: flow.rally,
       conditions: flow.court,
     });
+    // No music here: a kick at STAND_BPM stands in for its beat
+    frame.beat = Math.exp(-(flow.time % (60 / STAND_BPM)) / 0.14);
     Object.assign(frame.hud, {
       overdriveCharges: flow.overdriveCharges,
       overdriveStreaks: flow.overdriveStreaks,
@@ -328,6 +333,7 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
     pre: 0,
   };
   let replayFrame = 0;
+  const comfort = new FlashMeter();
   for (let i = 0; i < MAX_FRAMES; i++) {
     effects.beforeSimulation(FRAME, flow);
     const dt = FRAME * effects.timeScale;
@@ -345,11 +351,12 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
     }
 
     refreshFrame();
-    const shown = replay.isShowing ? replay.frame(frame) : frame;
+    const shown = replay.isHolding ? replay.frame(frame) : frame;
     renderer.update(FRAME, shown);
     renderer.render(shown, FRAME);
 
     const shot = copyOf(canvas);
+    comfort.measure(shot, i * FRAME);
     if (replay.isShowing && replayFrame++ % REPLAY_EVERY === 0) replayed.frames.push(shot);
     recent.push(shot);
     if (recent.length > FILM.PRE) recent.shift();
@@ -374,6 +381,7 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
     images[`${moment.id}-whole.png`] = sheet(moment, scale, false);
     lines.push(`- **${moment.id}**: ${moment.title}`);
   }
+  lines.push('', ...comfort.report(), '');
   lines.push(
     '',
     `Hits: ${hits.join(' · ')}`,
@@ -437,3 +445,101 @@ function sheet(moment: Moment, scale: number, isCloseUp: boolean): string {
 }
 
 window.renderImpact = renderImpact;
+
+/**
+ * How hard the picture is on the eyes, by the measure games are checked for flashes with (WCAG
+ * 2.3.1, the Harding test, simplified): each of GRID × GRID parts of the screen has its mean
+ * relative luminance taken every frame; a flash is a pair of opposing changes of FLASH or more
+ * where the darker side is under DARK. Over three flashes a second in any part is a risk to
+ * photosensitive players; well under that, a part that keeps flashing still tires the eyes.
+ */
+const COMFORT = { GRID: 4, SAMPLE: 64, FLASH: 0.1, DARK: 0.8, WINDOW: 1 } as const;
+
+class FlashMeter {
+  private readonly sampler = document.createElement('canvas').getContext('2d', {
+    willReadFrequently: true,
+  })!;
+  /** Each part's luminance, frame by frame, and the wall-clock time of each frame. */
+  private readonly series: number[][] = [];
+  private readonly times: number[] = [];
+
+  constructor() {
+    const { SAMPLE, GRID } = COMFORT;
+    this.sampler.canvas.width = SAMPLE;
+    this.sampler.canvas.height = Math.round((SAMPLE * COURT.HEIGHT) / COURT.WIDTH);
+    for (let i = 0; i < GRID * GRID; i++) this.series.push([]);
+  }
+
+  public measure(frame: HTMLCanvasElement, time: number): void {
+    const { width, height } = this.sampler.canvas;
+    this.sampler.drawImage(frame, 0, 0, width, height);
+    const { data } = this.sampler.getImageData(0, 0, width, height);
+    const { GRID } = COMFORT;
+    const sums = new Array<number>(GRID * GRID).fill(0);
+    const counts = new Array<number>(GRID * GRID).fill(0);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        const lin = (c: number) => {
+          const v = c / 255;
+          return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+        };
+        const lum = 0.2126 * lin(data[i]) + 0.7152 * lin(data[i + 1]) + 0.0722 * lin(data[i + 2]);
+        const cell = Math.floor((y * GRID) / height) * GRID + Math.floor((x * GRID) / width);
+        sums[cell] += lum;
+        counts[cell]++;
+      }
+    }
+    sums.forEach((sum, cell) => this.series[cell].push(sum / counts[cell]));
+    this.times.push(time);
+  }
+
+  /** The flashes found: the most in any second in any part, and where and when. */
+  public report(): string[] {
+    let worst = { count: 0, cell: 0, at: 0 };
+    let biggest = 0;
+    let flashesInAll = 0;
+    this.series.forEach((values, cell) => {
+      // Each opposing pair of changes of FLASH or more, with its darker side under DARK
+      const flashTimes: number[] = [];
+      let low = values[0];
+      let high = values[0];
+      let rising: boolean | null = null;
+      for (let i = 1; i < values.length; i++) {
+        const v = values[i];
+        biggest = Math.max(biggest, Math.abs(v - values[i - 1]));
+        if (rising !== true && v - low >= COMFORT.FLASH && low < COMFORT.DARK) {
+          if (rising === false) flashTimes.push(this.times[i]);
+          rising = true;
+          high = v;
+        } else if (rising !== false && high - v >= COMFORT.FLASH && v < COMFORT.DARK) {
+          if (rising === true) flashTimes.push(this.times[i]);
+          rising = false;
+          low = v;
+        }
+        if (rising === true) high = Math.max(high, v);
+        else if (rising === false) low = Math.min(low, v);
+        else {
+          low = Math.min(low, v);
+          high = Math.max(high, v);
+        }
+      }
+      flashesInAll += flashTimes.length;
+      flashTimes.forEach((at) => {
+        const count = flashTimes.filter((t) => t >= at && t < at + COMFORT.WINDOW).length;
+        if (count > worst.count) worst = { count, cell, at };
+      });
+    });
+    const span = this.times.at(-1)! - this.times[0];
+    const row = Math.floor(worst.cell / COMFORT.GRID) + 1;
+    const column = (worst.cell % COMFORT.GRID) + 1;
+    return [
+      '## Flashes (WCAG 2.3.1, simplified)',
+      '',
+      `- most in any second, any part of the screen: **${worst.count}** (limit 3)` +
+        (worst.count > 0 ? `, part ${row}:${column} at ${worst.at.toFixed(2)} s` : ''),
+      `- flashes over the run, all parts: ${flashesInAll} in ${span.toFixed(1)} s`,
+      `- biggest jump in a part's luminance between two frames: ${biggest.toFixed(3)}`,
+    ];
+  }
+}

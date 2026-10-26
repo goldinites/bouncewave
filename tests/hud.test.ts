@@ -53,4 +53,55 @@ describe('HudRenderer', () => {
     expect(labelsDrawn(['P1', 'P2'])).toEqual(['P1', 'P2']);
     expect(labelsDrawn(null)).toEqual([]);
   });
+
+  describe('the rally’s streak', () => {
+    /** The texts written in a render with `rally` hits, and the HUD to draw on. */
+    const streakTexts = (hud: HudRenderer, rally: number, scores: [number, number] = [0, 0]) => {
+      const { ctx, spies } = fakeContext();
+      spies.measureText.mockReturnValue({ width: 40 });
+      hud.render(
+        ctx,
+        0.016,
+        paddles(),
+        scores,
+        0,
+        'GET READY',
+        0,
+        false,
+        null,
+        null,
+        true,
+        null,
+        rally,
+      );
+      return spies.fillText.mock.calls.map((call) => call[0] as string);
+    };
+
+    it('shows ×N between the scores from five hits on', () => {
+      const hud = new HudRenderer();
+      expect(streakTexts(hud, 4)).not.toContain('×4');
+      expect(streakTexts(hud, 5)).toContain('×5');
+      expect(streakTexts(hud, 12)).toContain('×12');
+    });
+
+    it('crumbles when the rally ends, by a new serve or by the point that won the match', () => {
+      const served = new HudRenderer();
+      streakTexts(served, 8);
+      // Its halves still fall, the streak itself gone
+      expect(streakTexts(served, 0).filter((text) => text === '×8').length).toBe(2);
+
+      const won = new HudRenderer();
+      streakTexts(won, 8);
+      // The last point: the score changes, the rally is never served again
+      const texts = streakTexts(won, 8, [1, 0]);
+      expect(texts.filter((text) => text === '×8').length).toBe(2);
+      expect(streakTexts(won, 8, [1, 0]).filter((text) => text === '×8').length).toBe(2);
+    });
+
+    it('just goes, with no crumble, for a player who asked for less motion', () => {
+      const hud = new HudRenderer(() => true);
+      streakTexts(hud, 8);
+      expect(streakTexts(hud, 0)).not.toContain('×8');
+    });
+  });
 });

@@ -24,11 +24,14 @@ export class AudioSpectrum {
     }
   }
 
-  /** Beat strength in [0, 1] from the bass, or from screen shake if that is stronger. */
-  public getPulse(shake: number): number {
+  /**
+   * Beat strength in [0, 1]: the music's own beat, as its kicks sound, when it is given; else
+   * read off the bass; or from screen shake, if that is stronger.
+   */
+  public getPulse(shake: number, beat: number | null = null): number {
     const bassSum = BASS_BINS.reduce((sum, bin) => sum + this.frequencyData[bin], 0);
     const bassAvg = bassSum / (255 * BASS_BINS.length);
-    const pulseFromAudio = clamp((bassAvg - BASS_GATE) * BASS_GAIN, 0, 1);
+    const pulseFromAudio = beat ?? clamp((bassAvg - BASS_GATE) * BASS_GAIN, 0, 1);
     const pulseFromShake = clamp(shake / SHAKE_FOR_FULL_PULSE, 0, 1);
     return Math.max(pulseFromAudio, pulseFromShake);
   }

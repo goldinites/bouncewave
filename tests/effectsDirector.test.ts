@@ -16,6 +16,7 @@ const makeRenderer = () => ({
   addKick: vi.fn(),
   addImpactFrame: vi.fn(),
   flareBackdrop: vi.fn(),
+  addAberration: vi.fn(),
   triggerClimaxSurge: vi.fn(),
   celebrate: vi.fn(),
   triggerVictoryEffect: vi.fn(),

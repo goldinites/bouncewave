@@ -16,6 +16,7 @@ import { Paddle } from '@/match/Paddle';
 import { STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Side } from '@/match/side';
 import { COURT_LINES } from '@/render/CourtRenderer';
+import { HUD_LAYOUT } from '@/render/HudRenderer';
 import { Squash } from '@/render/scene';
 import { REFLEX } from '@/match/skills/Reflex';
 import { finalScoreText } from '@/render/FinalScoreRenderer';
@@ -38,7 +39,7 @@ const SHAKE = {
 // Screen flash per event; a hit flashes where it struck instead (IMPACT)
 const FLASH = {
   START: 1.0,
-  SCORE: 0.3,
+  SCORE: 0.15,
   FIREWORK: 0.25,
   FINALE_WIN: 0.9,
 } as const;
@@ -54,8 +55,11 @@ const IMPACT = {
   KICK: { MIN: 1.5, MAX: 4, PERFECT: 6, POWER: 8 },
   RECOIL: { MIN: 2, MAX: 4, PERFECT: 6, POWER: 9 },
   SQUASH: { MIN: 0.3, MAX: 0.5, PERFECT: 0.65, POWER: 0.8 },
-  FLARE: { MIN: 14, MAX: 22, PERFECT: 46, POWER: 50 },
+  FLARE: { MIN: 14, MAX: 22, PERFECT: 46, POWER: 34 },
   FLARE_FOR: 0.06, // s after the hit-stop
+  // The light a hit throws onto the backdrop (6.5): px across, gone in LIGHT_FOR s
+  LIGHT: { MIN: 160, MAX: 240, PERFECT: 280, POWER: 300 },
+  LIGHT_FOR: 0.35, // s
   // A perfect hit is told from a plain one at a glance: a star glint's rays reaching GLINT px
   // across the flare, the ball burning white-hot for WHITE_HOT s,
   // and a second, slower ring in the paddle's colour inside the white one
@@ -64,14 +68,17 @@ const IMPACT = {
   PERFECT_INNER_RING: { SPEED: 380, DECAY: 4, WIDTH: 2 },
   SPARKS: { COUNT: 14, RALLY_CAP: 14, SPEED: 340, SPREAD: 1.7, SIZE: [1.5, 3] }, // rad, px
   PERFECT_SPARKS: { COUNT: 18, SPEED: 520, SPREAD: 1.2, SIZE: [2, 4] },
-  POWER_SPARKS: { COUNT: 30, SPEED: 620, SPREAD: 2.2, SIZE: [2, 4.5] },
+  POWER_SPARKS: { COUNT: 18, SPEED: 620, SPREAD: 2.2, SIZE: [2, 4] },
   ARC: { SPEED: 420, DECAY: 6, WIDTH: 2, SPREAD: 2.2 }, // px/s, 1/s, px, rad
   // The perfect hit's wave: big and quick, out to near half the court, so it is felt anywhere on
   // screen; a thin front with a soft wake behind it, so it never hides the ball
   PERFECT_RING: { SPEED: 900, DECAY: 2.2, WIDTH: 3, WAKE: 16 },
   POWER_RINGS: { SPEED: 820, INNER_SPEED: 560, DECAY: 4.5, WIDTH: 4 },
-  // The power shot's impact frame: the picture in negative for a frame or two
+  // The power shot's impact frame: the court in shadow under it for a frame or two, then its colours
+  // split ABERRATION px apart, closing over ABERRATION_FOR s
   IMPACT_FRAME: 0.035, // s
+  ABERRATION: 5, // px
+  ABERRATION_FOR: 0.18, // s
   // Its sound waits out its hit-stop under a hush, so the shot lands as the ball leaves
   POWER_SOUND_DELAY: HIT_STOP.POWER_SHOT,
 } as const;
@@ -89,6 +96,8 @@ const WALL = {
   SPARKS: 10,
   SPARK_SPEED: 260,
   SPREAD: 1.6, // rad
+  LIGHT: 180, // px across at the top speed, thrown on the backdrop for LIGHT_FOR s
+  LIGHT_FOR: 0.25,
 } as const;
 
 /**
@@ -105,7 +114,15 @@ const GOAL = {
   SPREAD: 2.2, // rad, the cone the sparks spray back into the court
   WAVE_SPEED: 620,
   WAVE_WAKE: 22, // px
+  LIGHT: 320, // px across, thrown on the backdrop for LIGHT_FOR s
+  LIGHT_FOR: 0.6,
+  ABERRATION: 4, // px the colours split, closing over ABERRATION_FOR s
+  ABERRATION_FOR: 0.25,
 } as const;
+
+// A rally's streak on screen crumbling as its point is scored (from FROM hits, as the HUD shows
+// it): sparks off it, falling as its halves do
+const STREAK_CRUMBLE = { FROM: 5, SPARKS: 24, SPEED: 160, COLOR: '#ffe53b' } as const;
 
 // Particle bursts: how many and how fast
 const BURST = {
@@ -221,6 +238,8 @@ export class EffectsDirector {
   private readonly whiteHot: number[] = [];
   /** The match's balls as the last step left them, to tell which one a hit or bounce was. */
   private balls: readonly Ball[] = [];
+  /** Hits in the rally on court, as its last hit left them: its streak, should it end. */
+  private rally = 0;
   /** A power shot's sound waiting out its hit-stop: `in` s more. */
   private powerSound: { rally: number; pan: number; in: number } | null = null;
   /** Each paddle's meter as the last frame left it, to see a charge go. */
@@ -516,6 +535,7 @@ export class EffectsDirector {
    */
   private onPaddleHit(hit: Extract<MatchEvent, { type: 'paddleHit' }>): void {
     const paddle = this.paddles[hit.paddleIndex];
+    this.rally = hit.rally;
     const force = getSpeedHeat(hit.speed, this.maxBallSpeed);
     const kind = hit.isPowerShot ? 'POWER' : hit.isPerfect ? 'PERFECT' : null;
     const strength = (range: { MIN: number; MAX: number; PERFECT: number; POWER: number }) =>
@@ -530,6 +550,7 @@ export class EffectsDirector {
     const glint = hit.isPerfect ? IMPACT.GLINT : 0;
     const flareFor = hold + IMPACT.FLARE_FOR;
     this.particles.flare(hit.x, hit.y, strength(IMPACT.FLARE), flareColor, flareFor, glint);
+    this.particles.light(hit.x, hit.y, strength(IMPACT.LIGHT), flareColor, hold + IMPACT.LIGHT_FOR);
 
     const { SPARKS, ARC } = IMPACT;
     const sparks = SPARKS.COUNT + Math.min(hit.rally, SPARKS.RALLY_CAP);
@@ -589,7 +610,7 @@ export class EffectsDirector {
 
   /**
    * An Overdrive goes off: on top of the hit, a white-hot blast the way the ball went, two rings,
-   * the picture's negative for a frame, and its sound landing out of a hush as the ball leaves.
+   * the court in shadow for a frame, and its sound landing out of a hush as the ball leaves.
    */
   private onPowerShot(hit: Extract<MatchEvent, { type: 'paddleHit' }>): void {
     const { POWER_SPARKS, POWER_RINGS } = IMPACT;
@@ -605,6 +626,7 @@ export class EffectsDirector {
     this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, POWER_RINGS.SPEED, ring);
     this.particles.shockwave(hit.x, hit.y, COLORS.PINK, POWER_RINGS.INNER_SPEED, ring);
     this.renderer.addImpactFrame(IMPACT.IMPACT_FRAME);
+    this.renderer.addAberration(IMPACT.ABERRATION, IMPACT.ABERRATION_FOR);
     this.renderer.addShake(OVERDRIVE_FX.POWER_SHAKE);
     this.audio.sfx.hushForShot(IMPACT.POWER_SOUND_DELAY);
     this.powerSound = { rally: hit.rally, pan: courtPan(hit.x), in: IMPACT.POWER_SOUND_DELAY };
@@ -621,11 +643,12 @@ export class EffectsDirector {
       ? COURT.TOP_WALL - COURT_LINES.RAIL_THICKNESS / 2
       : COURT.HEIGHT - COURT.BOTTOM_WALL + COURT_LINES.RAIL_THICKNESS / 2;
     this.particles.ripple(x, railY, WALL.RIPPLE_MIN + (1 - WALL.RIPPLE_MIN) * force);
+    const railColor = mixHexColors(COLORS.CYAN, COLORS.PINK, x / COURT.WIDTH);
+    this.particles.light(x, railY, WALL.LIGHT * (0.4 + 0.6 * force), railColor, WALL.LIGHT_FOR);
     this.squash.onHit(this.ballAt(x, y), 'y', WALL.SQUASH * (0.5 + 0.5 * force));
     this.renderer.addKick(isTop ? -Math.PI / 2 : Math.PI / 2, WALL.KICK * force);
     if (force > WALL.SPARKS_FROM) {
-      const color = mixHexColors(COLORS.CYAN, COLORS.PINK, x / COURT.WIDTH);
-      this.particles.burst(x, railY, color, WALL.SPARKS, WALL.SPARK_SPEED, {
+      this.particles.burst(x, railY, railColor, WALL.SPARKS, WALL.SPARK_SPEED, {
         heading: isTop ? Math.PI / 2 : -Math.PI / 2,
         spread: WALL.SPREAD,
         isStreak: true,
@@ -688,6 +711,7 @@ export class EffectsDirector {
     const y = Math.min(Math.max(score.y, COURT.TOP_WALL), COURT.HEIGHT - COURT.BOTTOM_WALL);
 
     this.particles.ripple(goalX, y, 1, true, color);
+    this.particles.light(goalX, y, GOAL.LIGHT, color, GOAL.LIGHT_FOR);
     const spray = { heading: backIn, spread: GOAL.SPREAD, isStreak: true, size: [2, 4] } as const;
     this.particles.burst(burstX, y, color, GOAL.SPARKS, GOAL.SPARK_SPEED, spray);
     this.particles.burst(burstX, y, COLORS.WHITE, GOAL.WHITE_SPARKS, GOAL.SPARK_SPEED, spray);
@@ -696,6 +720,19 @@ export class EffectsDirector {
     this.renderer.addShake(SHAKE.SCORE);
     this.renderer.addFlash(FLASH.SCORE);
     this.renderer.flareBackdrop();
+    this.renderer.addAberration(GOAL.ABERRATION, GOAL.ABERRATION_FOR);
+    // The rally's streak, if it showed, crumbles into sparks
+    if (this.rally >= STREAK_CRUMBLE.FROM) {
+      this.particles.burst(
+        COURT.WIDTH / 2,
+        HUD_LAYOUT.SCORE_Y,
+        STREAK_CRUMBLE.COLOR,
+        STREAK_CRUMBLE.SPARKS,
+        STREAK_CRUMBLE.SPEED,
+        { heading: Math.PI / 2, spread: Math.PI },
+      );
+    }
+    this.rally = 0;
     // The side beaten for it shorts out, every paddle it has
     this.paddles.forEach((paddle, i) => {
       if (paddle.side !== score.scoringPlayerIndex) this.paddleFx.onConcede(i);

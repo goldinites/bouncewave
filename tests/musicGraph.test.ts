@@ -161,4 +161,20 @@ describe('MusicGraph', () => {
       expect(callsOf(calls, 'createConvolver')).toHaveLength(0);
     });
   });
+
+  it('beats with the kicks as they sound: the last one sounding, as hard as it was, fading', () => {
+    const { ctx } = fakeAudioContext();
+    const graph = new MusicGraph(ctx);
+    expect(graph.beatAt(1)).toBe(0);
+
+    graph.pump(1, 0.75);
+    graph.pump(1.5, 0.375);
+    // Before the first kick sounds there is no beat; at it, full; it fades until the next
+    expect(graph.beatAt(0.9)).toBe(0);
+    expect(graph.beatAt(1)).toBeCloseTo(1);
+    expect(graph.beatAt(1.2)).toBeLessThan(0.5);
+    expect(graph.beatAt(1.2)).toBeGreaterThan(0);
+    // The next kick, played half as hard, lands half as hard
+    expect(graph.beatAt(1.5)).toBeCloseTo(0.5);
+  });
 });

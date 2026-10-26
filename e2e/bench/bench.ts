@@ -173,6 +173,7 @@ function bench(scene: string) {
       },
       particles,
       analyser: null,
+      beat: null,
       isRotated: false,
       replay: null,
     };
