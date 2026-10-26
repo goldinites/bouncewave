@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { skillAt } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
-import { BALL, COURT, PADDLE } from '@/match/config';
+import { BALL, COURT, HIT_STOP, PADDLE } from '@/match/config';
 import { CHALLENGES } from '@/match/challenges';
 import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
@@ -54,6 +54,8 @@ const setup = () => {
     ball.vx = index === 0 ? -speed : speed;
     ball.vy = 0;
     flow.update(0.001);
+    // A hit square in the middle is perfect: the match holds still a moment before it flies on
+    flow.update(HIT_STOP.POWER_SHOT);
   };
 
   return { flow, ball, events, scoreFor, hitWith };

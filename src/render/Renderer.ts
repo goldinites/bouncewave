@@ -17,6 +17,9 @@ const MENU_DIM = { ALPHA: 0.6, SPEED: 8.6 } as const;
 const SHAKE_DECAY = 9;
 const FLASH_DECAY = 3;
 const CLIMAX_FLASH = 0.2; // soft flash when the climax peaks, no screen shake
+// A hit knocks the court the way the ball was struck and it springs back: out in PEAK s, home by
+// ~6 × PEAK (t/PEAK · e^(1 − t/PEAK) of the push)
+const KICK = { PEAK: 0.03 } as const;
 
 // Sharpest canvas pixel ratio; phones report 3, which costs more fill rate than it shows
 const MAX_PIXEL_RATIO = 2;
@@ -55,6 +58,10 @@ export class Renderer {
   private readonly mood = new BackdropMood();
   private screenShake = 0;
   private screenFlash = 0;
+  /** The last kick: its push (px, either way) and how long ago it came (s). */
+  private readonly kick = { x: 0, y: 0, age: Infinity };
+  /** Seconds of the impact frame left. */
+  private impactFrame = 0;
 
   private finalSign: FinalScoreSign | null = null;
   private finalSignAge = 0;
@@ -76,6 +83,8 @@ export class Renderer {
     menuDim: MENU_DIM.ALPHA,
     shake: 0,
     flash: 0,
+    kick: { x: 0, y: 0 },
+    isImpactFrame: false,
     mood: { laserIntensity: 1, climax: 0, celebration: 0 },
     realDt: 0,
   };
@@ -204,6 +213,23 @@ export class Renderer {
   }
 
   /**
+   * Knocks the court `amount` px the way `heading` points (radians): a hit's push, which springs
+   * back at once. A newer kick replaces the one still running.
+   */
+  public addKick(heading: number, amount: number): void {
+    if (!this.showsEffects || this.reducedMotion.matches) return;
+    this.kick.x = Math.cos(heading) * amount;
+    this.kick.y = Math.sin(heading) * amount;
+    this.kick.age = 0;
+  }
+
+  /** A power shot's impact frame: the whole picture inverted for `duration` s, a frame or two. */
+  public addImpactFrame(duration: number): void {
+    if (!this.showsEffects || this.reducedMotion.matches) return;
+    this.impactFrame = Math.max(this.impactFrame, duration);
+  }
+
+  /**
    * Soft accent when the climax peaks: a gentle laser swell and flash, no screen shake. The
    * backgrounds' bursts are kept for the victory celebration only.
    */
@@ -326,6 +352,8 @@ export class Renderer {
     this.finalSignAge += dt;
     this.screenShake *= Math.exp(-dt * SHAKE_DECAY);
     this.screenFlash = Math.max(0, this.screenFlash - dt * FLASH_DECAY);
+    this.kick.age += dt;
+    this.impactFrame = Math.max(0, this.impactFrame - dt);
   }
 
   /**
@@ -355,6 +383,11 @@ export class Renderer {
     state.menuDim = this.menuDim;
     state.shake = this.screenShake;
     state.flash = this.screenFlash;
+    const t = this.kick.age / KICK.PEAK;
+    const push = t < 8 ? t * Math.exp(1 - t) : 0;
+    state.kick.x = this.kick.x * push;
+    state.kick.y = this.kick.y * push;
+    state.isImpactFrame = this.impactFrame > 0;
     state.mood = this.mood.current(frame.drama.climax);
     state.realDt = realDt;
     this.looks[this.look].render(this.ctx, frame, state);

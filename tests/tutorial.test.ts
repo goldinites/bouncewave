@@ -36,6 +36,7 @@ const setup = () => {
       y: 0,
       speed: 400,
       angle: 0,
+      heading: 0,
       rally: 1,
       isPowerShot: false,
       chargedOverdrive: false,

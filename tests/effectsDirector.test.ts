@@ -4,6 +4,7 @@ import { EffectsDirector, EffectsDirectorDeps } from '@/fx/EffectsDirector';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Ball } from '@/match/Ball';
+import { HIT_STOP } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import type { Renderer } from '@/render/Renderer';
 import { COLORS } from '@/shared/palette';
@@ -12,6 +13,8 @@ import { SceneId } from '@/shared/scenes';
 const makeRenderer = () => ({
   addShake: vi.fn(),
   addFlash: vi.fn(),
+  addKick: vi.fn(),
+  addImpactFrame: vi.fn(),
   triggerClimaxSurge: vi.fn(),
   celebrate: vi.fn(),
   triggerVictoryEffect: vi.fn(),
@@ -51,6 +54,7 @@ const makeAudio = () => ({
     playHeartbeat: vi.fn(),
     playFireworkPop: vi.fn(),
     playPowerShot: vi.fn(),
+    hushForShot: vi.fn(),
     playOverdriveReady: vi.fn(),
     playChannelSurf: vi.fn(),
   },
@@ -130,6 +134,7 @@ describe('EffectsDirector.handle', () => {
       y: 250,
       speed: 400,
       angle: 0,
+      heading: 0,
       rally: 1,
       isPowerShot: false,
       chargedOverdrive: false,
@@ -198,12 +203,14 @@ describe('EffectsDirector.handle', () => {
     expect(audio.music.enterScene).not.toHaveBeenCalled();
   });
 
-  it('shakes and beeps on a wall bounce', () => {
-    const { effects, audio, renderer } = makeDirector();
+  it('lights the rail struck, kicks the court toward it and beeps on a wall bounce', () => {
+    const { effects, audio, renderer, particles } = makeDirector();
 
     handle(effects, { type: 'wallBounce', x: 10, y: 20 });
 
-    expect(renderer.addShake).toHaveBeenCalled();
+    expect(particles.ripples).toHaveLength(1);
+    expect(particles.ripples[0].y).toBeLessThan(20); // the top rail
+    expect(renderer.addKick).toHaveBeenCalledWith(-Math.PI / 2, expect.any(Number));
     expect(audio.sfx.playWallBounce).toHaveBeenCalledOnce();
   });
 
@@ -218,6 +225,7 @@ describe('EffectsDirector.handle', () => {
       y: 300,
       speed: 500,
       angle: 0,
+      heading: 0,
       rally: 4,
       isPowerShot: false,
       chargedOverdrive: false,
@@ -247,15 +255,21 @@ describe('EffectsDirector.handle', () => {
       y: 300,
       speed: 700,
       angle: 0,
+      heading: 0,
       rally: 9,
       isPowerShot: true,
       chargedOverdrive: false,
     });
 
+    // The music hushes through the hit-stop, and the shot is heard as the ball leaves
+    expect(audio.sfx.hushForShot).toHaveBeenCalledWith(HIT_STOP.POWER_SHOT);
+    expect(audio.sfx.playPowerShot).not.toHaveBeenCalled();
+    effects.afterSimulation(HIT_STOP.POWER_SHOT, fakeFlow());
     expect(audio.sfx.playPowerShot).toHaveBeenCalledWith(9, expect.any(Number));
     expect(audio.sfx.playPaddleHit).not.toHaveBeenCalled();
     expect(particles.particles.some((p) => p.color === COLORS.YELLOW)).toBe(true);
-    expect(renderer.addFlash).toHaveBeenCalled();
+    expect(renderer.addImpactFrame).toHaveBeenCalled();
+    expect(renderer.addFlash).not.toHaveBeenCalled();
     expect(renderer.addShake).toHaveBeenCalled();
   });
 
@@ -270,6 +284,7 @@ describe('EffectsDirector.handle', () => {
       y: 300,
       speed: 700,
       angle: 0,
+      heading: 0,
       rally: 6,
       isPowerShot: false,
       chargedOverdrive: true,
@@ -279,7 +294,7 @@ describe('EffectsDirector.handle', () => {
     expect(audio.sfx.playPaddleHit).toHaveBeenCalledWith(6, true, 0, expect.any(Object));
   });
 
-  it('adds an extra white burst and a flash on a perfect hit', () => {
+  it('adds an extra white burst and a flare at the contact on a perfect hit, not a screen flash', () => {
     const { effects, renderer, particles } = makeDirector();
 
     handle(effects, {
@@ -290,6 +305,7 @@ describe('EffectsDirector.handle', () => {
       y: 300,
       speed: 700,
       angle: 0,
+      heading: 0,
       rally: 8,
       isPowerShot: false,
       chargedOverdrive: false,
@@ -297,7 +313,45 @@ describe('EffectsDirector.handle', () => {
 
     const perfectBurst = particles.particles.filter((p) => p.color === COLORS.WHITE);
     expect(perfectBurst.length).toBeGreaterThan(0);
-    expect(renderer.addFlash).toHaveBeenCalled();
+    expect(particles.flares).toHaveLength(1);
+    expect(renderer.addFlash).not.toHaveBeenCalled();
+    expect(renderer.addKick).toHaveBeenCalledWith(0, expect.any(Number));
+  });
+
+  it('knocks the court, the paddle and the ball the harder the hit, and throws sparks its way', () => {
+    const { effects, renderer, particles } = makeDirector();
+    const hit = (isPerfect: boolean, speed: number) => {
+      handle(effects, {
+        type: 'paddleHit',
+        paddleIndex: 1,
+        isPerfect,
+        x: 750,
+        y: 250,
+        speed,
+        angle: 0,
+        heading: Math.PI,
+        rally: 1,
+        isPowerShot: false,
+        chargedOverdrive: false,
+      });
+      effects.afterSimulation(0.02, fakeFlow());
+      return {
+        kick: vi.mocked(renderer.addKick).mock.calls.at(-1)![1],
+        recoil: effects.paddleRecoil[1],
+      };
+    };
+
+    const slow = hit(false, 380);
+    const fast = hit(false, 900);
+    const perfect = hit(true, 900);
+    expect(fast.kick).toBeGreaterThan(slow.kick);
+    expect(perfect.kick).toBeGreaterThan(fast.kick);
+    expect(fast.recoil).toBeGreaterThan(slow.recoil);
+    expect(perfect.recoil).toBeGreaterThan(fast.recoil);
+    // The right paddle sends the ball left: the sparks struck off its hits fly left
+    const struck = particles.particles.filter((p) => p.isStreak);
+    expect(struck.length).toBeGreaterThan(0);
+    expect(struck.every((p) => p.vx < 0)).toBe(true);
   });
 
   it('rises on a point won, falls on one lost, from the goal it went in; not in the demo', () => {
@@ -447,6 +501,7 @@ describe('EffectsDirector.handle', () => {
       y: 250,
       speed: 400,
       angle: 0,
+      heading: 0,
       rally: 1,
       isPowerShot: false,
       chargedOverdrive: false,
@@ -466,6 +521,7 @@ describe('EffectsDirector.handle', () => {
       y: 250,
       speed: 400,
       angle: 0,
+      heading: 0,
       rally: 1,
       isPowerShot: false,
       chargedOverdrive: false,

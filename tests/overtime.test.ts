@@ -39,6 +39,7 @@ const setup = (level: DifficultyLevel) => {
           y: 0,
           speed: 500,
           angle: 0,
+          heading: 0,
         },
         ball,
       );

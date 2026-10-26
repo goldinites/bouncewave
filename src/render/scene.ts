@@ -81,6 +81,18 @@ export interface DramaView {
   meterSpent: readonly number[];
   /** How far each paddle leans, in radians, positive clockwise (a whip off a spinning hit). */
   paddleTilt: readonly number[];
+  /** How far each paddle is knocked back toward its own goal by its last hit, px. */
+  paddleRecoil: readonly number[];
+  /** How white-hot each ball burns off a perfect hit, in [0, 1], by its place in `court.balls`. */
+  ballWhiteHot: readonly number[];
+  /** Each ball's squash off its last hit or bounce, by its place in `court.balls`; null for round. */
+  ballSquash: readonly (Squash | null)[];
+}
+
+/** How a ball is squashed: along `axis` by `amount` (> 0 flattened, < 0 stretched). */
+export interface Squash {
+  axis: 'x' | 'y';
+  amount: number;
 }
 
 /** Everything the renderer needs to draw (and animate toward) one frame, by who reads it. */
@@ -105,6 +117,10 @@ export interface SceneState {
   shake: number;
   /** The white flash, in [0, 1]. */
   flash: number;
+  /** Where a hit has knocked the court to, px: it is pushed the way the ball was struck. */
+  kick: { x: number; y: number };
+  /** Whether this frame is a power shot's impact frame: the whole picture inverted. */
+  isImpactFrame: boolean;
   /** The backdrop's mood (BackdropMood). */
   mood: BackgroundMood;
   /** Wall-clock seconds since the last frame, paused frames included. */

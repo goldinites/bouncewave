@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { skillAt } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
-import { COURT, PADDLE } from '@/match/config';
+import { COURT, HIT_STOP, PADDLE } from '@/match/config';
 import { DEMO_AI_SKILL, DIFFICULTY_LEVELS, DifficultyLevel } from '@/match/difficulty';
 import { Lineup, MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { OVERDRIVE } from '@/match/Overdrive';
@@ -104,6 +104,8 @@ describe('a match played by its lineup', () => {
       ball.vx = side === 0 ? -400 : 400;
       ball.vy = 0;
       flow.update(0.001);
+      // A hit square in the middle is perfect: the match holds still a moment before it flies on
+      flow.update(HIT_STOP.POWER_SHOT);
     };
     return { flow, keys, events, perfectHit };
   };

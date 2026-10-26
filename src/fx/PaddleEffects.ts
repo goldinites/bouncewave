@@ -17,6 +17,9 @@ const WHIP = {
   HOLD: 0.12, // s it leans toward its angle before easing back
   RATE: 22, // 1/s of the spring: ~0.1 s to lean in, ~0.25 s to come back
 } as const;
+// A hit knocks the paddle back toward its own goal and it springs straight back: out to the
+// push in PEAK s, home again by ~6 × PEAK, never past where it stood
+const RECOIL = { PEAK: 0.025 } as const;
 
 /**
  * Paddle neon: a glow that flares on every hit and fades, and the sparks a paddle sheds
@@ -30,6 +33,10 @@ export class PaddleEffects {
   /** The angle each paddle leans toward, and for how long more before it comes back to 0. */
   private readonly lean: number[];
   private readonly leanFor: number[];
+  /** How far each paddle's last hit pushed it back (px) and how long ago (s). */
+  private readonly push: number[];
+  private readonly pushAge: number[];
+  private readonly _recoil: number[];
 
   /** @param paddleCount how many paddles are on the court */
   constructor(paddleCount: number) {
@@ -39,6 +46,14 @@ export class PaddleEffects {
     this.tiltSpeed = new Array<number>(paddleCount).fill(0);
     this.lean = new Array<number>(paddleCount).fill(0);
     this.leanFor = new Array<number>(paddleCount).fill(0);
+    this.push = new Array<number>(paddleCount).fill(0);
+    this.pushAge = new Array<number>(paddleCount).fill(0);
+    this._recoil = new Array<number>(paddleCount).fill(0);
+  }
+
+  /** How far each paddle is knocked back toward its own goal by its last hit, px. */
+  public get recoil(): readonly number[] {
+    return this._recoil;
   }
 
   /** How brightly the charge each paddle's meter just lost still burns, in [0, 1]. */
@@ -79,9 +94,14 @@ export class PaddleEffects {
     return this._glow;
   }
 
-  /** @param paddleIndex the paddle's place in the match's list */
-  public onHit(paddleIndex: number): void {
+  /**
+   * @param paddleIndex the paddle's place in the match's list
+   * @param push px the hit knocks it back by, the harder the hit the further
+   */
+  public onHit(paddleIndex: number, push = 0): void {
     this._glow[paddleIndex] = 1;
+    this.push[paddleIndex] = push;
+    this.pushAge[paddleIndex] = 0;
   }
 
   public reset(): void {
@@ -91,6 +111,9 @@ export class PaddleEffects {
     this.tiltSpeed.fill(0);
     this.lean.fill(0);
     this.leanFor.fill(0);
+    this.push.fill(0);
+    this.pushAge.fill(0);
+    this._recoil.fill(0);
   }
 
   public update(
@@ -104,6 +127,7 @@ export class PaddleEffects {
       this._glow[i] = Math.max(0, this._glow[i] - dt * GLOW_DECAY);
       this._spent[i] = Math.max(0, this._spent[i] - dt * SPENT_DECAY);
       this.springBack(i, dt);
+      this.recoilBack(i, dt);
       this.emitSparks(dt, paddle, particles, rally);
     });
   }
@@ -120,6 +144,9 @@ export class PaddleEffects {
       this.tiltSpeed,
       this.lean,
       this.leanFor,
+      this.push,
+      this.pushAge,
+      this._recoil,
     ]) {
       while (values.length < count) values.push(0);
       values.length = count;
@@ -146,6 +173,18 @@ export class PaddleEffects {
     if (target === 0 && Math.abs(this._tilt[i]) < 1e-3 && Math.abs(this.tiltSpeed[i]) < 1e-2) {
       this._tilt[i] = 0;
       this.tiltSpeed[i] = 0;
+    }
+  }
+
+  /** The knock back: out fast, home a little slower (t/PEAK · e^(1 − t/PEAK) of the push). */
+  private recoilBack(i: number, dt: number): void {
+    if (this.push[i] === 0) return;
+    this.pushAge[i] += dt;
+    const t = this.pushAge[i] / RECOIL.PEAK;
+    this._recoil[i] = this.push[i] * t * Math.exp(1 - t);
+    if (t > 8) {
+      this.push[i] = 0;
+      this._recoil[i] = 0;
     }
   }
 

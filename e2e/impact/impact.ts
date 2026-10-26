@@ -250,6 +250,9 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
       paddleGlow: effects.paddleGlow,
       paddleTilt: effects.paddleTilt,
       meterSpent: effects.meterSpent,
+      paddleRecoil: effects.paddleRecoil,
+      ballSquash: effects.ballSquash,
+      ballWhiteHot: effects.ballWhiteHot,
     },
     particles,
     analyser: null,
@@ -279,6 +282,9 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
       paddleGlow: effects.paddleGlow,
       paddleTilt: effects.paddleTilt,
       meterSpent: effects.meterSpent,
+      paddleRecoil: effects.paddleRecoil,
+      ballSquash: effects.ballSquash,
+      ballWhiteHot: effects.ballWhiteHot,
     });
   };
 

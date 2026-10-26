@@ -105,7 +105,7 @@ describe('listening to the match', () => {
 
   it('lets the effects react to whatever the match reports', () => {
     const bus = new EventBus<MatchEvent>();
-    const renderer = { addShake: vi.fn() };
+    const renderer = { addKick: vi.fn() };
     const effects = new EffectsDirector({
       renderer: renderer as unknown as Renderer,
       audio: { sfx: { playWallBounce: vi.fn() } } as unknown as AudioEngine,
@@ -119,7 +119,7 @@ describe('listening to the match', () => {
     stop();
     bus.emit({ type: 'wallBounce', x: 100, y: 14 });
 
-    expect(renderer.addShake).toHaveBeenCalledTimes(1);
+    expect(renderer.addKick).toHaveBeenCalledTimes(1);
   });
 
   it('opens the game-over menu and puts the pause button away when a match ends', () => {
