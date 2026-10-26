@@ -1,54 +1,97 @@
 import { AudioEngine } from '@/audio/AudioEngine';
 import { FinaleSting } from '@/audio/music/sting';
+import { BallSquash } from '@/fx/BallSquash';
 import { MatchPointDrama } from '@/fx/MatchPointDrama';
 import { PaddleEffects } from '@/fx/PaddleEffects';
 import { ParticleSystem } from '@/fx/ParticleSystem';
 import { RallyClimax } from '@/fx/RallyClimax';
 import { VictoryFireworks } from '@/fx/VictoryFireworks';
 import { Ball } from '@/match/Ball';
-import { COURT, BALL } from '@/match/config';
+import { COURT, HIT_STOP } from '@/match/config';
 import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { getSpeedHeat } from '@/match/heat';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { Paddle } from '@/match/Paddle';
 import { STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Side } from '@/match/side';
+import { COURT_LINES } from '@/render/CourtRenderer';
+import { Squash } from '@/render/scene';
 import { REFLEX } from '@/match/skills/Reflex';
 import { finalScoreText } from '@/render/FinalScoreRenderer';
 import { brickColor } from '@/render/ModifierRenderer';
 import { Renderer } from '@/render/Renderer';
 import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
+import { mixHexColors } from '@/shared/math';
 import { SceneId } from '@/shared/scenes';
 
-// Screen shake per event (px); a paddle hit shakes
-// base + (ball speed − serve speed) / divisor, plus a bonus when perfect
+// Screen shake per event (px): a jitter, where a hit kicks the court one way (IMPACT)
 const SHAKE = {
-  WALL_BOUNCE: 2,
-  PADDLE_HIT_BASE: 3,
-  PADDLE_HIT_SPEED_DIVISOR: 90,
-  PERFECT_BONUS: 3,
+  BUMP: 2, // off a post or a brick
   SCORE: 14,
   FIREWORK: 4,
   FINALE_WIN: 12,
   FINALE_LOSS: 18,
 } as const;
 
-// Screen flash per event
+// Screen flash per event; a hit flashes where it struck instead (IMPACT)
 const FLASH = {
   START: 1.0,
-  PERFECT_HIT: 0.6,
   SCORE: 0.8,
   FIREWORK: 0.25,
   FINALE_WIN: 0.9,
 } as const;
 
+/**
+ * How a hit feels, by how hard it was struck (ROADMAP 6.2): a plain hit from MIN at the serve's
+ * speed to MAX at the level's top, a perfect hit and a power shot above both. The contact is the
+ * strongest frame: the court is kicked the way the ball went (px), the paddle knocked back (px),
+ * the ball flattened (share), a flare of light where they met (px across). Sparks streak off in a
+ * cone the way the ball went; rings are quick, a plain hit's an arc opening onto the court.
+ */
+const IMPACT = {
+  KICK: { MIN: 1.5, MAX: 4, PERFECT: 6, POWER: 8 },
+  RECOIL: { MIN: 2, MAX: 4, PERFECT: 6, POWER: 9 },
+  SQUASH: { MIN: 0.3, MAX: 0.5, PERFECT: 0.65, POWER: 0.8 },
+  FLARE: { MIN: 14, MAX: 22, PERFECT: 46, POWER: 50 },
+  FLARE_FOR: 0.06, // s after the hit-stop
+  // A perfect hit is told from a plain one at a glance: a star glint's rays reaching GLINT px
+  // across the flare, the ball burning white-hot for WHITE_HOT s,
+  // and a second, slower ring in the paddle's colour inside the white one
+  GLINT: 90, // px
+  WHITE_HOT: 0.35, // s
+  PERFECT_INNER_RING: { SPEED: 380, DECAY: 4, WIDTH: 2 },
+  SPARKS: { COUNT: 14, RALLY_CAP: 14, SPEED: 340, SPREAD: 1.7, SIZE: [1.5, 3] }, // rad, px
+  PERFECT_SPARKS: { COUNT: 18, SPEED: 520, SPREAD: 1.2, SIZE: [2, 4] },
+  POWER_SPARKS: { COUNT: 30, SPEED: 620, SPREAD: 2.2, SIZE: [2, 4.5] },
+  ARC: { SPEED: 420, DECAY: 6, WIDTH: 2, SPREAD: 2.2 }, // px/s, 1/s, px, rad
+  // The perfect hit's wave: big and quick, out to near half the court, so it is felt anywhere on
+  // screen; a thin front with a soft wake behind it, so it never hides the ball
+  PERFECT_RING: { SPEED: 900, DECAY: 2.2, WIDTH: 3, WAKE: 16 },
+  POWER_RINGS: { SPEED: 820, INNER_SPEED: 560, DECAY: 4.5, WIDTH: 4 },
+  // The power shot's impact frame: the picture in negative for a frame or two
+  IMPACT_FRAME: 0.035, // s
+  // Its sound waits out its hit-stop under a hush, so the shot lands as the ball leaves
+  POWER_SOUND_DELAY: HIT_STOP.POWER_SHOT,
+} as const;
+
+/**
+ * A wall struck: its rail lights and a wave runs along it (strength from MIN at the serve's speed
+ * to 1 at the level's top), the ball flattens against it a little, the court is kicked toward
+ * it, and above SPARKS_FROM of the top speed sparks fly off it into the court.
+ */
+const WALL = {
+  RIPPLE_MIN: 0.35,
+  SQUASH: 0.3,
+  KICK: 2, // px at the top speed
+  SPARKS_FROM: 0.5,
+  SPARKS: 10,
+  SPARK_SPEED: 260,
+  SPREAD: 1.6, // rad
+} as const;
+
 // Particle bursts: how many and how fast
 const BURST = {
-  HIT_COUNT: 18,
-  HIT_RALLY_CAP: 20, // each rally hit adds a particle, up to this many
-  PERFECT_COUNT: 16,
-  PERFECT_SPEED: 380,
   SCORE_COUNT: 46,
   SCORE_SPEED: 460,
   SCORE_INSET: 6, // score bursts go off just inside the goal line
@@ -62,15 +105,13 @@ const BURST = {
 
 // Overdrive: the meter filling up, and the power shot going off
 const OVERDRIVE_FX = {
-  POWER_SHAKE: 8,
-  POWER_FLASH: 0.7,
-  POWER_RING_SPEED: 760,
+  POWER_SHAKE: 4,
   READY_RING_SPEED: 380,
+  READY_RING_DECAY: 3.5, // 1/s
 } as const;
 
-// Shockwave ring expansion speeds; a plain hit uses the ParticleSystem default
+// Shockwave ring expansion speeds
 const SHOCKWAVE_SPEED = {
-  PERFECT: 520,
   SCORE: 620,
   TIME_WARP: 300,
 } as const;
@@ -157,6 +198,16 @@ export class EffectsDirector {
   private readonly drama = new MatchPointDrama();
   private readonly climax = new RallyClimax();
   private readonly paddleFx: PaddleEffects;
+  private readonly squash = new BallSquash();
+  /**
+   * How white-hot each ball burns off a perfect hit, by its place in the list: above 1 through
+   * the hit-stop, fading to 0 over IMPACT.WHITE_HOT s after it.
+   */
+  private readonly whiteHot: number[] = [];
+  /** The match's balls as the last step left them, to tell which one a hit or bounce was. */
+  private balls: readonly Ball[] = [];
+  /** A power shot's sound waiting out its hit-stop: `in` s more. */
+  private powerSound: { rally: number; pan: number; in: number } | null = null;
   /** Each paddle's meter as the last frame left it, to see a charge go. */
   private meterCharges: (number | null)[] = [];
   /** The match's top ball speed, for how hard a hit sounds. */
@@ -229,6 +280,21 @@ export class EffectsDirector {
     return this.paddleFx.spent;
   }
 
+  /** How far each paddle is knocked back toward its own goal by its last hit, px. */
+  public get paddleRecoil(): readonly number[] {
+    return this.paddleFx.recoil;
+  }
+
+  /** How white-hot each ball burns off a perfect hit, in [0, 1], by its place in the list. */
+  public get ballWhiteHot(): readonly number[] {
+    return this.whiteHot.map((level) => Math.min(1, level));
+  }
+
+  /** Each ball's squash off its last hit or bounce, by its place in the match's list. */
+  public get ballSquash(): readonly (Squash | null)[] {
+    return this.squash.squash;
+  }
+
   /** How far each paddle leans, radians (a whip off a spinning hit). */
   public get paddleTilt(): readonly number[] {
     return this.paddleFx.tilt;
@@ -258,6 +324,7 @@ export class EffectsDirector {
 
   /** Runs on the wall clock before the simulation step, which may be slowed by it. */
   public beforeSimulation(realDt: number, flow: MatchFlow): void {
+    this.balls = flow.balls;
     if (flow.phase === 'finale') return;
     this.maxBallSpeed = DIFFICULTY_CONFIGS[flow.difficulty].maxSpeed;
 
@@ -285,6 +352,11 @@ export class EffectsDirector {
     this.followClock(flow);
     const sparkRally = flow.phase === 'finale' ? 0 : flow.rally;
     this.paddleFx.update(dt, this.paddles, this.particles, sparkRally);
+    this.squash.update(dt);
+    for (let i = 0; i < this.whiteHot.length; i++) {
+      this.whiteHot[i] = Math.max(0, this.whiteHot[i] - dt / IMPACT.WHITE_HOT);
+    }
+    this.followPowerSound(dt);
 
     // Every ball burns with the climax; a power shot burns like the full climax
     if (flow.isBallLive) {
@@ -326,6 +398,9 @@ export class EffectsDirector {
         }
         this.renderer.addFlash(FLASH.START);
         this.paddleFx.reset();
+        this.squash.reset();
+        this.whiteHot.length = 0;
+        this.powerSound = null;
         this.resetTension();
         // Again, at once: the last match's sting gives way to this one's music
         this.audio.music.cutFinale();
@@ -333,6 +408,9 @@ export class EffectsDirector {
 
       case 'returnToMenu':
         this.paddleFx.reset();
+        this.squash.reset();
+        this.whiteHot.length = 0;
+        this.powerSound = null;
         this.resetTension();
         break;
 
@@ -341,15 +419,19 @@ export class EffectsDirector {
         break;
 
       case 'wallBounce':
-        this.renderer.addShake(SHAKE.WALL_BOUNCE);
-        if (event.isPost) this.audio.sfx.playPostBounce(courtPan(event.x));
-        else this.audio.sfx.playWallBounce(courtPan(event.x));
+        if (event.isPost) {
+          this.renderer.addShake(SHAKE.BUMP);
+          this.audio.sfx.playPostBounce(courtPan(event.x));
+        } else {
+          this.onWallBounce(event.x, event.y);
+          this.audio.sfx.playWallBounce(courtPan(event.x));
+        }
         break;
 
       case 'brickBreak': {
         // It bounces like a wall and shatters in its own colour
         const { brick } = event;
-        this.renderer.addShake(SHAKE.WALL_BOUNCE);
+        this.renderer.addShake(SHAKE.BUMP);
         this.audio.sfx.playBrickBreak(courtPan(event.x));
         this.particles.burst(
           brick.x + brick.width / 2,
@@ -390,24 +472,63 @@ export class EffectsDirector {
     }
   }
 
+  /**
+   * A paddle hit, as hard as it was struck: the contact the strongest frame (a flare, the ball
+   * flattened, the paddle knocked back, the court kicked the way the ball went), then sparks
+   * streaking off the same way and a quick ring.
+   */
   private onPaddleHit(hit: Extract<MatchEvent, { type: 'paddleHit' }>): void {
     const paddle = this.paddles[hit.paddleIndex];
-    this.paddleFx.onHit(hit.paddleIndex);
+    const force = getSpeedHeat(hit.speed, this.maxBallSpeed);
+    const kind = hit.isPowerShot ? 'POWER' : hit.isPerfect ? 'PERFECT' : null;
+    const strength = (range: { MIN: number; MAX: number; PERFECT: number; POWER: number }) =>
+      kind ? range[kind] : range.MIN + (range.MAX - range.MIN) * force;
+    // A perfect hit and a power shot hold the match still a moment (HIT_STOP): so does their look
+    const hold = hit.isPowerShot ? HIT_STOP.POWER_SHOT : hit.isPerfect ? HIT_STOP.PERFECT : 0;
 
-    this.renderer.addShake(
-      SHAKE.PADDLE_HIT_BASE +
-        (hit.speed - BALL.INITIAL_SPEED) / SHAKE.PADDLE_HIT_SPEED_DIVISOR +
-        (hit.isPerfect ? SHAKE.PERFECT_BONUS : 0),
-    );
+    this.paddleFx.onHit(hit.paddleIndex, strength(IMPACT.RECOIL));
+    this.squash.onHit(this.ballAt(hit.x, hit.y), 'x', strength(IMPACT.SQUASH), hold);
+    this.renderer.addKick(hit.heading, strength(IMPACT.KICK));
+    const flareColor = hit.isPowerShot ? COLORS.YELLOW : paddle.color;
+    const glint = hit.isPerfect ? IMPACT.GLINT : 0;
+    const flareFor = hold + IMPACT.FLARE_FOR;
+    this.particles.flare(hit.x, hit.y, strength(IMPACT.FLARE), flareColor, flareFor, glint);
 
-    const burstCount = BURST.HIT_COUNT + Math.min(hit.rally, BURST.HIT_RALLY_CAP);
-    this.particles.burst(hit.x, hit.y, paddle.color, burstCount);
-    this.particles.shockwave(hit.x, hit.y, paddle.color);
+    const { SPARKS, ARC } = IMPACT;
+    const sparks = SPARKS.COUNT + Math.min(hit.rally, SPARKS.RALLY_CAP);
+    this.particles.burst(hit.x, hit.y, paddle.color, sparks, SPARKS.SPEED * (0.7 + 0.6 * force), {
+      heading: hit.heading,
+      spread: SPARKS.SPREAD,
+      size: SPARKS.SIZE,
+      isStreak: true,
+    });
 
     if (hit.isPerfect) {
-      this.particles.burst(hit.x, hit.y, COLORS.WHITE, BURST.PERFECT_COUNT, BURST.PERFECT_SPEED);
-      this.particles.shockwave(hit.x, hit.y, COLORS.WHITE, SHOCKWAVE_SPEED.PERFECT);
-      this.renderer.addFlash(FLASH.PERFECT_HIT);
+      const { PERFECT_SPARKS, PERFECT_RING, PERFECT_INNER_RING } = IMPACT;
+      this.whiteHot[this.ballAt(hit.x, hit.y)] = 1 + hold / IMPACT.WHITE_HOT;
+      this.particles.shockwave(hit.x, hit.y, paddle.color, PERFECT_INNER_RING.SPEED, {
+        decay: PERFECT_INNER_RING.DECAY,
+        width: PERFECT_INNER_RING.WIDTH,
+      });
+      this.particles.burst(hit.x, hit.y, COLORS.WHITE, PERFECT_SPARKS.COUNT, PERFECT_SPARKS.SPEED, {
+        heading: hit.heading,
+        spread: PERFECT_SPARKS.SPREAD,
+        size: PERFECT_SPARKS.SIZE,
+        isStreak: true,
+      });
+      this.particles.shockwave(hit.x, hit.y, COLORS.WHITE, PERFECT_RING.SPEED, {
+        decay: PERFECT_RING.DECAY,
+        width: PERFECT_RING.WIDTH,
+        wake: PERFECT_RING.WAKE,
+      });
+    } else if (!hit.isPowerShot) {
+      // A plain hit's ring: an arc opening onto the court, the way the ball went
+      this.particles.shockwave(hit.x, hit.y, paddle.color, ARC.SPEED, {
+        decay: ARC.DECAY,
+        width: ARC.WIDTH,
+        heading: paddle.side === 0 ? 0 : Math.PI,
+        spread: ARC.SPREAD,
+      });
     }
 
     if (hit.isPowerShot) {
@@ -415,28 +536,88 @@ export class EffectsDirector {
     } else {
       this.audio.sfx.playPaddleHit(hit.rally, hit.isPerfect, paddle.side, {
         pan: courtPan(hit.x),
-        force: getSpeedHeat(hit.speed, this.maxBallSpeed),
+        force,
         size: paddle.spec.height / STANDARD_PADDLE.height,
       });
     }
     if (this.isOnIce) this.audio.sfx.playIceTink(courtPan(hit.x));
 
     if (hit.chargedOverdrive) {
-      this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, OVERDRIVE_FX.READY_RING_SPEED);
+      this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, OVERDRIVE_FX.READY_RING_SPEED, {
+        decay: OVERDRIVE_FX.READY_RING_DECAY,
+      });
       this.audio.sfx.playOverdriveReady(courtPan(hit.x));
     }
   }
 
-  /** The player's Overdrive goes off: a white-hot blast on top of the usual hit. */
+  /**
+   * An Overdrive goes off: on top of the hit, a white-hot blast the way the ball went, two rings,
+   * the picture's negative for a frame, and its sound landing out of a hush as the ball leaves.
+   */
   private onPowerShot(hit: Extract<MatchEvent, { type: 'paddleHit' }>): void {
+    const { POWER_SPARKS, POWER_RINGS } = IMPACT;
     for (const color of [COLORS.YELLOW, COLORS.WHITE]) {
-      this.particles.burst(hit.x, hit.y, color, BURST.POWER_COUNT, BURST.POWER_SPEED);
+      this.particles.burst(hit.x, hit.y, color, POWER_SPARKS.COUNT, POWER_SPARKS.SPEED, {
+        heading: hit.heading,
+        spread: POWER_SPARKS.SPREAD,
+        size: POWER_SPARKS.SIZE,
+        isStreak: true,
+      });
     }
-    this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, OVERDRIVE_FX.POWER_RING_SPEED);
-    this.particles.shockwave(hit.x, hit.y, COLORS.PINK, SHOCKWAVE_SPEED.PERFECT);
-    this.renderer.addFlash(OVERDRIVE_FX.POWER_FLASH);
+    const ring = { decay: POWER_RINGS.DECAY, width: POWER_RINGS.WIDTH };
+    this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, POWER_RINGS.SPEED, ring);
+    this.particles.shockwave(hit.x, hit.y, COLORS.PINK, POWER_RINGS.INNER_SPEED, ring);
+    this.renderer.addImpactFrame(IMPACT.IMPACT_FRAME);
     this.renderer.addShake(OVERDRIVE_FX.POWER_SHAKE);
-    this.audio.sfx.playPowerShot(hit.rally, courtPan(hit.x));
+    this.audio.sfx.hushForShot(IMPACT.POWER_SOUND_DELAY);
+    this.powerSound = { rally: hit.rally, pan: courtPan(hit.x), in: IMPACT.POWER_SOUND_DELAY };
+  }
+
+  /**
+   * A wall struck, as hard as the ball's speed: its rail lights and a wave runs along it, the ball
+   * flattens against it, the court is kicked toward it, and a fast ball strikes sparks off it.
+   */
+  private onWallBounce(x: number, y: number): void {
+    const force = getSpeedHeat(this.balls[this.ballAt(x, y)]?.speed ?? 0, this.maxBallSpeed);
+    const isTop = y < COURT.HEIGHT / 2;
+    const railY = isTop
+      ? COURT.TOP_WALL - COURT_LINES.RAIL_THICKNESS / 2
+      : COURT.HEIGHT - COURT.BOTTOM_WALL + COURT_LINES.RAIL_THICKNESS / 2;
+    this.particles.ripple(x, railY, WALL.RIPPLE_MIN + (1 - WALL.RIPPLE_MIN) * force);
+    this.squash.onHit(this.ballAt(x, y), 'y', WALL.SQUASH * (0.5 + 0.5 * force));
+    this.renderer.addKick(isTop ? -Math.PI / 2 : Math.PI / 2, WALL.KICK * force);
+    if (force > WALL.SPARKS_FROM) {
+      const color = mixHexColors(COLORS.CYAN, COLORS.PINK, x / COURT.WIDTH);
+      this.particles.burst(x, railY, color, WALL.SPARKS, WALL.SPARK_SPEED, {
+        heading: isTop ? Math.PI / 2 : -Math.PI / 2,
+        spread: WALL.SPREAD,
+        isStreak: true,
+      });
+    }
+  }
+
+  /** A power shot's sound, landing once its hit-stop is over. */
+  private followPowerSound(dt: number): void {
+    const sound = this.powerSound;
+    if (!sound) return;
+    sound.in -= dt;
+    if (sound.in > 0) return;
+    this.powerSound = null;
+    this.audio.sfx.playPowerShot(sound.rally, sound.pan);
+  }
+
+  /** Which ball in the match's list is the one at (x, y): the nearest. */
+  private ballAt(x: number, y: number): number {
+    let nearest = 0;
+    let best = Infinity;
+    this.balls.forEach((ball, i) => {
+      const distance = (ball.x - x) ** 2 + (ball.y - y) ** 2;
+      if (distance < best) {
+        best = distance;
+        nearest = i;
+      }
+    });
+    return nearest;
   }
 
   /** A skill's sound and burst; what lasts (a spin, a slowed world) the renderer draws itself. */

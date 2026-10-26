@@ -151,7 +151,7 @@ describe('a side with more than one paddle', () => {
   it('lights the paddle that hit and plays the hit in its side’s voice', () => {
     const playPaddleHit = vi.fn();
     const audio = { sfx: { playPaddleHit, playOverdriveReady: vi.fn() } };
-    const renderer = { addShake: vi.fn(), addFlash: vi.fn() };
+    const renderer = { addShake: vi.fn(), addFlash: vi.fn(), addKick: vi.fn() };
     const effects = new EffectsDirector({
       renderer: renderer as unknown as Renderer,
       audio: audio as unknown as AudioEngine,
@@ -168,6 +168,7 @@ describe('a side with more than one paddle', () => {
       y: 380,
       speed: BALL.INITIAL_SPEED,
       angle: 0,
+      heading: 0,
       rally: 1,
       isPowerShot: false,
       chargedOverdrive: false,

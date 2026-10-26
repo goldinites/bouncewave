@@ -28,6 +28,9 @@ const HIT_CARVE = {
   HOLD: 0.04, // s the dip holds
   RELEASE: 0.05, // s, time constant back up
 } as const;
+// The breath before an Overdrive (6.2): the music drops out under its hit-stop, so the shot
+// lands out of a moment's hush
+const HUSH = { DEPTH: -14, ATTACK: 0.006 } as const; // dB, s (time constant)
 // Under an Overdrive the dip holds longer and comes back slowly, leaving its tail room to ring
 const LONG_DUCK = { HOLD: 0.3, RELEASE: 0.4 } as const; // s
 // About 0.37 s at 44.1 kHz: long enough for a level that doesn't flicker with every beat
@@ -142,6 +145,22 @@ export class Mixer {
       gain.setTargetAtTime(1, now + HOLD, RELEASE);
     } catch {
       // Play on undipped rather than break audio
+    }
+  }
+
+  /**
+   * The music drops out at once, deep, until the next dip (a power shot's) takes over from it; back
+   * by itself after `duration` s should none come.
+   */
+  public hush(duration: number): void {
+    const now = this.context.currentTime;
+    try {
+      const gain = this.hitDuck.gain;
+      gain.cancelScheduledValues(now);
+      gain.setTargetAtTime(dbToGain(HUSH.DEPTH), now, HUSH.ATTACK);
+      gain.setTargetAtTime(1, now + duration, HIT_DUCK.RELEASE);
+    } catch {
+      // Play on unhushed rather than break audio
     }
   }
 

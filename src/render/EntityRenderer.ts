@@ -1,13 +1,27 @@
-import { Particle, ShockwaveRing } from '@/render/particles';
+import { Flare, Particle, ShockwaveRing } from '@/render/particles';
 import { Ball } from '@/match/Ball';
 import { OVERDRIVE } from '@/match/Overdrive';
 import { getRallyHeat } from '@/match/heat';
 import { Paddle } from '@/match/Paddle';
+import { Squash } from '@/render/scene';
 import { glowMargin, sprites } from '@/render/SpriteCache';
 import { TWO_PI } from '@/shared/math';
 import { COLORS } from '@/shared/palette';
 
 const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
+// A squashed ball: flattened along its axis by this share of its squash, widened across it by
+// SPREAD of that (the plasma keeps roughly its area)
+const SQUASH_SHAPE = { FLATTEN: 0.45, SPREAD: 0.6 } as const;
+// A wave's wake: the soft glow inside its front, this much as bright as the front
+const WAKE_ALPHA = 0.22;
+// A spark's streak: as long as STREAK s of its flight, at least a dot
+const STREAK = 0.022; // s
+// A perfect hit's star glint: rays THICK px at the root, the upright ones UPRIGHT of the
+// level ones' reach
+const GLINT = { THICK: 4, UPRIGHT: 0.55 } as const;
+// A ball struck perfectly burns white-hot a moment: its plasma whitened by this share at most,
+// its corona this much wider
+const WHITE_HOT = { LIGHT: 0.85, CORONA: 0.6 } as const;
 // Paddle neon in canvas pixels: always lit, flaring up to HOT on a hit
 const PADDLE_GLOW = { BASE: 18, HOT: 48 } as const;
 // The tutorial's mark on a paddle's perfect zone: a band of yellow light a little wider than the
@@ -32,7 +46,8 @@ export class EntityRenderer {
    @param glow hit glow in [0, 1]
    @param overdrivePulse > 0 while the paddle's Overdrive is charged: its core pulses yellow
    @param tilt radians it leans by, about its center, positive clockwise
-   @param perfectMark how brightly its perfect zone is marked, in [0, 1] (the tutorial); 0 for none */
+   @param perfectMark how brightly its perfect zone is marked, in [0, 1] (the tutorial); 0 for none
+   @param recoil px it is knocked back toward its own goal by a hit */
   public static renderPaddle(
     ctx: CanvasRenderingContext2D,
     paddle: Paddle,
@@ -40,11 +55,13 @@ export class EntityRenderer {
     overdrivePulse = 0,
     tilt = 0,
     perfectMark = 0,
+    recoil = 0,
   ): void {
     const { width, height } = paddle.spec;
     const topY = paddle.drawY - height / 2;
 
     ctx.save();
+    if (recoil !== 0) ctx.translate(paddle.side === 0 ? -recoil : recoil, 0);
     if (tilt !== 0) {
       const centerX = paddle.x + width / 2;
       ctx.translate(centerX, paddle.drawY);
@@ -201,6 +218,8 @@ export class EntityRenderer {
     time: number,
     serveTime: number,
     climax = 0,
+    squash: Squash | null = null,
+    whiteHot = 0,
   ): void {
     ctx.save();
 
@@ -210,9 +229,12 @@ export class EntityRenderer {
     // Climax pushes the plasma from yellow-green toward a white-hot orange
     const rallyHue = 52 + rallyIntensity * 30;
     const hue = rallyHue + (CLIMAX_BALL_HUE - rallyHue) * climax;
-    const sat = 20 + rallyIntensity * 80;
-    const glowSat = Math.min(100, sat + 35);
-    const lit = 88 - rallyIntensity * 18 + climax * 8;
+    // Struck perfectly, it burns white-hot a moment
+    const white = whiteHot * WHITE_HOT.LIGHT;
+    const sat = (20 + rallyIntensity * 80) * (1 - white);
+    const glowSat = Math.min(100, sat + 35) * (1 - white);
+    const plainLit = 88 - rallyIntensity * 18 + climax * 8;
+    const lit = plainLit + (97 - plainLit) * white;
     const flicker =
       0.92 +
       Math.sin(time * (23 + climax * 17)) * 0.05 * (1 + climax * 1.5) +
@@ -237,8 +259,22 @@ export class EntityRenderer {
     });
     ctx.globalAlpha = baseAlpha;
 
+    // Struck, the ball flattens against what struck it, and stretches as it springs back
+    if (squash && squash.amount !== 0) {
+      const along = 1 - squash.amount * SQUASH_SHAPE.FLATTEN;
+      const across = 1 + squash.amount * SQUASH_SHAPE.FLATTEN * SQUASH_SHAPE.SPREAD;
+      ctx.translate(x, y);
+      if (squash.axis === 'x') ctx.scale(along, across);
+      else ctx.scale(across, along);
+      ctx.translate(-x, -y);
+    }
+
     // Outer plasma corona
-    const coronaRadius = currentRadius * (2 + rallyIntensity * 1.8 + climax * 1.6) * flicker;
+    const coronaRadius =
+      currentRadius *
+      (2 + rallyIntensity * 1.8 + climax * 1.6) *
+      flicker *
+      (1 + WHITE_HOT.CORONA * whiteHot);
     const coronaGradient = ctx.createRadialGradient(x, y, currentRadius * 0.6, x, y, coronaRadius);
     coronaGradient.addColorStop(0, `hsla(${hue}, ${glowSat}%, ${lit}%, 0.7)`);
     coronaGradient.addColorStop(0.35, `hsla(${hue + 10}, ${glowSat}%, ${lit - 12}%, 0.22)`);
@@ -300,8 +336,59 @@ export class EntityRenderer {
     ctx.globalCompositeOperation = 'lighter';
     for (const p of particles) {
       ctx.globalAlpha = p.life;
+      if (p.isStreak) {
+        // A spark struck off a hit: a streak along its flight, thinning as it dies
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.size * (0.4 + 0.6 * p.life);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * STREAK, p.y - p.vy * STREAK);
+        ctx.stroke();
+        continue;
+      }
       ctx.fillStyle = p.color;
       ctx.fillRect(p.x, p.y, p.size, p.size);
+    }
+    ctx.lineCap = 'butt';
+  }
+
+  /** The flashes of contact: a white-hot core in a ball of the struck thing's light. */
+  public static renderFlares(ctx: CanvasRenderingContext2D, flares: readonly Flare[]): void {
+    ctx.globalCompositeOperation = 'lighter';
+    for (const f of flares) {
+      ctx.globalAlpha = f.life;
+      const radius = f.radius * (0.6 + 0.4 * f.life);
+      const gradient = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, radius);
+      gradient.addColorStop(0, COLORS.WHITE);
+      gradient.addColorStop(0.25, COLORS.WHITE);
+      gradient.addColorStop(0.5, f.color);
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, radius, 0, TWO_PI);
+      ctx.fill();
+      if (f.spikes > 0) this.drawGlint(ctx, f);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** A star glint's four rays: white at the root, the level ones longer, shrinking as it dies. */
+  private static drawGlint(ctx: CanvasRenderingContext2D, f: Flare): void {
+    const thick = GLINT.THICK * f.life;
+    for (const [reach, isLevel] of [
+      [f.spikes * (0.5 + 0.5 * f.life), true],
+      [f.spikes * GLINT.UPRIGHT * (0.5 + 0.5 * f.life), false],
+    ] as const) {
+      const ray = isLevel
+        ? ctx.createLinearGradient(f.x - reach, 0, f.x + reach, 0)
+        : ctx.createLinearGradient(0, f.y - reach, 0, f.y + reach);
+      ray.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      ray.addColorStop(0.5, COLORS.WHITE);
+      ray.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = ray;
+      if (isLevel) ctx.fillRect(f.x - reach, f.y - thick / 2, reach * 2, thick);
+      else ctx.fillRect(f.x - thick / 2, f.y - reach, thick, reach * 2);
     }
   }
 
@@ -311,11 +398,23 @@ export class EntityRenderer {
   ): void {
     ctx.globalCompositeOperation = 'lighter';
     for (const r of rings) {
-      ctx.globalAlpha = r.life;
       ctx.strokeStyle = r.color;
-      ctx.lineWidth = 3;
+      if (r.wake > 0 && r.radius > r.wake) {
+        // A wave: a band of soft light trailing just inside the front
+        ctx.globalAlpha = r.life * WAKE_ALPHA;
+        ctx.lineWidth = r.wake;
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.radius - r.wake / 2, 0, TWO_PI);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = r.life;
+      ctx.lineWidth = r.width * (0.5 + 0.5 * r.life);
       ctx.beginPath();
-      ctx.arc(r.x, r.y, r.radius, 0, TWO_PI);
+      if (r.heading === undefined || r.spread === undefined) {
+        ctx.arc(r.x, r.y, r.radius, 0, TWO_PI);
+      } else {
+        ctx.arc(r.x, r.y, r.radius, r.heading - r.spread / 2, r.heading + r.spread / 2);
+      }
       ctx.stroke();
     }
   }

@@ -38,6 +38,15 @@ export const BALL = {
 } as const;
 
 /**
+ * The hit-stop: a strong hit freezes the whole match for a moment, both sides alike, so the
+ * contact is held on screen and felt (ROADMAP 6.2). Plain hits don't stop: a rally keeps its flow.
+ */
+export const HIT_STOP = {
+  PERFECT: 0.03, // s
+  POWER_SHOT: 0.05, // s, an Overdrive (or overtime's) power shot
+} as const;
+
+/**
  * Points that win a standard match. A match reads its own from its MatchRules (match/rules.ts);
  * use STANDARD_RULES rather than this.
  */

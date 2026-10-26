@@ -46,6 +46,8 @@ export type PhysicsEvent =
       speed: number;
       /** How steeply it went off, radians from the flat return (either way). */
       angle: number;
+      /** Where it went off to: its flight's direction, radians (atan2 of its velocity). */
+      heading: number;
     }
   | { type: 'score'; scoringPlayerIndex: Side; y: number }
   /** Off one of the court's bricks (Bricks); whoever handles it breaks the brick. */
@@ -169,6 +171,7 @@ export class Physics {
             y: ball.y,
             speed: ball.speed,
             angle: Math.abs(bounceAngle),
+            heading: Math.atan2(ball.vy, ball.vx),
           });
           break;
         }

@@ -119,8 +119,17 @@ function bench(scene: string) {
     flow.interpolate(1);
     const simEnd = performance.now();
 
+    // About what the effects throw: streaking sparks and a flare on a hit, a wave on a wall
     for (const event of events.splice(0)) {
-      if (event.type === 'paddleHit') particles.burst(event.x, event.y, COLORS.PINK, SPARKS);
+      if (event.type === 'paddleHit') {
+        particles.burst(event.x, event.y, COLORS.PINK, SPARKS, 400, {
+          heading: event.heading,
+          spread: 1.7,
+          isStreak: true,
+        });
+        particles.flare(event.x, event.y, 46, COLORS.PINK, 0.09, 90);
+      }
+      if (event.type === 'wallBounce') particles.ripple(event.x, event.y, 1);
     }
     particles.update(FRAME);
 
@@ -156,6 +165,9 @@ function bench(scene: string) {
         zoom: 1 + 0.1 * climax,
         paddleGlow: [climax, climax],
         paddleTilt: [0, 0],
+        paddleRecoil: [0, 0],
+        ballSquash: [],
+        ballWhiteHot: [],
         meterSpent: [0, 0],
       },
       particles,

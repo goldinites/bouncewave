@@ -68,6 +68,8 @@ export class NeonScene implements Scene {
     this.renderSpace('backdrop', ctx, frame, state);
 
     ctx.save();
+    // A hit's kick pushes the court the way the ball was struck; a shake jitters it
+    ctx.translate(state.kick.x, state.kick.y);
     if (state.shake > SHAKE_FROM) {
       ctx.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
     }
@@ -228,6 +230,12 @@ function neonLayers(
     },
     { id: 'court', space: 'court', render: (c) => CourtRenderer.render(c) },
     {
+      // A struck wall answers along its rail
+      id: 'ripples',
+      space: 'court',
+      render: (c, { particles }) => CourtRenderer.renderRipples(c, particles.ripples),
+    },
+    {
       id: 'wind',
       space: 'court',
       render: (c, { court }) => {
@@ -297,7 +305,9 @@ function neonLayers(
             view.perfectZoneMark === i
               ? EntityRenderer.perfectMarkAt(court.time, isMotionReduced())
               : 0;
-          EntityRenderer.renderPaddle(c, paddle, drama.paddleGlow[i], pulse, tilt, mark);
+          // Knocked back by a hit, but not for a player who asked for less motion
+          const recoil = isMotionReduced() ? 0 : (drama.paddleRecoil[i] ?? 0);
+          EntityRenderer.renderPaddle(c, paddle, drama.paddleGlow[i], pulse, tilt, mark, recoil);
           if (charge !== null && !state.finalSign) {
             EntityRenderer.renderOverdriveMeter(
               c,
@@ -338,14 +348,25 @@ function neonLayers(
       render: (c, { court, drama }) => {
         const isBanded = court.modifiers.includes('invisibleBand');
         const isTurbo = court.conditions.turbo !== 0;
-        for (const ball of court.balls) {
+        court.balls.forEach((ball, i) => {
           // The invisible band hides a ball crossing it
-          if (isBanded && ModifierRenderer.isInBand(ball.drawX)) continue;
+          if (isBanded && ModifierRenderer.isInBand(ball.drawX)) return;
           // A turbo ball glows hotter the faster it has got
           const turbo = isTurbo ? clamp((ball.speed - TURBO_HEAT.FROM) / TURBO_HEAT.SPAN, 0, 1) : 0;
           const heat = Math.max(drama.climax, ball.isPowerShot ? 1 : 0, turbo);
-          EntityRenderer.renderBall(c, ball, court.rally, court.time, court.serveTime, heat);
-        }
+          // A struck ball squashes, but stays round for a player who asked for less motion
+          const squash = isMotionReduced() ? null : (drama.ballSquash[i] ?? null);
+          EntityRenderer.renderBall(
+            c,
+            ball,
+            court.rally,
+            court.time,
+            court.serveTime,
+            heat,
+            squash,
+            drama.ballWhiteHot[i] ?? 0,
+          );
+        });
       },
     },
     {
@@ -367,6 +388,7 @@ function neonLayers(
       render: (c, { particles }) => {
         EntityRenderer.renderParticles(c, particles.particles);
         EntityRenderer.renderShockwaves(c, particles.rings);
+        EntityRenderer.renderFlares(c, particles.flares);
       },
     },
     {
@@ -422,6 +444,18 @@ function neonLayers(
         c.fillStyle = vignette;
         fillScreen(c);
         c.globalAlpha = 1;
+      },
+    },
+    {
+      // A power shot's impact frame: the whole picture turned to its negative for a frame or two
+      id: 'impactFrame',
+      space: 'screen',
+      render: (c, _frame, { isImpactFrame }) => {
+        if (!isImpactFrame) return;
+        c.globalCompositeOperation = 'difference';
+        c.fillStyle = '#ffffff';
+        fillScreen(c);
+        c.globalCompositeOperation = 'source-over';
       },
     },
     {

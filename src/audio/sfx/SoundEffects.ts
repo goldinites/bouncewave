@@ -1397,6 +1397,12 @@ export class SoundEffects {
   }
 
   /** The music dips for a moment under a strong hit, if the hit is heard at all. */
+  /** The breath before a power shot: the music drops out for `duration` s, the shot to come. */
+  public hushForShot(duration: number): void {
+    if (this.isMutedGetter() || !this.isGameplayAudibleGetter()) return;
+    this.mixerGetter()?.hush(duration);
+  }
+
   private duckMusic(strength: number, isLong = false): void {
     if (this.isMutedGetter() || !this.isGameplayAudibleGetter()) return;
     this.mixerGetter()?.duckMusic(strength, isLong);

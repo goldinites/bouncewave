@@ -4,7 +4,7 @@ import { Brick, CourtConditions } from '@/match/court';
 import { ModifierHost, ModifierId, ModifierMoment } from '@/match/modifiers/Modifier';
 import { HALVES, SECOND_PADDLE_STEP } from '@/match/modifiers/modifiers';
 import { ModifierSet } from '@/match/modifiers/ModifierSet';
-import { BALL, COURT } from '@/match/config';
+import { BALL, COURT, HIT_STOP } from '@/match/config';
 import { DifficultyConfig, DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { GameState } from '@/match/GameState';
 import { Paddle } from '@/match/Paddle';
@@ -68,6 +68,8 @@ export type MatchEvent =
       speed: number;
       /** How steeply it went off, radians from the flat return (either way). */
       angle: number;
+      /** Where it went off to: its flight's direction, radians (atan2 of its velocity). */
+      heading: number;
       /** Rally length including this hit. */
       rally: number;
       /** The paddle's Overdrive went off on this hit. */
@@ -137,6 +139,8 @@ export class MatchFlow {
   private _phase: MatchPhase = 'attract';
   private resumePhase: MatchPhase = 'serving';
   private _serveTime = 0;
+  /** Seconds the match stays frozen on a strong hit (HIT_STOP). */
+  private hitStop = 0;
   private _rally = 0;
   private _time = 0;
 
@@ -546,6 +550,12 @@ export class MatchFlow {
       return;
     }
 
+    // A strong hit holds everything where it is for a moment, the clock included
+    if (this.hitStop > 0) {
+      this.hitStop = Math.max(0, this.hitStop - dt);
+      return;
+    }
+
     // The clock runs through serves and rallies alike: a lost point costs the time of the serve
     if (this._timeLeft !== null && this._phase !== 'attract') {
       this._timeLeft = Math.max(0, this._timeLeft - dt);
@@ -766,6 +776,9 @@ export class MatchFlow {
         const chargedOverdrive = hasOverdrive && !wasCharged && overdrive.isCharged;
 
         ball.isPowerShot = isPowerShot;
+        if (isPowerShot || event.isPerfect) {
+          this.hitStop = isPowerShot ? HIT_STOP.POWER_SHOT : HIT_STOP.PERFECT;
+        }
         if (isPowerShot) {
           ball.applyBoost(OVERDRIVE.BOOST, OVERDRIVE.BOOST_DURATION);
         }
@@ -912,6 +925,7 @@ export class MatchFlow {
     this.skills.onServe();
     this.modifiers.onServe();
     this._rally = 0;
+    this.hitStop = 0;
     this._serveTime = delay;
     this.emit({ type: 'serve' });
   }

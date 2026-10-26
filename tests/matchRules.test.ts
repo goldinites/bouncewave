@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MatchPointDrama } from '@/fx/MatchPointDrama';
 import { AiForm } from '@/match/AiForm';
 import { Ball } from '@/match/Ball';
-import { BALL, COURT, PADDLE, WINNING_SCORE } from '@/match/config';
+import { BALL, COURT, HIT_STOP, PADDLE, WINNING_SCORE } from '@/match/config';
 import { DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { OVERDRIVE } from '@/match/Overdrive';
@@ -50,6 +50,8 @@ const setup = () => {
     ball.vx = -400;
     ball.vy = 0;
     flow.update(0.001);
+    // A hit square in the middle is perfect: the match holds still a moment before it flies on
+    flow.update(HIT_STOP.POWER_SHOT);
   };
 
   return { flow, paddles, events, scoreFor, perfectHit };
@@ -115,6 +117,51 @@ describe('a match under its rules', () => {
         (event) => event.type === 'paddleHit' && (event.isPowerShot || event.chargedOverdrive),
       ),
     ).toBe(false);
+  });
+});
+
+describe('the hit-stop', () => {
+  it('holds the whole match still a moment on a perfect hit, then lets the ball fly on', () => {
+    const { flow, paddles, perfectHit } = setup();
+    flow.startMatch(STANDARD_RULES);
+    perfectHit();
+    // perfectHit has played the hit-stop out: the ball now flies, and the next one freezes again
+    const ball = flow.leadBall;
+    const x = ball.x;
+    flow.update(0.01);
+    expect(ball.x).toBeGreaterThan(x);
+
+    // Hit again, square in the middle: frozen for HIT_STOP.PERFECT, paddles included
+    ball.x = paddles[0].x + PADDLE.WIDTH + 2;
+    ball.vx = -400;
+    ball.vy = 0;
+    paddles[0].y = paddles[0].targetY = ball.y;
+    flow.update(0.001);
+    const frozenAt = ball.x;
+    paddles[0].targetY = 0;
+    const paddleY = paddles[0].y;
+    flow.update(HIT_STOP.PERFECT / 2);
+    expect(ball.x).toBe(frozenAt);
+    expect(paddles[0].y).toBe(paddleY);
+    flow.update(HIT_STOP.PERFECT / 2);
+    flow.update(0.01);
+    expect(ball.x).toBeGreaterThan(frozenAt);
+  });
+
+  it('never stops a plain hit', () => {
+    const { flow, paddles } = setup();
+    flow.startMatch(STANDARD_RULES);
+    while (flow.serveTime > 0) flow.update(0.05);
+    const ball = flow.leadBall;
+    // Off the paddle's edge, far from its perfect zone
+    paddles[0].y = paddles[0].targetY = ball.y + PADDLE.HEIGHT * 0.4;
+    ball.x = paddles[0].x + PADDLE.WIDTH + 2;
+    ball.vx = -400;
+    ball.vy = 0;
+    flow.update(0.001);
+    const x = ball.x;
+    flow.update(0.01);
+    expect(ball.x).toBeGreaterThan(x);
   });
 });
 
