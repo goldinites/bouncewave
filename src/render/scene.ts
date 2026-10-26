@@ -133,6 +133,10 @@ export interface SceneState {
   kick: { x: number; y: number };
   /** Whether this frame is a power shot's impact frame: the whole picture inverted. */
   isImpactFrame: boolean;
+  /** Whether the bloom is drawn: only at the sharpest resolution, frames running fast enough. */
+  bloom: boolean;
+  /** px the colours split by on a big moment (chromatic aberration); 0 for none. */
+  aberration: number;
   /** The backdrop's mood (BackdropMood). */
   mood: BackgroundMood;
   /** Wall-clock seconds since the last frame, paused frames included. */

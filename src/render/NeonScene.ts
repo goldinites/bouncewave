@@ -4,6 +4,7 @@ import { CourtRenderer } from '@/render/CourtRenderer';
 import { EntityRenderer } from '@/render/EntityRenderer';
 import { FinalScoreRenderer } from '@/render/FinalScoreRenderer';
 import { HudRenderer } from '@/render/HudRenderer';
+import { PostEffects } from '@/render/PostEffects';
 import { DARKNESS, Flash, ModifierRenderer } from '@/render/ModifierRenderer';
 import { RenderFrame, Scene, SceneState } from '@/render/scene';
 import {
@@ -33,6 +34,9 @@ const REPLAY_BARS = { SIZE: 26, ALPHA: 0.85, FONT: 15, BLINK: 3 } as const; // p
 // strong (more as it speeds up, a power shot's yellow), and the hits' bursts of light, LIGHT
 // strong at their height
 const COURT_LIGHT = { BALL: 110, BALL_ALPHA: 0.1, BALL_SPEED_ALPHA: 0.08, LIGHT: 0.22 } as const;
+// The layers drawn again for the bloom: what glows on the court, and nothing that moves on as it
+// is drawn (a layer that follows time by being drawn would go twice as fast)
+const GLOWING_LAYERS = new Set(['ripples', 'paddles', 'balls', 'particles']);
 // How hard a hit's kick thumps the backdrop, against a shake of the same px
 const KICK_THUMP = 1.5;
 // A turbo ball's heat: none at the serve's speed, full this much faster (px/s)
@@ -59,6 +63,7 @@ export interface Layer {
 export class NeonScene implements Scene {
   private readonly layers: readonly Layer[];
   private readonly isMotionReduced: () => boolean;
+  private readonly post = new PostEffects();
 
   /**
    * @param ctx the canvas the scene draws on, to build its gradients once
@@ -74,6 +79,8 @@ export class NeonScene implements Scene {
   }
 
   public render(ctx: CanvasRenderingContext2D, frame: RenderFrame, state: SceneState): void {
+    // The court's units in canvas px, as the renderer scales them
+    const scale = ctx.canvas.width / COURT.WIDTH;
     // Camera: everything up to the screen overlays zooms in on the ball
     ctx.save();
     this.applyZoom(ctx, frame);
@@ -88,6 +95,25 @@ export class NeonScene implements Scene {
     this.renderSpace('court', ctx, frame, state);
     ctx.restore();
     ctx.restore();
+
+    // What glows on the court, again, for the bloom; not in the dark, where it would show the ball
+    const glow =
+      state.bloom && !frame.court.modifiers.includes('darkness')
+        ? this.post.beginGlow(ctx.canvas, scale)
+        : null;
+    if (glow) {
+      this.applyZoom(glow, frame);
+      glow.translate(state.kick.x, state.kick.y);
+      for (const layer of this.layers) {
+        if (GLOWING_LAYERS.has(layer.id)) layer.render(glow, frame, state);
+      }
+    }
+
+    // The finish over the picture, under the screen's overlays (the dimming, the flash)
+    this.post.apply(ctx, {
+      aberration: state.aberration,
+      isRotated: frame.isRotated,
+    });
 
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';

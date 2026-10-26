@@ -54,7 +54,7 @@ const IMPACT = {
   KICK: { MIN: 1.5, MAX: 4, PERFECT: 6, POWER: 8 },
   RECOIL: { MIN: 2, MAX: 4, PERFECT: 6, POWER: 9 },
   SQUASH: { MIN: 0.3, MAX: 0.5, PERFECT: 0.65, POWER: 0.8 },
-  FLARE: { MIN: 14, MAX: 22, PERFECT: 46, POWER: 50 },
+  FLARE: { MIN: 14, MAX: 22, PERFECT: 46, POWER: 34 },
   FLARE_FOR: 0.06, // s after the hit-stop
   // The light a hit throws onto the backdrop (6.5): px across, gone in LIGHT_FOR s
   LIGHT: { MIN: 160, MAX: 240, PERFECT: 320, POWER: 400 },
@@ -67,14 +67,17 @@ const IMPACT = {
   PERFECT_INNER_RING: { SPEED: 380, DECAY: 4, WIDTH: 2 },
   SPARKS: { COUNT: 14, RALLY_CAP: 14, SPEED: 340, SPREAD: 1.7, SIZE: [1.5, 3] }, // rad, px
   PERFECT_SPARKS: { COUNT: 18, SPEED: 520, SPREAD: 1.2, SIZE: [2, 4] },
-  POWER_SPARKS: { COUNT: 30, SPEED: 620, SPREAD: 2.2, SIZE: [2, 4.5] },
+  POWER_SPARKS: { COUNT: 18, SPEED: 620, SPREAD: 2.2, SIZE: [2, 4] },
   ARC: { SPEED: 420, DECAY: 6, WIDTH: 2, SPREAD: 2.2 }, // px/s, 1/s, px, rad
   // The perfect hit's wave: big and quick, out to near half the court, so it is felt anywhere on
   // screen; a thin front with a soft wake behind it, so it never hides the ball
   PERFECT_RING: { SPEED: 900, DECAY: 2.2, WIDTH: 3, WAKE: 16 },
   POWER_RINGS: { SPEED: 820, INNER_SPEED: 560, DECAY: 4.5, WIDTH: 4 },
-  // The power shot's impact frame: the picture in negative for a frame or two
+  // The power shot's impact frame: the picture in negative for a frame or two, then its colours
+  // split ABERRATION px apart, closing over ABERRATION_FOR s
   IMPACT_FRAME: 0.035, // s
+  ABERRATION: 5, // px
+  ABERRATION_FOR: 0.18, // s
   // Its sound waits out its hit-stop under a hush, so the shot lands as the ball leaves
   POWER_SOUND_DELAY: HIT_STOP.POWER_SHOT,
 } as const;
@@ -112,6 +115,8 @@ const GOAL = {
   WAVE_WAKE: 22, // px
   LIGHT: 460, // px across, thrown on the backdrop for LIGHT_FOR s
   LIGHT_FOR: 0.6,
+  ABERRATION: 4, // px the colours split, closing over ABERRATION_FOR s
+  ABERRATION_FOR: 0.25,
 } as const;
 
 // Particle bursts: how many and how fast
@@ -613,6 +618,7 @@ export class EffectsDirector {
     this.particles.shockwave(hit.x, hit.y, COLORS.YELLOW, POWER_RINGS.SPEED, ring);
     this.particles.shockwave(hit.x, hit.y, COLORS.PINK, POWER_RINGS.INNER_SPEED, ring);
     this.renderer.addImpactFrame(IMPACT.IMPACT_FRAME);
+    this.renderer.addAberration(IMPACT.ABERRATION, IMPACT.ABERRATION_FOR);
     this.renderer.addShake(OVERDRIVE_FX.POWER_SHAKE);
     this.audio.sfx.hushForShot(IMPACT.POWER_SOUND_DELAY);
     this.powerSound = { rally: hit.rally, pan: courtPan(hit.x), in: IMPACT.POWER_SOUND_DELAY };
@@ -706,6 +712,7 @@ export class EffectsDirector {
     this.renderer.addShake(SHAKE.SCORE);
     this.renderer.addFlash(FLASH.SCORE);
     this.renderer.flareBackdrop();
+    this.renderer.addAberration(GOAL.ABERRATION, GOAL.ABERRATION_FOR);
     // The side beaten for it shorts out, every paddle it has
     this.paddles.forEach((paddle, i) => {
       if (paddle.side !== score.scoringPlayerIndex) this.paddleFx.onConcede(i);

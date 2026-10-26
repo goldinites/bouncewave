@@ -62,6 +62,8 @@ export class Renderer {
   private readonly kick = { x: 0, y: 0, age: Infinity };
   /** Seconds of the impact frame left. */
   private impactFrame = 0;
+  /** A big moment's colour split: how far at its start (px), how long it lasts and has left (s). */
+  private readonly aberration = { px: 0, duration: 1, left: 0 };
 
   private finalSign: FinalScoreSign | null = null;
   private finalSignAge = 0;
@@ -85,6 +87,8 @@ export class Renderer {
     flash: 0,
     kick: { x: 0, y: 0 },
     isImpactFrame: false,
+    bloom: true,
+    aberration: 0,
     mood: { laserIntensity: 1, climax: 0, celebration: 0 },
     realDt: 0,
   };
@@ -229,6 +233,18 @@ export class Renderer {
     this.impactFrame = Math.max(this.impactFrame, duration);
   }
 
+  /** A big moment splits the picture's colours `px` apart, closing over `duration` s. */
+  public addAberration(px: number, duration: number): void {
+    if (!this.showsEffects || this.reducedMotion.matches) return;
+    if (this.aberration.left > 0 && this.aberrationNow() > px) return;
+    Object.assign(this.aberration, { px, duration, left: duration });
+  }
+
+  private aberrationNow(): number {
+    const { px, duration, left } = this.aberration;
+    return left > 0 ? px * (left / duration) : 0;
+  }
+
   /**
    * Soft accent when the climax peaks: a gentle laser swell and flash, no screen shake. The
    * backgrounds' bursts are kept for the victory celebration only.
@@ -360,6 +376,7 @@ export class Renderer {
     this.screenFlash = Math.max(0, this.screenFlash - dt * FLASH_DECAY);
     this.kick.age += dt;
     this.impactFrame = Math.max(0, this.impactFrame - dt);
+    this.aberration.left = Math.max(0, this.aberration.left - dt);
   }
 
   /**
@@ -394,6 +411,9 @@ export class Renderer {
     state.kick.x = this.kick.x * push;
     state.kick.y = this.kick.y * push;
     state.isImpactFrame = this.impactFrame > 0;
+    // The bloom is the first thing to go when frames run slow, before any sharpness is
+    state.bloom = this.resolution.isAtBest;
+    state.aberration = this.aberrationNow();
     state.mood = this.mood.current(frame.drama.climax);
     state.realDt = realDt;
     this.looks[this.look].render(this.ctx, frame, state);

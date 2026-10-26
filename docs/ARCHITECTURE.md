@@ -66,7 +66,9 @@ effects) and fill in the particles, whose types (`render/particles.ts`) belong t
    (shake, flash, the final score, the dimming, the backdrop's mood in `BackdropMood`) and hands
    the frame to the look's `Scene`. The neon one (`NeonScene`) is an ordered list of layers, each
    drawn in its space: `backdrop` under the camera's zoom, `court` under the zoom and the shake,
-   `screen` fixed over everything (dimming, vignette, flash).
+   `screen` fixed over everything (dimming, vignette, flash). Between the court and the screen
+   `PostEffects` lays its finish: the bloom (the glowing layers drawn again small), a light CRT and,
+   for a moment, chromatic aberration.
 
 When the point that wins a match is worth seeing again, `MatchReplay` holds the finale's start
 back and the simulation with it (step 2 is skipped), and draws its own recording of the point
