@@ -8,7 +8,7 @@ import {
   TutorialStep,
   tutorialMechanics,
 } from '@/match/tutorial';
-import { isTouchFirst } from '@/ui/MenuController';
+import { isTouchFirst } from '@/ui/device';
 import { describeTutorial } from '@/ui/tutorialTexts';
 
 /** What the tutorial needs beyond the match: its coach, and the screens it opens. */

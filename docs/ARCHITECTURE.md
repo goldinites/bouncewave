@@ -157,7 +157,7 @@ the music came from (`Conductor.cameFrom`). Hear each on the sound stand; `e2e/s
 renders them all in Chromium against the budgets.
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
-(`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), or in
+(`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/menus/choices.ts`), or in
 `QUICK_MATCH_SETUP` if it sets up the match rather than the game (a `choice` stepped by
 arrows: one from a list, or a volume), and its texts in both
 languages (`i18n/translations.ts`). The compiler insists on all of them; the profile checks
@@ -200,8 +200,8 @@ challenge condition's place (`ui/tutorialTexts.ts`). Whether it was gone through
 the profile's `tutorial`.
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
-in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/MenuController.ts`).
-The PLAY menu lists it, switched off until `isPlayable`; `MenuController.pickMode` opens
+in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/menus/ModeMenus.ts`).
+The PLAY menu lists it, switched off until `isPlayable`; picking it (`ModeMenus.pick`) opens
 its screen. What plays it is a `Session` (`app/sessions/Session.ts`): it starts its match and
 its restarts (rules, line-up, level) and answers what depends on the mode — its backdrop and
 music, the line over the court, whether it counts in the statistics, whether its winning point
@@ -210,8 +210,13 @@ quick match is the model: a setup screen whose choices are settings, and `QuickM
 building its `MatchRules` from them (`quickMatchRules`).
 
 **A screen.** A Preact component in `ui/screens/` (`.tsx`), taking its texts ready to show and
-its actions as props. `MenuController` describes it as a `ScreenEntry` (`ui/ScreenStack.ts`): an
-`id`, a `view()` building its title, subtitle and `h(Screen, props)`, and the backdrop it wants. A
+its actions as props. A section of the menus (`ui/menus/`: main, modes, tutorial, challenges,
+settings, match) describes it as a `ScreenEntry` (`ui/ScreenStack.ts`), built from the
+`MenuContext` every section shares (texts, settings, the game's actions, the stack, `routes` to
+the other sections' screens): an `id`, a `view()` building its title, subtitle and
+`h(Screen, props)`, and the backdrop it wants. A new section (the story's, the hub's apps) is a
+class of its own there; `MenuController` keeps the stack, draws its top and is the way in from
+outside the menus (`showChallengeCard`, `showPauseMenu`…). A
 button opens it over the screen on show (`stack.push`), its BACK and Esc step back down
 (`stack.back`), and a way in from outside the menus resets the stack to the way down to it. The
 screen on show is drawn in an effect: whatever signal `view()` reads (`settings.current`,

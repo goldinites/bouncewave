@@ -1,232 +1,36 @@
 import { effect, ReadonlySignal, signal, untracked } from '@preact/signals-core';
-import { h } from 'preact';
 import { SoundEffects } from '@/audio/sfx/SoundEffects';
 import { I18nManager } from '@/i18n/I18nManager';
-import { CONTROL_ROWS, LANGUAGES, TRANSLATIONS } from '@/i18n/translations';
-import { ChallengeVerdict } from '@/match/ChallengeJudge';
-import {
-  CHALLENGE_IDS,
-  CHALLENGE_TIERS,
-  ChallengeId,
-  CHALLENGES,
-  ChallengeTier,
-} from '@/match/challenges';
+import { ChallengeId } from '@/match/challenges';
 import { MatchEvent } from '@/match/MatchFlow';
 import { TutorialCard } from '@/match/tutorial';
-import { MATCH_POINTS, MODE_IDS, ModeId, MODES } from '@/match/modes';
-import { DIFFICULTY_LEVELS } from '@/match/difficulty';
-import {
-  ChallengeProgress,
-  challengeState,
-  getEmptyChallengeProgress,
-  nextChallenge,
-} from '@/profile/ChallengeProgress';
-import { getEmptyStatistics, Statistics } from '@/profile/Statistics';
+import { getEmptyChallengeProgress } from '@/profile/ChallengeProgress';
+import { getEmptyStatistics } from '@/profile/Statistics';
 import { SettingsStore } from '@/settings/SettingsStore';
-import { UserSettings } from '@/settings/UserSettings';
 import { EventBus } from '@/shared/EventBus';
 import { Look } from '@/shared/look';
-import { BACKGROUND_CHOICES, SceneId } from '@/shared/scenes';
-import { Volume, VOLUMES } from '@/shared/volume';
-import { describeShortfall } from '@/ui/challengeTexts';
+import { ChallengeMenus } from '@/ui/menus/ChallengeMenus';
+import { MainMenus } from '@/ui/menus/MainMenus';
+import { MatchMenus } from '@/ui/menus/MatchMenus';
+import {
+  ChallengeOutcome,
+  ChallengeProgressAccess,
+  GameMenuActions,
+  MenuContext,
+  StatisticsAccess,
+} from '@/ui/menus/MenuContext';
+import { ModeMenus } from '@/ui/menus/ModeMenus';
+import { SettingsMenus } from '@/ui/menus/SettingsMenus';
+import { TutorialMenus } from '@/ui/menus/TutorialMenus';
 import { ScreenEntry, ScreenStack, ScreenView } from '@/ui/ScreenStack';
-import { ButtonMenu } from '@/ui/screens/ButtonMenu';
-import { ChallengeCard } from '@/ui/screens/ChallengeCard';
-import { ChallengeList } from '@/ui/screens/ChallengeList';
-import { ChallengeResult, ChallengeResultAction } from '@/ui/screens/ChallengeResult';
-import { PlayMenu } from '@/ui/screens/PlayMenu';
-import { Choice } from '@/ui/screens/OptionRow';
-import { QuickMatchSetup } from '@/ui/screens/QuickMatchSetup';
-import { SettingsScreen } from '@/ui/screens/SettingsScreen';
-import { StatsScreen } from '@/ui/screens/StatsScreen';
-import { TutorialCardScreen } from '@/ui/screens/TutorialCardScreen';
-import { ButtonColor, UIManager } from '@/ui/UIManager';
+import { UIManager } from '@/ui/UIManager';
 
-/**
- * The player's statistics, as the statistics screen shows and wipes them. Read from a signal
- * (the profile's), the screen follows a change by itself.
- */
-export interface StatisticsAccess {
-  get(): Statistics;
-  /** Back to nothing, for good. */
-  reset(): void;
-}
-
-/** How far the player has got through the challenges, as the profile keeps it. */
-export interface ChallengeProgressAccess {
-  get(): ChallengeProgress;
-}
-
-/** How an attempt at a challenge went, as its result screen shows it. */
-export interface ChallengeOutcome {
-  verdict: ChallengeVerdict;
-  /** Whether this attempt passed the last challenge still to pass: every one is passed now. */
-  isAllPassed: boolean;
-}
-
-export interface GameMenuActions {
-  /** Starts the same match again from 0:0, set up as it was (restart, play again). */
-  onStartGame: () => void;
-  /**
-   * Starts the match on court again from 0:0 (the pause's restart): as `onStartGame`, but on the
-   * same backdrop, with no channels flicking over. `onStartGame` stands in when left out.
-   */
-  onRestartGame?: () => void;
-  /** Starts a quick match, as the player last set it up (the settings keep the setup). */
-  onStartQuickMatch: () => void;
-  /** Starts an attempt at a challenge. */
-  onStartChallenge: (challenge: ChallengeId) => void;
-  /** Starts a match of two players, as they last set it up (the settings keep the setup). */
-  onStartTwoPlayers?: () => void;
-  /** Starts the tutorial (step 4.8). */
-  onStartTutorial?: () => void;
-  /**
-   * Whether PLAY offers the tutorial first: to someone who has neither gone through it nor turned
-   * it down. Never when left out.
-   */
-  isTutorialOffered?: () => boolean;
-  /** The tutorial offered was turned down (NO): it isn't offered again. */
-  onDeclineTutorial?: () => void;
-  /**
-   * Whether two people play the match on court: its end names the winner instead of "you win" or
-   * "game over". Nobody does when left out.
-   */
-  isTwoPlayerMatch?: () => boolean;
-  /**
-   * Whether the match on court is an attempt at a challenge: its end shows the attempt's result
-   * (`showChallengeResult`) instead of the game-over menu. No match is when left out.
-   */
-  isChallengeMatch?: () => boolean;
-  onResumeGame: () => void;
-  onReturnToMainMenu: () => void;
-  onUnlockAudio: () => void;
-  /** The sound volume was stepped: a hit plays at the new volume, as sounds play only in a match. */
-  onSoundVolume?: () => void;
-  /** The quick match's setup came on screen (true) or gave way to another (false). */
-  onQuickMatchSetup?: (isShown: boolean) => void;
-  /**
-   * A menu came on screen that wants a backdrop behind it: a challenge's card its challenge's
-   * own, the main menu, the PLAY menu and the challenges' list the player's (null). Menus that
-   * belong to a match (pause, its end, an attempt's result) leave the backdrop as it is.
-   */
-  onMenuScene?: (scene: SceneId | null) => void;
-}
-
-/** A setting picked from a list: its name and value between arrows that step it either way. */
-interface ChoiceEntry {
-  kind: 'choice';
-  key: keyof UserSettings;
-  name: (i18n: I18nManager) => string;
-  value: (settings: UserSettings, i18n: I18nManager) => string;
-  /** Every value it can show, so its row keeps the widest one's room. */
-  values: (i18n: I18nManager) => string[];
-  color: ButtonColor;
-  /** A hit plays after the change, at the volume it set (the sound volume). */
-  previews?: boolean;
-}
-
-/** Each mode's button color in the PLAY menu; a new mode needs one. */
-const MODE_COLORS: Record<ModeId, ButtonColor> = {
-  story: 'pink',
-  challenges: 'purple',
-  quick: 'cyan',
-  tutorial: 'yellow',
-};
-
-/** Whether the device is played by touch first (a phone, a tablet), not with keys and a mouse. */
-export const isTouchFirst = (): boolean =>
-  typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-
-/** Whether the game runs installed, as an app of its own (full screen on a phone). */
-const isInstalled = (): boolean =>
-  typeof window !== 'undefined' &&
-  (window.matchMedia('(display-mode: standalone)').matches ||
-    window.matchMedia('(display-mode: fullscreen)').matches);
-
-/** Whether the court is turned for a portrait phone (as InputHandler.isRotated has it). */
-const isCourtTurned = (): boolean =>
-  typeof window !== 'undefined' &&
-  window.matchMedia('(orientation:portrait) and (max-width:900px)').matches;
-
-/** Whether the player asked for less motion: examples stand still. */
-const isMotionReduced = (): boolean =>
-  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-/** A volume as the settings show it: in percent, OFF at none. */
-const volumeText = (i18n: I18nManager, volume: Volume) =>
-  volume === 0 ? i18n.t('off') : `${volume}%`;
-
-/** The settings menu, top to bottom. */
-const SETTINGS_MENU: ChoiceEntry[] = [
-  {
-    kind: 'choice',
-    key: 'musicVolume',
-    color: 'pink',
-    name: (i18n) => i18n.t('music'),
-    value: (s, i18n) => volumeText(i18n, s.musicVolume),
-    values: (i18n) => VOLUMES.map((volume) => volumeText(i18n, volume)),
-  },
-  {
-    kind: 'choice',
-    key: 'soundVolume',
-    color: 'purple',
-    name: (i18n) => i18n.t('sound'),
-    value: (s, i18n) => volumeText(i18n, s.soundVolume),
-    values: (i18n) => VOLUMES.map((volume) => volumeText(i18n, volume)),
-    previews: true,
-  },
-  {
-    kind: 'choice',
-    key: 'language',
-    color: 'green',
-    name: (i18n) => i18n.t('lang'),
-    value: (_, i18n) => i18n.t('lang_name'),
-    // Each language is named in itself, whichever the menus are in
-    values: () => LANGUAGES.map((language) => TRANSLATIONS[language].lang_name),
-  },
-];
-
-/**
- * The choices of a match of two players: the quick match's, but its difficulty, which sets how
- * well the CPU plays. They share the settings with it: the backdrop and length the players like.
- */
-const TWO_PLAYER_SETUP = (): ChoiceEntry[] =>
-  QUICK_MATCH_SETUP.filter((entry) => entry.key !== 'difficulty');
-
-/** A match's setup in a look: the classic one draws no backdrop, so it has none to choose. */
-const setupIn = (look: Look, entries: ChoiceEntry[]): ChoiceEntry[] =>
-  look === 'classic' ? entries.filter((entry) => entry.key !== 'matchBackground') : entries;
-
-/**
- * The quick match's choices, top to bottom. They are kept with the settings, so the next quick
- * match is set up as the last one was.
- */
-const QUICK_MATCH_SETUP: ChoiceEntry[] = [
-  {
-    kind: 'choice',
-    key: 'matchBackground',
-    color: 'green',
-    name: (i18n) => i18n.t('background'),
-    value: (s, i18n) => i18n.getBackgroundName(s.matchBackground),
-    values: (i18n) => BACKGROUND_CHOICES.map((choice) => i18n.getBackgroundName(choice)),
-  },
-  {
-    kind: 'choice',
-    key: 'difficulty',
-    color: 'yellow',
-    name: (i18n) => i18n.t('diff'),
-    value: (s, i18n) => i18n.getDifficultyInfo(s.difficulty)[0],
-    values: (i18n) => DIFFICULTY_LEVELS.map((level) => i18n.getDifficultyInfo(level)[0]),
-  },
-  {
-    kind: 'choice',
-    key: 'matchPoints',
-    color: 'pink',
-    name: (i18n) => i18n.t('points'),
-    value: (s) => String(s.matchPoints),
-    values: () => MATCH_POINTS.map(String),
-  },
-];
+export type {
+  ChallengeOutcome,
+  ChallengeProgressAccess,
+  GameMenuActions,
+  StatisticsAccess,
+} from '@/ui/menus/MenuContext';
 
 /**
  * Every menu of the game, each a Preact screen on a stack (`ScreenStack`): a button opens a
@@ -235,22 +39,21 @@ const QUICK_MATCH_SETUP: ChoiceEntry[] = [
  * menu or from outside it: the M key, the classic look's easter egg) draws it again by itself.
  * The classic look plays only a quick match and a match of two: its main menu offers just those,
  * and their setups have no backdrop to choose.
+ *
+ * The screens are built by sections (`ui/menus/`), each from the same `MenuContext`; this keeps
+ * the stack, draws its top and is the way into each section from outside the menus.
  */
 export class MenuController {
-  private uiManager: UIManager;
-  private i18n: I18nManager;
-  private sfx: SoundEffects;
-  private settings: SettingsStore;
-  private actions: GameMenuActions;
-  /** The player's record, as the profile keeps it, for the statistics screen. */
-  private readonly statistics: StatisticsAccess;
-  /** Which challenges the player has passed, for their screens and the statistics. */
-  private readonly challenges: ChallengeProgressAccess;
+  private readonly uiManager: UIManager;
+  private readonly sfx: SoundEffects;
+  private readonly actions: GameMenuActions;
   private readonly stack = new ScreenStack();
-  /** The tier the challenges' list shows: the last challenge opened keeps it on its own. */
-  private readonly challengeTier = signal<ChallengeTier>(CHALLENGE_TIERS[0]);
-  /** The game's look, which decides what the menus offer. */
-  private readonly look: ReadonlySignal<Look>;
+  private readonly main: MainMenus;
+  private readonly modes: ModeMenus;
+  private readonly tutorial: TutorialMenus;
+  private readonly challenges: ChallengeMenus;
+  private readonly settingsMenus: SettingsMenus;
+  private readonly match: MatchMenus;
   /** The screen last drawn, to tell one drawn again from one that has just come on screen. */
   private drawn: ScreenEntry | null = null;
   /** Whether a match's setup (quick, two players) was the last screen to come up. */
@@ -268,15 +71,42 @@ export class MenuController {
     look: ReadonlySignal<Look> = signal('neon'),
   ) {
     this.uiManager = uiManager;
-    this.i18n = i18n;
     this.sfx = sfx;
     uiManager.onMenuSound = (sound) =>
       sound === 'move' ? sfx.playMenuMove() : sfx.playMenuSelect();
-    this.settings = settings;
     this.actions = actions;
-    this.statistics = statistics;
-    this.challenges = challenges;
-    this.look = look;
+
+    const context: MenuContext = {
+      ui: uiManager,
+      i18n,
+      settings,
+      actions,
+      statistics,
+      challenges,
+      look,
+      routes: {
+        main: () => this.main.main(),
+        play: () => this.modes.play(),
+        playOrTutorialOffer: () =>
+          actions.isTutorialOffered?.() ? this.tutorial.offer() : this.modes.play(),
+        quickMatchSetup: () => this.modes.quickMatchSetup(),
+        twoPlayerSetup: () => this.modes.twoPlayerSetup(),
+        statistics: () => this.main.statistics(),
+        challenges: () => this.challenges.fromPlay(),
+        openSettings: () => this.showSettingsMenu(),
+      },
+      open: (entry) => this.stack.push(entry),
+      reset: (...entries) => this.stack.reset(...entries),
+      back: () => {
+        if (this.stack.back()) this.sfx.playMenuBack();
+      },
+    };
+    this.main = new MainMenus(context);
+    this.modes = new ModeMenus(context);
+    this.tutorial = new TutorialMenus(context);
+    this.challenges = new ChallengeMenus(context);
+    this.settingsMenus = new SettingsMenus(context);
+    this.match = new MatchMenus(context);
 
     this.stopDrawing = effect(() => {
       const entry = this.stack.top.value;
@@ -323,66 +153,8 @@ export class MenuController {
     return this.uiManager.isMenuVisible && this.stack.top.value?.id === 'main';
   }
 
-  /** Back down the stack, as BACK does. */
-  private readonly back = () => {
-    if (this.stack.back()) this.sfx.playMenuBack();
-  };
-
   public showMainMenu(): void {
-    this.stack.reset(this.mainMenu());
-  }
-
-  private mainMenu(): ScreenEntry {
-    return {
-      id: 'main',
-      scene: null,
-      view: () => ({
-        title: this.uiManager.gameTitle,
-        subtitle: '',
-        body: h(ButtonMenu, {
-          items: [
-            this.look.value === 'classic'
-              ? {
-                  id: 'quick',
-                  label: this.i18n.getModeName('quick'),
-                  onClick: () => this.open(this.quickMatchSetup()),
-                }
-              : {
-                  id: 'play',
-                  label: this.i18n.t('play'),
-                  // Someone new is offered the tutorial first, the once
-                  onClick: () =>
-                    this.open(
-                      this.actions.isTutorialOffered?.() ? this.tutorialOffer() : this.playMenu(),
-                    ),
-                },
-            {
-              id: 'multiplayer',
-              label: this.i18n.t('multiplayer'),
-              color: 'green',
-              onClick: () => this.open(this.twoPlayerSetup()),
-            },
-            {
-              id: 'stats',
-              label: this.i18n.t('stats'),
-              color: 'yellow',
-              onClick: () => this.open(this.statisticsScreen()),
-            },
-            {
-              id: 'settings',
-              label: this.i18n.t('settings'),
-              color: 'pink',
-              onClick: () => this.showSettingsMenu(),
-            },
-          ],
-        }),
-      }),
-    };
-  }
-
-  /** Opens a screen over the one on show. */
-  private open(entry: ScreenEntry): void {
-    this.stack.push(entry);
+    this.stack.reset(this.main.main());
   }
 
   /**
@@ -390,438 +162,56 @@ export class MenuController {
    * passed (they don't count toward the rest).
    */
   public showStatistics(): void {
-    this.stack.reset(this.mainMenu(), this.statisticsScreen());
-  }
-
-  private statisticsScreen(): ScreenEntry {
-    return {
-      id: 'stats',
-      view: () => {
-        const stats = this.statistics.get();
-        const t = (key: Parameters<I18nManager['t']>[0]) => this.i18n.t(key) as string;
-        const percent = stats.played > 0 ? Math.round((100 * stats.won) / stats.played) : 0;
-        return {
-          title: t('stats'),
-          subtitle: '',
-          body: h(StatsScreen, {
-            sections: [
-              {
-                rows: [
-                  { label: t('statPlayed'), value: String(stats.played) },
-                  { label: t('statWon'), value: `${stats.won} (${percent}%)` },
-                  { label: t('statStreak'), value: String(stats.streak) },
-                  { label: t('statBestStreak'), value: String(stats.bestStreak) },
-                  { label: t('statRally'), value: String(stats.longestRally) },
-                  { label: t('statPerfect'), value: String(stats.perfectHits) },
-                  { label: t('statPower'), value: String(stats.powerShots) },
-                ],
-              },
-              {
-                heading: t('statByDifficulty'),
-                rows: DIFFICULTY_LEVELS.map((level) => {
-                  const { played, won } = stats.byDifficulty[level];
-                  return {
-                    label: this.i18n.getDifficultyInfo(level)[0],
-                    value: `${won} / ${played}`,
-                  };
-                }),
-              },
-              {
-                heading: t('challengesHeading'),
-                rows: [{ label: t('challengesPassed'), value: this.passedCount() }],
-              },
-            ],
-            reset: {
-              label: t('resetStats'),
-              confirmLabel: t('resetStatsConfirm'),
-              // The profile is a signal: wiped, the screen shows it by itself
-              onReset: () => this.statistics.reset(),
-            },
-            backLabel: t('back'),
-            onBack: this.back,
-          }),
-        };
-      },
-    };
+    this.stack.reset(this.main.main(), this.main.statistics());
   }
 
   /** The PLAY menu: a button per mode, those not playable yet switched off. */
   public showPlayMenu(): void {
-    this.stack.reset(this.mainMenu(), this.playMenu());
-  }
-
-  private playMenu(): ScreenEntry {
-    return {
-      id: 'play',
-      scene: null,
-      view: () => ({
-        title: this.i18n.t('mode'),
-        subtitle: '',
-        body: h(PlayMenu, {
-          modes: MODE_IDS.map((id) => ({
-            id,
-            name: this.i18n.getModeName(id),
-            color: MODE_COLORS[id],
-            isPlayable: MODES[id].isPlayable,
-          })),
-          backLabel: this.i18n.t('back'),
-          onPick: (mode) => this.pickMode(mode),
-          onBack: this.back,
-        }),
-      }),
-    };
+    this.stack.reset(this.main.main(), this.modes.play());
   }
 
   /**
-   * The tutorial offered on PLAY to someone who hasn't gone through it: YES plays it; NO turns it
-   * down for good (it stays on the PLAY menu) and goes on to the modes. Esc steps back, deciding
-   * nothing.
-   */
-  private tutorialOffer(): ScreenEntry {
-    return {
-      id: 'tutorialOffer',
-      scene: null,
-      view: () => ({
-        title: this.i18n.t('tutorial').offerTitle,
-        subtitle: this.i18n.t('tutorial').offerText,
-        body: h(ButtonMenu, {
-          items: [
-            {
-              id: 'yes',
-              label: this.i18n.t('tutorial').yes,
-              color: MODE_COLORS.tutorial,
-              onClick: () => this.actions.onStartTutorial?.(),
-            },
-            {
-              id: 'no',
-              label: this.i18n.t('tutorial').no,
-              onClick: () => {
-                this.actions.onDeclineTutorial?.();
-                this.stack.reset(this.mainMenu(), this.playMenu());
-              },
-            },
-          ],
-        }),
-      }),
-    };
-  }
-
-  /**
-   * The card that opens a tutorial step, over the paused match: an example of the move, why it is
-   * worth making and how; GOT IT (or Esc, as from the pause) plays it.
+   * The card that opens a tutorial step, over the paused match; GOT IT (or Esc, as from the
+   * pause) plays it.
    */
   public showTutorialCard(card: TutorialCard, onOk: () => void): void {
-    this.stack.reset({
-      id: 'tutorialCard',
-      view: () => {
-        const texts = this.i18n.t('tutorial');
-        const { title, why, how } = texts.cards[card];
-        return {
-          title,
-          subtitle: '',
-          body: h(TutorialCardScreen, {
-            card,
-            why,
-            how,
-            okLabel: texts.ok,
-            onOk,
-            isMotionReduced: isMotionReduced(),
-            isRotated: isCourtTurned(),
-          }),
-        };
-      },
-    });
+    this.stack.reset(this.tutorial.card(card, onOk));
   }
 
   /** The tutorial's end: on to a quick match, or back to the menu. */
   public showTutorialDone(): void {
-    this.stack.reset({
-      id: 'tutorialDone',
-      view: () => ({
-        title: this.i18n.t('tutorial').doneTitle,
-        subtitle: this.i18n.t('tutorial').doneText,
-        body: h(ButtonMenu, {
-          items: [
-            {
-              id: 'quick',
-              label: this.i18n.getModeName('quick'),
-              onClick: () => this.open(this.quickMatchSetup()),
-            },
-            {
-              id: 'menu',
-              label: this.i18n.t('menu'),
-              color: 'purple',
-              onClick: () => this.actions.onReturnToMainMenu(),
-            },
-          ],
-        }),
-      }),
-    });
-  }
-
-  private pickMode(mode: ModeId): void {
-    if (mode === 'tutorial') this.actions.onStartTutorial?.();
-    if (mode === 'quick') this.open(this.quickMatchSetup());
-    if (mode === 'challenges') {
-      this.challengeTier.value = this.firstOpenTier();
-      this.open(this.challengeList());
-    }
-  }
-
-  /** "4 / 18": the challenges passed, of them all. */
-  private passedCount(): string {
-    return `${this.challenges.get().passed.length} / ${CHALLENGE_IDS.length}`;
+    this.stack.reset(this.tutorial.done());
   }
 
   /** Every challenge in the order they open, the count of those passed under the title. */
   public showChallengeList(): void {
-    this.stack.reset(this.mainMenu(), this.playMenu(), this.challengeList());
+    this.challenges.showList();
   }
 
-  /**
-   * The tier the list opens on from PLAY: that of the first challenge still to pass (the first
-   * tier once all are).
-   */
-  private firstOpenTier(): ChallengeTier {
-    const progress = this.challenges.get();
-    const next = CHALLENGE_IDS.find((id) => challengeState(progress, id) === 'open');
-    return CHALLENGES[next ?? CHALLENGE_IDS[0]].scene;
-  }
-
-  private challengeList(): ScreenEntry {
-    return {
-      id: 'challenges',
-      scene: null,
-      view: () => {
-        const progress = this.challenges.get();
-        const tier = this.challengeTier.value;
-        const tierNames = this.i18n.t('challengeTiers');
-        return {
-          title: this.i18n.getModeName('challenges'),
-          subtitle: `${this.i18n.t('challengesPassed')}: ${this.passedCount()}`,
-          body: h(ChallengeList, {
-            tiers: CHALLENGE_TIERS.map((id) => {
-              const ids = CHALLENGE_IDS.filter((challenge) => CHALLENGES[challenge].scene === id);
-              return {
-                id,
-                name: tierNames[id],
-                passed: ids.filter((challenge) => challengeState(progress, challenge) === 'passed')
-                  .length,
-                total: ids.length,
-              };
-            }),
-            tier,
-            onTier: (id) => (this.challengeTier.value = id),
-            challenges: CHALLENGE_IDS.filter((id) => CHALLENGES[id].scene === tier).map((id) => ({
-              id,
-              name: this.i18n.getChallengeInfo(id)[0],
-              state: challengeState(progress, id),
-            })),
-            backLabel: this.i18n.t('back'),
-            onPick: (id) => {
-              this.challengeTier.value = CHALLENGES[id].scene;
-              this.open(this.challengeCard(id));
-            },
-            onBack: this.back,
-          }),
-        };
-      },
-    };
-  }
-
-  /**
-   * A challenge's card: its name and its description (which says what sets its match apart), START
-   * and BACK. A passed one is marked so, and can be played again. Its reward (money) joins it with
-   * the economy (stage 9).
-   */
+  /** A challenge's card: START plays it, BACK goes to the list. */
   public showChallengeCard(challenge: ChallengeId): void {
-    this.challengeTier.value = CHALLENGES[challenge].scene;
-    this.stack.reset(
-      this.mainMenu(),
-      this.playMenu(),
-      this.challengeList(),
-      this.challengeCard(challenge),
-    );
+    this.challenges.showCard(challenge);
   }
 
-  private challengeCard(challenge: ChallengeId): ScreenEntry {
-    return {
-      id: `challenge:${challenge}`,
-      // The card shows the challenge on its own backdrop, its song with it
-      scene: CHALLENGES[challenge].scene,
-      view: () => {
-        const [name, description] = this.i18n.getChallengeInfo(challenge);
-        const isPassed = challengeState(this.challenges.get(), challenge) === 'passed';
-        return {
-          title: name,
-          subtitle: description,
-          body: h(ChallengeCard, {
-            passedLabel: isPassed ? this.i18n.t('attemptPassed') : null,
-            startLabel: this.i18n.t('start'),
-            backLabel: this.i18n.t('back'),
-            onStart: () => this.actions.onStartChallenge(challenge),
-            onBack: this.back,
-          }),
-        };
-      },
-    };
+  /** How an attempt went, in place of the game-over menu. */
+  public showChallengeResult(outcome: ChallengeOutcome): void {
+    this.stack.reset(this.challenges.result(outcome));
   }
 
-  /**
-   * How an attempt went, in place of the game-over menu. Passed: NEXT (on to the next one's card)
-   * and the list, with a flourish once every challenge is passed. Not passed: what it fell short
-   * by, TRY AGAIN and the list.
-   */
-  public showChallengeResult({ verdict, isAllPassed }: ChallengeOutcome): void {
-    const { challenge, isPassed } = verdict;
-    const next = nextChallenge(challenge);
-    // Out of the finished match, back to the menus, and on to a challenge's screen
-    const leave = (show: () => void) => () => {
-      this.actions.onReturnToMainMenu();
-      show();
-    };
-    const toList: ChallengeResultAction = {
-      id: 'list',
-      label: this.i18n.t('toChallenges'),
-      color: 'purple',
-      onClick: leave(() => this.showChallengeList()),
-    };
-    const actions: ChallengeResultAction[] = [];
-    if (!isPassed) {
-      actions.push({
-        id: 'again',
-        label: this.i18n.t('tryAgain'),
-        color: 'cyan',
-        onClick: () => this.actions.onStartGame(),
-      });
-    } else if (next) {
-      actions.push({
-        id: 'next',
-        label: this.i18n.t('nextChallenge'),
-        color: 'cyan',
-        onClick: leave(() => this.showChallengeCard(next)),
-      });
-    }
-    actions.push(toList);
-
-    let message = '';
-    if (!isPassed) message = describeShortfall(this.i18n, verdict);
-    else if (isAllPassed) message = this.i18n.t('attemptAllPassed');
-
-    this.stack.reset({
-      id: 'challengeResult',
-      view: () => ({
-        title: this.i18n.t(isPassed ? 'attemptPassed' : 'attemptFailed'),
-        subtitle: this.i18n.getChallengeInfo(challenge)[0],
-        body: h(ChallengeResult, { message, isCelebration: isPassed && isAllPassed, actions }),
-      }),
-    });
-  }
-
-  /**
-   * The quick match's setup: backdrop, difficulty and length, as last chosen; START plays it.
-   * The difficulty's description stands under the title, as it did in the settings.
-   */
+  /** The quick match's setup: backdrop, difficulty and length, as last chosen; START plays it. */
   public showQuickMatchSetup(): void {
     // The classic look has no PLAY menu: its main menu opens the setup itself
-    const way = this.look.value === 'classic' ? [] : [this.playMenu()];
-    this.stack.reset(this.mainMenu(), ...way, this.quickMatchSetup());
+    const way = this.main.isClassic ? [] : [this.modes.play()];
+    this.stack.reset(this.main.main(), ...way, this.modes.quickMatchSetup());
   }
 
-  private quickMatchSetup(): ScreenEntry {
-    return {
-      id: 'quickMatch',
-      isMatchSetup: true,
-      view: () => {
-        const settings = this.settings.current;
-        return {
-          title: this.i18n.getModeName('quick'),
-          subtitle: this.i18n.getDifficultyInfo(settings.difficulty)[1],
-          body: h(QuickMatchSetup, {
-            options: setupIn(this.look.value, QUICK_MATCH_SETUP).map((entry) =>
-              this.choiceOf(entry, settings),
-            ),
-            previousLabel: this.i18n.t('previousChoice'),
-            nextLabel: this.i18n.t('nextChoice'),
-            startLabel: this.i18n.t('start'),
-            backLabel: this.i18n.t('back'),
-            onStart: () => this.actions.onStartQuickMatch(),
-            onBack: this.back,
-          }),
-        };
-      },
-    };
-  }
-
-  /**
-   * The setup of a match of two players on one device: backdrop and length, as last chosen; how
-   * each steers stands under the title. START plays it.
-   */
+  /** The setup of a match of two players on one device; START plays it. */
   public showTwoPlayerSetup(): void {
-    this.stack.reset(this.mainMenu(), this.twoPlayerSetup());
-  }
-
-  private twoPlayerSetup(): ScreenEntry {
-    return {
-      id: 'twoPlayers',
-      isMatchSetup: true,
-      view: () => {
-        const settings = this.settings.current;
-        return {
-          title: this.i18n.t('twoPlayers'),
-          subtitle: this.i18n.t('twoPlayersHint'),
-          body: h(QuickMatchSetup, {
-            options: setupIn(this.look.value, TWO_PLAYER_SETUP()).map((entry) =>
-              this.choiceOf(entry, settings),
-            ),
-            previousLabel: this.i18n.t('previousChoice'),
-            nextLabel: this.i18n.t('nextChoice'),
-            startLabel: this.i18n.t('start'),
-            backLabel: this.i18n.t('back'),
-            onStart: () => this.actions.onStartTwoPlayers?.(),
-            onBack: this.back,
-          }),
-        };
-      },
-    };
+    this.stack.reset(this.main.main(), this.modes.twoPlayerSetup());
   }
 
   public showPauseMenu(): void {
-    this.stack.reset({
-      id: 'pause',
-      view: () => ({
-        title: this.i18n.t('pause'),
-        subtitle: '',
-        body: h(ButtonMenu, {
-          items: [
-            {
-              id: 'resume',
-              label: this.i18n.t('resume'),
-              onClick: () => this.actions.onResumeGame(),
-            },
-            {
-              // The same match again from 0:0, set up as it was
-              id: 'restart',
-              label: this.i18n.t('restart'),
-              color: 'yellow',
-              onClick: () => (this.actions.onRestartGame ?? this.actions.onStartGame)(),
-            },
-            {
-              id: 'settings',
-              label: this.i18n.t('settings'),
-              color: 'pink',
-              onClick: () => this.showSettingsMenu(),
-            },
-            {
-              id: 'menu',
-              label: this.i18n.t('menu'),
-              color: 'purple',
-              onClick: () => this.actions.onReturnToMainMenu(),
-            },
-          ],
-        }),
-      }),
-    });
+    this.stack.reset(this.match.pause());
   }
 
   /**
@@ -838,55 +228,7 @@ export class MenuController {
   }
 
   public showGameOverMenu(winnerIndex: number, scores: [number, number]): void {
-    // Asked now: whether two played is the match's that has just ended
-    const isTwoPlayers = this.actions.isTwoPlayerMatch?.() ?? false;
-    // A quick match won: the next level up is a tap away, so a newcomer, who starts at the easiest
-    // (step 4.7), sees where to go from there
-    const level = this.settings.current.difficulty;
-    const harder = DIFFICULTY_LEVELS[DIFFICULTY_LEVELS.indexOf(level) + 1];
-    const offersHarder = !isTwoPlayers && winnerIndex === 0 && harder !== undefined;
-    this.stack.reset({
-      id: 'gameOver',
-      view: () => ({
-        // With two players the winner is named; otherwise the left side is the player
-        title: isTwoPlayers
-          ? this.i18n.t(winnerIndex === 0 ? 'player1Wins' : 'player2Wins')
-          : this.i18n.t(winnerIndex === 0 ? 'win' : 'lose'),
-        subtitle: `${scores[0]} : ${scores[1]}`,
-        body: h(ButtonMenu, {
-          items: [
-            { id: 'again', label: this.i18n.t('again'), onClick: () => this.actions.onStartGame() },
-            ...(offersHarder
-              ? [
-                  {
-                    id: 'harder',
-                    label: this.i18n.format('harder', {
-                      level: this.i18n.getDifficultyInfo(harder)[0],
-                    }),
-                    color: 'yellow' as const,
-                    onClick: () => {
-                      this.settings.update({ difficulty: harder });
-                      this.actions.onStartGame();
-                    },
-                  },
-                ]
-              : []),
-            {
-              id: 'settings',
-              label: this.i18n.t('settings'),
-              color: 'pink',
-              onClick: () => this.showSettingsMenu(),
-            },
-            {
-              id: 'menu',
-              label: this.i18n.t('menu'),
-              color: 'purple',
-              onClick: () => this.actions.onReturnToMainMenu(),
-            },
-          ],
-        }),
-      }),
-    });
+    this.stack.reset(this.match.gameOver(winnerIndex, scores));
   }
 
   /**
@@ -903,92 +245,10 @@ export class MenuController {
   }
 
   /**
-   * The settings: music, sound and language, over the screen on show (the main menu, the pause,
-   * a match's end), which BACK returns to. Nothing in them changes how a match plays (that is
-   * the quick match's setup), so they open from the pause too.
+   * The settings over the screen on show (the main menu, the pause, a match's end), which BACK
+   * returns to.
    */
   public showSettingsMenu(): void {
-    this.open({
-      id: 'settings',
-      view: () => {
-        const settings = this.settings.current;
-        const isTouch = isTouchFirst();
-        return {
-          title: this.i18n.t('settings'),
-          // A phone plays full screen once the game is installed: the one thing worth telling
-          // there that the game doesn't show by itself
-          subtitle: isTouch && !isInstalled() ? this.i18n.t('installHint') : '',
-          body: h(SettingsScreen, {
-            items: [
-              ...SETTINGS_MENU.map((entry) => ({
-                kind: 'choice' as const,
-                ...this.choiceOf(entry, settings),
-              })),
-              // The keys, on a computer: a finger's controls are plain to see, and the tutorial
-              // and the two players' setup tell what isn't
-              ...(isTouch
-                ? []
-                : [
-                    {
-                      kind: 'link' as const,
-                      id: 'controls',
-                      label: this.i18n.t('controls').title,
-                      color: 'yellow' as const,
-                      onClick: () => this.open(this.controlsScreen()),
-                    },
-                  ]),
-            ],
-            previousLabel: this.i18n.t('previousChoice'),
-            nextLabel: this.i18n.t('nextChoice'),
-            backLabel: this.i18n.t('back'),
-            onBack: this.back,
-          }),
-        };
-      },
-    });
-  }
-
-  /** The keys and the mouse, on a computer. Opened from the settings, so from the pause too. */
-  private controlsScreen(): ScreenEntry {
-    return {
-      id: 'controls',
-      view: () => {
-        const texts = this.i18n.t('controls');
-        const rows = CONTROL_ROWS.map((id) => ({
-          label: texts.rows[id].name,
-          value: texts.rows[id].keys,
-        }));
-        return {
-          title: texts.title,
-          subtitle: '',
-          body: h(StatsScreen, {
-            sections: [{ rows }],
-            backLabel: this.i18n.t('back'),
-            onBack: this.back,
-            variant: 'controls',
-          }),
-        };
-      },
-    };
-  }
-
-  /** A choice as its row shows it, its arrows stepping the setting either way. */
-  private choiceOf(entry: ChoiceEntry, settings: UserSettings): Choice {
-    return {
-      id: entry.key,
-      name: entry.name(this.i18n),
-      value: entry.value(settings, this.i18n),
-      values: entry.values(this.i18n),
-      color: entry.color,
-      onNext: () => this.changeSetting(entry, 1),
-      onPrevious: () => this.changeSetting(entry, -1),
-    };
-  }
-
-  /** Switches one setting; the screen showing it is drawn again by itself. */
-  private changeSetting(entry: ChoiceEntry, step: 1 | -1 = 1): void {
-    this.settings.cycle(entry.key, step);
-    // Silent at none
-    if (entry.previews) this.actions.onSoundVolume?.();
+    this.stack.push(this.settingsMenus.settings());
   }
 }
