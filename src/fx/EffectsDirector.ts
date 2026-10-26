@@ -65,7 +65,9 @@ const IMPACT = {
   PERFECT_SPARKS: { COUNT: 18, SPEED: 520, SPREAD: 1.2, SIZE: [2, 4] },
   POWER_SPARKS: { COUNT: 30, SPEED: 620, SPREAD: 2.2, SIZE: [2, 4.5] },
   ARC: { SPEED: 420, DECAY: 6, WIDTH: 2, SPREAD: 2.2 }, // px/s, 1/s, px, rad
-  PERFECT_RING: { SPEED: 700, DECAY: 5, WIDTH: 3 },
+  // The perfect hit's wave: big and quick, out to near half the court, so it is felt anywhere on
+  // screen; a thin front with a soft wake behind it, so it never hides the ball
+  PERFECT_RING: { SPEED: 900, DECAY: 2.2, WIDTH: 3, WAKE: 16 },
   POWER_RINGS: { SPEED: 820, INNER_SPEED: 560, DECAY: 4.5, WIDTH: 4 },
   // The power shot's impact frame: the picture in negative for a frame or two
   IMPACT_FRAME: 0.035, // s
@@ -517,6 +519,7 @@ export class EffectsDirector {
       this.particles.shockwave(hit.x, hit.y, COLORS.WHITE, PERFECT_RING.SPEED, {
         decay: PERFECT_RING.DECAY,
         width: PERFECT_RING.WIDTH,
+        wake: PERFECT_RING.WAKE,
       });
     } else if (!hit.isPowerShot) {
       // A plain hit's ring: an arc opening onto the court, the way the ball went

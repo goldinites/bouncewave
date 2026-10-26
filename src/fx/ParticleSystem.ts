@@ -27,6 +27,7 @@ export interface BurstShape {
 export interface RingShape {
   decay?: number;
   width?: number;
+  wake?: number;
   heading?: number;
   spread?: number;
 }
@@ -83,6 +84,7 @@ export class ParticleSystem {
       velocity: expansionSpeed,
       decay: shape.decay ?? PARTICLE_LIFE_DECAY,
       width: shape.width ?? SHOCKWAVE_WIDTH,
+      wake: shape.wake ?? 0,
       heading: shape.heading,
       spread: shape.spread,
     });

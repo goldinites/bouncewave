@@ -12,6 +12,8 @@ const CLIMAX_BALL_HUE = 34; // white-hot orange plasma at full climax
 // A squashed ball: flattened along its axis by this share of its squash, widened across it by
 // SPREAD of that (the plasma keeps roughly its area)
 const SQUASH_SHAPE = { FLATTEN: 0.45, SPREAD: 0.6 } as const;
+// A wave's wake: the soft glow inside its front, this much as bright as the front
+const WAKE_ALPHA = 0.22;
 // A spark's streak: as long as STREAK s of its flight, at least a dot
 const STREAK = 0.022; // s
 // A perfect hit's star glint: rays THICK px at the root, the upright ones UPRIGHT of the
@@ -396,8 +398,16 @@ export class EntityRenderer {
   ): void {
     ctx.globalCompositeOperation = 'lighter';
     for (const r of rings) {
-      ctx.globalAlpha = r.life;
       ctx.strokeStyle = r.color;
+      if (r.wake > 0 && r.radius > r.wake) {
+        // A wave: a band of soft light trailing just inside the front
+        ctx.globalAlpha = r.life * WAKE_ALPHA;
+        ctx.lineWidth = r.wake;
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.radius - r.wake / 2, 0, TWO_PI);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = r.life;
       ctx.lineWidth = r.width * (0.5 + 0.5 * r.life);
       ctx.beginPath();
       if (r.heading === undefined || r.spread === undefined) {

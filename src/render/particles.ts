@@ -28,6 +28,8 @@ export interface ShockwaveRing {
   decay: number;
   /** Line width, px. */
   width: number;
+  /** px of soft glow trailing inside its front, a wave rather than a line; none when 0. */
+  wake: number;
   /**
    * Only an arc of it, facing this way (radians) and `spread` wide: a plain hit's ring opens
    * toward the court. The whole ring when left out.
