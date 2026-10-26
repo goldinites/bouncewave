@@ -22,7 +22,8 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 - **Everything else is presentation or plumbing**: it reacts to the match's events (`fx/`,
   `ui/`), draws its state (`render/`), plays it (`audio/`), or feeds it input (`input/`).
 - **`app/Game.ts` is the composition root**: it builds every part, connects the listeners to the
-  match's events, and runs the frame loop.
+  match's events, and runs the frame loop. What is being played is a `Session`
+  (`app/sessions/`): `Game` holds the current one and never asks which mode it is.
 
 ## Layers and their dependencies
 
@@ -39,7 +40,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax    | `match/`, `render/`, `audio/`, `shared/`            |
 | `ui/`                  | menus as Preact screens on a stack, challenge condition, boot screen     | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
 | `debug/`, `easterEgg/` | FPS overlay, developer menus, the sound stand; the classic look's switch | `audio/`, `shared/`                                 |
-| `app/`                 | `Game` (composition root, frame loop), `FixedStep`, `MatchReplay`        | anything                                            |
+| `app/`                 | `Game` (composition root, frame loop), sessions, `FixedStep`, replay     | anything                                            |
 
 The rules that matter most are checked by `tests/architecture.test.ts`: `match/` imports only
 `match/` and `shared/`, and `shared/` imports nothing from the project.
@@ -120,8 +121,8 @@ the quick match's setup offers it from then on. Draw for both orientations (`isR
 `npm run test:visual -- --update-snapshots` for its new baselines, and look at them.
 A mode's own background (the challenges', later the story's) is the same, but its id goes to its
 mode's list in `EXCLUSIVE_SCENES`, not `SCENES`, and it needs no name: the quick match never
-offers it, nor does random deal it. Whatever starts a match sets the scene it is played on
-(`Game.matchScene`: a challenge's `scene`, `match/challenges.ts`), and the effects ask
+offers it, nor does random deal it. The session sets the scene its matches are played on
+(`Session.scene`: a challenge's `scene`, `match/challenges.ts`), and the effects ask
 `switchChannel` for it on `matchStart`.
 
 **A song.** An entry in `SONG_DEFS` (`audio/music/songs.ts`); its `scene` ties it to a background,
@@ -156,7 +157,7 @@ the music came from (`Conductor.cameFrom`). Hear each on the sound stand; `e2e/s
 renders them all in Chromium against the budgets.
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
-(`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/MenuController.ts`), or in
+(`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/menus/choices.ts`), or in
 `QUICK_MATCH_SETUP` if it sets up the match rather than the game (a `choice` stepped by
 arrows: one from a list, or a volume), and its texts in both
 languages (`i18n/translations.ts`). The compiler insists on all of them; the profile checks
@@ -184,7 +185,7 @@ paddles and a goal; its name and goal in both languages (`challenges` in
 `i18n/translations.ts`). The list is in the order they open. A new kind of goal is a case in
 `ChallengeGoal` and in `ChallengeJudge` (`match/ChallengeJudge.ts`), which counts what goals need
 from the match's events and gives a verdict on every finished attempt; it never changes the
-match. The menus start one (`onStartChallenge`), `Game.start` plays it and its restarts
+match. The menus start one (`onStartChallenge`), a `ChallengeSession` plays it and its restarts
 (`?challenge=<id>` makes every quick match one, for developers); the verdict goes to the profile
 (`challenges.passed`, `profile/ChallengeProgress.ts`; every challenge is open from the start)
 and to the result screen in place of the game-over menu. Challenges stay out of the statistics
@@ -194,19 +195,28 @@ and to the result screen in place of the game-over menu. Challenges stay out of 
 `TUTORIAL_CARDS` with its example (`ui/screens/TutorialCardScreen.tsx`); what counts for it in
 `TutorialCoach` (from the match's events and the learner's paddle; it only watches), and its line
 and hint in both languages (`tutorial` in `i18n/translations.ts`). The tutorial is a match of
-`TUTORIAL_RULES` against `TrainerController`, started by `Game.start`; its line takes the
+`TUTORIAL_RULES` against `TrainerController`, played by `TutorialSession`; its line takes the
 challenge condition's place (`ui/tutorialTexts.ts`). Whether it was gone through or turned down is
 the profile's `tutorial`.
 
 **A game mode.** An entry in `MODES` (`match/modes.ts`), its name in both languages (`modes`
-in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/MenuController.ts`).
-The PLAY menu lists it, switched off until `isPlayable`; `MenuController.pickMode` opens
-its screen. The quick match is the model: a setup screen whose choices are settings, and
-`Game.start` building its `MatchRules` from them (`quickMatchRules`).
+in `i18n/translations.ts`) and its button color (`MODE_COLORS` in `ui/menus/ModeMenus.ts`).
+The PLAY menu lists it, switched off until `isPlayable`; picking it (`ModeMenus.pick`) opens
+its screen. What plays it is a `Session` (`app/sessions/Session.ts`): it starts its match and
+its restarts (rules, line-up, level) and answers what depends on the mode — its backdrop and
+music, the line over the court, whether it counts in the statistics, whether its winning point
+is replayed, what it does each frame — and `Game` plays it (`play`) from the menu's action. The
+quick match is the model: a setup screen whose choices are settings, and `QuickMatchSession`
+building its `MatchRules` from them (`quickMatchRules`).
 
 **A screen.** A Preact component in `ui/screens/` (`.tsx`), taking its texts ready to show and
-its actions as props. `MenuController` describes it as a `ScreenEntry` (`ui/ScreenStack.ts`): an
-`id`, a `view()` building its title, subtitle and `h(Screen, props)`, and the backdrop it wants. A
+its actions as props. A section of the menus (`ui/menus/`: main, modes, tutorial, challenges,
+settings, match) describes it as a `ScreenEntry` (`ui/ScreenStack.ts`), built from the
+`MenuContext` every section shares (texts, settings, the game's actions, the stack, `routes` to
+the other sections' screens): an `id`, a `view()` building its title, subtitle and
+`h(Screen, props)`, and the backdrop it wants. A new section (the story's, the hub's apps) is a
+class of its own there; `MenuController` keeps the stack, draws its top and is the way in from
+outside the menus (`showChallengeCard`, `showPauseMenu`…). A
 button opens it over the screen on show (`stack.push`), its BACK and Esc step back down
 (`stack.back`), and a way in from outside the menus resets the stack to the way down to it. The
 screen on show is drawn in an effect: whatever signal `view()` reads (`settings.current`,

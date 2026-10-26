@@ -2,6 +2,11 @@ import { effect, untracked } from '@preact/signals-core';
 import { FixedStep } from '@/app/FixedStep';
 import { MatchReplay } from '@/app/MatchReplay';
 import { MenuBackdrops } from '@/app/MenuBackdrops';
+import { ChallengeSession } from '@/app/sessions/ChallengeSession';
+import { QuickMatchSession } from '@/app/sessions/QuickMatchSession';
+import { Session, SessionContext } from '@/app/sessions/Session';
+import { TutorialSession } from '@/app/sessions/TutorialSession';
+import { TwoPlayerSession } from '@/app/sessions/TwoPlayerSession';
 import { AudioEngine } from '@/audio/AudioEngine';
 import { MusicState } from '@/audio/music/intensity';
 import { BackgroundMenu } from '@/debug/BackgroundMenu';
@@ -17,23 +22,15 @@ import { I18nManager } from '@/i18n/I18nManager';
 import { InputHandler } from '@/input/InputHandler';
 import { Ball } from '@/match/Ball';
 import { ChallengeJudge, ChallengeVerdict } from '@/match/ChallengeJudge';
-import { ChallengeId, CHALLENGES, isChallengeId } from '@/match/challenges';
+import { ChallengeId, isChallengeId } from '@/match/challenges';
 import { COURT, PADDLE } from '@/match/config';
-import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
+import { DIFFICULTY_CONFIGS } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { isModifierId, MODIFIER_IDS, ModifierId } from '@/match/modifiers/Modifier';
 import { quickMatchRules } from '@/match/modes';
 import { MatchRules } from '@/match/rules';
 import { Paddle } from '@/match/Paddle';
-import { HumanController } from '@/match/PaddleController';
-import {
-  TrainerController,
-  TUTORIAL_RULES,
-  TUTORIAL_STEPS,
-  TutorialCoach,
-  TutorialStep,
-  tutorialMechanics,
-} from '@/match/tutorial';
+import { TUTORIAL_STEPS, TutorialCoach, TutorialStep } from '@/match/tutorial';
 import { isSkillId, SKILL_IDS, SkillId } from '@/match/skills/Skill';
 import { challengeState, isEveryChallengePassed, markPassed } from '@/profile/ChallengeProgress';
 import { ProfileStore } from '@/profile/ProfileStore';
@@ -47,18 +44,14 @@ import { EventBus } from '@/shared/EventBus';
 import { Look } from '@/shared/look';
 import { COLORS } from '@/shared/palette';
 import { BackgroundChoice, isPickableScene, isSceneId, SceneId } from '@/shared/scenes';
-import { isTouchFirst, MenuController } from '@/ui/MenuController';
-import { describeTutorial } from '@/ui/tutorialTexts';
-import { Condition, describeCondition, describeFinale } from '@/ui/challengeTexts';
+import { MenuController } from '@/ui/MenuController';
+import { Condition, describeFinale } from '@/ui/challengeTexts';
 import { ConditionBar, SIDE_DOCK_QUERY } from '@/ui/ConditionBar';
 import { UIManager } from '@/ui/UIManager';
 import { Volume, VOLUME } from '@/shared/volume';
 
 // Longest step the simulation takes in one frame (e.g. after a hitch)
 const MAX_FRAME_DT = 0.033;
-// The level a match of two players is played at: no CPU, so it only sets the ball's pace, the
-// default level's (Medium)
-const TWO_PLAYER_PACE = DifficultyLevel.NORMAL;
 
 /**
  * Composition root and main loop. Wires the match (MatchFlow), its presentation
@@ -74,31 +67,23 @@ export class Game {
   private readonly statsRecorder: StatsRecorder;
   /** Says whether each finished attempt at a challenge passed. */
   private readonly challengeJudge: ChallengeJudge;
-  /** The challenge the match on court (and its restarts) is an attempt at; null for a quick match. */
-  private challenge: ChallengeId | null = null;
   /**
-   * Whether the match being played (or just finished) is two people's at one device. Kept here,
-   * not asked of the match: by its end the match has already handed the paddles back to the demo.
+   * What is being played (or was, until the way back to the menus): its match and restarts, and
+   * whatever depends on the mode. Kept here, not asked of the match: by its end the match has
+   * already handed the paddles back to the demo.
    */
-  private isTwoPlayers = false;
-  /** Whether the match on court (and its restarts) is the tutorial (step 4.8). */
-  private isTutorial = false;
+  private session: Session | null = null;
+  /** What sessions read from the game to set up and follow their matches. */
+  private readonly sessionContext: SessionContext;
   /** Follows the learner through the tutorial's steps. */
   private readonly tutorialCoach: TutorialCoach;
   /** For developers: the step ?tutorial= starts the tutorial at. */
   private pinnedTutorialStep: TutorialStep = TUTORIAL_STEPS[0];
-  /** The step whose moves the learner's paddle has (tutorialMechanics), to give the next ones. */
-  private tutorialMechanicsStep: TutorialStep = TUTORIAL_STEPS[0];
   /**
    * Two players on a phone held upright: their match (its pause and its end too) is shown in
    * landscape, the phone held sideways between them. Off again back on the main menu.
    */
   private isLandscape = false;
-  /**
-   * The backdrop the match on court asked for when it started: a challenge's (or, in stage 7, a
-   * story chapter's) own; null plays it on the player's. Set by whatever starts the match.
-   */
-  private matchScene: SceneId | null = null;
   private readonly menuBackdrops: MenuBackdrops;
   private readonly stopFollowingSections: () => void;
   /** Whether the match starting is the one on court started again: it keeps its backdrop. */
@@ -271,7 +256,7 @@ export class Game {
       renderer: this.renderer,
       paddles: () => this.paddles,
       time: () => this.flow.time,
-      isEnabled: () => this.renderer.showsEffects && !this.isTutorial,
+      isEnabled: () => this.renderer.showsEffects && (this.session?.isReplayed ?? true),
       label: () => this.i18n.t('replay'),
     });
 
@@ -281,8 +266,9 @@ export class Game {
       particles: this.particles,
       paddles: this.paddles,
       translate: (key) => this.i18n.t(key),
-      matchScene: () => this.matchScene,
-      isTwoPlayer: () => this.isTwoPlayers,
+      // The backdrop the match on court asked for: a challenge's own, or null for the player's
+      matchScene: () => this.session?.scene ?? null,
+      isTwoPlayer: () => this.session?.isTwoPlayers ?? false,
       challengeFinale: (finale) => {
         const verdict = this.challengeJudge.verdictFor(finale.winnerIndex);
         if (!verdict) return null;
@@ -316,6 +302,15 @@ export class Game {
       onEvent: (event) => this.replay.route(event, (e) => this.matchEvents.emit(e)),
     });
 
+    this.sessionContext = {
+      flow: this.flow,
+      input: this.inputHandler,
+      i18n: this.i18n,
+      quickRules: () => this.forLook(this.quickRules()),
+      forLook: (rules) => this.forLook(rules),
+      skillsOf: (owner) => this.skillsOf(owner),
+    };
+
     // The classic look comes and goes only on the main menu. Taps on the title are the phone's
     // way in; a mouse has the Konami code's keyboard to hand
     const title = document.getElementById('gameTitle');
@@ -332,35 +327,23 @@ export class Game {
       {
         onStartGame: () => this.start(),
         onRestartGame: () => this.restart(),
-        onStartQuickMatch: () => {
-          // The classic look has no challenges, not even a pinned one
-          this.challenge = this.look === 'classic' ? null : this.pinnedChallenge;
-          this.isTwoPlayers = false;
-          this.isTutorial = false;
-          this.start();
-        },
-        onStartChallenge: (challenge) => {
-          this.challenge = challenge;
-          this.isTwoPlayers = false;
-          this.isTutorial = false;
-          this.start();
-        },
-        onStartTwoPlayers: () => {
-          this.challenge = null;
-          this.isTwoPlayers = true;
-          this.isTutorial = false;
-          this.start();
-        },
-        onStartTutorial: () => {
-          this.challenge = null;
-          this.isTwoPlayers = false;
-          this.isTutorial = true;
-          this.start();
-        },
+        onStartQuickMatch: () => this.play(this.quickMatch()),
+        onStartChallenge: (challenge) =>
+          this.play(new ChallengeSession(this.sessionContext, challenge)),
+        onStartTwoPlayers: () => this.play(new TwoPlayerSession(this.sessionContext)),
+        onStartTutorial: () =>
+          this.play(
+            new TutorialSession(this.sessionContext, {
+              coach: this.tutorialCoach,
+              firstStep: this.pinnedTutorialStep,
+              showCard: () => this.showTutorialCard(),
+              finish: () => this.finishTutorial(),
+            }),
+          ),
         isTutorialOffered: () => this.profile.current.tutorial === null,
         onDeclineTutorial: () => this.profile.update({ tutorial: 'skipped' }),
-        isChallengeMatch: () => this.challenge !== null,
-        isTwoPlayerMatch: () => this.isTwoPlayers,
+        isChallengeMatch: () => (this.session?.challenge ?? null) !== null,
+        isTwoPlayerMatch: () => this.session?.isTwoPlayers ?? false,
         onResumeGame: () => this.resume(),
         onReturnToMainMenu: () => this.toMenu(),
         onUnlockAudio: () => this.unlockAudio(),
@@ -382,7 +365,7 @@ export class Game {
       getDifficulty: () => this.flow.difficulty,
       // The player's record is the player's: neither challenges, two people's matches nor the
       // tutorial count
-      isCounted: () => this.challenge === null && !this.isTwoPlayers && !this.isTutorial,
+      isCounted: () => this.session?.isCounted ?? true,
     });
 
     this.challengeJudge = new ChallengeJudge({
@@ -504,65 +487,43 @@ export class Game {
     });
   }
 
+  /** Plays a session: its match from 0:0, and its restarts until the way back to the menus. */
+  private play(session: Session): void {
+    this.session = session;
+    this.start();
+  }
+
   /**
-   * Starts a match: the challenge being played, a match of two players, or else a quick match set
-   * up as the player last chose (the settings keep it). Restart and play again start the same.
+   * A quick match as the player set it up; for developers, every one an attempt at the challenge
+   * ?challenge= pinned (the classic look has no challenges, not even a pinned one).
+   */
+  private quickMatch(): Session {
+    return this.pinnedChallenge && this.look !== 'classic'
+      ? new ChallengeSession(this.sessionContext, this.pinnedChallenge)
+      : new QuickMatchSession(this.sessionContext);
+  }
+
+  /**
+   * Starts the session's match from 0:0: its first, a restart, or playing again. The match's
+   * backdrop is the session's, set before the match starts: the effects ask for it on its
+   * matchStart.
    */
   public start(): void {
-    this.setLandscape(this.isTwoPlayers);
-    // The menus' music gives way to the match's backdrop's, or to the tutorial's own, and the
-    // backdrops stop changing behind them
-    this.audio.music.enterPlace(this.isTutorial ? 'tutorial' : null);
+    const session = this.session;
+    if (!session) return;
+    this.setLandscape(session.isTwoPlayers);
+    // The menus' music gives way to the match's backdrop's, or to the session's own place, and
+    // the backdrops stop changing behind them
+    this.audio.music.enterPlace(session.place);
     this.menuBackdrops.setActive(false);
-    this.challengeJudge.judge(this.challenge);
-    // The scene is set before the match starts: the effects ask for it on its matchStart
-    if (this.challenge) {
-      // A challenge is set up in advance: its own rules, paddles, level and backdrop
-      const { rules, paddles, difficulty, scene } = CHALLENGES[this.challenge];
-      this.matchScene = scene;
-      this.flow.startMatch(
-        this.forLook(rules),
-        this.flow.playerVsCpu(paddles, this.skillsOf('player'), this.skillsOf('cpu')),
-        difficulty,
-      );
-    } else if (this.isTutorial) {
-      // The learner against the trainer, on the Range, from the first step
-      this.matchScene = 'range';
-      this.tutorialCoach.reset(this.pinnedTutorialStep);
-      // Perfect hits and Overdrive come in with the steps that teach them
-      this.tutorialMechanicsStep = this.pinnedTutorialStep;
-      this.flow.startMatch(
-        TUTORIAL_RULES,
-        [
-          {
-            controller: new HumanController(this.inputHandler),
-            ...tutorialMechanics(this.pinnedTutorialStep),
-          },
-          { controller: new TrainerController(Math.random), overdrive: false },
-        ],
-        DifficultyLevel.EASY,
-      );
-    } else if (this.isTwoPlayers) {
-      // No CPU to set a level for: the ball plays at the default one's pace
-      this.matchScene = null;
-      this.flow.startMatch(
-        this.forLook(this.quickRules),
-        this.flow.twoPlayers(this.inputHandler.players),
-        TWO_PLAYER_PACE,
-      );
-    } else {
-      this.matchScene = null;
-      this.flow.startMatch(
-        this.forLook(this.quickRules),
-        this.flow.playerVsCpu(undefined, this.skillsOf('player'), this.skillsOf('cpu')),
-      );
-    }
+    this.challengeJudge.judge(session.challenge);
+    session.start();
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
   }
 
   /** A quick match's rules, as the player set it up, with any modifiers a developer pinned. */
-  private get quickRules(): MatchRules {
+  private quickRules(): MatchRules {
     const rules = quickMatchRules(this.settings.current.matchPoints);
     return this.pinnedModifiers.length > 0 ? { ...rules, modifiers: this.pinnedModifiers } : rules;
   }
@@ -591,7 +552,7 @@ export class Game {
    */
   private chooseSkills(owner: SkillOwner, skills: readonly SkillId[]): void {
     this.pinnedSkills[owner] = skills;
-    if (this.flow.isDemo || this.isTwoPlayers) return;
+    if (this.flow.isDemo || this.session?.isTwoPlayers) return;
     this.paddles.forEach((_, i) => {
       const isPlayers = this.flow.isPlayerPaddle(i);
       if (isPlayers === (owner === 'player')) this.flow.giveSkills(i, this.skillsOf(owner));
@@ -610,16 +571,6 @@ export class Game {
   }
 
   /**
-   * The paddle whose perfect zone the tutorial marks: the learner's, while a step is about
-   * perfect hits.
-   */
-  private get perfectZoneMark(): number | null {
-    if (!this.isTutorial || this.flow.isDemo || this.tutorialCoach.isBetweenSteps) return null;
-    const step = this.tutorialCoach.progress?.step;
-    return step === 'perfect' || step === 'overdrive' ? 0 : null;
-  }
-
-  /**
    * A step that opens on a card: the match pauses behind it until it is read (GOT IT, or Esc as
    * from the pause), then the step is played.
    */
@@ -632,7 +583,7 @@ export class Game {
 
   /** Every step done: the tutorial is through for good, and its end screen comes up. */
   private finishTutorial(): void {
-    this.isTutorial = false;
+    this.session = null;
     this.profile.update({ tutorial: 'done' });
     this.flow.returnToMenu();
     // Its end screen is a menu: the menus' music, as on every one outside a match, and the
@@ -654,7 +605,7 @@ export class Game {
   }
 
   public toMenu(): void {
-    this.isTutorial = false;
+    this.session = null;
     this.setLandscape(false);
     this.flow.returnToMenu();
     this.uiManager.setPauseButtonVisibility(false);
@@ -712,8 +663,7 @@ export class Game {
   }
 
   public resume(): void {
-    // A tutorial step's card is read once the match resumes from it
-    if (this.isTutorial) this.tutorialCoach.acknowledge();
+    this.session?.onResume();
     this.flow.resume();
     this.uiManager.hideMenu();
     this.uiManager.setPauseButtonVisibility(true);
@@ -768,30 +718,12 @@ export class Game {
     this.audio.setVolumes(this.settings.current.musicVolume, this.settings.current.soundVolume);
     this.audio.playMusic(this.buildMusicState());
 
-    const isTutorialOn = this.isTutorial && !this.flow.isDemo;
-    if (isTutorialOn && !isPaused) {
-      this.tutorialCoach.update(realDt);
-      // A new step: the learner's paddle gets the moves it teaches
-      const step = this.tutorialCoach.progress?.step;
-      if (step && step !== this.tutorialMechanicsStep) {
-        this.tutorialMechanicsStep = step;
-        this.flow.setMechanics(0, tutorialMechanics(step));
-      }
-      if (this.tutorialCoach.isFinished) this.finishTutorial();
-      else this.showTutorialCard();
-    }
+    // The session follows its match (the tutorial's steps), which may end it
+    if (!this.flow.isDemo && !isPaused) this.session?.update(realDt);
 
     // A challenge's condition, or the tutorial's step: in the strip above the court, or on the
     // court on a phone on its side, which has no strip
-    const condition = this.flow.isDemo
-      ? null
-      : isTutorialOn
-        ? describeTutorial(this.i18n, this.tutorialCoach, isTouchFirst())
-        : describeCondition(
-            this.i18n,
-            this.flow,
-            this.challenge ? CHALLENGES[this.challenge].goal : null,
-          );
+    const condition = this.flow.isDemo ? null : (this.session?.condition() ?? null);
     this.conditionBar.update(condition, !this.isConditionOnCourt);
     const live = this.buildRenderFrame(condition);
     const frame = this.replay.isHolding ? this.replay.frame(live) : live;
@@ -926,9 +858,10 @@ export class Game {
         readyText: this.i18n.t(this.flow.isDecidingPoint ? 'decider' : 'ready'),
         condition,
         isConditionOnCourt: this.isConditionOnCourt,
-        sideLabels: this.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
+        sideLabels:
+          this.session?.isTwoPlayers && !this.flow.isDemo ? this.i18n.t('playerLabels') : null,
         overtimeText: this.flow.isOvertime ? this.i18n.t('overtime') : null,
-        perfectZoneMark: this.perfectZoneMark,
+        perfectZoneMark: this.flow.isDemo ? null : (this.session?.perfectZoneMark ?? null),
         overdriveCharges: this.flow.overdriveCharges,
         overdriveStreaks: this.flow.overdriveStreaks,
       },
