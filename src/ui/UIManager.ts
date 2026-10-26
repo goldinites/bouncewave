@@ -22,6 +22,9 @@ const MENU_KEYS: Record<string, 'previous' | 'next' | 'first' | 'last'> = {
 /** Button colors; all but the default cyan have a .game-button--<color> modifier in main.css. */
 export type ButtonColor = 'cyan' | 'yellow' | 'pink' | 'purple' | 'green';
 
+// A screen coming in: its first ITEMS rise RISE px into place over DURATION ms, STAGGER ms apart
+const SCREEN_ENTER = { ITEMS: 8, RISE: 10, DURATION: 220, STAGGER: 30 } as const;
+
 export class UIManager {
   private uiOverlay: HTMLElement;
   private titleElement: HTMLElement;
@@ -137,6 +140,7 @@ export class UIManager {
     if (hadFocus && !isSameScreen) {
       this.buttons[0]?.focus();
     }
+    if (!isSameScreen) this.enter();
     this.reveal();
   }
 
@@ -145,6 +149,33 @@ export class UIManager {
     this.screenId = null;
     this.onScreenClick = null;
     render(null, this.screenElement);
+  }
+
+  /**
+   * Another screen comes in (6.7): its subtitle and then each of its items rise into place in
+   * turn, a few px and a fifth of a second each; not for a player who asked for less motion.
+   */
+  private enter(): void {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    // A screen in one box (a column of buttons) comes in by what the box holds
+    const screen = this.screenElement;
+    const root = screen.children.length === 1 ? screen.children[0] : screen;
+    const items = [this.subtitleElement, ...root.children].slice(0, SCREEN_ENTER.ITEMS);
+    items.forEach((item, i) => {
+      if (typeof item.animate !== 'function') return;
+      item.animate(
+        [
+          { opacity: 0, transform: `translateY(${SCREEN_ENTER.RISE}px)` },
+          { opacity: 1, transform: 'none' },
+        ],
+        {
+          duration: SCREEN_ENTER.DURATION,
+          delay: i * SCREEN_ENTER.STAGGER,
+          easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+          fill: 'backwards',
+        },
+      );
+    });
   }
 
   private reveal(): void {

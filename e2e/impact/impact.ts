@@ -350,7 +350,7 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
     }
 
     refreshFrame();
-    const shown = replay.isShowing ? replay.frame(frame) : frame;
+    const shown = replay.isHolding ? replay.frame(frame) : frame;
     renderer.update(FRAME, shown);
     renderer.render(shown, FRAME);
 

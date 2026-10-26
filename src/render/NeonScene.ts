@@ -37,6 +37,8 @@ const COURT_LIGHT = { BALL: 110, BALL_ALPHA: 0.1, BALL_SPEED_ALPHA: 0.08, LIGHT:
 // The layers drawn again for the bloom: what glows on the court, and nothing that moves on as it
 // is drawn (a layer that follows time by being drawn would go twice as fast)
 const GLOWING_LAYERS = new Set(['ripples', 'paddles', 'balls', 'particles']);
+// 1/s a charge gained on a meter settles at, from its flare
+const METER_GAIN_DECAY = 4;
 // How hard a hit's kick thumps the backdrop, against a shake of the same px
 const KICK_THUMP = 1.5;
 // A turbo ball's heat: none at the serve's speed, full this much faster (px/s)
@@ -204,7 +206,20 @@ function neonLayers(
       view.sideLabels,
       view.isConditionOnCourt,
       view.overtimeText,
+      court.rally,
     );
+  };
+
+  // A charge gained on a meter flares and settles over 1 / METER_GAIN_DECAY s
+  const meters = { charges: [] as (number | null)[], gains: [] as number[] };
+  const followMeters = (charges: readonly (number | null)[], realDt: number) => {
+    charges.forEach((charge, i) => {
+      const before = meters.charges[i] ?? null;
+      const gain = Math.max(0, (meters.gains[i] ?? 0) - realDt * METER_GAIN_DECAY);
+      meters.gains[i] = charge !== null && before !== null && charge > before ? 1 : gain;
+    });
+    meters.charges = [...charges];
+    meters.gains.length = charges.length;
   };
 
   // In the dark, a ball flashes wherever it bounces (it turns around, up or down or across)
@@ -357,6 +372,13 @@ function neonLayers(
       },
     },
     {
+      // Follows the meters' charges, to flare one as it is gained; draws nothing itself, so the
+      // paddles' layer can be drawn again for the bloom without following them twice
+      id: 'meters',
+      space: 'court',
+      render: (_c, { hud: view }, { realDt }) => followMeters(view.overdriveCharges, realDt),
+    },
+    {
       // Each person's paddle carries their Overdrive meter (only in a match that has Overdrive)
       id: 'paddles',
       space: 'court',
@@ -396,6 +418,7 @@ function neonLayers(
               court.time,
               streak,
               drama.meterSpent[i] ?? 0,
+              isMotionReduced() ? 0 : (meters.gains[i] ?? 0),
             );
           }
         });

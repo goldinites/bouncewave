@@ -16,6 +16,7 @@ import { Paddle } from '@/match/Paddle';
 import { STANDARD_PADDLE } from '@/match/PaddleSpec';
 import { Side } from '@/match/side';
 import { COURT_LINES } from '@/render/CourtRenderer';
+import { HUD_LAYOUT } from '@/render/HudRenderer';
 import { Squash } from '@/render/scene';
 import { REFLEX } from '@/match/skills/Reflex';
 import { finalScoreText } from '@/render/FinalScoreRenderer';
@@ -118,6 +119,10 @@ const GOAL = {
   ABERRATION: 4, // px the colours split, closing over ABERRATION_FOR s
   ABERRATION_FOR: 0.25,
 } as const;
+
+// A rally's streak on screen crumbling as its point is scored (from FROM hits, as the HUD shows
+// it): sparks off it, falling as its halves do
+const STREAK_CRUMBLE = { FROM: 5, SPARKS: 24, SPEED: 160, COLOR: '#ffe53b' } as const;
 
 // Particle bursts: how many and how fast
 const BURST = {
@@ -233,6 +238,8 @@ export class EffectsDirector {
   private readonly whiteHot: number[] = [];
   /** The match's balls as the last step left them, to tell which one a hit or bounce was. */
   private balls: readonly Ball[] = [];
+  /** Hits in the rally on court, as its last hit left them: its streak, should it end. */
+  private rally = 0;
   /** A power shot's sound waiting out its hit-stop: `in` s more. */
   private powerSound: { rally: number; pan: number; in: number } | null = null;
   /** Each paddle's meter as the last frame left it, to see a charge go. */
@@ -528,6 +535,7 @@ export class EffectsDirector {
    */
   private onPaddleHit(hit: Extract<MatchEvent, { type: 'paddleHit' }>): void {
     const paddle = this.paddles[hit.paddleIndex];
+    this.rally = hit.rally;
     const force = getSpeedHeat(hit.speed, this.maxBallSpeed);
     const kind = hit.isPowerShot ? 'POWER' : hit.isPerfect ? 'PERFECT' : null;
     const strength = (range: { MIN: number; MAX: number; PERFECT: number; POWER: number }) =>
@@ -713,6 +721,18 @@ export class EffectsDirector {
     this.renderer.addFlash(FLASH.SCORE);
     this.renderer.flareBackdrop();
     this.renderer.addAberration(GOAL.ABERRATION, GOAL.ABERRATION_FOR);
+    // The rally's streak, if it showed, crumbles into sparks
+    if (this.rally >= STREAK_CRUMBLE.FROM) {
+      this.particles.burst(
+        COURT.WIDTH / 2,
+        HUD_LAYOUT.SCORE_Y,
+        STREAK_CRUMBLE.COLOR,
+        STREAK_CRUMBLE.SPARKS,
+        STREAK_CRUMBLE.SPEED,
+        { heading: Math.PI / 2, spread: Math.PI },
+      );
+    }
+    this.rally = 0;
     // The side beaten for it shorts out, every paddle it has
     this.paddles.forEach((paddle, i) => {
       if (paddle.side !== score.scoringPlayerIndex) this.paddleFx.onConcede(i);

@@ -54,6 +54,8 @@ const PADDLE_GLOW = { BASE: 18, HOT: 48 } as const;
 // paddle, throbbing gently (steady with reduced motion)
 const PERFECT_MARK = { OVERHANG: 4, GLOW: 14, PULSE: 6 } as const; // px, px, rad/s
 
+// A charge gained on the Overdrive meter flares white, its glow GROW × the halo wider at first
+const METER_GAIN = { GROW: 2 } as const;
 // The Overdrive meter rides along the player's paddle, on its goal side: one segment per
 // perfect hit in the streak; once full they and the paddle's core pulse yellow. Charges an
 // implants' core keeps after the streak broke are lit plainly, with no glow: still clearly
@@ -294,7 +296,10 @@ export class EntityRenderer {
   /** A meter segment's size, px. */
   public static readonly METER_SEGMENT = OVERDRIVE_METER.SEGMENT;
 
-  /** The player's Overdrive meter: segments along the goal side of their paddle, glowing. */
+  /**
+   * The player's Overdrive meter: segments along the goal side of their paddle, glowing.
+   * @param gain how brightly the charge just gained still flares, in [0, 1]
+   */
   public static renderOverdriveMeter(
     ctx: CanvasRenderingContext2D,
     paddle: Paddle,
@@ -302,6 +307,7 @@ export class EntityRenderer {
     time: number,
     streak: number = charge,
     spent = 0,
+    gain = 0,
   ): void {
     const { SEGMENT, HALO, PULSE_SPEED, ENERGY_ALPHA } = OVERDRIVE_METER;
     const isFull = streak >= OVERDRIVE.CHARGE;
@@ -337,6 +343,16 @@ export class EntityRenderer {
       ctx.globalAlpha = isLit ? 0.7 + 0.3 * pulse : 0.18;
       ctx.fillStyle = isLit ? color : '#ffffff';
       ctx.fillRect(x, y, SEGMENT.WIDTH, SEGMENT.HEIGHT);
+
+      // A charge just gained flares white and settles into place; the one that fills the meter
+      // flares the whole meter with it
+      const isGained = gain > 0 && isLit && (i === charge - 1 || isFull);
+      if (isGained) {
+        const grow = HALO * (1 + METER_GAIN.GROW * gain);
+        ctx.globalAlpha = gain;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x - grow, y - grow, SEGMENT.WIDTH + grow * 2, SEGMENT.HEIGHT + grow * 2);
+      }
     });
     ctx.restore();
   }
