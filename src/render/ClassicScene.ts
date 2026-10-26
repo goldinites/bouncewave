@@ -49,7 +49,9 @@ export class ClassicScene implements Scene {
     paddles.forEach((paddle, i) => {
       this.renderPaddle(ctx, paddle);
       const charge = hud.overdriveCharges[i] ?? null;
-      if (isMatchOn && charge !== null) this.renderMeter(ctx, paddle, charge);
+      if (isMatchOn && charge !== null) {
+        this.renderMeter(ctx, paddle, charge, hud.overdriveCapacities?.[i]);
+      }
     });
     court.balls.forEach((ball) => this.renderBall(ctx, ball));
 
@@ -138,10 +140,15 @@ export class ClassicScene implements Scene {
   }
 
   /** The Overdrive meter as plain white blocks, the unlit ones faint, no glow or pulse. */
-  private renderMeter(ctx: CanvasRenderingContext2D, paddle: Paddle, charge: number): void {
+  private renderMeter(
+    ctx: CanvasRenderingContext2D,
+    paddle: Paddle,
+    charge: number,
+    capacity?: number,
+  ): void {
     const { WIDTH, HEIGHT } = EntityRenderer.METER_SEGMENT;
     ctx.save();
-    EntityRenderer.meterSegments(paddle).forEach(({ x, y }, i) => {
+    EntityRenderer.meterSegments(paddle, capacity).forEach(({ x, y }, i) => {
       ctx.globalAlpha = i < charge ? 1 : CLASSIC.METER_UNLIT_ALPHA;
       ctx.fillRect(x, y, WIDTH, HEIGHT);
     });

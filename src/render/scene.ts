@@ -53,7 +53,7 @@ export interface HudView {
    */
   perfectZoneMark: number | null;
   /**
-   * Charges in each paddle's Overdrive meter (0..OVERDRIVE.CHARGE), in the order of `paddles`;
+   * Charges in each paddle's Overdrive meter (0 to its capacity), in the order of `paddles`;
    * null for a paddle that shows none (the CPU's, every one under rules without Overdrive).
    */
   overdriveCharges: readonly (number | null)[];
@@ -62,6 +62,8 @@ export interface HudView {
    * as `overdriveCharges` unless an implants' core keeps charges a broken streak left.
    */
   overdriveStreaks: readonly (number | null)[];
+  /** The charges each paddle's meter holds, in order; OVERDRIVE.CAPACITY where left out. */
+  overdriveCapacities?: readonly number[];
 }
 
 /** How the drama presents the moment (fx/EffectsDirector). */

@@ -864,6 +864,7 @@ export class Game {
         perfectZoneMark: this.flow.isDemo ? null : (this.session?.perfectZoneMark ?? null),
         overdriveCharges: this.flow.overdriveCharges,
         overdriveStreaks: this.flow.overdriveStreaks,
+        overdriveCapacities: this.flow.overdriveCapacities,
       },
       drama: {
         climax: this.effects.climaxLevel,

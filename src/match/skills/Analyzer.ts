@@ -1,6 +1,5 @@
 import { Ball, Point } from '@/match/Ball';
 import { forecastArrival } from '@/match/forecast';
-import { OVERDRIVE } from '@/match/Overdrive';
 import { faceLine, isComingAt, ShotRead, Skill, SkillHit, SkillHost } from '@/match/skills/Skill';
 
 // Analyzer: the machine reads a hard shot before the eye does
@@ -62,7 +61,7 @@ export class Analyzer implements Skill {
     this.pending = null;
     if (!ball || this.isUsed || !isComingAt(this.paddle, ball)) return;
     const meter = this.host.meter();
-    if (!meter || meter.charge < ANALYZER.COST || meter.charge >= OVERDRIVE.CHARGE) return;
+    if (!meter || meter.charge < ANALYZER.COST || meter.isFull) return;
 
     const path: Point[] = [];
     const arrival = forecastArrival(ball, faceLine(this.paddle, ball), this.host.physics(), path);
