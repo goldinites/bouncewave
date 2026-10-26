@@ -299,7 +299,12 @@ developer tools (`debug/DebugTools.ts`: the dock, its menus, the sound stand) ar
 own, loaded the first time they are asked for (`?debug`, F3, a link to the sound stand); the FPS
 line and the errors it reports are always there. `npm run build` builds for GitHub Pages
 (`/bouncewave/`, installable, offline); `npm run build:portal` builds for a web game portal
-(`dist-portal/`, relative paths, no service worker).
+(`dist-portal/`, relative paths, no service worker). Both are the arcade edition. **Planned**
+(ROADMAP 8.2): the edition becomes a build mode (`arcade`, `steam`) that `FEATURES` is derived
+from, so what an edition lacks is dropped at build time, and the Steam edition's modules (the
+story, the career, the classic look) are loaded with `import()` behind its flags, leaving no chunk
+of theirs in the arcade build. Flags are read only at the root (`app/boot.ts`, `Game`, the
+menus); `match/` knows nothing of editions.
 
 ## Rules of thumb
 
