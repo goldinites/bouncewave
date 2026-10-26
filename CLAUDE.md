@@ -30,6 +30,7 @@ npm run test:perf     # every background's frame time vs e2e/frameBudget.ts (CI 
 npm run test:visual   # every background vs its saved picture in e2e/__screenshots__ (local only)
 npm run sim           # balance report, AI against AI: levels, rallies, skills, challenges (local only)
 npm run render -- <song-id> ...    # a song rendered silently into renders/<id>/: pictures and a report (local only)
+npm run render:impact -- <scene>   # hits filmed frame by frame into renders/impact/<scene>/ (local only)
 ```
 
 All four checks (tests, types, lint, format), the smoke and the frame budget must pass before a

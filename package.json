@@ -19,7 +19,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "icons": "pwa-assets-generator && pwa-assets-generator --config pwa-assets.favicon.config.ts && node scripts/splash.mjs"
+    "icons": "pwa-assets-generator && pwa-assets-generator --config pwa-assets.favicon.config.ts && node scripts/splash.mjs",
+    "render:impact": "node scripts/impact.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
