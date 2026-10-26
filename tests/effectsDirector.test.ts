@@ -15,6 +15,7 @@ const makeRenderer = () => ({
   addFlash: vi.fn(),
   addKick: vi.fn(),
   addImpactFrame: vi.fn(),
+  flareBackdrop: vi.fn(),
   triggerClimaxSurge: vi.fn(),
   celebrate: vi.fn(),
   triggerVictoryEffect: vi.fn(),
@@ -352,6 +353,21 @@ describe('EffectsDirector.handle', () => {
     const struck = particles.particles.filter((p) => p.isStreak);
     expect(struck.length).toBeGreaterThan(0);
     expect(struck.every((p) => p.vx < 0)).toBe(true);
+  });
+
+  it('lights the goal line it went over, kicks the court at it and shorts out the beaten paddle', () => {
+    const { effects, renderer, particles } = makeDirector();
+
+    handle(effects, { type: 'score', scoringPlayerIndex: 0, y: 200, isDemo: false });
+
+    expect(particles.ripples).toEqual([
+      expect.objectContaining({ y: 200, isUpright: true, color: COLORS.CYAN }),
+    ]);
+    expect(renderer.addKick).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(renderer.flareBackdrop).toHaveBeenCalledOnce();
+    expect(effects.paddleOut).toEqual([0, 1]);
+    // Its sparks spray back into the court, away from the right goal
+    expect(particles.particles.every((p) => p.vx < 0)).toBe(true);
   });
 
   it('rises on a point won, falls on one lost, from the goal it went in; not in the demo', () => {

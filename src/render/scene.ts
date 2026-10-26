@@ -83,6 +83,8 @@ export interface DramaView {
   paddleTilt: readonly number[];
   /** How far each paddle is knocked back toward its own goal by its last hit, px. */
   paddleRecoil: readonly number[];
+  /** How far each paddle is shorted out by the point it just lost, in [0, 1]. */
+  paddleOut: readonly number[];
   /** How white-hot each ball burns off a perfect hit, in [0, 1], by its place in `court.balls`. */
   ballWhiteHot: readonly number[];
   /** Each ball's squash off its last hit or bounce, by its place in `court.balls`; null for round. */
@@ -95,12 +97,20 @@ export interface Squash {
   amount: number;
 }
 
+/** The point that won the match shown again, slowed, in cinema bars (app/MatchReplay). */
+export interface ReplayView {
+  /** REPLAY, in the player's language. */
+  label: string;
+}
+
 /** Everything the renderer needs to draw (and animate toward) one frame, by who reads it. */
 export interface RenderFrame {
   court: CourtView;
   hud: HudView;
   drama: DramaView;
   particles: ParticleView;
+  /** The replay being shown instead of the match; null when it is the match. */
+  replay: ReplayView | null;
   analyser: AnalyserNode | null;
   isRotated: boolean;
 }

@@ -54,15 +54,22 @@ export interface Flare {
 /** Seconds a wall's wave runs along its rail. */
 export const RIPPLE_LIFE = 0.45;
 
-/** A wall struck: its rail lights where it was hit and a wave runs off along it both ways. */
+/**
+ * A line struck: a wall's rail where the ball bounced, or a goal line where it went in. It lights
+ * where it was hit and a wave runs off along it both ways.
+ */
 export interface Ripple {
+  /** Where it was struck: on a rail, x along it and y its middle; on a goal line, the reverse. */
   x: number;
-  /** The rail's middle, px down the court. */
   y: number;
-  /** Seconds since the bounce. */
+  /** Seconds since the strike. */
   age: number;
   /** How hard it was struck, in [0, 1]. */
   strength: number;
+  /** Along a goal line, up and down the court, rather than along a rail. */
+  isUpright?: boolean;
+  /** Its light; a rail's own colour where it was struck when left out. */
+  color?: string;
 }
 
 /** Every particle and ring on screen this frame. */

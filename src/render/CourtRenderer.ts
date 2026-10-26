@@ -40,7 +40,7 @@ export class CourtRenderer {
     ctx.restore();
   }
 
-  /** The struck walls' rails lighting up, and the waves running along them. */
+  /** The struck lines lighting up, the walls' rails and the goal lines, and their waves. */
   public static renderRipples(ctx: CanvasRenderingContext2D, ripples: readonly Ripple[]): void {
     if (ripples.length === 0) return;
     ctx.save();
@@ -48,24 +48,34 @@ export class CourtRenderer {
     for (const ripple of ripples) {
       const { x, y, age, strength } = ripple;
       const fade = 1 - age / RIPPLE_LIFE;
-      // The rail's own color where it was struck, cyan at the left end to pink at the right
-      const color = mixHexColors(COLORS.CYAN, COLORS.PINK, x / COURT.WIDTH);
+      // A rail's own color where it was struck, cyan at the left end to pink at the right
+      const color = ripple.color ?? mixHexColors(COLORS.CYAN, COLORS.PINK, x / COURT.WIDTH);
+      // Drawn as along a rail; a goal line's turned upright about where it was struck
+      const length = ripple.isUpright ? COURT.HEIGHT : COURT.WIDTH;
+      const at = ripple.isUpright ? y : x;
+      ctx.save();
+      if (ripple.isUpright) {
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 2);
+        ctx.translate(-y, -x);
+      }
+      const across = ripple.isUpright ? x : y;
 
       // The spot struck, flaring and going out first
       const glow = RIPPLE.GLOW * (0.5 + 0.5 * strength);
       ctx.globalAlpha = fade * fade * strength;
-      const spot = ctx.createRadialGradient(x, y, 0, x, y, glow);
+      const spot = ctx.createRadialGradient(at, across, 0, at, across, glow);
       spot.addColorStop(0, COLORS.WHITE);
       spot.addColorStop(0.3, color);
       spot.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = spot;
-      ctx.fillRect(x - glow, y - glow / 2, glow * 2, glow);
+      ctx.fillRect(at - glow, across - glow / 2, glow * 2, glow);
 
-      // Two fronts running off along the rail, their tails toward the spot
+      // Two fronts running off along the line, their tails toward the spot
       ctx.globalAlpha = fade * (0.4 + 0.6 * strength);
       for (const way of [-1, 1]) {
-        const front = x + way * RIPPLE.SPEED * age;
-        if (front < 0 || front > COURT.WIDTH) continue;
+        const front = at + way * RIPPLE.SPEED * age;
+        if (front < 0 || front > length) continue;
         const tail = front - way * Math.min(RIPPLE.TAIL, RIPPLE.SPEED * age);
         const wave = ctx.createLinearGradient(front, 0, tail, 0);
         wave.addColorStop(0, COLORS.WHITE);
@@ -74,11 +84,12 @@ export class CourtRenderer {
         ctx.fillStyle = wave;
         ctx.fillRect(
           Math.min(front, tail),
-          y - RIPPLE.HEIGHT / 2,
+          across - RIPPLE.HEIGHT / 2,
           Math.abs(front - tail),
           RIPPLE.HEIGHT,
         );
       }
+      ctx.restore();
     }
     ctx.restore();
   }

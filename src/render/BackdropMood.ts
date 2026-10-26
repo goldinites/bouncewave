@@ -9,6 +9,7 @@ const LIGHTS = {
   CLIMAX_MAX: 0.6,
   CELEBRATION_MAX: 1,
   CLIMAX_SURGE: 0.2, // on the climax drop
+  GOAL_SURGE: 0.5, // as a point is scored
   CELEBRATION_SURGE: 1.0,
   SURGE_DECAY: 1.5, // 1/s
   EASE: 2.55, // 1/s toward the brightness the moment calls for
@@ -30,6 +31,11 @@ export class BackdropMood {
   public swell(): void {
     // Raises the target rather than the value, so the swell eases in
     this.surge = LIGHTS.CLIMAX_SURGE;
+  }
+
+  /** A point scored: the lights flare up and settle. */
+  public flare(): void {
+    this.surge = Math.max(this.surge, LIGHTS.GOAL_SURGE);
   }
 
   /** Victory: the lights flare, and the celebration starts at its height. */

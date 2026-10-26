@@ -21,6 +21,8 @@ const WHIP = {
 // A hit knocks the paddle back toward its own goal and it springs straight back: out to the
 // push in PEAK s, home again by ~6 × PEAK, never past where it stood
 const RECOIL = { PEAK: 0.025 } as const;
+// A paddle beaten for a point shorts out: it flickers and dims, back over ~1 / OUT_DECAY s
+const OUT_DECAY = 1.6; // 1/s
 // A charged Overdrive sheds yellow sparks off its paddle, RATE a second, from anywhere along it
 const CHARGED_SPARKS = { RATE: 16, SPEED: 90, LIFE: 0.5, SIZE: [1.5, 3] } as const; // px/s, s, px
 
@@ -40,6 +42,7 @@ export class PaddleEffects {
   private readonly push: number[];
   private readonly pushAge: number[];
   private readonly _recoil: number[];
+  private readonly _out: number[];
 
   /** @param paddleCount how many paddles are on the court */
   constructor(paddleCount: number) {
@@ -52,6 +55,17 @@ export class PaddleEffects {
     this.push = new Array<number>(paddleCount).fill(0);
     this.pushAge = new Array<number>(paddleCount).fill(0);
     this._recoil = new Array<number>(paddleCount).fill(0);
+    this._out = new Array<number>(paddleCount).fill(0);
+  }
+
+  /** How far each paddle is shorted out by the point it just lost, in [0, 1]. */
+  public get out(): readonly number[] {
+    return this._out;
+  }
+
+  /** The paddle was beaten for a point: it shorts out and comes back. */
+  public onConcede(paddleIndex: number): void {
+    this._out[paddleIndex] = 1;
   }
 
   /** How far each paddle is knocked back toward its own goal by its last hit, px. */
@@ -117,6 +131,7 @@ export class PaddleEffects {
     this.push.fill(0);
     this.pushAge.fill(0);
     this._recoil.fill(0);
+    this._out.fill(0);
   }
 
   public update(
@@ -130,6 +145,7 @@ export class PaddleEffects {
     paddles.forEach((paddle, i) => {
       this._glow[i] = Math.max(0, this._glow[i] - dt * GLOW_DECAY);
       this._spent[i] = Math.max(0, this._spent[i] - dt * SPENT_DECAY);
+      this._out[i] = Math.max(0, this._out[i] - dt * OUT_DECAY);
       this.springBack(i, dt);
       this.recoilBack(i, dt);
       this.emitSparks(dt, paddle, particles, rally);
@@ -152,6 +168,7 @@ export class PaddleEffects {
       this.push,
       this.pushAge,
       this._recoil,
+      this._out,
     ]) {
       while (values.length < count) values.push(0);
       values.length = count;

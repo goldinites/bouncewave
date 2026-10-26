@@ -39,7 +39,7 @@ comes next is in [ROADMAP.md](ROADMAP.md).
 | `fx/`                  | effects reacting to the match: shake, flash, particles, drama, climax    | `match/`, `render/`, `audio/`, `shared/`            |
 | `ui/`                  | menus as Preact screens on a stack, challenge condition, boot screen     | `match/`, `audio/`, `settings/`, `i18n/`, `shared/` |
 | `debug/`, `easterEgg/` | FPS overlay, developer menus, the sound stand; the classic look's switch | `audio/`, `shared/`                                 |
-| `app/`                 | `Game` (composition root, frame loop), `FixedStep`                       | anything                                            |
+| `app/`                 | `Game` (composition root, frame loop), `FixedStep`, `MatchReplay`        | anything                                            |
 
 The rules that matter most are checked by `tests/architecture.test.ts`: `match/` imports only
 `match/` and `shared/`, and `shared/` imports nothing from the project.
@@ -67,6 +67,10 @@ effects) and fill in the particles, whose types (`render/particles.ts`) belong t
    the frame to the look's `Scene`. The neon one (`NeonScene`) is an ordered list of layers, each
    drawn in its space: `backdrop` under the camera's zoom, `court` under the zoom and the shake,
    `screen` fixed over everything (dimming, vignette, flash).
+
+When the point that wins a match is worth seeing again, `MatchReplay` holds the finale's start
+back and the simulation with it (step 2 is skipped), and draws its own recording of the point
+slowed in the match's place until it is over or skipped.
 
 Everything freezes while paused except the menu dimming. Because the steps are fixed and the
 simulation's randomness is injected, the same seed and inputs replay the same match

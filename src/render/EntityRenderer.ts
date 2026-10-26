@@ -74,7 +74,10 @@ export class EntityRenderer {
    @param tilt radians it leans by, about its center, positive clockwise
    @param perfectMark how brightly its perfect zone is marked, in [0, 1] (the tutorial); 0 for none
    @param recoil px it is knocked back toward its own goal by a hit
-   @param isCharged its Overdrive is charged: lightning crackles along it */
+   @param isCharged its Overdrive is charged: lightning crackles along it
+   @param out how far it is shorted out by the point it just lost, in [0, 1]: dimmed, flickering
+   unless `isSteady` (less motion)
+   @param isSteady dimmed without the flicker */
   public static renderPaddle(
     ctx: CanvasRenderingContext2D,
     paddle: Paddle,
@@ -84,11 +87,17 @@ export class EntityRenderer {
     perfectMark = 0,
     recoil = 0,
     isCharged = false,
+    out = 0,
+    isSteady = false,
   ): void {
     const { width, height } = paddle.spec;
     const topY = paddle.drawY - height / 2;
 
     ctx.save();
+    if (out > 0.01) {
+      const flicker = isSteady ? 0.5 : Math.random();
+      ctx.globalAlpha = 1 - out * (0.3 + 0.35 * flicker);
+    }
     if (recoil !== 0) ctx.translate(paddle.side === 0 ? -recoil : recoil, 0);
     if (tilt !== 0) {
       const centerX = paddle.x + width / 2;
@@ -99,9 +108,10 @@ export class EntityRenderer {
     // Pre-rendered neon; a hit fades the hot one in on top
     this.drawPaddleGlow(ctx, paddle, topY, PADDLE_GLOW.BASE);
     if (glow > 0.01) {
-      ctx.globalAlpha = glow;
+      const alpha = ctx.globalAlpha;
+      ctx.globalAlpha = alpha * glow;
       this.drawPaddleGlow(ctx, paddle, topY, PADDLE_GLOW.HOT);
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = alpha;
     }
 
     // Inner bright neon core, yellow-hot while Overdrive is charged

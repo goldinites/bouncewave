@@ -239,6 +239,12 @@ export class Renderer {
     this.addFlash(CLIMAX_FLASH);
   }
 
+  /** A point scored: the backdrop's lights flare up behind the court and settle. */
+  public flareBackdrop(): void {
+    if (!this.showsEffects) return;
+    this.mood.flare();
+  }
+
   /** Victory: lasers flare and sweep through hues, every background bursts in its own way. */
   public celebrate(): void {
     if (!this.showsEffects) return;

@@ -57,6 +57,8 @@ export interface TranslationSchema {
   harder: string;
   /** Over the court while a long rally is in overtime (match/overtime.ts). */
   overtime: string;
+  /** In the cinema bars while the point that won the match is shown again, slowed (app/MatchReplay). */
+  replay: string;
   resume: string;
   restart: string;
   menu: string;
@@ -163,6 +165,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     again: 'PLAY AGAIN',
     harder: 'TRY {level}',
     overtime: 'OVERTIME',
+    replay: 'REPLAY',
     resume: 'RESUME',
     restart: 'RESTART',
     menu: 'MAIN MENU',
@@ -347,6 +350,7 @@ export const TRANSLATIONS: Record<Language, TranslationSchema> = {
     again: 'ИГРАТЬ СНОВА',
     harder: 'СЛОЖНЕЕ: {level}',
     overtime: 'ОВЕРТАЙМ',
+    replay: 'ПОВТОР',
     resume: 'ПРОДОЛЖИТЬ',
     restart: 'ЗАНОВО',
     menu: 'В МЕНЮ',
