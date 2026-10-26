@@ -13,6 +13,8 @@ import { CHANNEL_SURF } from '@/shared/channelSurf';
 import { clamp } from '@/shared/math';
 import { isPickableScene, SceneId } from '@/shared/scenes';
 
+// The share of its dark veil a backdrop sheds on a full beat (6.5)
+const BEAT_BREATH = 0.45;
 // Dark tint over the background so the court reads clearly on top of it
 const OVERLAY_TINT_RGB = '10, 2, 32';
 
@@ -317,9 +319,11 @@ export class BackgroundRenderer {
     shake: number,
     isRotated: boolean,
     mood: BackgroundMood,
+    beat: number | null = null,
+    breathes = false,
   ): void {
     this.spectrum.update(analyser);
-    const pulse = this.spectrum.getPulse(shake);
+    const pulse = this.spectrum.getPulse(shake, beat);
 
     const dt = this.lastTime === null ? 0 : clamp(time - this.lastTime, 0, 0.1);
     this.lastTime = time;
@@ -352,7 +356,10 @@ export class BackgroundRenderer {
     background.render({ ...mood, ctx: target, spectrum: this.spectrum, pulse, time, isRotated });
     if (roll > 0) target.restore();
 
-    target.fillStyle = `rgba(${OVERLAY_TINT_RGB}, ${background.overlayTint})`;
+    // On every beat the dark veil over the backdrop lifts a little: the whole picture breathes with
+    // the music in its own colours, in play too, when its lights are dimmed (not for less motion)
+    const breath = breathes ? pulse * BEAT_BREATH : 0;
+    target.fillStyle = `rgba(${OVERLAY_TINT_RGB}, ${background.overlayTint * (1 - breath)})`;
     target.fillRect(0, 0, COURT.WIDTH, COURT.HEIGHT);
     if (surf) this.renderStatic(target, surf.noise);
     this.renderDissolve(target, dt);

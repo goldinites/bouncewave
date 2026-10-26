@@ -36,6 +36,10 @@ const SIDECHAIN = {
   RELEASE: 0.08, // s, time constant back up
   FULL_KICK: 0.75, // kick volume that ducks by the full depth
 } as const;
+// The picture beats with the kicks (6.5): the last KICKS_KEPT scheduled kicks are kept, and a beat
+// fades over BEAT_DECAY s after its kick sounds
+const KICKS_KEPT = 16;
+const BEAT_DECAY = 0.14; // s
 // Each song's own room (audio/music/rooms.ts): a new one fades in as the last one fades out
 const ROOM_FADE = 0.4; // s, time constant of the crossfade between rooms
 const ROOM_FADE_OUT = 5; // time constants after which a room fading out is silent
@@ -106,6 +110,8 @@ interface RoomNodes {
 }
 
 export class MusicGraph {
+  /** The kicks scheduled lately, in time order, with how hard each was played, in [0, 1]. */
+  private readonly kicks: { time: number; strength: number }[] = [];
   public readonly context: AudioContext;
   /** Effects outside the stems (risers): straight into the mix. */
   public readonly bus: GainNode;
@@ -362,6 +368,9 @@ export class MusicGraph {
    * Kicks come in time order, so each one's automation lands after the last one's.
    */
   public pump(time: number, kickVolume: number): void {
+    // Kept for the picture, which beats with the kicks as they sound (`beatAt`)
+    this.kicks.push({ time, strength: clamp(kickVolume / SIDECHAIN.FULL_KICK, 0, 1) });
+    if (this.kicks.length > KICKS_KEPT) this.kicks.shift();
     const strength = clamp(kickVolume / SIDECHAIN.FULL_KICK, 0, 1) * this.pumpDepth;
     if (strength === 0) return;
     const duck = (gain: AudioParam, depth: number) => {
@@ -374,6 +383,19 @@ export class MusicGraph {
     } catch {
       // Play on without the breathing rather than break audio
     }
+  }
+
+  /**
+   * How hard the beat is landing at audio time `now`, in [0, 1]: the last kick to have sounded, as
+   * hard as it was played, fading over BEAT_DECAY s. Kicks are scheduled ahead, so only those
+   * already sounding count.
+   */
+  public beatAt(now: number): number {
+    for (let i = this.kicks.length - 1; i >= 0; i--) {
+      const kick = this.kicks[i];
+      if (kick.time <= now) return kick.strength * Math.exp(-(now - kick.time) / BEAT_DECAY);
+    }
+    return 0;
   }
 
   /**

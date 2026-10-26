@@ -100,6 +100,7 @@ const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
     },
     particles: new ParticleSystem(),
     analyser: null,
+    beat: null,
     isRotated: false,
     replay: null,
   };

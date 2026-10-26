@@ -35,4 +35,13 @@ describe('ParticleSystem', () => {
     for (let i = 0; i < 50; i++) system.burst(0, 0, '#fff', 40);
     expect(system.particles.length).toBeLessThanOrEqual(800);
   });
+
+  it('lets a hit’s light on the backdrop fade over its time and go', () => {
+    const system = new ParticleSystem();
+    system.light(100, 200, 300, '#fff', 0.4);
+    system.update(0.2);
+    expect(system.lights[0].life).toBeCloseTo(0.5);
+    system.update(0.25);
+    expect(system.lights).toHaveLength(0);
+  });
 });

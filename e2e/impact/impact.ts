@@ -36,6 +36,8 @@ const FILM = { PRE: 3, POST: 13, COLUMNS: 4 } as const;
 const CLOSE_UP = { WIDTH: 300, HEIGHT: 190 } as const;
 const WHOLE_SCALE = 0.5;
 const LABEL = { HEIGHT: 18, FONT: '12px monospace' } as const;
+// The beat the backdrop breathes with, in place of the music's
+const STAND_BPM = 120;
 // The replay is filmed a frame in this many, as long as it runs
 const REPLAY_EVERY = 16;
 
@@ -273,6 +275,7 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
     },
     particles,
     analyser: null,
+    beat: 0,
     isRotated: false,
     replay: null,
   };
@@ -289,6 +292,8 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
       rally: flow.rally,
       conditions: flow.court,
     });
+    // No music here: a kick at STAND_BPM stands in for its beat
+    frame.beat = Math.exp(-(flow.time % (60 / STAND_BPM)) / 0.14);
     Object.assign(frame.hud, {
       overdriveCharges: flow.overdriveCharges,
       overdriveStreaks: flow.overdriveStreaks,

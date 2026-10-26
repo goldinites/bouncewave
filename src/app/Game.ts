@@ -946,6 +946,7 @@ export class Game {
       },
       particles: this.particles,
       analyser: this.audio.music.getAnalyser(),
+      beat: this.audio.music.getBeat(),
       isRotated: this.isPortraitView,
       replay: null,
     };

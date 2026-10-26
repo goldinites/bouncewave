@@ -56,6 +56,9 @@ const IMPACT = {
   SQUASH: { MIN: 0.3, MAX: 0.5, PERFECT: 0.65, POWER: 0.8 },
   FLARE: { MIN: 14, MAX: 22, PERFECT: 46, POWER: 50 },
   FLARE_FOR: 0.06, // s after the hit-stop
+  // The light a hit throws onto the backdrop (6.5): px across, gone in LIGHT_FOR s
+  LIGHT: { MIN: 160, MAX: 240, PERFECT: 320, POWER: 400 },
+  LIGHT_FOR: 0.35, // s
   // A perfect hit is told from a plain one at a glance: a star glint's rays reaching GLINT px
   // across the flare, the ball burning white-hot for WHITE_HOT s,
   // and a second, slower ring in the paddle's colour inside the white one
@@ -89,6 +92,8 @@ const WALL = {
   SPARKS: 10,
   SPARK_SPEED: 260,
   SPREAD: 1.6, // rad
+  LIGHT: 180, // px across at the top speed, thrown on the backdrop for LIGHT_FOR s
+  LIGHT_FOR: 0.25,
 } as const;
 
 /**
@@ -105,6 +110,8 @@ const GOAL = {
   SPREAD: 2.2, // rad, the cone the sparks spray back into the court
   WAVE_SPEED: 620,
   WAVE_WAKE: 22, // px
+  LIGHT: 460, // px across, thrown on the backdrop for LIGHT_FOR s
+  LIGHT_FOR: 0.6,
 } as const;
 
 // Particle bursts: how many and how fast
@@ -530,6 +537,7 @@ export class EffectsDirector {
     const glint = hit.isPerfect ? IMPACT.GLINT : 0;
     const flareFor = hold + IMPACT.FLARE_FOR;
     this.particles.flare(hit.x, hit.y, strength(IMPACT.FLARE), flareColor, flareFor, glint);
+    this.particles.light(hit.x, hit.y, strength(IMPACT.LIGHT), flareColor, hold + IMPACT.LIGHT_FOR);
 
     const { SPARKS, ARC } = IMPACT;
     const sparks = SPARKS.COUNT + Math.min(hit.rally, SPARKS.RALLY_CAP);
@@ -621,11 +629,12 @@ export class EffectsDirector {
       ? COURT.TOP_WALL - COURT_LINES.RAIL_THICKNESS / 2
       : COURT.HEIGHT - COURT.BOTTOM_WALL + COURT_LINES.RAIL_THICKNESS / 2;
     this.particles.ripple(x, railY, WALL.RIPPLE_MIN + (1 - WALL.RIPPLE_MIN) * force);
+    const railColor = mixHexColors(COLORS.CYAN, COLORS.PINK, x / COURT.WIDTH);
+    this.particles.light(x, railY, WALL.LIGHT * (0.4 + 0.6 * force), railColor, WALL.LIGHT_FOR);
     this.squash.onHit(this.ballAt(x, y), 'y', WALL.SQUASH * (0.5 + 0.5 * force));
     this.renderer.addKick(isTop ? -Math.PI / 2 : Math.PI / 2, WALL.KICK * force);
     if (force > WALL.SPARKS_FROM) {
-      const color = mixHexColors(COLORS.CYAN, COLORS.PINK, x / COURT.WIDTH);
-      this.particles.burst(x, railY, color, WALL.SPARKS, WALL.SPARK_SPEED, {
+      this.particles.burst(x, railY, railColor, WALL.SPARKS, WALL.SPARK_SPEED, {
         heading: isTop ? Math.PI / 2 : -Math.PI / 2,
         spread: WALL.SPREAD,
         isStreak: true,
@@ -688,6 +697,7 @@ export class EffectsDirector {
     const y = Math.min(Math.max(score.y, COURT.TOP_WALL), COURT.HEIGHT - COURT.BOTTOM_WALL);
 
     this.particles.ripple(goalX, y, 1, true, color);
+    this.particles.light(goalX, y, GOAL.LIGHT, color, GOAL.LIGHT_FOR);
     const spray = { heading: backIn, spread: GOAL.SPREAD, isStreak: true, size: [2, 4] } as const;
     this.particles.burst(burstX, y, color, GOAL.SPARKS, GOAL.SPARK_SPEED, spray);
     this.particles.burst(burstX, y, COLORS.WHITE, GOAL.WHITE_SPARKS, GOAL.SPARK_SPEED, spray);

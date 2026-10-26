@@ -51,6 +51,17 @@ export interface Flare {
   spikes: number;
 }
 
+/** Light a hit throws onto the backdrop behind the court, fading out. */
+export interface Light {
+  x: number;
+  y: number;
+  radius: number;
+  life: number;
+  /** Life lost per second. */
+  decay: number;
+  color: string;
+}
+
 /** Seconds a wall's wave runs along its rail. */
 export const RIPPLE_LIFE = 0.45;
 
@@ -78,4 +89,5 @@ export interface ParticleView {
   readonly rings: readonly ShockwaveRing[];
   readonly flares: readonly Flare[];
   readonly ripples: readonly Ripple[];
+  readonly lights: readonly Light[];
 }

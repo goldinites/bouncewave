@@ -29,6 +29,12 @@ const TIME_WARP_FADE = 14; // 1/s the slowed world's cast comes and goes at
 // A replay's cinema bars along the court's long edges (its short ones on a phone held upright, which
 // turns the court), px thick, and its label with a blinking dot (steady for less motion)
 const REPLAY_BARS = { SIZE: 26, ALPHA: 0.85, FONT: 15, BLINK: 3 } as const; // px, -, px, Hz
+// Light the game throws onto the backdrop (6.5): each ball's own glow, BALL px across and ALPHA
+// strong (more as it speeds up, a power shot's yellow), and the hits' bursts of light, LIGHT
+// strong at their height
+const COURT_LIGHT = { BALL: 110, BALL_ALPHA: 0.1, BALL_SPEED_ALPHA: 0.08, LIGHT: 0.22 } as const;
+// How hard a hit's kick thumps the backdrop, against a shake of the same px
+const KICK_THUMP = 1.5;
 // A turbo ball's heat: none at the serve's speed, full this much faster (px/s)
 const TURBO_HEAT = { FROM: 380, SPAN: 520 } as const;
 
@@ -229,10 +235,39 @@ function neonLayers(
           c,
           frame.analyser,
           frame.court.time,
-          state.shake,
+          // A hit's kick thumps the backdrop as a shake does
+          Math.max(state.shake, Math.hypot(state.kick.x, state.kick.y) * KICK_THUMP),
           frame.isRotated,
           state.mood,
+          frame.beat,
+          !isMotionReduced(),
         ),
+    },
+    {
+      // The light the game throws on the backdrop: the balls', and the hits'. Not in the dark,
+      // where it would show where the ball is
+      id: 'courtLight',
+      space: 'backdrop',
+      render: (c, { court, particles }) => {
+        if (court.modifiers.includes('darkness')) return;
+        const isBanded = court.modifiers.includes('invisibleBand');
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        if (court.serveTime <= 0) {
+          for (const ball of court.balls) {
+            if (isBanded && ModifierRenderer.isInBand(ball.drawX)) continue;
+            const heat = clamp((ball.speed - TURBO_HEAT.FROM) / TURBO_HEAT.SPAN, 0, 1);
+            const alpha = COURT_LIGHT.BALL_ALPHA + COURT_LIGHT.BALL_SPEED_ALPHA * heat;
+            const color = ball.isPowerShot ? COLORS.YELLOW : COLORS.WHITE;
+            drawLight(c, ball.drawX, ball.drawY, COURT_LIGHT.BALL, color, alpha);
+          }
+        }
+        for (const light of particles.lights) {
+          const alpha = COURT_LIGHT.LIGHT * light.life;
+          drawLight(c, light.x, light.y, light.radius, light.color, alpha);
+        }
+        c.restore();
+      },
     },
     { id: 'court', space: 'court', render: (c) => CourtRenderer.render(c) },
     {
@@ -524,4 +559,22 @@ function neonLayers(
       },
     },
   ];
+}
+
+/** A pool of `color` light `radius` px across at (x, y), `alpha` strong at its heart. */
+function drawLight(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  color: string,
+  alpha: number,
+): void {
+  if (alpha <= 0.005) return;
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, color);
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.globalAlpha = Math.min(1, alpha);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
 }

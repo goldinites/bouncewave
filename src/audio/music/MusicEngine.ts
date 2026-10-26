@@ -420,6 +420,11 @@ export class MusicEngine {
     return () => this.sectionListeners.delete(listener);
   }
 
+  /** How hard the music's beat is landing now, in [0, 1]; null before the music has a graph. */
+  public getBeat(): number | null {
+    return this.graph ? this.graph.beatAt(this.graph.context.currentTime) : null;
+  }
+
   /** The audio clock's time now; null before the music has a graph. */
   public get audioTime(): number | null {
     return this.graph?.context.currentTime ?? null;

@@ -112,6 +112,8 @@ export interface RenderFrame {
   /** The replay being shown instead of the match; null when it is the match. */
   replay: ReplayView | null;
   analyser: AnalyserNode | null;
+  /** How hard the music's beat is landing now, in [0, 1]; null without the music's beat to hand. */
+  beat: number | null;
   isRotated: boolean;
 }
 
