@@ -22,7 +22,8 @@
     "format:check": "prettier --check .",
     "icons": "pwa-assets-generator && pwa-assets-generator --config pwa-assets.favicon.config.ts && node scripts/splash.mjs",
     "render:impact": "node scripts/impact.mjs",
-    "video": "node scripts/video.mjs"
+    "video": "node scripts/video.mjs",
+    "size": "node scripts/size.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

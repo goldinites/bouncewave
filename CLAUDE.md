@@ -24,6 +24,7 @@ npm run dev           # http://localhost:3000/bouncewave/ (base path is /bouncew
 npm test              # vitest, happy-dom
 npx tsc --noEmit -p . # types (npm run build also builds)
 npm run build:portal  # the build for a web game portal: dist-portal/, relative paths, no service worker
+npm run size          # after a build: the first load and the whole build vs their budget (CI runs it too)
 npm run lint
 npm run format:check  # prettier, Markdown included; npm run format fixes
 npm run test:e2e      # Playwright smoke: desktop, phone portrait and landscape (CI runs it too)
@@ -36,7 +37,7 @@ npm run video -- <id>              # a video of e2e/video/videos.ts filmed into 
 ```
 
 All four checks (tests, types, lint, format), the smoke and the frame budget must pass before a
-commit; CI runs them and blocks the deploy otherwise. Run `test:perf` after anything that can make
+commit; CI runs them and the build size, and blocks the deploy otherwise. Run `test:perf` after anything that can make
 a frame heavier (a background, a layer, an effect, the simulation); raise a budget only for a
 reason, in the commit that needs it. Run `npm run sim` (a few minutes; `SIM_MATCHES=120` for finer numbers) after anything that
 changes the balance — a level, a skill, a challenge — and quote its tables. Run `test:visual` after anything that can change what a
