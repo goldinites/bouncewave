@@ -86,6 +86,8 @@ simulation's randomness is injected, the same seed and inputs replay the same ma
 | Question                             | Answer                                                                                                                                                                              |
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | What wins it, which mechanics are on | `MatchRules` (`rules.ts`): winning score by side, clock, rally goal, CPU ramp, Overdrive, balls                                                                                     |
+| Who has won it, and when it is over  | the `Referee` (`Referee.ts`): the score, the clock, the rally goal; it decides, `MatchFlow` plays the finale out                                                                    |
+| Which modifiers are in play now      | the `ModifierSchedule` (`modifiers/ModifierSchedule.ts`): the rules' own, a rotation's turn (Chaos)                                                                                 |
 | Who stands where                     | the paddles: a list, each with a `side` (`side.ts`: 0 left, 1 right)                                                                                                                |
 | What a paddle is like                | its `PaddleSpec` (`PaddleSpec.ts`): size, perfect zone, power, steer, speed                                                                                                         |
 | Who plays a paddle                   | the `Lineup`: a controller, an Overdrive flag and a paddle per paddle                                                                                                               |
@@ -93,7 +95,9 @@ simulation's randomness is injected, the same seed and inputs replay the same ma
 | What a paddle can do beyond the base | its participant's skills (`match/skills/`), played through hooks by the match's `SkillSet`                                                                                          |
 | How the AI plays                     | `AiController` (reading each ball's shot through the physics, aiming, perfect swings, nerves), `AiForm` (form by score) and `fatigue` (worn by a long rally, `rules.rallyPressure`) |
 
-Points belong to sides and are kept by the match (`flow.scores`). The first ball out wins the
+Points belong to sides and are kept by the match's referee (`flow.scores`). Whatever changes
+mid-match how the match is won or what is in play (a story fight's script) goes to the referee
+and the schedule, not into `MatchFlow`. The first ball out wins the
 point and ends it for every ball. The demo behind the menus is a match with its own lineup of two
 AIs and one ball.
 
