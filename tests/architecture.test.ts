@@ -10,34 +10,59 @@ const sourceFiles = (dir: string): string[] =>
     return /\.tsx?$/.test(path) ? [path] : [];
   });
 
-/** The top-level directories of src/ that `file` imports from, e.g. ['match', 'shared']. */
+/** The top-level directories of src/ that `file` imports from, e.g. ['match', 'shared'];
+ * dynamic imports (`import('@/debug/…')`) and side-effect imports count too. */
 const importedLayers = (file: string): string[] =>
-  [...readFileSync(file, 'utf8').matchAll(/from '@\/([^/']+)/g)].map((match) => match[1]);
+  [...readFileSync(file, 'utf8').matchAll(/(?:from |import\(\s*|import )'@\/([^/']+)/g)].map(
+    (match) => match[1],
+  );
 
 /** The files of `layer` that import a layer outside `allowed`, with what they import. */
-const violations = (layer: string, allowed: string[]) =>
+const violations = (layer: string, allowed: readonly string[]) =>
   sourceFiles(join('src', layer)).flatMap((file) =>
     importedLayers(file)
-      .filter((imported) => !allowed.includes(imported))
+      .filter((imported) => imported !== layer && !allowed.includes(imported))
       .map((imported) => `${file} imports @/${imported}`),
   );
 
+/**
+ * What each layer may import besides itself: the table in docs/ARCHITECTURE.md, "Layers and their
+ * dependencies". `app/` is the composition root and may import anything; `styles/` holds no code.
+ */
+const LAYERS: Record<string, readonly string[]> = {
+  shared: [],
+  match: ['shared'],
+  settings: ['match', 'i18n', 'shared'],
+  profile: ['settings', 'match', 'shared'],
+  i18n: ['match', 'shared'],
+  input: ['match', 'shared'],
+  audio: ['match', 'shared'],
+  // The renderer only reads what fx/ leaves it: fx/ moves particles and calls the renderer
+  render: ['match', 'shared'],
+  fx: ['match', 'render', 'audio', 'shared'],
+  ui: ['match', 'audio', 'settings', 'profile', 'i18n', 'shared'],
+  debug: ['match', 'audio', 'shared'],
+  easterEgg: ['audio', 'shared'],
+};
+const UNCHECKED = ['app', 'styles'];
+
 /** The layering in docs/ARCHITECTURE.md that keeps the game apart from its presentation. */
 describe('architecture', () => {
-  it('keeps the match free of pixels, sound and the DOM', () => {
-    expect(violations('match', ['match', 'shared'])).toEqual([]);
+  it.each(Object.entries(LAYERS))(
+    'keeps %s/ to the layers the table allows it',
+    (layer, allowed) => {
+      expect(violations(layer, allowed)).toEqual([]);
+    },
+  );
+
+  it('gives every directory of src/ a row in the table', () => {
+    const layers = readdirSync('src').filter((name) => statSync(join('src', name)).isDirectory());
+    expect(layers.filter((name) => !(name in LAYERS) && !UNCHECKED.includes(name))).toEqual([]);
   });
 
-  it('keeps the profile to the settings it saves and the match it listens to', () => {
-    expect(violations('profile', ['profile', 'settings', 'match', 'shared'])).toEqual([]);
-  });
-
-  it('keeps the canvas reading the match, never driving the effects that drive it', () => {
-    // fx/ moves particles and calls the renderer; the renderer only reads what fx/ leaves it
-    expect(violations('render', ['render', 'match', 'shared'])).toEqual([]);
-  });
-
-  it('keeps shared/ free of the rest of the project', () => {
-    expect(violations('shared', ['shared'])).toEqual([]);
+  it('sees a dynamic import as an import', () => {
+    // The developer tools reach the game only through Game's import() of them
+    const fromGame = violations('app', []).filter((line) => line.includes('Game.ts'));
+    expect(fromGame).toContainEqual(expect.stringMatching(/imports @\/debug$/));
   });
 });
