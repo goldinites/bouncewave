@@ -319,6 +319,8 @@ function neonLayers(
             mark,
             recoil,
             isCharged,
+            drama.paddleOut[i] ?? 0,
+            isMotionReduced(),
           );
           if (charge !== null && !state.finalSign) {
             EntityRenderer.renderOverdriveMeter(

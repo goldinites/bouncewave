@@ -211,8 +211,9 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
     }
     if (event.type === 'score') {
       isRallyOver = true;
-      const ball = flow.leadBall;
-      return { id: 'goal', title: 'Goal after the power shot', x: ball.x, y: ball.y };
+      // At the goal it went in: the ball itself is already back in the middle for the serve
+      const x = event.scoringPlayerIndex === 0 ? COURT.WIDTH : 0;
+      return { id: 'goal', title: 'Goal after the power shot', x, y: event.y };
     }
     return null;
   };
@@ -253,6 +254,7 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
       paddleRecoil: effects.paddleRecoil,
       ballSquash: effects.ballSquash,
       ballWhiteHot: effects.ballWhiteHot,
+      paddleOut: effects.paddleOut,
     },
     particles,
     analyser: null,
@@ -285,6 +287,7 @@ async function renderImpact({ scene }: { scene: string }): Promise<ImpactResult>
       paddleRecoil: effects.paddleRecoil,
       ballSquash: effects.ballSquash,
       ballWhiteHot: effects.ballWhiteHot,
+      paddleOut: effects.paddleOut,
     });
   };
 

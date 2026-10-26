@@ -83,6 +83,8 @@ export interface DramaView {
   paddleTilt: readonly number[];
   /** How far each paddle is knocked back toward its own goal by its last hit, px. */
   paddleRecoil: readonly number[];
+  /** How far each paddle is shorted out by the point it just lost, in [0, 1]. */
+  paddleOut: readonly number[];
   /** How white-hot each ball burns off a perfect hit, in [0, 1], by its place in `court.balls`. */
   ballWhiteHot: readonly number[];
   /** Each ball's squash off its last hit or bounce, by its place in `court.balls`; null for round. */

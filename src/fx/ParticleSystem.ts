@@ -105,10 +105,13 @@ export class ParticleSystem {
     this.flares.push({ x, y, radius, life: 1, decay: 1 / duration, color, spikes });
   }
 
-  /** A wall struck at `x`, its rail's middle at `y`, `strength` in [0, 1]. */
-  public ripple(x: number, y: number, strength: number): void {
+  /**
+   * A wall struck at `x`, its rail's middle at `y`, `strength` in [0, 1]; or, `isUpright`, a goal
+   * line at `x` struck at `y`, in `color`.
+   */
+  public ripple(x: number, y: number, strength: number, isUpright = false, color?: string): void {
     if (this.ripples.length >= MAX_RIPPLES) this.ripples.shift();
-    this.ripples.push({ x, y, age: 0, strength });
+    this.ripples.push({ x, y, age: 0, strength, isUpright, color });
   }
 
   public update(dt: number): void {

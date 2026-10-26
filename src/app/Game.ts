@@ -919,6 +919,7 @@ export class Game {
         paddleRecoil: this.effects.paddleRecoil,
         ballSquash: this.effects.ballSquash,
         ballWhiteHot: this.effects.ballWhiteHot,
+        paddleOut: this.effects.paddleOut,
         meterSpent: this.effects.meterSpent,
       },
       particles: this.particles,

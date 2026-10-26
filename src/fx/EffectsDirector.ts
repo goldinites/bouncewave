@@ -29,7 +29,7 @@ import { SceneId } from '@/shared/scenes';
 // Screen shake per event (px): a jitter, where a hit kicks the court one way (IMPACT)
 const SHAKE = {
   BUMP: 2, // off a post or a brick
-  SCORE: 14,
+  SCORE: 5,
   FIREWORK: 4,
   FINALE_WIN: 12,
   FINALE_LOSS: 18,
@@ -38,7 +38,7 @@ const SHAKE = {
 // Screen flash per event; a hit flashes where it struck instead (IMPACT)
 const FLASH = {
   START: 1.0,
-  SCORE: 0.8,
+  SCORE: 0.3,
   FIREWORK: 0.25,
   FINALE_WIN: 0.9,
 } as const;
@@ -91,11 +91,25 @@ const WALL = {
   SPREAD: 1.6, // rad
 } as const;
 
+/**
+ * A point scored (6.4): the goal line it went over lights and a wave runs up and down it, sparks
+ * spray back into the court and a wave rolls out over it, all in the scorer's colour; the court is
+ * kicked toward that goal, the backdrop flares, and the beaten paddle shorts out.
+ */
+const GOAL = {
+  KICK: 6, // px
+  LINE_INSET: 5, // px inside the court edge the goal line lights, so all of it is on screen
+  SPARKS: 40,
+  WHITE_SPARKS: 20,
+  SPARK_SPEED: 520,
+  SPREAD: 2.2, // rad, the cone the sparks spray back into the court
+  WAVE_SPEED: 620,
+  WAVE_WAKE: 22, // px
+} as const;
+
 // Particle bursts: how many and how fast
 const BURST = {
-  SCORE_COUNT: 46,
-  SCORE_SPEED: 460,
-  SCORE_INSET: 6, // score bursts go off just inside the goal line
+  SCORE_INSET: 6, // a goal's sparks go off just inside the goal line
   FIREWORK_COUNT: 40,
   FIREWORK_SPEED: 340,
   POWER_COUNT: 36, // per color, twice over
@@ -284,6 +298,11 @@ export class EffectsDirector {
   /** How far each paddle is knocked back toward its own goal by its last hit, px. */
   public get paddleRecoil(): readonly number[] {
     return this.paddleFx.recoil;
+  }
+
+  /** How far each paddle is shorted out by the point it just lost, in [0, 1]. */
+  public get paddleOut(): readonly number[] {
+    return this.paddleFx.out;
   }
 
   /** How white-hot each ball burns off a perfect hit, in [0, 1], by its place in the list. */
@@ -649,11 +668,25 @@ export class EffectsDirector {
     const burstX =
       score.scoringPlayerIndex === 0 ? COURT.WIDTH - BURST.SCORE_INSET : BURST.SCORE_INSET;
     const color = this.colorOf(score.scoringPlayerIndex);
+    // The ball went right, into the right goal, for the left side; back into the court is the other way
+    const intoGoal = score.scoringPlayerIndex === 0 ? 0 : Math.PI;
+    const backIn = intoGoal + Math.PI;
+    const goalX = score.scoringPlayerIndex === 0 ? COURT.WIDTH - GOAL.LINE_INSET : GOAL.LINE_INSET;
+    const y = Math.min(Math.max(score.y, COURT.TOP_WALL), COURT.HEIGHT - COURT.BOTTOM_WALL);
 
-    this.particles.burst(burstX, score.y, color, BURST.SCORE_COUNT, BURST.SCORE_SPEED);
-    this.particles.shockwave(burstX, score.y, color, SHOCKWAVE_SPEED.SCORE);
+    this.particles.ripple(goalX, y, 1, true, color);
+    const spray = { heading: backIn, spread: GOAL.SPREAD, isStreak: true, size: [2, 4] } as const;
+    this.particles.burst(burstX, y, color, GOAL.SPARKS, GOAL.SPARK_SPEED, spray);
+    this.particles.burst(burstX, y, COLORS.WHITE, GOAL.WHITE_SPARKS, GOAL.SPARK_SPEED, spray);
+    this.particles.shockwave(burstX, y, color, GOAL.WAVE_SPEED, { wake: GOAL.WAVE_WAKE });
+    this.renderer.addKick(intoGoal, GOAL.KICK);
     this.renderer.addShake(SHAKE.SCORE);
     this.renderer.addFlash(FLASH.SCORE);
+    this.renderer.flareBackdrop();
+    // The side beaten for it shorts out, every paddle it has
+    this.paddles.forEach((paddle, i) => {
+      if (paddle.side !== score.scoringPlayerIndex) this.paddleFx.onConcede(i);
+    });
 
     if (!score.isDemo) {
       // Heard from the goal it went in, the scorer's opponent's. In a match of two every point

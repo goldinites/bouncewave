@@ -168,6 +168,7 @@ function bench(scene: string) {
         paddleRecoil: [0, 0],
         ballSquash: [],
         ballWhiteHot: [],
+        paddleOut: [0, 0],
         meterSpent: [0, 0],
       },
       particles,

@@ -95,6 +95,7 @@ const baseFrame = ({ court, hud, drama }: FrameOverrides = {}): RenderFrame => {
       paddleRecoil: [0, 0],
       ballSquash: [],
       ballWhiteHot: [],
+      paddleOut: [0, 0],
       ...drama,
     },
     particles: new ParticleSystem(),
