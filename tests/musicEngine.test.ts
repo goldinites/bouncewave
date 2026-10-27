@@ -114,6 +114,51 @@ describe('MusicEngine', () => {
     });
   });
 
+  describe('as a match starts', () => {
+    it('brings the match’s song in when the picture does, off the bar grid, on its intro', () => {
+      const { engine, play } = track(setup());
+      engine.enterPlace('menu');
+      play(4); // the menus' song
+      engine.setState({ ...INITIAL_MUSIC_STATE, gameState: 'play', serveTime: 1.5 });
+      engine.enterPlace(null);
+      engine.enterScene('neonCity');
+      engine.openMatch(0.68);
+      // Shown at once; still the menus' song until the picture is in
+      expect(engine.getSongTitle()).toBe('Kabukicho Rain');
+      expect(engine.getPosition().songId).toBe('standby');
+      // Its chord rings the chime: the city's F minor, not the menus' F lydian
+      expect(engine.getUpcomingHarmony()?.chord).toEqual([0, 3, 7]);
+
+      play(0.8);
+      expect(engine.getPosition()).toMatchObject({ songId: 'kabukicho-rain', part: 'intro' });
+    });
+
+    it('keeps the intro until the ball is in play, then goes into the groove', () => {
+      const { engine, play } = track(setup());
+      engine.enterPlace('menu');
+      play(4);
+      engine.setState({ ...INITIAL_MUSIC_STATE, gameState: 'play', serveTime: 1.5 });
+      engine.enterPlace(null);
+      engine.enterScene('neonCity');
+      engine.openMatch(0);
+      play(8); // the serve holds on: the intro plays on past its phrase boundary
+      expect(engine.getPosition().part).toBe('intro');
+
+      engine.setState({ ...INITIAL_MUSIC_STATE, gameState: 'play', serveTime: 0 });
+      play(4); // at most a phrase, two bars at 140
+      expect(engine.getPosition().part).toBe('verse');
+    });
+
+    it('changes nothing when the song plays on into the match', () => {
+      const { engine, play } = track(setup());
+      play(2);
+      const { songId } = engine.getPosition();
+      engine.openMatch(0.68);
+      play(1);
+      expect(engine.getPosition().songId).toBe(songId);
+    });
+  });
+
   it("opens with the backdrop's own song when it has one", () => {
     const engine = new MusicEngine();
     engine.enterScene('lasers');

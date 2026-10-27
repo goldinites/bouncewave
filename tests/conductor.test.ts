@@ -345,6 +345,32 @@ describe('Conductor', () => {
     });
   });
 
+  describe('cutting to a song at a moment of the game’s', () => {
+    it('plays on until the cut, then opens the new song on its intro, from its first bar', () => {
+      const conductor = new Conductor(SONGS, 0, 'groove');
+      play(conductor, 'groove', 2);
+      conductor.requestNewSong();
+      expect(conductor.awaitCut()).toBe(true);
+      expect(conductor.upcomingSong.title).toBe('Two');
+      // Bar lines come and go: no change until the cut
+      expect(play(conductor, 'groove', 3)).toEqual(['verse', 'verse', 'verse']);
+      expect(conductor.song.title).toBe('One');
+
+      conductor.cut();
+      expect(conductor.song.title).toBe('Two');
+      expect(conductor.section.name).toBe('intro');
+      expect(conductor.bar).toBe(0);
+      // And leaves the intro soon once play wants the groove
+      expect(play(conductor, 'groove', 3)).toEqual(['intro', 'intro', 'verse']);
+    });
+
+    it('waits for nothing when no song change is asked for', () => {
+      const conductor = new Conductor(SONGS, 0, 'groove');
+      expect(conductor.awaitCut()).toBe(false);
+      expect(conductor.cutChord).toBeNull();
+    });
+  });
+
   describe('walking the form', () => {
     const formSong = (form: string[]) => compileSong({ ...def('Form'), form });
 

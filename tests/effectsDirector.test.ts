@@ -8,6 +8,7 @@ import { HIT_STOP } from '@/match/config';
 import { Paddle } from '@/match/Paddle';
 import type { Renderer } from '@/render/Renderer';
 import { COLORS } from '@/shared/palette';
+import { CHANNEL_SURF_TUNED_IN } from '@/shared/channelSurf';
 import { SceneId } from '@/shared/scenes';
 
 const makeRenderer = () => ({
@@ -69,6 +70,8 @@ const makeAudio = () => ({
     cutFinale: vi.fn(),
     recover: vi.fn(),
     enterScene: vi.fn(),
+    openMatch: vi.fn(),
+    getUpcomingHarmony: vi.fn(() => ({ root: 41, chord: [0, 3, 7] })),
     resetClimax: vi.fn(),
   },
 });
@@ -156,7 +159,12 @@ describe('EffectsDirector.handle', () => {
 
     expect(renderer.switchChannel).toHaveBeenCalledOnce();
     expect(audio.music.enterScene).toHaveBeenCalledExactlyOnceWith('fuji');
-    expect(audio.sfx.playChannelSurf).toHaveBeenCalledOnce();
+    // The match's song comes in with the picture, the chime ringing the chord it opens on
+    expect(audio.music.openMatch).toHaveBeenCalledExactlyOnceWith(CHANNEL_SURF_TUNED_IN);
+    expect(audio.sfx.playChannelSurf).toHaveBeenCalledExactlyOnceWith({
+      root: 41,
+      chord: [0, 3, 7],
+    });
     // Again, straight after a finale: its sting gives way
     expect(audio.music.cutFinale).toHaveBeenCalledOnce();
   });
@@ -170,6 +178,8 @@ describe('EffectsDirector.handle', () => {
 
     expect(renderer.switchChannel).toHaveBeenCalledOnce();
     expect(audio.sfx.playChannelSurf).not.toHaveBeenCalled();
+    // With no picture to wait for, the song comes in at once
+    expect(audio.music.openMatch).toHaveBeenCalledExactlyOnceWith(0);
   });
 
   it('plays a match that asks for its own backdrop on it (a challenge), else on the player’s', () => {
@@ -192,6 +202,7 @@ describe('EffectsDirector.handle', () => {
 
     expect(renderer.switchChannel).not.toHaveBeenCalled();
     expect(audio.music.enterScene).not.toHaveBeenCalled();
+    expect(audio.music.openMatch).not.toHaveBeenCalled();
     expect(audio.sfx.playChannelSurf).not.toHaveBeenCalled();
     expect(renderer.addFlash).toHaveBeenCalled();
   });

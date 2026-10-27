@@ -74,6 +74,11 @@ export class Conductor {
   private isChangeUrgent = false;
   /** Where a skip goes; it overrides every plan until the bar line takes the music there. */
   private skipTarget: Position | null = null;
+  /**
+   * Where a song change waiting for its moment off the bar grid goes (`awaitCut`): the song
+   * playing plays on until `cut` takes the music there.
+   */
+  private cutTarget: Position | null = null;
   /** The backdrop on screen; songs that belong to another one never play. */
   private scene: SceneId | null = null;
   /** The place the game is in, with music of its own; null where the backdrop's plays. */
@@ -108,7 +113,37 @@ export class Conductor {
 
   /** The song the music is heading into: the next bar's, once a change is decided. */
   public get upcomingSong(): Song {
-    return this.songs[(this.planned ?? this.position).songIndex];
+    return this.songs[(this.cutTarget ?? this.planned ?? this.position).songIndex];
+  }
+
+  /** The chord the song waiting for its cut opens on; null if none is waiting. */
+  public get cutChord(): Chord | null {
+    const target = this.cutTarget;
+    return target ? chordAt(this.songs[target.songIndex].sections[target.sectionIndex], 0) : null;
+  }
+
+  /**
+   * The song change asked for waits for a moment of the game's (the channel surf's picture) rather
+   * than a bar line, and opens on the new song's intro: its first calm part, which gives way to
+   * the groove soon once play wants it. The song playing plays on meanwhile.
+   * @returns whether a change was waiting
+   */
+  public awaitCut(): boolean {
+    if (this.pin || !(this.isSongChangeRequested || this.skipTarget)) return false;
+    this.cutTarget = this.skipTarget ?? this.entry(this.pickOtherSong(), 'calm');
+    this.skipTarget = null;
+    this.planned = null;
+    return true;
+  }
+
+  /** The song change waiting comes in now, off the bar grid, from its first bar. */
+  public cut(): void {
+    const target = this.cutTarget;
+    if (!target) return;
+    this.cutTarget = null;
+    this.planned = target;
+    this.plannedFor = 'calm';
+    this.advance();
   }
 
   /** Bar of the current section, from 0. */
@@ -244,6 +279,11 @@ export class Conductor {
 
   /** Decides where the next bar goes, given the tier the game wants right now. */
   public plan(wanted: Tier): void {
+    // The song playing plays on, its form going round, until the cut
+    if (this.cutTarget) {
+      this.planned = this.continuation();
+      return;
+    }
     if (this.skipTarget) {
       this.planned = this.skipTarget;
       return;

@@ -135,7 +135,10 @@ offers it, nor does random deal it. The session sets the scene its matches are p
 which then plays it first; its `place` (`menu`, `tutorial`) makes it the music of a place in the
 game instead, played there whatever the backdrop (`Game` calls `music.enterPlace` as the screens
 change), and nowhere else. Its `form` is the order its sections play in; the `Conductor` walks it,
-jumping to a peak (a build and its chorus) only on a hot rally and coming back after. A
+jumping to a peak (a build and its chorus) only on a hot rally and coming back after, a step
+at a time (a chorus into a groove part, a calm part only after a groove one). A match's song
+cuts in off the bar grid with the channel surf's picture (`music.openMatch`, from
+`EffectsDirector` on `matchStart`) and holds its intro until the ball is in play. A
 section's `layers` say from what intensity each part comes in; its `feel` (half- or double-time),
 `silence` (a break) and `drop` shape its texture. A part varies each time it comes back
 (`audio/music/variation.ts`): ghost notes, phrase fills, bass octaves, a shifted arpeggio, the
