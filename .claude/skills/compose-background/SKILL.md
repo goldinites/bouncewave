@@ -6,8 +6,8 @@ description: Make one BounceWave backdrop by eye with the user — an idea and p
 # Make a background
 
 The method, the requirements and the table of backgrounds are in `docs/BACKGROUNDS.md`; which
-backgrounds there are and will be is in `docs/ROADMAP.md`, "Фоны быстрого матча", and the step
-(8.8, 8.8b…). Read them first, and look at the current backgrounds' pictures in
+backgrounds there are and will be is in `docs/ROADMAP.md`, "Фоны быстрого матча", and stage 7б
+and its step. Read them first, and look at the current backgrounds' pictures in
 `e2e/__screenshots__/` so the new one stays apart from them. The user chooses by eye: every step
 ends with something to look at and a choice, never with a background coded blind. **No code of
 the background before the user has picked a sketch.**
