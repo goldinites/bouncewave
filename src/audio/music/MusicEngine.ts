@@ -46,6 +46,8 @@ const START_DELAY = 0.1; // s before the first step
 const PLAN_STEP = 8;
 const ECHO_STEPS = 3; // lead echo time, in steps
 const TONE_FILTER: Record<GameState, number> = { paused: 450, menu: 2800, play: 16000 };
+// dB the song playing sinks by under the channel surf's static, before the match's song cuts in
+const CUT_DIP = 9;
 
 /** A finale's sting being played: its sections, and where in them the music is. */
 interface StingPlay {
@@ -110,6 +112,14 @@ export class MusicEngine {
   private sting: StingPlay | null = null;
   /** Whether the game has let the sting go (`recover`): the music goes on once it has played. */
   private isStingReleased = false;
+
+  /**
+   * Audio-clock time the song change waiting comes in, off the bar grid (`openMatch`); null if
+   * none is waiting.
+   */
+  private cutAt: number | null = null;
+  /** Whether a match's song is on its intro, until the ball is in play. */
+  private isOpening = false;
 
   private currentStep = 0;
   /** The step the bars are counted from: a sting starts its own, and the music after it too. */
@@ -276,6 +286,27 @@ export class MusicEngine {
   }
 
   /**
+   * A match starts: the song it brings in (`enterScene`, `enterPlace`) comes in `delay` s from
+   * now, off the bar grid — as the channel surf's picture appears — while the song playing sinks
+   * under the static, still muffled. It opens on its intro, which gives way to the song's groove
+   * at a phrase boundary once the ball is in play (docs/AUDIO.md, "Музыка в матче"). Nothing
+   * changes if the song plays on (a match played again).
+   */
+  public openMatch(delay: number): void {
+    if (!this.graph || this.currentStep === 0 || !this.conductor.awaitCut()) return;
+    this.cutAt = this.graph.context.currentTime + Math.max(0, delay);
+    this.isOpening = true;
+    this.prepare(this.conductor.upcomingSong);
+  }
+
+  /** The chord the match's song opens on while it waits to cut in; else the one sounding now. */
+  public getUpcomingHarmony(): Harmony | null {
+    const chord = this.conductor.cutChord;
+    if (!chord) return this.getHarmony();
+    return { root: placeAbove(chord.root, BASS_LOW), chord: chord.triad };
+  }
+
+  /**
    * The listening stand holds the music to a song and, if `part` names one of its sections, to
    * that section, or with `WHOLE_FORM` to its whole form in order from step `fromStep` of it, from
    * the next bar line; the music then sounds as in a match even behind the
@@ -439,6 +470,8 @@ export class MusicEngine {
 
   /** The kind of section the game calls for now. */
   private wantedTier(): Tier {
+    // A match's song keeps to its intro until the ball is in play
+    if (this.isOpening) return 'calm';
     return getWantedTier(
       this.gameState,
       this.intensity,
@@ -466,8 +499,20 @@ export class MusicEngine {
     if (this.sting) return this.playStingStep(time, graph, arrangement, this.sting);
 
     const { conductor } = this;
+    const isCutWaiting = this.cutAt !== null && time < this.cutAt;
+    const isCut = this.cutAt !== null && !isCutWaiting;
+    if (isCut) {
+      // The picture is in: the match's song from its first bar, the bars counted from here
+      this.cutAt = null;
+      conductor.cut();
+      this.barStart = this.currentStep;
+    }
+    // The ball is in play: the intro gives way to the groove at its next phrase boundary
+    if (this.isOpening && !isCutWaiting && gameState === 'play' && this.state.serveTime <= 0) {
+      this.isOpening = false;
+    }
     const stepInBar = (this.currentStep - this.barStart) % STEPS_PER_BAR;
-    if (stepInBar === 0 && this.currentStep > 0) conductor.advance();
+    if (stepInBar === 0 && this.currentStep > 0 && !isCut) conductor.advance();
     if (stepInBar === PLAN_STEP) {
       conductor.plan(this.wantedTier());
       // The song the next bar plays gets its extra leads rendered now, if it needs any
@@ -500,8 +545,9 @@ export class MusicEngine {
       }
     }
 
-    graph.setToneFilter(TONE_FILTER[gameState], time);
-    graph.setSongLevel(song.level ?? 0, time);
+    // Waiting for the cut, the song playing stays as muffled as the menus' and sinks
+    graph.setToneFilter(TONE_FILTER[isCutWaiting ? 'menu' : gameState], time);
+    graph.setSongLevel((song.level ?? 0) - (isCutWaiting ? CUT_DIP : 0), time);
     graph.setPartLevel(partLevel(section), time);
     graph.setPartMix(section.mix ?? {}, time);
     graph.setSongSpace(song.room ?? DEFAULT_ROOM, song.pump ?? 1, time);

@@ -210,10 +210,7 @@ export class AudioEngine {
       // which every song plays. A song's own instruments are rendered by the music for the song
       // playing and the one coming up (audio/music/palette.ts), and freed after
       const rate = ac.sampleRate;
-      const actions = this.samples
-        .render(rate, ACTION_SAMPLES)
-        .then(() => this.samples.renderPitched(rate, ACTION_PITCHED));
-      this.samples.holdUntil(actions);
+      void this.samples.renderFirst(rate, ACTION_SAMPLES, ACTION_PITCHED);
       void this.samples.render(rate, TRANSITION_SAMPLES);
     }
     this.music.init(ac, this.mixer.music, this.samples);

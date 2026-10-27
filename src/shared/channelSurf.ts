@@ -14,4 +14,10 @@ export const CHANNEL_SURF = {
    * match's setup flicks between backdrops: quick enough to flick through them.
    */
   TUNE: 0.25,
+  /** Seconds after the last channel comes on that the chime says the picture is in. */
+  CHIME_AFTER: 0.12,
 } as const;
+
+/** Seconds from the surf's start to its chime: the match's song comes in with it. */
+export const CHANNEL_SURF_TUNED_IN =
+  (CHANNEL_SURF.CHANNELS - 1) * CHANNEL_SURF.STEP + CHANNEL_SURF.CHIME_AFTER;

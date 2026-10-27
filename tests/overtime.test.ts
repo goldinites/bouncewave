@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { Ball } from '@/match/Ball';
 import { COURT, PADDLE } from '@/match/config';
-import { DifficultyLevel } from '@/match/difficulty';
+import { DIFFICULTY_CONFIGS, DifficultyLevel } from '@/match/difficulty';
 import { MatchEvent, MatchFlow } from '@/match/MatchFlow';
 import { quickMatchRules } from '@/match/modes';
+import { OVERDRIVE } from '@/match/Overdrive';
 import { OVERTIME, isOvertimeAt } from '@/match/overtime';
 import { Paddle } from '@/match/Paddle';
 import { STANDARD_PADDLE } from '@/match/PaddleSpec';
@@ -114,5 +115,37 @@ describe('overtime', () => {
     hit(OVERTIME.FROM + 10, true);
     expect(flow.isOvertime).toBe(false);
     expect(powerShots(1)).toEqual([false]);
+  });
+});
+
+describe('the power shot', () => {
+  /** The speed an Overdrive shot leaves a ball flying at `speed` with, at Normal. */
+  const shotAt = (speed: number) => {
+    const { flow, ball, hit, powerShots } = setup(DifficultyLevel.NORMAL);
+    flow.startMatch(quickMatchRules(5));
+    ball.vx = speed * 0.8;
+    ball.vy = speed * 0.6;
+    ball.speed = speed;
+    // The player's three perfect hits charge the meter; the next one fires it
+    hit(7, true);
+    expect(powerShots(1)).toEqual([true]);
+    // The flight keeps its direction
+    expect(ball.vy / ball.vx).toBeCloseTo(0.75);
+    return ball.speed;
+  };
+  const top = DIFFICULTY_CONFIGS[DifficultyLevel.NORMAL].maxSpeed;
+
+  it('leaves a slow ball at 70% of the top speed for good, not only for a moment', () => {
+    expect(shotAt(380)).toBeCloseTo(top * OVERDRIVE.SPEED_FLOOR);
+  });
+
+  it('makes a ball half as fast again in between, with no step', () => {
+    expect(shotAt(560)).toBeCloseTo(840);
+  });
+
+  it('takes a ball from two thirds of the top up to the top, and none past it', () => {
+    expect(shotAt(top * 0.7)).toBeCloseTo(top);
+    // A turbo court's ball, already past the top, isn't slowed
+    expect(shotAt(top * 1.1)).toBeCloseTo(top * 1.1);
   });
 });

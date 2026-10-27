@@ -41,7 +41,9 @@ const isPeak = (tier: Tier) => tier === 'rise' || tier === 'high';
  * peaks (a build and the chorus it builds to) are earned: the walk passes them by until a rally
  * gets hot, when the music jumps to the next peak at a phrase boundary, through its build, and
  * afterwards comes back to the form where it left; then the peaks rest for a while. In the
- * menus only the calm parts play. When the form comes round again, after a while, the music
+ * menus only the calm parts play; in play the music changes a step at a time — a chorus comes
+ * down into a groove part, a calm part follows only a groove one, and the song's intro and outro
+ * are left to the menus. When the form comes round again, after a while, the music
  * moves on to another song (picked at random, never the one that just played). How full each
  * part sounds is the arrangement's: its layers come and go with the heat.
  *
@@ -72,6 +74,11 @@ export class Conductor {
   private isChangeUrgent = false;
   /** Where a skip goes; it overrides every plan until the bar line takes the music there. */
   private skipTarget: Position | null = null;
+  /**
+   * Where a song change waiting for its moment off the bar grid goes (`awaitCut`): the song
+   * playing plays on until `cut` takes the music there.
+   */
+  private cutTarget: Position | null = null;
   /** The backdrop on screen; songs that belong to another one never play. */
   private scene: SceneId | null = null;
   /** The place the game is in, with music of its own; null where the backdrop's plays. */
@@ -106,7 +113,37 @@ export class Conductor {
 
   /** The song the music is heading into: the next bar's, once a change is decided. */
   public get upcomingSong(): Song {
-    return this.songs[(this.planned ?? this.position).songIndex];
+    return this.songs[(this.cutTarget ?? this.planned ?? this.position).songIndex];
+  }
+
+  /** The chord the song waiting for its cut opens on; null if none is waiting. */
+  public get cutChord(): Chord | null {
+    const target = this.cutTarget;
+    return target ? chordAt(this.songs[target.songIndex].sections[target.sectionIndex], 0) : null;
+  }
+
+  /**
+   * The song change asked for waits for a moment of the game's (the channel surf's picture) rather
+   * than a bar line, and opens on the new song's intro: its first calm part, which gives way to
+   * the groove soon once play wants it. The song playing plays on meanwhile.
+   * @returns whether a change was waiting
+   */
+  public awaitCut(): boolean {
+    if (this.pin || !(this.isSongChangeRequested || this.skipTarget)) return false;
+    this.cutTarget = this.skipTarget ?? this.entry(this.pickOtherSong(), 'calm');
+    this.skipTarget = null;
+    this.planned = null;
+    return true;
+  }
+
+  /** The song change waiting comes in now, off the bar grid, from its first bar. */
+  public cut(): void {
+    const target = this.cutTarget;
+    if (!target) return;
+    this.cutTarget = null;
+    this.planned = target;
+    this.plannedFor = 'calm';
+    this.advance();
   }
 
   /** Bar of the current section, from 0. */
@@ -242,6 +279,11 @@ export class Conductor {
 
   /** Decides where the next bar goes, given the tier the game wants right now. */
   public plan(wanted: Tier): void {
+    // The song playing plays on, its form going round, until the cut
+    if (this.cutTarget) {
+      this.planned = this.continuation();
+      return;
+    }
     if (this.skipTarget) {
       this.planned = this.skipTarget;
       return;
@@ -275,6 +317,8 @@ export class Conductor {
       wanted !== 'high' &&
       !this.pin &&
       section.tier !== 'rise' &&
+      // A chorus comes down into its own song's groove first; only a place's music cuts it short
+      (section.tier !== 'high' || this.isChangeUrgent) &&
       ((this.isSongChangeRequested && canChangeSong) ||
         (willWrap && this.barsInSong + 1 >= SONG_BARS))
     ) {
@@ -290,10 +334,7 @@ export class Conductor {
       if (isEnd && wanted === 'high' && nextIsPeak) {
         this.planned = this.at(position.songIndex, next);
       } else if (isEnd || (wanted !== 'high' && canLeave)) {
-        this.planned = this.at(
-          position.songIndex,
-          this.returnStep ?? this.nextWalkStep(position.step, wanted),
-        );
+        this.planned = this.at(position.songIndex, this.afterPeak(wanted));
         this.returnStep = null;
       } else {
         this.planned = this.continuation();
@@ -385,22 +426,52 @@ export class Conductor {
   }
 
   /**
-   * The next step of the form after `from` the walk plays: in the menus a calm part, in play any
-   * but a peak (peaks are jumped to). Past the end the form comes round again.
+   * Where the form goes on after a peak: back where it left for it, if that is a groove part,
+   * otherwise on to the next one — a chorus never falls straight into a calm part.
    */
-  private nextWalkStep(from: number, wanted: Tier, songIndex = this.position.songIndex): number {
+  private afterPeak(wanted: Tier): number {
+    const back = this.returnStep;
+    const { form, sections } = this.song;
+    if (back !== null && wanted !== 'calm' && sections[form[back]]?.tier === 'groove') return back;
+    return this.nextWalkStep(
+      back === null ? this.position.step : back - 1,
+      wanted,
+      undefined,
+      'high',
+    );
+  }
+
+  /**
+   * The next step of the form after `from` the walk plays: in the menus a calm part; in play a
+   * groove part, or a calm one in the middle of the form right after a groove part — the music
+   * comes down a step at a time, and the song's edges (its intro, its outro) are the menus'
+   * (docs/AUDIO.md, "Музыка в матче"). Peaks are jumped to. Past the end the form comes round
+   * again.
+   * @param fromTier the tier the music comes from: `from`'s, unless it is coming off a peak
+   */
+  private nextWalkStep(
+    from: number,
+    wanted: Tier,
+    songIndex = this.position.songIndex,
+    fromTier: Tier | null = null,
+  ): number {
     const song = this.songs[songIndex];
     const { form } = song;
     const tierAt = (step: number) => song.sections[form[step]].tier;
-    const allowed: ((tier: Tier) => boolean)[] = [
-      wanted === 'calm' ? (tier) => tier === 'calm' : (tier) => !isPeak(tier),
+    const comesFrom = fromTier ?? (from >= 0 ? tierAt(from) : null);
+    const isEdge = (step: number) => step === 0 || step === form.length - 1;
+    const allowed: ((tier: Tier, step: number) => boolean)[] = [
+      wanted === 'calm'
+        ? (tier) => tier === 'calm'
+        : (tier, step) =>
+            tier === 'groove' || (tier === 'calm' && comesFrom === 'groove' && !isEdge(step)),
       (tier) => !isPeak(tier),
       () => true,
     ];
     for (const allows of allowed) {
       for (let k = 1; k <= form.length; k++) {
         const step = (from + k + form.length) % form.length;
-        if (allows(tierAt(step))) return step;
+        if (allows(tierAt(step), step)) return step;
       }
     }
     return 0;

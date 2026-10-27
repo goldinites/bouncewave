@@ -59,6 +59,14 @@ export class Ball {
     return 1 + this.boostAmount * (this.boostTimeLeft / this.boostDuration);
   }
 
+  /** Sets the base speed, the direction of flight kept. */
+  public setSpeed(speed: number): void {
+    const scale = speed / this.speed;
+    this.vx *= scale;
+    this.vy *= scale;
+    this.speed = speed;
+  }
+
   public applyBoost(amount: number, duration: number): void {
     this.boostAmount = amount;
     this.boostDuration = duration;

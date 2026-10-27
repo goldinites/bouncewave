@@ -5,7 +5,7 @@ import { HIT_BODIES, HIT_CLICK } from '@/audio/samples/actions';
 import { SampleBank } from '@/audio/samples/SampleBank';
 import { getClimbingRallyNote, getRallyNote, getWallNote, MELODY_LOW } from '@/audio/sfx/harmony';
 import { LoopTarget, LoopVoice } from '@/audio/sfx/LoopVoice';
-import { CHANNEL_SURF } from '@/shared/channelSurf';
+import { CHANNEL_SURF, CHANNEL_SURF_TUNED_IN } from '@/shared/channelSurf';
 import { clamp, midiToFrequency } from '@/shared/math';
 
 const SFX_FREQUENCIES = {
@@ -29,11 +29,11 @@ const HEARTBEAT_KNOCK = { HZ: 330, LENGTH: 0.06, SHARE: 1 } as const;
 // The channel surf's last channel starts this far flat and glides up onto its note
 // The channel surf (playChannelSurf): a relay's soft thud, Hz, falling from FROM semitones up;
 // static under a low-pass, clearing to CLEAR Hz as the last channel settles; the chime, MIDI over
-// the chord's root, AFTER s into the last channel
+// the chord's root, as the picture is in (CHANNEL_SURF_TUNED_IN)
 const CHANNEL_SOUND = {
   RELAY: { HZ: 110, FROM: 12, VOLUME: 0.09, LENGTH: 0.05 },
   STATIC: { VOLUME: 0.035, CUTOFF: 3000, CLEAR: 400 },
-  CHIME: { OFFSET: 48, VOLUME: 0.05, FIFTH: 0.6, LENGTH: 0.6, AFTER: 0.12 },
+  CHIME: { OFFSET: 48, VOLUME: 0.05, FIFTH: 0.6, LENGTH: 0.6 },
 } as const;
 
 // Shared echo used by the victory sting
@@ -1507,10 +1507,11 @@ export class SoundEffects {
     });
   }
 
-  public playChannelSurf(): void {
+  /** @param harmony what the chime rings: the chord the match's song opens on, as it comes in */
+  public playChannelSurf(harmony: Harmony | null = this.harmonyGetter()): void {
     const ac = this.getUnmutedContext();
     if (!ac) return;
-    const { root, chord } = this.harmonyGetter() ?? { root: 33, chord: [0, 3, 7] };
+    const { root, chord } = harmony ?? { root: 33, chord: [0, 3, 7] };
     const { RELAY, STATIC, CHIME } = CHANNEL_SOUND;
 
     for (let i = 0; i < CHANNEL_SURF.CHANNELS; i++) {
@@ -1538,7 +1539,7 @@ export class SoundEffects {
       });
     }
 
-    const tuned = (CHANNEL_SURF.CHANNELS - 1) * CHANNEL_SURF.STEP + CHIME.AFTER;
+    const tuned = CHANNEL_SURF_TUNED_IN;
     const fifth = chord.find((interval) => interval === 7) ?? chord[chord.length - 1];
     for (const [interval, share] of [
       [0, 1],

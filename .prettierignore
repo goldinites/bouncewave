@@ -6,3 +6,4 @@ package-lock.json
 .claude
 test-results
 playwright-report
+docs/backgrounds

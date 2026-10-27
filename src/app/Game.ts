@@ -839,8 +839,8 @@ export class Game {
     // In a match, the match's level (a challenge sets its own); behind the menus, the chosen one
     const difficulty = this.flow.isDemo ? this.settings.current.difficulty : this.flow.difficulty;
     return {
-      // Muffled while the winning point is replayed, as behind the pause
-      gameState: this.replay.isShowing ? 'paused' : this.flow.gameState,
+      // The replay of the winning point plays on at full brightness: only the pause is muffled
+      gameState: this.flow.gameState,
       serveTime: this.flow.serveTime,
       // The music builds with the fastest ball on court
       ballSpeed: Math.max(...this.flow.balls.map((b) => b.speed)),

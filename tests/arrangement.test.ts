@@ -284,6 +284,22 @@ describe('Arrangement', () => {
       expect(drums.mock.calls.filter((call) => call[1] === 'crash')).toHaveLength(1);
     });
 
+    it("lets overtime's alarm die away over half a bar once the point is played", () => {
+      const { graph, arps, playBar } = setup();
+      playBar({ isOvertime: true });
+      const before = arps.mock.calls.length;
+      playBar({ isOvertime: false });
+      const alarm = arps.mock.calls.slice(before).filter((call) => call[5] === graph.bus);
+      // On the eighths of the first half bar, each quieter than the one before
+      expect(alarm.map((call) => call[2] / step)).toEqual([0, 2, 4, 6]);
+      const volumes = alarm.map((call) => call[4] / ((call[2] / step) % 4 === 2 ? 0.65 : 1));
+      volumes.reduce((previous, volume) => (expect(volume).toBeLessThan(previous), volume));
+      // And not again in the next bar
+      const after = arps.mock.calls.length;
+      playBar({ isOvertime: false });
+      expect(arps.mock.calls.slice(after).filter((call) => call[5] === graph.bus)).toEqual([]);
+    });
+
     it("keeps overtime's alarm through the deciding point", () => {
       const { graph, arps, playBar } = setup();
       playBar({ isOvertime: true, dramaLevel: 0.6 });

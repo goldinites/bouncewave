@@ -118,7 +118,8 @@ never stop the match.
 
 Each of these works without editing the code that is already there, beyond one registration line.
 
-**A background.** A class implementing `Background` (`render/backgrounds/Background.ts`), added to
+**A background.** Made with the user from sketches first (`docs/BACKGROUNDS.md`, which also holds
+its performance rules). A class implementing `Background` (`render/backgrounds/Background.ts`), added to
 `createBackgrounds()` (`render/BackgroundRenderer.ts`), its id added to `SCENES`
 (`shared/scenes.ts`) and its name in both languages (`backgrounds` in `i18n/translations.ts`);
 the quick match's setup offers it from then on. Draw for both orientations (`isRotated`); read
@@ -135,7 +136,10 @@ offers it, nor does random deal it. The session sets the scene its matches are p
 which then plays it first; its `place` (`menu`, `tutorial`) makes it the music of a place in the
 game instead, played there whatever the backdrop (`Game` calls `music.enterPlace` as the screens
 change), and nowhere else. Its `form` is the order its sections play in; the `Conductor` walks it,
-jumping to a peak (a build and its chorus) only on a hot rally and coming back after. A
+jumping to a peak (a build and its chorus) only on a hot rally and coming back after, a step
+at a time (a chorus into a groove part, a calm part only after a groove one). A match's song
+cuts in off the bar grid with the channel surf's picture (`music.openMatch`, from
+`EffectsDirector` on `matchStart`) and holds its intro until the ball is in play. A
 section's `layers` say from what intensity each part comes in; its `feel` (half- or double-time),
 `silence` (a break) and `drop` shape its texture. A part varies each time it comes back
 (`audio/music/variation.ts`): ghost notes, phrase fills, bass octaves, a shifted arpeggio, the
@@ -155,7 +159,7 @@ sound plays on `sfx` (`menu` for menus), and a strong one dips the music (`Mixer
 variant into the `SampleBank`, one sound at a time, giving the main thread back between them. The
 action sounds and the transitions are rendered as the audio starts and kept all session; a song's
 own instruments (`soundsFor`, `audio/music/palette.ts`) are rendered for the song playing and the
-one coming up, after the action sounds (`SampleBank.holdUntil`), and released once neither needs
+one coming up, after the action sounds (`SampleBank.renderFirst`), and released once neither needs
 them (`unneeded`). Its live synth in `Instruments` plays until it is rendered. A drum is a role in a kit (`audio/music/kits.ts`): a song picks its `kit`,
 the arrangement asks for roles. A pitched instrument is rendered at a few roots and played from
 the nearest at the right speed, through a live envelope and filter; a sustained one loops, its
@@ -163,7 +167,8 @@ oscillators tuned to whole cycles of the loop (`tune`) so the join is seamless. 
 (`audio/samples/transitions.ts`) marks the song's form: a swell is placed to end on the downbeat it
 leads into (`Instruments.transition`), and the arrangement picks it from the section and the tier
 the music came from (`Conductor.cameFrom`). Hear each on the sound stand; `e2e/samples.spec.ts`
-renders them all in Chromium against the budgets.
+renders them all in Chromium against the budgets, and plays every song in the game itself to
+check it is heard on its rendered sounds, not its live synths.
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
 (`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/menus/choices.ts`), or in

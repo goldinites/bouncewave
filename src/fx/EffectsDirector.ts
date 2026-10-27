@@ -22,6 +22,7 @@ import { REFLEX } from '@/match/skills/Reflex';
 import { finalScoreText } from '@/render/FinalScoreRenderer';
 import { brickColor } from '@/render/ModifierRenderer';
 import { Renderer } from '@/render/Renderer';
+import { CHANNEL_SURF_TUNED_IN } from '@/shared/channelSurf';
 import { EventBus } from '@/shared/EventBus';
 import { COLORS } from '@/shared/palette';
 import { mixHexColors } from '@/shared/math';
@@ -449,8 +450,13 @@ export class EffectsDirector {
         // the backdrop (and to the song) it was being played on. The old set is heard only when
         // it is seen: staying on the same backdrop, or cutting over with reduced motion, is silent
         if (!this.isRestart()) {
-          this.audio.music.enterScene(this.renderer.switchChannel(true, this.matchScene()));
-          if (this.renderer.isSurfing) this.audio.sfx.playChannelSurf();
+          const { music } = this.audio;
+          music.enterScene(this.renderer.switchChannel(true, this.matchScene()));
+          // The match's song comes in as the picture does, the cut hidden in the static; the
+          // chime rings the chord it opens on
+          const isSurfing = this.renderer.isSurfing;
+          music.openMatch(isSurfing ? CHANNEL_SURF_TUNED_IN : 0);
+          if (isSurfing) this.audio.sfx.playChannelSurf(music.getUpcomingHarmony());
         }
         this.renderer.addFlash(FLASH.START);
         this.paddleFx.reset();

@@ -15,7 +15,9 @@ screens, an installable offline PWA. Played at https://goldinites.github.io/boun
   instead of appending, and keep the docs free of contradictions.
 - Skills for recurring jobs: `/roadmap-step` (carry out the next step of the plan), `/release`
   (ship a version to GitHub Pages), `/compose-track` (write a soundtrack track by ear with the
-  user, as `docs/AUDIO.md` "Как делаем трек" describes).
+  user, as `docs/AUDIO.md` "Как делаем трек" describes), `/compose-background` (make a backdrop by
+  eye with the user: sketches in an Artifact to choose from before any code, as
+  `docs/BACKGROUNDS.md` describes).
 
 ## Commands
 
@@ -104,6 +106,9 @@ table in `docs/ARCHITECTURE.md`):
   grouped in `UPPER_SNAKE` objects with units in comments.
 - `@/` alias for imports; `private readonly` where possible; no default exports.
 - Tests live in `tests/*.test.ts`; canvas and audio fakes are in `tests/helpers/`.
+- Tests depend on neither their order (`npx vitest run --sequence.shuffle`) nor randomness
+  (seeded where there is any); a timing check in the browser judges by the best of a few takes,
+  as a CI runner's timers come late on their own now and then.
 
 ## Git
 
