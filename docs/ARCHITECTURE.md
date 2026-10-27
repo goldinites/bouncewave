@@ -118,7 +118,8 @@ never stop the match.
 
 Each of these works without editing the code that is already there, beyond one registration line.
 
-**A background.** A class implementing `Background` (`render/backgrounds/Background.ts`), added to
+**A background.** Made with the user from sketches first (`docs/BACKGROUNDS.md`, which also holds
+its performance rules). A class implementing `Background` (`render/backgrounds/Background.ts`), added to
 `createBackgrounds()` (`render/BackgroundRenderer.ts`), its id added to `SCENES`
 (`shared/scenes.ts`) and its name in both languages (`backgrounds` in `i18n/translations.ts`);
 the quick match's setup offers it from then on. Draw for both orientations (`isRotated`); read

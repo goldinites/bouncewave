@@ -15,7 +15,9 @@ screens, an installable offline PWA. Played at https://goldinites.github.io/boun
   instead of appending, and keep the docs free of contradictions.
 - Skills for recurring jobs: `/roadmap-step` (carry out the next step of the plan), `/release`
   (ship a version to GitHub Pages), `/compose-track` (write a soundtrack track by ear with the
-  user, as `docs/AUDIO.md` "Как делаем трек" describes).
+  user, as `docs/AUDIO.md` "Как делаем трек" describes), `/compose-background` (make a backdrop by
+  eye with the user: sketches in an Artifact to choose from before any code, as
+  `docs/BACKGROUNDS.md` describes).
 
 ## Commands
 
