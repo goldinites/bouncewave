@@ -165,6 +165,8 @@ const OVERTIME = {
   CUTOFF: 4200, // Hz
   CRASH: 0.16,
   KICK: 0.9,
+  // Steps the alarm dies away over once the point is played, rather than stopping dead
+  RELEASE_STEPS: 8,
 } as const;
 // How hot each tier is, to tell the music going up from coming down
 const TIER_HEAT: Record<Tier, number> = { calm: 0, groove: 1, rise: 2, high: 3 };
@@ -247,6 +249,8 @@ export class Arrangement {
   private readonly muted: ReadonlySet<MusicLayer>;
   /** Whether the last step was in overtime, to strike its entry once. */
   private wasOvertime = false;
+  /** Steps since overtime ended, while its alarm dies away; null once it is gone. */
+  private overtimeRelease: number | null = null;
 
   constructor(
     instruments: Instruments,
@@ -656,8 +660,15 @@ export class Arrangement {
   private playOvertime(time: number, chord: Chord, context: StepContext): void {
     const isOvertime = context.isOvertime === true;
     const isEntry = isOvertime && !this.wasOvertime;
+    // Once the point is played the alarm fades out over half a bar rather than stopping dead
+    if (isOvertime) this.overtimeRelease = null;
+    else if (this.wasOvertime) this.overtimeRelease = 0;
+    else if (this.overtimeRelease !== null) this.overtimeRelease++;
     this.wasOvertime = isOvertime;
-    if (!isOvertime || !this.has('fx')) return;
+    const release = this.overtimeRelease;
+    const fade = release === null ? 1 : 1 - release / OVERTIME.RELEASE_STEPS;
+    if (fade <= 0) this.overtimeRelease = null;
+    if ((!isOvertime && release === null) || fade <= 0 || !this.has('fx')) return;
 
     if (isEntry) {
       this.drum('crash', time, OVERTIME.CRASH);
@@ -672,7 +683,7 @@ export class Arrangement {
       isOffbeat ? root + 12 : root,
       time,
       stepDuration * 0.9,
-      OVERTIME.VOLUME * (isOffbeat ? OVERTIME.OFFBEAT : 1),
+      OVERTIME.VOLUME * (isOffbeat ? OVERTIME.OFFBEAT : 1) * fade,
       this.graph.bus,
       OVERTIME.CUTOFF,
     );
