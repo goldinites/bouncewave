@@ -144,7 +144,11 @@ async function inTurns<T, R>(items: readonly T[], start: (item: T) => Promise<R>
   const started: Promise<R>[] = [];
   for (const item of items) {
     await yieldToMain();
-    started.push(start(item));
+    const job = start(item);
+    // One failing while the rest are still being started is reported by Promise.all below, not
+    // as an unhandled rejection meanwhile
+    job.catch(() => {});
+    started.push(job);
   }
   return Promise.all(started);
 }
@@ -201,11 +205,19 @@ export class SampleBank {
   private gate: Promise<unknown> = Promise.resolve();
 
   /**
-   * Renders asked for from now on start once `first` is done (the action sounds: the first hit
-   * comes within seconds, a song's instruments have their live synths meanwhile).
+   * Renders the sounds that must come first (the action sounds: the first hit comes within
+   * seconds, a song's instruments have their live synths meanwhile); renders asked for from now
+   * on start once they are done. Both kinds are asked for here, before the gate closes: one asked
+   * for after it, chained on the other, waited for itself, and nothing was ever rendered again.
    */
-  public holdUntil(first: Promise<unknown>): void {
+  public renderFirst(
+    rate: number,
+    sounds: Record<string, SampleRecipe>,
+    pitched: Record<string, PitchedRecipe>,
+  ): Promise<void> {
+    const first = Promise.all([this.render(rate, sounds), this.renderPitched(rate, pitched)]);
     this.gate = first.catch(() => {});
+    return first.then(() => {});
   }
 
   /** Renders every recipe not rendered yet; resolves when they all are. */

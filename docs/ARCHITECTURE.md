@@ -155,7 +155,7 @@ sound plays on `sfx` (`menu` for menus), and a strong one dips the music (`Mixer
 variant into the `SampleBank`, one sound at a time, giving the main thread back between them. The
 action sounds and the transitions are rendered as the audio starts and kept all session; a song's
 own instruments (`soundsFor`, `audio/music/palette.ts`) are rendered for the song playing and the
-one coming up, after the action sounds (`SampleBank.holdUntil`), and released once neither needs
+one coming up, after the action sounds (`SampleBank.renderFirst`), and released once neither needs
 them (`unneeded`). Its live synth in `Instruments` plays until it is rendered. A drum is a role in a kit (`audio/music/kits.ts`): a song picks its `kit`,
 the arrangement asks for roles. A pitched instrument is rendered at a few roots and played from
 the nearest at the right speed, through a live envelope and filter; a sustained one loops, its
@@ -163,7 +163,8 @@ oscillators tuned to whole cycles of the loop (`tune`) so the join is seamless. 
 (`audio/samples/transitions.ts`) marks the song's form: a swell is placed to end on the downbeat it
 leads into (`Instruments.transition`), and the arrangement picks it from the section and the tier
 the music came from (`Conductor.cameFrom`). Hear each on the sound stand; `e2e/samples.spec.ts`
-renders them all in Chromium against the budgets.
+renders them all in Chromium against the budgets, and plays every song in the game itself to
+check it is heard on its rendered sounds, not its live synths.
 
 **A setting.** A field in `UserSettings` and its entry in `SETTINGS`
 (`settings/UserSettings.ts`), an entry in `SETTINGS_MENU` (`ui/menus/choices.ts`), or in

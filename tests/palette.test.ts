@@ -7,7 +7,9 @@ import { LAZY_SOUND_IDS, soundsFor, unneeded } from '@/audio/music/palette';
 import { PAD_CHOP } from '@/audio/music/patterns';
 import { compileSong, SectionDef, SongDef, STEPS_PER_BAR } from '@/audio/music/score';
 import { SONGS } from '@/audio/music/songs';
+import { finaleSting } from '@/audio/music/sting';
 import { ACTION_PITCHED, ACTION_SAMPLES } from '@/audio/samples/actions';
+import { SampleBank } from '@/audio/samples/SampleBank';
 import { TRANSITION_SAMPLES } from '@/audio/samples/transitions';
 import { DifficultyLevel } from '@/match/difficulty';
 import { fakeAudioContext } from './helpers/fakeAudioContext';
@@ -101,6 +103,66 @@ describe('the palette a song needs rendered', () => {
     expect(core.pitched).toHaveProperty('supersawLow');
     expect(core.pitched).toHaveProperty('supersaw');
   });
+});
+
+describe('every song', () => {
+  // A sound a song asks for that isn't rendered ahead of it plays on its live synth all along:
+  // every part is played here at a calm and a full heat, with its drop and its turns, and the
+  // finales' stings too, and every sound asked of the bank must be one the song renders
+  it.each(SONGS.map((song) => [song.title, song] as const))(
+    '%s asks only for the sounds rendered for it',
+    (_title, played) => {
+      const asked = new Set<string>();
+      const bank = new SampleBank();
+      bank.pick = (id: string) => (asked.add(id), null);
+      bank.pickNote = (id: string) => (asked.add(id), null);
+      const { ctx } = fakeAudioContext();
+      const graph = new MusicGraph(ctx);
+      const arrangement = new Arrangement(new Instruments(graph, bank), graph);
+      const step = 60 / played.bpm / 4;
+      const parts = [
+        ...played.sections,
+        ...finaleSting(played, 'win'),
+        ...finaleSting(played, 'loss'),
+      ];
+      let time = 0;
+      for (const [i, section] of parts.entries()) {
+        for (const climaxLevel of [0, 1]) {
+          if (climaxLevel) arrangement.playDrop(time, section.chords[0], step, played.transitions);
+          for (let s = 0; s < section.bars * STEPS_PER_BAR; s++) {
+            const bar = Math.floor(s / STEPS_PER_BAR);
+            arrangement.playStep({
+              time,
+              stepDuration: step,
+              song: played,
+              section,
+              bar,
+              stepInBar: s % STEPS_PER_BAR,
+              isLastBar: bar === section.bars - 1,
+              nextBarChord: section.chords[0],
+              previousTier: i % 2 ? 'calm' : 'high',
+              pass: i % 3,
+              intensity: climaxLevel ? 1 : 0.2,
+              climaxLevel,
+              isOvertime: climaxLevel === 1,
+              difficulty: DifficultyLevel.HARD,
+            });
+            time += step;
+          }
+        }
+      }
+      const { pitched, oneShots } = soundsFor(played);
+      const rendered = new Set([...Object.keys(pitched), ...Object.keys(oneShots)]);
+      const missing = [...asked].filter((id) => LAZY_SOUND_IDS.includes(id) && !rendered.has(id));
+      expect(missing).toEqual([]);
+      // The rest it asks for are rendered at the start and kept: the transitions
+      for (const id of [...asked].filter((id) => !LAZY_SOUND_IDS.includes(id))) {
+        expect(id in TRANSITION_SAMPLES || id in ACTION_SAMPLES || id in ACTION_PITCHED, id).toBe(
+          true,
+        );
+      }
+    },
+  );
 });
 
 describe('the songs’ sounds freed', () => {

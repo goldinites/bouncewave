@@ -436,3 +436,84 @@ test("renders each song's instruments within budget, the page still drawing", as
     ].join('; '),
   });
 });
+
+// A song is on its rendered sounds once it has played this long without asking for one that
+// isn't (a cold page renders the action sounds first, then the song: ~0.4 s here, more on a
+// busy CI runner). Renders that never finish keep it asking until the deadline
+const SONG_QUIET_S = 2;
+const SONG_DEADLINE_S = 20; // from the song's first bar
+
+/** What the game's music asked for and didn't get, by song: the sound and seconds into the song. */
+interface Probe {
+  missed: Record<string, { id: string; at: number }[]>;
+  startedAt: Record<string, number>;
+}
+
+// The checks above render into banks of their own; this one goes the game's way — the audio
+// unlocked by a press, the action sounds first, then the song's own — and catches what only the
+// game does: its first renders waiting on themselves left every song on its live synths (1.7.1)
+test('plays every song on its rendered sounds in the game itself', async ({ page }) => {
+  test.setTimeout(180_000);
+  const { SONGS } = await import('../src/audio/music/songs');
+  for (const { id } of SONGS.filter((song) => !song.sketch)) {
+    await page.goto(`./?song=${id}&part=whole-form`);
+    await page.evaluate(async () => {
+      const source = (path: string) => `/bouncewave/src/audio/${path}`;
+      const { SampleBank } = (await import(
+        /* @vite-ignore */ source('samples/SampleBank.ts')
+      )) as typeof import('../src/audio/samples/SampleBank');
+      const { Conductor } = (await import(
+        /* @vite-ignore */ source('music/Conductor.ts')
+      )) as typeof import('../src/audio/music/Conductor');
+      // Every sound the music asks for and doesn't get, by the song playing; patched on the
+      // prototype, so the game's own bank and conductor report too
+      const probe: Probe = { missed: {}, startedAt: {} };
+      (window as unknown as { probe: Probe }).probe = probe;
+      let playing = '';
+      const advance = Conductor.prototype.advance;
+      Conductor.prototype.advance = function (this: InstanceType<typeof Conductor>) {
+        advance.call(this);
+        playing = this.song.id;
+        probe.startedAt[playing] ??= performance.now();
+      };
+      for (const name of ['pick', 'pickNote'] as const) {
+        const pick = SampleBank.prototype[name] as (id: string, ...rest: unknown[]) => unknown;
+        (SampleBank.prototype[name] as unknown) = function (
+          this: InstanceType<typeof SampleBank>,
+          id: string,
+          ...rest: unknown[]
+        ) {
+          const result = pick.call(this, id, ...rest);
+          const started = probe.startedAt[playing];
+          if (result === null && started !== undefined) {
+            (probe.missed[playing] ??= []).push({ id, at: (performance.now() - started) / 1000 });
+          }
+          return result;
+        };
+      }
+    });
+    // The first press unlocks the audio, as a player's would
+    await page.mouse.click(5, 5);
+    await page.waitForFunction(
+      (song) => (window as unknown as { probe: Probe }).probe.startedAt[song] !== undefined,
+      id,
+    );
+    // Polled for when the song last asked in vain; the misses listed if it never stops
+    const check = () =>
+      page.evaluate((song) => {
+        const { missed, startedAt } = (window as unknown as { probe: Probe }).probe;
+        const now = (performance.now() - startedAt[song]) / 1000;
+        const misses = missed[song] ?? [];
+        return { now, last: misses.at(-1)?.at ?? 0, ids: [...new Set(misses.map((m) => m.id))] };
+      }, id);
+    let state = await check();
+    while (state.now - state.last < SONG_QUIET_S && state.now < SONG_DEADLINE_S) {
+      await page.waitForTimeout(250);
+      state = await check();
+    }
+    expect(
+      state.now - state.last,
+      `${id} still on live synths: ${state.ids.join(', ')}`,
+    ).toBeGreaterThanOrEqual(SONG_QUIET_S);
+  }
+});
