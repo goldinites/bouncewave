@@ -25,6 +25,10 @@ the background before the user has picked a sketch.**
 - One Artifact page (load `artifact-design` per the Artifact tool), 3–4 variants side by side,
   each drawn on a canvas at 800×500 with a 500×800 portrait thumbnail. Make them really differ:
   composition, hero, palette — not shades of one picture.
+- Draw them detailed from the first sketch, near the game's quality, never blocks of flat
+  rectangles: textures, light and its pools, reflections, small things of the place on three
+  planes (`docs/BACKGROUNDS.md`, "Детально и качественно"). Paint the still layers once into
+  offscreen canvases, as the game will, so detail costs nothing per frame.
 - Every variant animated and switchable: the court on top (paddles, a ball in flight, the net,
   the score) to judge readability; menu / play / climax states; a beat pulse; a card-sized
   preview as a portal would show it. Respect `prefers-reduced-motion` on the page itself.
