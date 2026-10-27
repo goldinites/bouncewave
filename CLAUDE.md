@@ -104,6 +104,9 @@ table in `docs/ARCHITECTURE.md`):
   grouped in `UPPER_SNAKE` objects with units in comments.
 - `@/` alias for imports; `private readonly` where possible; no default exports.
 - Tests live in `tests/*.test.ts`; canvas and audio fakes are in `tests/helpers/`.
+- Tests depend on neither their order (`npx vitest run --sequence.shuffle`) nor randomness
+  (seeded where there is any); a timing check in the browser judges by the best of a few takes,
+  as a CI runner's timers come late on their own now and then.
 
 ## Git
 
