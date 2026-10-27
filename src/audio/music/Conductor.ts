@@ -41,7 +41,9 @@ const isPeak = (tier: Tier) => tier === 'rise' || tier === 'high';
  * peaks (a build and the chorus it builds to) are earned: the walk passes them by until a rally
  * gets hot, when the music jumps to the next peak at a phrase boundary, through its build, and
  * afterwards comes back to the form where it left; then the peaks rest for a while. In the
- * menus only the calm parts play. When the form comes round again, after a while, the music
+ * menus only the calm parts play; in play the music changes a step at a time — a chorus comes
+ * down into a groove part, a calm part follows only a groove one, and the song's intro and outro
+ * are left to the menus. When the form comes round again, after a while, the music
  * moves on to another song (picked at random, never the one that just played). How full each
  * part sounds is the arrangement's: its layers come and go with the heat.
  *
@@ -275,6 +277,8 @@ export class Conductor {
       wanted !== 'high' &&
       !this.pin &&
       section.tier !== 'rise' &&
+      // A chorus comes down into its own song's groove first; only a place's music cuts it short
+      (section.tier !== 'high' || this.isChangeUrgent) &&
       ((this.isSongChangeRequested && canChangeSong) ||
         (willWrap && this.barsInSong + 1 >= SONG_BARS))
     ) {
@@ -290,10 +294,7 @@ export class Conductor {
       if (isEnd && wanted === 'high' && nextIsPeak) {
         this.planned = this.at(position.songIndex, next);
       } else if (isEnd || (wanted !== 'high' && canLeave)) {
-        this.planned = this.at(
-          position.songIndex,
-          this.returnStep ?? this.nextWalkStep(position.step, wanted),
-        );
+        this.planned = this.at(position.songIndex, this.afterPeak(wanted));
         this.returnStep = null;
       } else {
         this.planned = this.continuation();
@@ -385,22 +386,52 @@ export class Conductor {
   }
 
   /**
-   * The next step of the form after `from` the walk plays: in the menus a calm part, in play any
-   * but a peak (peaks are jumped to). Past the end the form comes round again.
+   * Where the form goes on after a peak: back where it left for it, if that is a groove part,
+   * otherwise on to the next one — a chorus never falls straight into a calm part.
    */
-  private nextWalkStep(from: number, wanted: Tier, songIndex = this.position.songIndex): number {
+  private afterPeak(wanted: Tier): number {
+    const back = this.returnStep;
+    const { form, sections } = this.song;
+    if (back !== null && wanted !== 'calm' && sections[form[back]]?.tier === 'groove') return back;
+    return this.nextWalkStep(
+      back === null ? this.position.step : back - 1,
+      wanted,
+      undefined,
+      'high',
+    );
+  }
+
+  /**
+   * The next step of the form after `from` the walk plays: in the menus a calm part; in play a
+   * groove part, or a calm one in the middle of the form right after a groove part — the music
+   * comes down a step at a time, and the song's edges (its intro, its outro) are the menus'
+   * (docs/AUDIO.md, "Музыка в матче"). Peaks are jumped to. Past the end the form comes round
+   * again.
+   * @param fromTier the tier the music comes from: `from`'s, unless it is coming off a peak
+   */
+  private nextWalkStep(
+    from: number,
+    wanted: Tier,
+    songIndex = this.position.songIndex,
+    fromTier: Tier | null = null,
+  ): number {
     const song = this.songs[songIndex];
     const { form } = song;
     const tierAt = (step: number) => song.sections[form[step]].tier;
-    const allowed: ((tier: Tier) => boolean)[] = [
-      wanted === 'calm' ? (tier) => tier === 'calm' : (tier) => !isPeak(tier),
+    const comesFrom = fromTier ?? (from >= 0 ? tierAt(from) : null);
+    const isEdge = (step: number) => step === 0 || step === form.length - 1;
+    const allowed: ((tier: Tier, step: number) => boolean)[] = [
+      wanted === 'calm'
+        ? (tier) => tier === 'calm'
+        : (tier, step) =>
+            tier === 'groove' || (tier === 'calm' && comesFrom === 'groove' && !isEdge(step)),
       (tier) => !isPeak(tier),
       () => true,
     ];
     for (const allows of allowed) {
       for (let k = 1; k <= form.length; k++) {
         const step = (from + k + form.length) % form.length;
-        if (allows(tierAt(step))) return step;
+        if (allows(tierAt(step), step)) return step;
       }
     }
     return 0;

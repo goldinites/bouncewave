@@ -62,24 +62,24 @@ describe('Conductor', () => {
 
   it('builds up to the chorus on a hot rally and lets the build finish', () => {
     const conductor = new Conductor(SONGS, 0, 'groove');
-    expect(play(conductor, 'high', 5)).toEqual(['intro', 'intro', 'build', 'build', 'chorus']);
+    expect(play(conductor, 'high', 5)).toEqual(['verse', 'verse', 'build', 'build', 'chorus']);
   });
 
   it('holds the chorus for a while even if the rally cools at once, then goes on with the form', () => {
     const conductor = new Conductor(SONGS, 0, 'high');
-    expect(play(conductor, 'groove', 5)).toEqual([...Array(4).fill('chorus'), 'breakdown']);
+    expect(play(conductor, 'groove', 5)).toEqual([...Array(4).fill('chorus'), 'verse']);
   });
 
   it('flags the last bar before a new section, for the fill', () => {
     const conductor = new Conductor(SONGS, 0, 'groove');
-    const fills = Array.from({ length: 8 }, () => {
+    const fills = Array.from({ length: 10 }, () => {
       conductor.plan('groove');
       const isLast = conductor.isLastBar;
       conductor.advance();
       return isLast;
     });
-    // The song starts at its start: four bars of intro, then the verse
-    expect(fills).toEqual([false, false, false, true, false, false, false, false]);
+    // In play the song starts on its verse, eight bars, and plays it again
+    expect(fills).toEqual([...Array(7).fill(false), true, false, false]);
   });
 
   it('moves on to the next song after a while, never mid-chorus', () => {
@@ -348,20 +348,35 @@ describe('Conductor', () => {
   describe('walking the form', () => {
     const formSong = (form: string[]) => compileSong({ ...def('Form'), form });
 
-    it('plays the form in order, passing its peaks by while the match is not hot', () => {
-      const conductor = new Conductor(SONGS, 0, 'groove');
-      expect(play(conductor, 'groove', 16)).toEqual([
-        ...Array(4).fill('intro'),
-        ...Array(8).fill('verse'),
-        ...Array(4).fill('breakdown'),
-      ]);
+    it('plays the form in order, passing its peaks and the song’s edges by in play', () => {
+      const song = formSong(['intro', 'verse', 'breakdown', 'verse', 'build', 'chorus', 'intro']);
+      const conductor = new Conductor([song], 0, 'groove');
+      const parts = play(conductor, 'groove', 32).filter((name, i, all) => name !== all[i - 1]);
+      // The intro and outro are the menus'; the breakdown, mid-form, follows a verse
+      expect(parts).toEqual(['verse', 'breakdown', 'verse', 'breakdown']);
+    });
+
+    it('comes down from a chorus into a groove part, never straight into a calm one', () => {
+      const song = formSong(['intro', 'verse', 'build', 'chorus', 'breakdown', 'verse']);
+      const conductor = new Conductor([song], 0, 'high');
+      expect(play(conductor, 'groove', 5)).toEqual([...Array(4).fill('chorus'), 'verse']);
+    });
+
+    it('comes back from a peak it jumped to from a calm part into a groove one', () => {
+      const song = formSong(['intro', 'verse', 'breakdown', 'verse', 'build', 'chorus']);
+      const conductor = new Conductor([song], 0, 'groove');
+      play(conductor, 'groove', 9); // through the verse, into the breakdown
+      expect(conductor.section.name).toBe('breakdown');
+      const heard = [...play(conductor, 'high', 7), ...play(conductor, 'groove', 5)];
+      expect(heard.slice(-1)).toEqual(['verse']);
+      expect(heard).not.toContain('intro');
     });
 
     it('follows a written form, parts coming more than once', () => {
       const song = formSong(['intro', 'verse', 'breakdown', 'verse']);
       const conductor = new Conductor([song], 0, 'groove');
       const parts = play(conductor, 'groove', 24).filter((name, i, all) => name !== all[i - 1]);
-      expect(parts).toEqual(['intro', 'verse', 'breakdown', 'verse']);
+      expect(parts).toEqual(['verse', 'breakdown', 'verse']);
     });
 
     it('rejects a form naming a section the song doesn’t have', () => {
@@ -402,7 +417,7 @@ describe('Conductor', () => {
     it('leaves a menu’s calm part soon once play starts', () => {
       const conductor = new Conductor(SONGS, 0);
       play(conductor, 'calm', 4); // into the breakdown, for the menu
-      expect(play(conductor, 'groove', 3)).toEqual(['breakdown', 'breakdown', 'intro']);
+      expect(play(conductor, 'groove', 3)).toEqual(['breakdown', 'breakdown', 'verse']);
     });
 
     it('moves on to another song only when its form comes round, after a while', () => {
@@ -412,7 +427,7 @@ describe('Conductor', () => {
       expect(conductor.song.title).toBe('One');
       play(conductor, 'groove', 17);
       expect(conductor.song.title).toBe('Two');
-      expect(conductor.section.name).toBe('intro');
+      expect(conductor.section.name).toBe('verse');
     });
 
     it('tells where in its form the song is', () => {
