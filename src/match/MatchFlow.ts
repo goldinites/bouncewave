@@ -25,6 +25,7 @@ import { MatchRules, STANDARD_RULES } from '@/match/rules';
 import { otherSide, Scores, Side } from '@/match/side';
 import { IMPLANTS, ShotRead, SkillHost, SkillId, SkillUse } from '@/match/skills/Skill';
 import { SkillSet, TimeWarp } from '@/match/skills/SkillSet';
+import { clamp } from '@/shared/math';
 
 // Seconds the ball waits at center before each kind of serve
 export const SERVE_DELAY = {
@@ -777,6 +778,15 @@ export class MatchFlow {
           this.hitStop = isPowerShot ? HIT_STOP.POWER_SHOT : HIT_STOP.PERFECT;
         }
         if (isPowerShot) {
+          // A power shot leaves the ball fast, not only for a moment; never slower than it was
+          // (a turbo court may have it past the top)
+          const { maxSpeed } = this.physicsConfig;
+          const speed = clamp(
+            ball.speed * OVERDRIVE.SPEED_GAIN,
+            OVERDRIVE.SPEED_FLOOR * maxSpeed,
+            maxSpeed,
+          );
+          ball.setSpeed(Math.max(ball.speed, speed));
           ball.applyBoost(OVERDRIVE.BOOST, OVERDRIVE.BOOST_DURATION);
         }
 

@@ -4,6 +4,11 @@ export const OVERDRIVE = {
   CAPACITY: 3, // charges a meter holds unless its owner's implants grow it (up to 5, stage 10)
   BOOST: 0.6, // extra speed share of the power shot, fading out...
   BOOST_DURATION: 1.4, // ...over this many seconds
+  // ...onto the speed it leaves the ball at for good: this many times as fast, but at least
+  // SPEED_FLOOR of the level's top speed and at most all of it — a slow ball to 70%, one from
+  // two thirds of the top up to the top, with no step between
+  SPEED_GAIN: 1.5,
+  SPEED_FLOOR: 0.7, // share of the level's top speed
 } as const;
 
 /**
