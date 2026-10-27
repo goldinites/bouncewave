@@ -1,0 +1,635 @@
+<title>Онсэн-курорт: концепт фона</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+  /* Layout: one concept in three lights, a card each, stacked; a control strip over them.
+     A single dark look on purpose: the game is dark, and backdrops are judged on dark. */
+  :root {
+    --ground: #0b1016;
+    --panel: #131b24;
+    --line: #22303e;
+    --ink: #e6ebef;
+    --muted: #94a4b2;
+    --amber: #f2a541;
+    --neon: #ff4fa8;
+    --display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+    --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 24px 48px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 22px; }
+  header { display: grid; gap: 6px; }
+  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 4vw, 42px); margin: 0; text-wrap: balance; }
+  h1 .mark { color: var(--neon); margin-right: 10px; }
+  header p { margin: 0; color: var(--muted); max-width: 74ch; line-height: 1.55; }
+  .controls {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+    display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px;
+  }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .seg button, .btn { font: inherit; font-size: 14px; color: var(--ink); background: transparent; border: 0; padding: 6px 12px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--line); color: #fff; }
+  .btn { border: 1px solid var(--amber); border-radius: 4px; color: #ffe2b8; }
+  .btn.win { border-color: var(--neon); color: #ffd0ea; }
+  .btn:hover { background: color-mix(in srgb, var(--amber) 22%, transparent); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--muted); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+  .card h2 { font-family: var(--display); font-size: 24px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+  .card h2 .tag { font-family: var(--body); font-size: 12px; font-weight: 700; background: var(--ink); color: var(--ground); border-radius: 3px; padding: 1px 7px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; max-width: 80ch; }
+  .main { width: 100%; aspect-ratio: 8 / 5; display: block; border-radius: 3px; background: #000; max-width: 100%; }
+  .previews { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .previews figure { margin: 0; display: grid; gap: 4px; }
+  .previews figcaption { font-size: 12px; color: var(--muted); }
+  .portrait { width: 150px; aspect-ratio: 5 / 8; display: block; border-radius: 3px; background: #000; }
+  .portal { width: 230px; aspect-ratio: 8 / 5; display: block; border-radius: 8px; background: #000; max-width: 100%; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span class="mark">♨</span>Онсэн-курорт 80-х — неоновая ночь</h1>
+    <p>Неоновая ночь, вторая итерация: вертикальная вывеска «オンセン» на углу отеля, балконы с
+      перилами и кондиционерами, занавески разных цветов, силуэт в юкате и обезьяна, заглядывающая в
+      окно, бак на крыше, козырёк входа с бегущими лампочками; камни берега разного размера и неровным
+      ритмом, с сугробами; у обезьян вытянутая голова с бакенбардами и прядями меха вместо шара.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Состояние">
+    <div class="seg" id="state">
+      <button type="button" id="st-menu" data-state="menu" aria-pressed="false">Меню</button>
+      <button type="button" id="st-play" data-state="play" aria-pressed="true">Игра</button>
+      <button type="button" id="st-hot" data-state="hot" aria-pressed="false">Накал</button>
+    </div>
+    <label><input type="checkbox" id="court" checked> Корт поверх</label>
+    <label><input type="checkbox" id="beat" checked> Бит</label>
+    <label><input type="checkbox" id="motion"> Движение</label>
+    <button type="button" class="btn" id="goal">Гол</button>
+    <button type="button" class="btn win" id="win">Победа</button>
+  </div>
+
+  <div id="cards" style="display:grid;gap:22px"></div>
+</div>
+
+<script>
+(() => {
+  const BPM = 96;
+  const STATES = { menu: { lights: 1, heat: 0, court: false }, play: { lights: 0.62, heat: 0, court: true }, hot: { lights: 0.85, heat: 1, court: true } };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const ui = { state: 'play', court: true, beat: true, motion: !reduce.matches };
+  document.getElementById('motion').checked = ui.motion;
+
+  // ——— helpers ———
+  const TAU = Math.PI * 2;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const hexToRgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const mix = (a, b, t) => { const x = hexToRgb(a), y = hexToRgb(b); const c = x.map((v, i) => Math.round(v + (y[i] - v) * t)); return `rgb(${c[0]},${c[1]},${c[2]})`; };
+  const mixHex = (a, b, t) => { const x = hexToRgb(a), y = hexToRgb(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+  const rgba = (h, a) => { const [r, g, b] = hexToRgb(h); return `rgba(${r},${g},${b},${a})`; };
+  const seeded = (s) => () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.ceil(w); c.height = Math.ceil(h); return [c, c.getContext('2d')]; };
+  const vgrad = (g, y0, y1, stops) => { const r = g.createLinearGradient(0, y0, 0, y1); stops.forEach((c, i) => r.addColorStop(i / (stops.length - 1), c)); return r; };
+  const font = (weight, size, role = '--body') => `${weight} ${size}px ${getComputedStyle(document.documentElement).getPropertyValue(role)}`;
+  /** A soft round sprite, made once and stamped: glows, steam, near snow. */
+  const sprite = (rgb, core, size = 128) => { const [c, g] = mk(size, size); const h = size / 2; const r = g.createRadialGradient(h, h, 0, h, h, h); r.addColorStop(0, `rgba(${rgb},${core})`); r.addColorStop(0.45, `rgba(${rgb},${core * 0.35})`); r.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = r; g.fillRect(0, 0, size, size); return c; };
+  const stamp = (g, img, x, y, r, a, add) => { if (a <= 0.005) return; g.save(); if (add) g.globalCompositeOperation = 'lighter'; g.globalAlpha = clamp(a, 0, 1); g.drawImage(img, x - r, y - r, r * 2, r * 2); g.restore(); };
+  const ballAt = (t, w, h, portrait) => { const L = portrait ? h : w, S = portrait ? w : h, p = (t % 2.2) / 2.2; const along = 30 + (p < 0.5 ? p * 2 : 2 - p * 2) * (L - 60); const across = 20 + Math.abs(((t * 0.37) % 2) - 1) * (S - 40); return portrait ? [across, along] : [along, across]; };
+  /** A ridge line from a sum of sines: smooth, mountain-like, the same every time. */
+  const ridgeY = (x, base, amp, seed) => base - amp * (0.55 * Math.sin(x * 0.006 + seed) + 0.3 * Math.sin(x * 0.017 + seed * 2.3) + 0.15 * Math.sin(x * 0.041 + seed * 5.1));
+
+  // ——— the three lights ———
+  const PRESETS = [
+    {
+      id: 'A', title: 'Синий час', text: 'Сразу после заката: небо из индиго в розовое, хребты лиловыми силуэтами, розовый свет по снежным гребням. Вывеска только зажглась, гондолы плывут на фоне зари, огни трассы бегут вниз по склону.',
+      sky: ['#121a4c', '#3e307a', '#d4688c'], stars: 0.4, horizonGlow: '#ff8aa8',
+      ridgeFar: '#5a4688', ridgeNear: '#352f60', snowFar: '#f0b0cc', snowNear: '#bb8cbc', fog: '#7a5a96', forest: '#18183a', forestBack: '#2c2858', forestSnow: '#d8c6ea', forestSnowShade: '#8a7ab2',
+      rock: '#2c2a4c', rockShade: '#16162e', snow: '#d6caee', snowShade: '#8a7cba', snowLight: '#ffe2f2', rimLight: '#ffa6cc', rimSide: 1,
+      water: ['#3c3a80', '#1e2054', '#0e1032'], steam: '232,212,242', fur: '#8a7f86', furDark: '#5a5160', snowFall: 0.5, fogAlpha: 0.5, warmth: 0.7, neonGlow: 1,
+      building: '#221c40', buildingLit: '#ffcf86',
+    },
+    {
+      id: 'B', title: 'Неоновая ночь', text: 'Глубокая ночь, звёзды, всё держит неон: розовая вывеска и голубые огни гондол отражаются в воде и красят пар. Самая «синтвейвная» версия, ближе всего к лазерам и городу.',
+      sky: ['#03041a', '#0d0c34', '#2a1650'], stars: 1, horizonGlow: '#7a2a9a',
+      ridgeFar: '#241f4c', ridgeNear: '#15133a', snowFar: '#6a6aa8', snowNear: '#4c4a86', fog: '#3a2c6c', forest: '#0c0c24', forestBack: '#1a1840', forestSnow: '#8e8ec8', forestSnowShade: '#4e4e86',
+      rock: '#1e1c3a', rockShade: '#0c0c1c', snow: '#9a9ad0', snowShade: '#50508a', snowLight: '#d8c8ff', rimLight: '#ff6ac0', rimSide: -1,
+      water: ['#20205a', '#0e0e32', '#06061a'], steam: '200,180,240', fur: '#7e7486', furDark: '#4e465a', snowFall: 0.6, fogAlpha: 0.45, warmth: 0.45, neonGlow: 1.5,
+      building: '#14122e', buildingLit: '#ffb878',
+    },
+    {
+      id: 'C', title: 'Метель', text: 'Снег стеной: дальние горы тонут в белёсой мгле, неон расплывается большими ореолами, гондолы — пятна света в метели. Самая атмосферная и самая спокойная для глаза.',
+      sky: ['#1a1a36', '#2c2a4e', '#54446a'], stars: 0, horizonGlow: '#8a6a9a',
+      ridgeFar: '#4a4668', ridgeNear: '#36345a', snowFar: '#9a96b8', snowNear: '#7a76a0', fog: '#7a7698', forest: '#1c1c36', forestBack: '#36345a', forestSnow: '#c8c6e0', forestSnowShade: '#8a88aa',
+      rock: '#2c2c46', rockShade: '#18182a', snow: '#cecce4', snowShade: '#8c8aac', snowLight: '#f0eefa', rimLight: '#ffb8d8', rimSide: 1,
+      water: ['#3a3a66', '#20203e', '#101024'], steam: '220,218,236', fur: '#8a8290', furDark: '#5c5664', snowFall: 2.6, fogAlpha: 0.75, warmth: 0.6, neonGlow: 2,
+      building: '#26243e', buildingLit: '#ffd090',
+    },
+  ];
+
+  const AMBER = sprite('255,176,84', 0.9), NEON = sprite('255,79,168', 0.9), CYAN = sprite('63,240,255', 0.9);
+
+  // ——— the macaques ———
+  /**
+   * A macaque to its shoulders: fluffy head, heart-shaped red face, a mood, eyes on the ball,
+   * snow on its head, rim light on one side. `look` is a unit vector toward the ball.
+   */
+  function monkey(g, x, y, s, o) {
+    const { fur, furDark } = o.pal;
+    g.save();
+    g.fillStyle = furDark; g.beginPath(); g.ellipse(x, y + s * 1.05, s * 1.6, s * 0.95, 0, Math.PI, TAU); g.fill();
+    // Shoulder fur, wet at the water line
+    g.fillStyle = fur; g.beginPath(); g.ellipse(x, y + s * 0.95, s * 1.35, s * 0.62, 0, Math.PI, TAU); g.fill();
+    // The fluffy head
+    g.fillStyle = fur; g.beginPath();
+    for (let i = 0; i <= 64; i++) {
+      const a = (i / 64) * TAU, down = Math.max(0, Math.sin(a));
+      // A flatter crown, cheeks that flare out into sideburns below the eyes, a tufted edge
+      const r = s * (1 + 0.035 * Math.sin(a * 13 + x) + 0.03 * Math.sin(a * 7) + 0.07 * Math.pow(Math.abs(Math.cos(a)), 3) * (0.3 + down));
+      const px = x + Math.cos(a) * r * 1.02, py = y + Math.sin(a) * r * (a > Math.PI ? 0.86 : 1.02);
+      if (i) g.lineTo(px, py); else g.moveTo(px, py);
+    }
+    g.fill();
+    // Sideburn tufts, combed down and out
+    g.strokeStyle = mixHex(fur, '#ffffff', 0.12); g.lineWidth = Math.max(1, s * 0.06); g.lineCap = 'round';
+    g.globalAlpha = 0.5;
+    for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) { const bx = x + sd * s * 0.86, by = y + s * (0.05 + k * 0.14); g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + sd * s * 0.12, by + s * 0.08); g.stroke(); }
+    g.globalAlpha = 1;
+    // A few strands across the crown
+    g.strokeStyle = mixHex(fur, '#000000', 0.18); g.lineWidth = Math.max(1, s * 0.04);
+    // A soft parting on the crown, the way macaque fur lies
+    g.globalAlpha = 0.35; g.beginPath(); g.moveTo(x - s * 0.25, y - s * 0.7); g.quadraticCurveTo(x, y - s * 0.6, x + s * 0.25, y - s * 0.7); g.stroke(); g.globalAlpha = 1;
+    g.fillStyle = rgba('#000000', 0.18); g.beginPath(); g.ellipse(x, y + s * 0.5, s * 0.98, s * 0.48, 0, 0, Math.PI); g.fill();
+    // Fur strands round the face
+    g.strokeStyle = mixHex(fur, '#ffffff', 0.1); g.lineWidth = Math.max(1, s * 0.04); g.lineCap = 'round';
+    for (let i = 0; i < 10; i++) { const a = Math.PI * (0.95 + (i / 13) * 1.1); const r0 = s * 0.78, r1 = s * 1.02; g.beginPath(); g.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); g.lineTo(x + Math.cos(a + 0.08) * r1, y + Math.sin(a + 0.08) * r1); g.stroke(); }
+    // The heart-shaped face
+    const face = g.createRadialGradient(x, y + s * 0.05, s * 0.1, x, y + s * 0.12, s * 0.8);
+    face.addColorStop(0, '#e8908c'); face.addColorStop(1, '#b8505a');
+    g.fillStyle = face; g.beginPath();
+    g.moveTo(x, y + s * 0.7);
+    g.bezierCurveTo(x - s * 0.74, y + s * 0.45, x - s * 0.8, y - s * 0.36, x - s * 0.3, y - s * 0.44);
+    g.quadraticCurveTo(x, y - s * 0.32, x + s * 0.3, y - s * 0.44);
+    g.bezierCurveTo(x + s * 0.8, y - s * 0.36, x + s * 0.74, y + s * 0.45, x, y + s * 0.7);
+    g.fill();
+    // Brows
+    g.strokeStyle = 'rgba(80,24,32,0.7)'; g.lineWidth = Math.max(1, s * 0.07);
+    for (const sd of [-1, 1]) {
+      g.beginPath();
+      if (o.mood === 'grumpy') { g.moveTo(x + sd * s * 0.42, y - s * 0.24); g.lineTo(x + sd * s * 0.1, y - s * 0.14); }
+      else if (o.startle > 0.3) { g.arc(x + sd * s * 0.26, y - s * 0.08, s * 0.2, Math.PI * 1.15, Math.PI * 1.85); }
+      else { g.arc(x + sd * s * 0.26, y - s * 0.02, s * 0.2, Math.PI * 1.2, Math.PI * 1.8); }
+      g.stroke();
+    }
+    // Eyes
+    for (const sd of [-1, 1]) {
+      const ex = x + sd * s * 0.26, ey = y - s * 0.04;
+      if (o.mood === 'sleep' && o.startle < 0.3) {
+        g.strokeStyle = '#3a1418'; g.lineWidth = Math.max(1, s * 0.06); g.beginPath(); g.arc(ex, ey - s * 0.02, s * 0.1, Math.PI * 0.15, Math.PI * 0.85); g.stroke();
+      } else {
+        const open = s * (0.085 + o.startle * 0.08) * (o.mood === 'grumpy' ? 0.7 : 1);
+        g.fillStyle = '#f4e8d8'; g.beginPath(); g.ellipse(ex, ey, s * 0.14, open, 0, 0, TAU); g.fill();
+        const pr = s * (0.075 - o.startle * 0.025);
+        g.fillStyle = '#2a1410'; g.beginPath(); g.arc(ex + o.look[0] * s * 0.055, ey + o.look[1] * open * 0.4, pr, 0, TAU); g.fill();
+        g.fillStyle = '#ffffff'; g.beginPath(); g.arc(ex + o.look[0] * s * 0.055 - pr * 0.35, ey - pr * 0.35, pr * 0.3, 0, TAU); g.fill();
+      }
+    }
+    // Nose and mouth
+    g.fillStyle = '#6a2028'; g.beginPath(); g.arc(x - s * 0.06, y + s * 0.22, s * 0.035, 0, TAU); g.arc(x + s * 0.06, y + s * 0.22, s * 0.035, 0, TAU); g.fill();
+    g.strokeStyle = '#6a2028'; g.lineWidth = Math.max(1, s * 0.05); g.beginPath();
+    if (o.startle > 0.3) { g.fillStyle = '#5a1820'; g.ellipse(x, y + s * 0.42, s * 0.08, s * 0.1, 0, 0, TAU); g.fill(); }
+    else if (o.mood === 'grumpy') { g.arc(x, y + s * 0.52, s * 0.14, Math.PI * 1.2, Math.PI * 1.8); g.stroke(); }
+    else if (o.mood === 'sleep') { g.arc(x, y + s * 0.36, s * 0.08, 0.2, Math.PI - 0.2); g.stroke(); }
+    else { g.arc(x, y + s * 0.3, s * 0.14, Math.PI * 0.25, Math.PI * 0.75); g.stroke(); }
+    // A folded towel on the head, as every bather in an onsen wears it
+    if (o.towel) {
+      g.save(); g.translate(x + s * 0.08, y - s * 0.86); g.rotate(-0.12);
+      g.fillStyle = '#d88aa8'; g.beginPath(); g.roundRect(-s * 0.48, -s * 0.16, s * 0.96, s * 0.3, s * 0.08); g.fill();
+      g.fillStyle = '#f2b8cc'; g.fillRect(-s * 0.46, -s * 0.12, s * 0.92, s * 0.06); g.fillRect(-s * 0.46, s * 0.02, s * 0.92, s * 0.05);
+      g.fillStyle = 'rgba(80,20,40,0.35)'; g.fillRect(-s * 0.48, s * 0.1, s * 0.96, s * 0.04);
+      g.restore();
+    }
+    // Snow on the head
+    if (o.snow && !o.towel) {
+      g.fillStyle = o.pal.snowShade; g.beginPath(); g.ellipse(x, y - s * 0.88, s * (0.5 + o.snow * 0.2), s * (0.18 + o.snow * 0.1), 0, Math.PI, TAU); g.fill();
+      g.fillStyle = o.pal.snow; g.beginPath(); g.ellipse(x - s * 0.04, y - s * 0.92, s * (0.44 + o.snow * 0.18), s * (0.15 + o.snow * 0.1), 0, Math.PI, TAU); g.fill();
+    }
+    // Rim light on the side the light comes from
+    g.strokeStyle = o.pal.rimLight; g.globalAlpha = 0.55; g.lineWidth = Math.max(1.2, s * 0.07);
+    const a0 = o.pal.rimSide > 0 ? -1.3 : Math.PI + 0.3, a1 = o.pal.rimSide > 0 ? -0.3 : Math.PI + 1.3;
+    g.beginPath(); g.arc(x, y, s * 1.03, a0, a1); g.stroke();
+    g.restore();
+  }
+
+
+  // ——— the scene ———
+  function scene(W, H, P, pal, seed) {
+    const rnd = seeded(seed);
+    const M = 40, LW = W + M * 2;
+    const horizon = H * (P ? 0.32 : 0.4), forestBase = H * (P ? 0.52 : 0.6), bank = H * (P ? 0.56 : 0.64);
+    const X = (f) => M + f * W;
+    const hotel = P ? { x: X(0.04), w: 210, h: 220 } : { x: X(0.025), w: 236, h: 176 };
+    hotel.y = bank - hotel.h + 6;
+    const pylons = P ? [X(0.62), X(0.95)] : [X(0.6), X(0.9)];
+    const cableY = (x) => { const a = H * 0.07, b = H * (P ? 0.2 : 0.27); const u = (x + 40) / (LW + 80); return a + (b - a) * u + Math.sin(u * Math.PI) * H * 0.04; };
+
+    // Sky: blue-hour gradient, stars, a glow on the horizon, the far ridges with the ski slope
+    const [sky, sg] = mk(LW, H);
+    sg.fillStyle = vgrad(sg, 0, forestBase, pal.sky); sg.fillRect(0, 0, LW, H);
+    for (let i = 0; i < 180 * pal.stars; i++) { sg.fillStyle = rgba('#e8e0ff', 0.2 + rnd() * 0.6); const r = rnd() > 0.93 ? 1.6 : 0.9; sg.fillRect(rnd() * LW, rnd() * horizon * 0.8, r, r); }
+    const hg = sg.createRadialGradient(LW * 0.6, horizon, 10, LW * 0.6, horizon, LW * 0.6); hg.addColorStop(0, rgba(pal.horizonGlow, 0.45)); hg.addColorStop(1, rgba(pal.horizonGlow, 0)); sg.fillStyle = hg; sg.fillRect(0, 0, LW, forestBase);
+    const ridge = (base, amp, color, snow, s0) => {
+      sg.fillStyle = color; sg.beginPath(); sg.moveTo(0, forestBase);
+      for (let x = 0; x <= LW; x += 4) sg.lineTo(x, ridgeY(x, base, amp, s0));
+      sg.lineTo(LW, forestBase); sg.closePath(); sg.fill();
+      sg.fillStyle = snow; sg.beginPath();
+      for (let x = 0; x <= LW; x += 4) sg.lineTo(x, ridgeY(x, base, amp, s0));
+      for (let x = LW; x >= 0; x -= 6) { const top = ridgeY(x, base, amp, s0); const line = base - amp * 0.3 + Math.sin(x * 0.2) * 4 + Math.sin(x * 0.07) * 6; sg.lineTo(x, Math.max(top, line)); }
+      sg.closePath(); sg.fill();
+      sg.fillStyle = vgrad(sg, base - amp * 0.2, base + amp, [rgba(pal.fog, 0), rgba(pal.fog, pal.fogAlpha * 1.2)]); sg.fillRect(0, base - amp * 0.2, LW, amp * 1.6);
+    };
+    ridge(horizon - H * 0.07, H * 0.13, pal.ridgeFar, pal.snowFar, 1.3);
+    const nearBase = horizon + H * 0.03, nearAmp = H * 0.09;
+    ridge(nearBase, nearAmp, pal.ridgeNear, pal.snowNear, 4.1);
+    // The ski run: a pale band down the near ridge, with lights along it (lit live)
+    const run = [];
+    for (let k = 0; k <= 22; k++) { const u = k / 22; const x = X(P ? 0.55 : 0.62) + Math.sin(u * 7) * W * 0.04 + u * W * (P ? 0.25 : 0.22); const y = ridgeY(X(P ? 0.62 : 0.68), nearBase, nearAmp, 4.1) + 6 + u * (forestBase - nearBase + nearAmp * 0.4); run.push([x, y]); }
+    sg.strokeStyle = rgba(pal.snowFar, 0.5); sg.lineWidth = 9; sg.lineJoin = 'round'; sg.beginPath(); run.forEach(([x, y], i) => (i ? sg.lineTo(x, y) : sg.moveTo(x, y))); sg.stroke();
+    // The gondola's pylons and its cable across the sky
+    for (const px of pylons) {
+      const top = cableY(px) - 4, foot = ridgeY(px, nearBase, nearAmp, 4.1) + 10;
+      sg.strokeStyle = '#120f26'; sg.lineWidth = 2; sg.beginPath(); sg.moveTo(px - 6, foot); sg.lineTo(px - 2, top); sg.moveTo(px + 6, foot); sg.lineTo(px + 2, top);
+      for (let y = top + 8; y < foot; y += 10) { sg.moveTo(px - 2 - (y - top) * 0.06, y); sg.lineTo(px + 2 + (y - top + 10) * 0.06, y + 10); }
+      sg.stroke(); sg.fillStyle = '#120f26'; sg.fillRect(px - 12, top - 2, 24, 4);
+    }
+    sg.strokeStyle = '#0e0c20'; sg.lineWidth = 1.4;
+    for (const dy of [0, 3]) { sg.beginPath(); for (let x = -40; x <= LW + 40; x += 10) sg.lineTo(x, cableY(x) + dy); sg.stroke(); }
+
+    // Forest: snow-laden cedars in clusters, thinner over the court's middle, fog at their feet
+    const [forest, fg] = mk(LW, H);
+    const cedar = (x, base, h, body, snow, shade) => {
+      fg.fillStyle = mixHex(body, '#000000', 0.2); fg.fillRect(x - h * 0.012, base - h * 0.15, h * 0.024, h * 0.15);
+      // A cedar's layered, drooping tiers: narrow and uneven, not a christmas tree
+      const tiers = 9;
+      for (let k = 0; k < tiers; k++) {
+        const ty = base - h * (0.12 + (k / tiers) * 0.86), tw = (h * 0.15 * (1 - k / tiers) + h * 0.025) * (0.85 + ((k * 7) % 3) * 0.12), th = h * 0.11;
+        const lean = (((k * 13) % 5) - 2) * h * 0.006;
+        fg.fillStyle = body; fg.beginPath(); fg.moveTo(x - tw + lean, ty + th * 0.45); fg.quadraticCurveTo(x - tw * 0.3, ty - th * 0.3, x, ty - th * 0.6); fg.quadraticCurveTo(x + tw * 0.3, ty - th * 0.3, x + tw + lean, ty + th * 0.45); fg.quadraticCurveTo(x, ty + th * 0.05, x - tw + lean, ty + th * 0.45); fg.fill();
+        fg.fillStyle = shade; fg.beginPath(); fg.moveTo(x - tw * 0.8 + lean, ty + th * 0.15); fg.quadraticCurveTo(x - tw * 0.25, ty - th * 0.3, x, ty - th * 0.52); fg.quadraticCurveTo(x + tw * 0.2, ty - th * 0.32, x + tw * 0.6, ty + th * 0.1); fg.quadraticCurveTo(x, ty - th * 0.15, x - tw * 0.8 + lean, ty + th * 0.15); fg.fill();
+        fg.fillStyle = snow; fg.beginPath(); fg.moveTo(x - tw * 0.7 + lean, ty + th * 0.02); fg.quadraticCurveTo(x - tw * 0.25, ty - th * 0.38, x - tw * 0.02, ty - th * 0.5); fg.quadraticCurveTo(x + tw * 0.1, ty - th * 0.3, x + tw * 0.4, ty - th * 0.05); fg.quadraticCurveTo(x, ty - th * 0.25, x - tw * 0.7 + lean, ty + th * 0.02); fg.fill();
+      }
+    };
+    for (let x = -10; x < LW + 20; x += 16 + rnd() * 18) cedar(x, forestBase - H * 0.01, H * (0.14 + rnd() * 0.09), pal.forestBack, mixHex(pal.forestSnow, pal.fog, 0.45), mixHex(pal.forestSnowShade, pal.fog, 0.45));
+    fg.fillStyle = vgrad(fg, forestBase - H * 0.12, forestBase, [rgba(pal.fog, 0), rgba(pal.fog, pal.fogAlpha)]); fg.fillRect(0, forestBase - H * 0.12, LW, H * 0.12);
+    const chalets = [];
+    for (let k = 0; k < 3; k++) {
+      const cx = X(P ? 0.62 + k * 0.13 : 0.7 + k * 0.095), base = forestBase - H * (0.004 + k * 0.012), cw = P ? 30 : 34, ch = P ? 22 : 24;
+      fg.fillStyle = '#2a1e1a'; fg.fillRect(cx - cw / 2, base - ch * 0.55, cw, ch * 0.55);
+      fg.fillStyle = '#ffc070'; fg.fillRect(cx - cw * 0.32, base - ch * 0.42, cw * 0.22, ch * 0.22); fg.fillRect(cx + cw * 0.1, base - ch * 0.42, cw * 0.22, ch * 0.22);
+      fg.fillStyle = '#1a1210'; fg.beginPath(); fg.moveTo(cx - cw * 0.66, base - ch * 0.5); fg.lineTo(cx, base - ch * 1.25); fg.lineTo(cx + cw * 0.66, base - ch * 0.5); fg.fill();
+      fg.fillStyle = pal.forestSnow; fg.beginPath(); fg.moveTo(cx - cw * 0.7, base - ch * 0.52); fg.lineTo(cx, base - ch * 1.32); fg.lineTo(cx + cw * 0.7, base - ch * 0.52); fg.lineTo(cx, base - ch * 1.1); fg.fill();
+      fg.fillStyle = '#ffd890'; fg.beginPath(); fg.moveTo(cx - cw * 0.12, base - ch * 0.62); fg.lineTo(cx, base - ch * 0.9); fg.lineTo(cx + cw * 0.12, base - ch * 0.62); fg.fill();
+      fg.fillStyle = '#3a2e2a'; fg.fillRect(cx + cw * 0.25, base - ch * 1.2, 5, ch * 0.4); fg.fillStyle = pal.forestSnow; fg.fillRect(cx + cw * 0.24, base - ch * 1.22, 7, 2);
+      chalets.push({ x: cx + cw * 0.25 + 2.5, y: base - ch * 1.22, glow: [cx, base - ch * 0.4] });
+    }
+    for (let x = -10; x < LW + 20; x += 22 + rnd() * 34) {
+      const f = (x - M) / W, calm = Math.exp(-(((f - 0.52) / 0.15) ** 2));
+      if (rnd() < calm * 0.85) continue;
+      if (x > hotel.x - 20 && x < hotel.x + hotel.w + 10 && rnd() < 0.7) continue;
+      cedar(x, forestBase + H * 0.012, H * (0.2 + rnd() * 0.14) * (1 - calm * 0.35), pal.forest, pal.forestSnow, pal.forestSnowShade);
+    }
+    fg.fillStyle = vgrad(fg, forestBase - H * 0.05, bank, [rgba(pal.fog, 0), rgba(pal.fog, pal.fogAlpha * 0.8), rgba(pal.fog, 0.2)]); fg.fillRect(0, forestBase - H * 0.05, LW, bank - forestBase + H * 0.05);
+
+    // Bank: the 80s hotel, its sign's frame, snowy boulders round the pool, the bamboo spout
+    const [bankL, bg] = mk(LW, H);
+    const hx = hotel.x, hy = hotel.y, hw = hotel.w, hh = hotel.h;
+    bg.fillStyle = pal.building; bg.fillRect(hx, hy, hw, hh);
+    bg.fillStyle = mixHex(pal.building, '#ffffff', 0.06); bg.fillRect(hx, hy, 6, hh); bg.fillStyle = mixHex(pal.building, '#000000', 0.3); bg.fillRect(hx + hw - 8, hy, 8, hh);
+    const floors = P ? 7 : 5, cols = P ? 6 : 8, fh = (hh - 40) / floors, cw = (hw - 16) / cols;
+    const lit = [];
+    for (let f = 0; f < floors; f++) {
+      const fy = hy + 14 + f * fh;
+      bg.fillStyle = mixHex(pal.building, '#ffffff', 0.12); bg.fillRect(hx + 4, fy + fh - 3, hw - 8, 2);
+      for (let c = 0; c < cols; c++) {
+        const wx = hx + 8 + c * cw, wy = fy + 3, ww = cw - 6, wh = fh - 9, r = rnd();
+        if (r > 0.45) {
+          const curtain = ['#ffcf86', '#ffb0c8', '#ffd8a0', '#c8f0e8'][Math.floor(rnd() * 4)];
+          bg.fillStyle = curtain; bg.fillRect(wx, wy, ww, wh);
+          bg.fillStyle = mixHex(curtain, '#7a4a20', 0.45); bg.fillRect(wx, wy, ww * 0.22, wh); bg.fillRect(wx + ww * 0.78, wy, ww * 0.22, wh);
+          // Someone in a yukata at the window, now and then, or a monkey peeking in
+          const who = rnd();
+          if (who > 0.86) { bg.fillStyle = '#2a1a22'; bg.beginPath(); bg.arc(wx + ww / 2, wy + wh * 0.42, wh * 0.18, 0, TAU); bg.fill(); bg.fillRect(wx + ww / 2 - wh * 0.26, wy + wh * 0.58, wh * 0.52, wh * 0.42); }
+          else if (who > 0.8) { bg.fillStyle = '#5a5060'; bg.beginPath(); bg.arc(wx + ww / 2, wy + wh * 0.75, wh * 0.26, Math.PI, TAU); bg.fill(); bg.fillStyle = '#c86a70'; bg.beginPath(); bg.arc(wx + ww / 2, wy + wh * 0.78, wh * 0.14, Math.PI, TAU); bg.fill(); }
+          lit.push([wx + ww / 2, wy + wh / 2]);
+        }
+        else if (r > 0.38) { bg.fillStyle = '#4ad8ff'; bg.fillRect(wx, wy, ww, wh); bg.fillStyle = '#1a6a8a'; bg.fillRect(wx + 2, wy + wh * 0.5, ww - 4, wh * 0.5); }
+        else { bg.fillStyle = mixHex(pal.building, '#000000', 0.45); bg.fillRect(wx, wy, ww, wh); }
+        bg.fillStyle = mixHex(pal.building, '#ffffff', 0.18); bg.fillRect(wx - 1, wy + wh, ww + 2, 1.5);
+      }
+      if (f < floors - 1) {
+        const ry = fy + fh - 4;
+        bg.fillStyle = mixHex(pal.building, '#ffffff', 0.2); bg.fillRect(hx + 2, ry, hw - 4, 2);
+        bg.fillStyle = mixHex(pal.building, '#ffffff', 0.1); for (let rx = hx + 4; rx < hx + hw - 4; rx += 4) bg.fillRect(rx, ry - 6, 1, 6);
+        bg.fillRect(hx + 2, ry - 7, hw - 4, 1);
+        if (rnd() > 0.4) { const ax = hx + 10 + rnd() * (hw - 30); bg.fillStyle = '#8a8e9a'; bg.fillRect(ax, ry - 6, 10, 6); bg.strokeStyle = '#4a4e58'; bg.lineWidth = 1; bg.beginPath(); bg.arc(ax + 5, ry - 3, 2, 0, TAU); bg.stroke(); }
+      }
+    }
+    const tank = hx + hw - 40;
+    bg.fillStyle = '#2a2640'; bg.fillRect(tank + 2, hy - 12, 2, 12); bg.fillRect(tank + 18, hy - 12, 2, 12); bg.fillRect(tank, hy - 26, 22, 14);
+    bg.fillStyle = pal.snow; bg.beginPath(); bg.ellipse(tank + 11, hy - 26, 12, 3, 0, Math.PI, TAU); bg.fill();
+    // The entrance with a red noren and the warm lobby
+    const door = { x: hx + hw * 0.42, w: hw * 0.2 };
+    bg.fillStyle = '#ffc070'; bg.fillRect(door.x, bank - 26, door.w, 22);
+    bg.fillStyle = '#a0222e'; bg.fillRect(door.x - 2, bank - 28, door.w + 4, 11); bg.fillStyle = '#7a1822'; for (let k = 1; k < 4; k++) bg.fillRect(door.x - 2 + (k * (door.w + 4)) / 4, bank - 28, 1, 11);
+    bg.fillStyle = '#ffe8c8'; bg.font = font(800, 8, '--display'); bg.textAlign = 'center'; bg.fillText('ゆ', door.x + door.w / 2, bank - 19);
+    bg.fillStyle = '#2a2244'; bg.fillRect(door.x - 14, bank - 36, door.w + 28, 7); bg.fillStyle = pal.snow; bg.fillRect(door.x - 15, bank - 38, door.w + 30, 2);
+    // The roof and the sign's steel frame
+    bg.fillStyle = pal.snow; bg.beginPath(); bg.ellipse(hx + hw / 2, hy + 1, hw * 0.54, 7, 0, Math.PI, TAU); bg.fill();
+    bg.fillStyle = rgba(pal.snowLight, 0.8); for (let ix = hx; ix < hx + hw; ix += 4 + rnd() * 5) { const len = 3 + rnd() * 9; bg.beginPath(); bg.moveTo(ix - 1.2, hy + 1); bg.lineTo(ix + 1.2, hy + 1); bg.lineTo(ix, hy + 1 + len); bg.fill(); }
+    const signY = hy - (P ? 42 : 40);
+    bg.strokeStyle = '#100c20'; bg.lineWidth = 2; bg.beginPath();
+    for (let sx = hx + 14; sx < hx + hw - 10; sx += 18) { bg.moveTo(sx, hy); bg.lineTo(sx + 9, signY + 6); bg.lineTo(sx + 18, hy); }
+    bg.moveTo(hx + 10, signY + 6); bg.lineTo(hx + hw - 10, signY + 6); bg.stroke();
+    // Snowy boulders round the pool, icicles under their edges
+    const boulder = (cx, cy, rw, rh) => {
+      const grd = bg.createLinearGradient(0, cy - rh, 0, cy + rh * 0.4); grd.addColorStop(0, mixHex(pal.rock, '#ffffff', 0.08)); grd.addColorStop(1, pal.rockShade);
+      bg.fillStyle = grd; bg.beginPath(); bg.moveTo(cx - rw, cy + rh * 0.3); bg.bezierCurveTo(cx - rw, cy - rh * 0.6, cx - rw * 0.4, cy - rh, cx, cy - rh); bg.bezierCurveTo(cx + rw * 0.5, cy - rh, cx + rw, cy - rh * 0.5, cx + rw, cy + rh * 0.3); bg.closePath(); bg.fill();
+      bg.fillStyle = pal.snowShade; bg.beginPath(); bg.ellipse(cx, cy - rh * 0.78, rw * 0.78, rh * 0.32, 0, Math.PI, TAU); bg.fill();
+      bg.fillStyle = pal.snow; bg.beginPath(); bg.ellipse(cx - rw * 0.04, cy - rh * 0.82, rw * 0.72, rh * 0.3, 0, Math.PI, TAU); bg.fill();
+      bg.fillStyle = pal.snowLight; bg.beginPath(); bg.ellipse(cx + pal.rimSide * rw * 0.3, cy - rh * 0.98, rw * 0.28, rh * 0.08, 0, Math.PI, TAU); bg.fill();
+      bg.fillStyle = rgba(pal.snowLight, 0.8);
+      for (let ix = cx - rw * 0.6; ix < cx + rw * 0.6; ix += 5 + rnd() * 6) { const len = 3 + rnd() * 9; bg.beginPath(); bg.moveTo(ix - 1.2, cy - rh * 0.72); bg.lineTo(ix + 1.2, cy - rh * 0.72); bg.lineTo(ix, cy - rh * 0.72 + len); bg.fill(); }
+    };
+    for (let x = -20; x < LW + 30;) {
+      const big = rnd() > 0.7, rw = big ? 40 + rnd() * 30 : 14 + rnd() * 22, rh = big ? 18 + rnd() * 12 : 8 + rnd() * 10;
+      boulder(x + rw, bank + rh * 0.25 + (big ? 2 : 0), rw, rh);
+      // A drift of snow piled between stones
+      if (rnd() > 0.5) { bg.fillStyle = pal.snow; bg.beginPath(); bg.ellipse(x + rw * 2.1, bank + 3, rw * 0.6, 4, 0, Math.PI, TAU); bg.fill(); }
+      x += rw * (1.2 + rnd() * 1.3) + (rnd() > 0.8 ? 30 : 0);
+    }
+    const spout = { x: X(P ? 0.8 : 0.78), y: bank - 20 };
+    bg.strokeStyle = '#6e8a3a'; bg.lineWidth = 7; bg.lineCap = 'round'; bg.beginPath(); bg.moveTo(spout.x + 40, spout.y - 12); bg.lineTo(spout.x - 4, spout.y); bg.stroke();
+    bg.strokeStyle = '#a8c060'; bg.lineWidth = 2; bg.beginPath(); bg.moveTo(spout.x + 40, spout.y - 14); bg.lineTo(spout.x - 4, spout.y - 2); bg.stroke();
+    bg.strokeStyle = '#5a4030'; bg.lineWidth = 3; bg.beginPath(); bg.moveTo(spout.x + 14, spout.y - 4); bg.lineTo(spout.x + 12, bank + 6); bg.stroke();
+    bg.fillStyle = vgrad(bg, bank, H, pal.water); bg.fillRect(0, bank + 6, LW, H - bank);
+    bg.fillStyle = rgba(pal.snowLight, 0.3); bg.fillRect(0, bank + 6, LW, 1.5);
+    const waterStone = (fx, fy, rw, rh) => { const cx = X(fx), cy = H * fy; boulder(cx, cy, rw, rh); bg.strokeStyle = rgba(pal.snowLight, 0.35); bg.lineWidth = 1.2; bg.beginPath(); bg.ellipse(cx, cy + rh * 0.3, rw * 1.08, rh * 0.28, 0, 0, TAU); bg.stroke(); };
+    if (P) { waterStone(0.62, 0.84, 30, 16); waterStone(0.1, 0.66, 24, 12); }
+    else { waterStone(0.7, 0.86, 34, 17); waterStone(0.06, 0.73, 30, 14); }
+
+    // Front: corner rocks, a cassette boombox on the left one, a vending machine at the right edge
+    const [front, frg] = mk(LW, H);
+    const cornerRock = (cx, cy, rw, rh) => {
+      frg.fillStyle = '#0d0c18'; frg.beginPath(); frg.ellipse(cx, cy, rw, rh, 0, Math.PI, TAU); frg.fill();
+      frg.fillStyle = mixHex(pal.snowShade, '#000000', 0.35); frg.beginPath(); frg.ellipse(cx, cy - rh * 0.82, rw * 0.82, rh * 0.26, 0, Math.PI, TAU); frg.fill();
+      frg.fillStyle = mixHex(pal.snow, '#000000', 0.2); frg.beginPath(); frg.ellipse(cx - 6, cy - rh * 0.86, rw * 0.75, rh * 0.22, 0, Math.PI, TAU); frg.fill();
+    };
+    const boom = { x: X(P ? 0.12 : 0.08), y: H - (P ? 44 : 40) };
+    cornerRock(boom.x + 10, H + 14, P ? 90 : 110, P ? 50 : 48);
+    frg.fillStyle = '#2a2a34'; frg.fillRect(boom.x - 34, boom.y - 22, 68, 30); frg.fillStyle = '#4a4a58'; frg.fillRect(boom.x - 34, boom.y - 22, 68, 3);
+    frg.strokeStyle = '#8a8a98'; frg.lineWidth = 3; frg.beginPath(); frg.moveTo(boom.x - 22, boom.y - 22); frg.lineTo(boom.x - 18, boom.y - 34); frg.lineTo(boom.x + 18, boom.y - 34); frg.lineTo(boom.x + 22, boom.y - 22); frg.stroke();
+    frg.fillStyle = '#14141c'; frg.fillRect(boom.x - 9, boom.y - 17, 18, 11); frg.fillStyle = '#c8a050'; frg.fillRect(boom.x - 7, boom.y - 14, 14, 5); frg.fillStyle = '#14141c'; frg.beginPath(); frg.arc(boom.x - 3, boom.y - 11.5, 1.6, 0, TAU); frg.arc(boom.x + 3, boom.y - 11.5, 1.6, 0, TAU); frg.fill();
+    for (const sd of [-1, 1]) { frg.fillStyle = '#18181e'; frg.beginPath(); frg.arc(boom.x + sd * 22, boom.y - 7, 10, 0, TAU); frg.fill(); frg.strokeStyle = '#6a6a78'; frg.lineWidth = 1.5; frg.stroke(); }
+    frg.fillStyle = mixHex(pal.snow, '#000000', 0.15); frg.beginPath(); frg.ellipse(boom.x, boom.y - 23, 30, 3, 0, Math.PI, TAU); frg.fill();
+    const vend = { x: X(1) - (P ? 26 : 34), w: P ? 50 : 56, h: P ? 100 : 104 };
+    vend.y = H - vend.h + 6;
+    cornerRock(X(1) + 10, H + 16, P ? 80 : 120, 40);
+    frg.fillStyle = '#d0d4dc'; frg.fillRect(vend.x, vend.y, vend.w, vend.h); frg.fillStyle = '#e8ecf2'; frg.fillRect(vend.x, vend.y, vend.w, 3);
+    frg.fillStyle = '#1c4a8a'; frg.fillRect(vend.x + 4, vend.y + 8, vend.w - 8, vend.h * 0.5);
+    const cans = ['#d94a3a', '#e8b33a', '#3aa36a', '#e8e0c8', '#3a7fd9', '#c84aa8'];
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) { const cx2 = vend.x + 7 + c * ((vend.w - 14) / 6), cy2 = vend.y + 12 + r * (vend.h * 0.12); frg.fillStyle = cans[(r * 2 + c) % 6]; frg.fillRect(cx2, cy2, 4, 8); frg.fillStyle = '#ff4040'; frg.fillRect(cx2 + 1, cy2 + 9, 2, 1.5); }
+    frg.fillStyle = '#2a2e36'; frg.fillRect(vend.x + 6, vend.y + vend.h * 0.66, vend.w - 12, 8); frg.fillStyle = '#14161c'; frg.fillRect(vend.x + 6, vend.y + vend.h - 22, vend.w - 12, 12);
+    frg.fillStyle = mixHex(pal.snow, '#000000', 0.1); frg.beginPath(); frg.ellipse(vend.x + vend.w / 2, vend.y, vend.w * 0.55, 5, 0, Math.PI, TAU); frg.fill();
+
+    const reflectH = bank - horizon + 20;
+
+    // ——— live state ———
+    const monkeys = P
+      ? [{ x: 0.28, y: 0.7, s: 24, mood: 'calm', baby: true, snow: 0.3 }, { x: 0.72, y: 0.66, s: 18, mood: 'grumpy', towel: true }, { x: 0.5, y: 0.82, s: 27, mood: 'sleep', snow: 0.4, lean: true }, { x: 0.84, y: 0.76, s: 20, mood: 'calm', snow: 0, diver: true }]
+      : [{ x: 0.22, y: 0.79, s: 27, mood: 'calm', baby: true, snow: 0.3 }, { x: 0.37, y: 0.72, s: 19, mood: 'grumpy', towel: true }, { x: 0.63, y: 0.81, s: 28, mood: 'sleep', snow: 0.4, lean: true }, { x: 0.86, y: 0.72, s: 20, mood: 'calm', snow: 0, diver: true }];
+    const gondolas = Array.from({ length: 5 }, (_, i) => ({ u: i / 5, c: i % 2 }));
+    const snowFar = Array.from({ length: Math.round(80 * pal.snowFall) }, () => ({ x: rnd(), y: rnd(), v: 0.02 + rnd() * 0.025, r: 0.7 + rnd() * 0.8 }));
+    const snowNear = Array.from({ length: Math.round(20 * pal.snowFall) }, () => ({ x: rnd(), y: rnd(), v: 0.07 + rnd() * 0.06, r: 3 + rnd() * 6 }));
+    const steam = Array.from({ length: 26 }, () => ({ x: rnd(), y: rnd(), r: 0.5 + rnd(), v: 0.4 + rnd() * 0.6, ph: rnd() * TAU }));
+    const st = { startle: 0, wake: 0, dive: -1, flash: 0, ripples: [], beat: 0 };
+    const STEAM = sprite(pal.steam, 1), FLAKE = sprite('230,232,248', 0.9, 32);
+
+    return {
+      layers: { M },
+      goal() { st.startle = 1; st.wake = 3; },
+      win() { st.startle = 1; st.wake = 3; st.dive = 0; st.flash = 1; },
+      onBeat(b) { st.beat = b; if (b % 2 === 0) st.ripples.push({ x: spout.x - 16, y: bank + 18, a: 0 }); const m = monkeys[b % monkeys.length]; st.ripples.push({ x: X(m.x), y: H * m.y + m.s * 0.8, a: 0, wide: m.s }); },
+      advance(dt, t, s) {
+        for (const f of snowFar) { f.y += f.v * dt * (1 + pal.snowFall * 0.3); if (f.y > 1) f.y = -0.02; }
+        for (const f of snowNear) { f.y += f.v * dt * (1 + s.heat * 0.4 + pal.snowFall * 0.2); f.x -= dt * 0.01 * pal.snowFall; if (f.y > 1.05) { f.y = -0.05; f.x = rnd(); } }
+        for (const p of steam) { p.y += dt * 0.09 * p.v * (1 + s.heat * 1.4); if (p.y > 1) { p.y = 0; p.x = rnd(); } }
+        for (const gd of gondolas) gd.u = (gd.u + dt * 0.012 * (1 + s.heat)) % 1;
+        st.startle = Math.max(0, st.startle - dt * 1.2); st.wake = Math.max(0, st.wake - dt); st.flash = Math.max(0, st.flash - dt * 0.8);
+        if (st.dive >= 0) { st.dive += dt; if (st.dive > 3.2) st.dive = -1; }
+        for (const r of st.ripples) r.a += dt;
+        st.ripples = st.ripples.filter((r) => r.a < 1.6);
+      },
+      draw(g, t, s, ball, off) {
+        const ox = (d) => off(d);
+        const neon = clamp(0.6 + s.pulse * 0.35 + s.heat * 0.25 + st.flash * 0.6, 0, 1.4);
+        const lights = 0.55 + s.lights * 0.35;
+        const sxo = ox(0.06);
+        g.drawImage(sky, sxo, 0);
+        // Ski-run lights running down the slope on the beat
+        const phase = st.beat * 2 + Math.floor(((t * BPM) / 60) % 1 * 2);
+        run.forEach(([x, y], i) => { const on = (i - phase) % 6 === 0 ? 1 : 0.35; g.fillStyle = rgba('#ffd890', 0.9 * on); g.fillRect(sxo + x - 1, y - 1, 2.4, 2.4); if (on > 0.5) stamp(g, AMBER, sxo + x, y, 9 * pal.neonGlow, 0.5, true); });
+        // Pylon lights blinking, gondolas gliding with neon windows
+        pylons.forEach((px, i) => { const on = (st.beat + i) % 2 ? 1 : 0.2; g.fillStyle = rgba('#ff4040', on); g.fillRect(sxo + px - 1.5, cableY(px) - 9, 3, 3); stamp(g, NEON, sxo + px, cableY(px) - 8, 10, 0.5 * on, true); });
+        for (const gd of gondolas) {
+          const lx = -40 + gd.u * (LW + 80), x = sxo + lx, y = cableY(lx) + 2;
+          g.strokeStyle = '#0e0c20'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 10); g.stroke();
+          g.fillStyle = '#1c1a34'; g.beginPath(); g.roundRect(x - 10, y + 10, 20, 16, 4); g.fill();
+          g.fillStyle = gd.c ? '#3ff0ff' : '#ff6ac0'; g.globalAlpha = 0.85; g.fillRect(x - 7, y + 13, 6, 6); g.fillRect(x + 1, y + 13, 6, 6); g.globalAlpha = 1;
+          stamp(g, gd.c ? CYAN : NEON, x, y + 17, 18 * pal.neonGlow, 0.35 + s.pulse * 0.15, true);
+        }
+        g.drawImage(forest, ox(0.22), 0);
+        // The chalets' warm windows and the smoke from their chimneys
+        for (const c of chalets) {
+          stamp(g, AMBER, ox(0.22) + c.glow[0], c.glow[1], 26, 0.3 * lights, true);
+          for (let k = 0; k < 5; k++) { const p = ((t * 0.12 + k / 5) % 1); stamp(g, STEAM, ox(0.22) + c.x + Math.sin(t + k) * 3 + p * 14, c.y - p * 40, 4 + p * 10, 0.22 * (1 - p)); }
+        }
+        for (const f of snowFar) { g.fillStyle = rgba(pal.forestSnow, 0.6); g.fillRect(ox(0.22) + f.x * LW + Math.sin(t * 0.8 + f.x * 20) * 4, f.y * H, f.r, f.r); }
+        const b = ox(0.45);
+        g.drawImage(bankL, b, 0);
+        for (let i = 0; i < lit.length; i += 5) stamp(g, AMBER, b + lit[i][0], lit[i][1], 14, 0.18 * lights, true);
+        // The big neon sign: ONSEN ♨ in pink, オンセン in cyan
+        const sx = b + hx + hw / 2, sy = hy - (P ? 24 : 22);
+        const neonText = (text, x, y, size, color, glowImg, a) => {
+          g.save(); g.font = font(800, size); g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+          g.globalAlpha = 0.22 * Math.min(1, a); g.strokeStyle = color; g.lineWidth = size * 0.3; g.strokeText(text, x, y);
+          g.globalAlpha = 0.6 * Math.min(1, a); g.lineWidth = size * 0.1; g.strokeText(text, x, y);
+          g.globalAlpha = Math.min(1, a); g.fillStyle = mix(color, '#ffffff', 0.5); g.fillText(text, x, y);
+          g.restore();
+          stamp(g, glowImg, x, y, size * 2.6 * pal.neonGlow, 0.35 * a, true);
+        };
+        neonText('ONSEN ♨', sx, sy, P ? 26 : 30, '#ff4fa8', NEON, neon);
+        // The vertical sign on the corner, as Japanese streets hang them
+        const vx = b + hx + hw + 2, vy = hy + 18, cell = P ? 22 : 24;
+        g.fillStyle = '#120e24'; g.fillRect(vx - 2, vy - 4, cell + 4, cell * 4 + 8); g.fillStyle = '#2a2448'; g.fillRect(vx - 6, vy + 4, 4, 3); g.fillRect(vx - 6, vy + cell * 3, 4, 3);
+        ['オ', 'ン', 'セ', 'ン'].forEach((ch, k) => neonText(ch, vx + cell / 2, vy + cell * k + cell / 2, cell * 0.78, '#3ff0ff', CYAN, neon * (k === st.beat % 4 ? 1 : 0.8)));
+        // Bulbs round the entrance canopy, chasing on the beat
+        for (let k = 0; k < 9; k++) { const bxk = b + door.x - 12 + (k / 8) * (door.w + 24), on = (k + st.beat) % 3 === 0 ? 1 : 0.35; g.fillStyle = rgba('#ffe0a0', on); g.beginPath(); g.arc(bxk, bank - 32, 1.6, 0, TAU); g.fill(); if (on > 0.5) stamp(g, AMBER, bxk, bank - 32, 7, 0.6, true); }
+        // Reflections: the bank mirrored in wavering slices, and the lights' streaks
+        g.save(); g.beginPath(); g.rect(0, bank + 7, W, H - bank - 7); g.clip();
+        g.globalAlpha = 0.12;
+        const slices = 12, sh = (reflectH * 0.7) / slices;
+        for (let i = 0; i < slices; i++) { const sy2 = bank - (i + 1) * sh, dy = bank + 7 + i * sh * 0.9, wob = Math.sin(t * 1.4 + i * 0.8) * (1 + i * 0.35); g.drawImage(bankL, 0, sy2, LW, sh, b + wob, dy, LW, sh * 0.9); }
+        g.globalAlpha = 1;
+        const streak = (x, color, a, width) => { for (let y = bank + 10; y < H; y += 4) { const k = (y - bank) / (H - bank); const w = width * (0.6 + k) * (0.6 + 0.4 * Math.sin(y * 0.5 + t * 3)); g.fillStyle = rgba(color, a * (1 - k * 0.7)); g.fillRect(x - w / 2 + Math.sin(y * 0.3 + t * 2) * 3, y, w, 1.6); } };
+        streak(sx, '#ff4fa8', 0.45 * Math.min(1, neon), 60);
+        streak(b + hx + hw + 2 + (P ? 11 : 12), '#3ff0ff', 0.3 * Math.min(1, neon), 18);
+        streak(b + door.x + door.w / 2, '#ffc070', 0.3 * lights, 16);
+        g.restore();
+        for (const r of st.ripples) { const k = r.a / 1.6; g.strokeStyle = rgba(pal.snowLight, 0.35 * (1 - k)); g.lineWidth = 1; g.beginPath(); g.ellipse(b + r.x, r.y, (r.wide ? r.wide * 1.3 : 6) + k * 30, 2 + k * 6, 0, 0, TAU); g.stroke(); }
+        g.strokeStyle = rgba('#e0f0ff', 0.7); g.lineWidth = 2.4; g.setLineDash([6, 4]); g.lineDashOffset = -t * 60 * (1 + s.heat);
+        g.beginPath(); g.moveTo(b + spout.x - 4, spout.y); g.quadraticCurveTo(b + spout.x - 14, spout.y + 4, b + spout.x - 16, bank + 16); g.stroke(); g.setLineDash([]);
+        // Monkeys, painted pink from the sign's side
+        const look = (mx, my) => { const dx = ball[0] - mx, dy = ball[1] - my, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; };
+        monkeys.forEach((m, i) => {
+          const mx = ox(0.58) + X(m.x), wl = H * m.y + m.s * 0.85;
+          let my = H * m.y + Math.sin(t * 1.6 + i) * 1.2 + s.pulse * 1.2 - st.startle * m.s * 0.12;
+          if (m.diver && st.dive >= 0) my += clamp(st.dive / 0.35, 0, 1) * m.s * 2.4 - clamp((st.dive - 2.1) / 0.6, 0, 1) * m.s * 2.4;
+          const mood = m.mood === 'sleep' && st.wake > 0 ? 'calm' : m.mood;
+          g.save(); g.beginPath(); g.rect(0, 0, W, wl); g.clip();
+          if (m.baby) monkey(g, mx + m.s * 1.05, my - m.s * 0.35 + st.startle * m.s * 0.5, m.s * 0.46, { pal, look: look(mx + m.s, my), mood: 'calm', startle: st.startle * 0.6, snow: 0 });
+          monkey(g, mx, my, m.s, { pal, look: look(mx, my), mood, startle: mood === 'sleep' ? 0 : st.startle * 0.6, snow: m.snow, towel: m.towel });
+          // Arms: fur forearms from the shoulders to the water, hands at the end
+          const arm = (ax, ay, bx, by) => {
+            g.strokeStyle = pal.furDark; g.lineWidth = m.s * 0.42; g.lineCap = 'round'; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+            g.strokeStyle = pal.fur; g.lineWidth = m.s * 0.3; g.beginPath(); g.moveTo(ax, ay - m.s * 0.04); g.lineTo(bx, by - m.s * 0.04); g.stroke();
+            g.fillStyle = '#9a7078'; g.beginPath(); g.ellipse(bx, by, m.s * 0.17, m.s * 0.11, 0, 0, TAU); g.fill();
+          };
+          const sy0 = my + m.s * 0.75;
+          if (m.baby) { arm(mx + m.s * 0.9, sy0, mx + m.s * 1.25, my - m.s * 0.05 + st.startle * m.s * 0.4); arm(mx - m.s * 0.9, sy0, mx - m.s * 0.55, wl - m.s * 0.1); }
+          else if (m.lean) { arm(mx + m.s * 0.9, sy0, mx + m.s * 1.7, sy0 - m.s * 0.25); arm(mx + m.s * 0.6, sy0 + m.s * 0.1, mx + m.s * 1.45, sy0 - m.s * 0.05); }
+          else if (!m.diver || st.dive < 0) { arm(mx - m.s * 0.85, sy0, mx - m.s * 0.3, wl - m.s * 0.12); arm(mx + m.s * 0.85, sy0, mx + m.s * 0.3, wl - m.s * 0.12); }
+          g.restore();
+          g.strokeStyle = rgba(pal.snowLight, 0.3); g.lineWidth = 1.2; g.beginPath(); g.ellipse(mx, wl, m.s * 1.55, m.s * 0.2, 0, 0, TAU); g.stroke();
+          stamp(g, NEON, mx - m.s * 0.6, my - m.s * 0.3, m.s * 1.4, 0.08 * neon * pal.neonGlow, true);
+          if (mood === 'sleep') { const zt = (t * 0.6) % 1; g.fillStyle = rgba('#e8f0ff', 0.75 * (1 - zt)); g.font = font(700, 10 + zt * 6); g.fillText('z', mx + m.s * 0.8 + zt * 8, my - m.s * 0.8 - zt * 20); }
+        });
+        if (st.dive >= 0 && st.dive < 1.2) { const m = monkeys.find((k) => k.diver); const mx = ox(0.58) + X(m.x), wl = H * m.y + m.s * 0.85; g.fillStyle = rgba(pal.snowLight, 1 - st.dive / 1.2); for (let k = 0; k < 18; k++) { const a = Math.PI + (k / 17) * Math.PI, r = st.dive * 70; g.beginPath(); g.arc(mx + Math.cos(a) * r, wl + Math.sin(a) * r * 0.7 + st.dive * st.dive * 50, 2, 0, TAU); g.fill(); } }
+        // Steam, tinted by the neon near the sign
+        for (const p of steam) {
+          const x = ox(0.55) + p.x * LW + Math.sin(t * 0.5 + p.ph) * 14, y = H + 20 - p.y * (H - bank + H * 0.2);
+          const f = x / W, centre = 1 - 0.85 * Math.exp(-(((f - 0.5) / 0.17) ** 2));
+          const a = (0.09 + s.heat * 0.08) * Math.sin(p.y * Math.PI) * centre;
+          stamp(g, STEAM, x, y, (40 + p.r * 46) * (P ? 0.85 : 1), a);
+          stamp(g, NEON, x, y, 40 + p.r * 30, a * Math.exp(-(((x - sx) / 160) ** 2)) * neon * 0.8, true);
+        }
+        // Front plane: rocks, the boombox thumping to the music, the vending machine's light
+        const fo = ox(1.1);
+        g.drawImage(front, fo, 0);
+        const kick = s.pulse;
+        for (const sd of [-1, 1]) { const cx = fo + boom.x + sd * 22, cy = boom.y - 7; g.fillStyle = '#3a3a46'; g.beginPath(); g.arc(cx, cy, 6 + kick * 1.8, 0, TAU); g.fill(); g.fillStyle = '#0c0c12'; g.beginPath(); g.arc(cx, cy, 2.2, 0, TAU); g.fill(); }
+        for (let k = 0; k < 5; k++) { const lv = 0.3 + 0.7 * Math.abs(Math.sin(t * 3 + k * 1.3)) * (0.5 + kick * 0.5); g.fillStyle = k < 3 ? '#3aff8a' : '#ff4a4a'; g.fillRect(fo + boom.x - 8 + k * 3.4, boom.y + 1, 2.4, -lv * 6); }
+        stamp(g, CYAN, fo + vend.x + vend.w / 2, vend.y + vend.h * 0.35, 70, 0.22 + s.lights * 0.1, true);
+        for (const f of snowNear) stamp(g, FLAKE, ox(1.3) + f.x * LW + Math.sin(t * 1.1 + f.x * 9) * 10, f.y * H, f.r, 0.5);
+        if (pal.snowFall > 2) { g.fillStyle = rgba(pal.fog, 0.12); g.fillRect(0, 0, W, H); }
+        if (st.flash > 0) { g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = rgba('#ff4fa8', st.flash * 0.12); g.fillRect(0, 0, W, H); g.restore(); }
+        if (s.heat > 0.01) { g.save(); g.globalCompositeOperation = 'soft-light'; g.globalAlpha = s.heat * 0.3; g.fillStyle = '#ff6a8a'; g.fillRect(0, 0, W, H); g.restore(); }
+      },
+    };
+  }
+
+  // ——— game finish and court ———
+  const finishCache = new Map();
+  function finish(o, w, h, P) {
+    const key = w + 'x' + h;
+    if (!finishCache.has(key)) {
+      const [c, x] = mk(w, h);
+      x.fillStyle = 'rgba(0,0,0,0.07)'; if (P) for (let i = 0; i < w; i += 3) x.fillRect(i, 0, 1, h); else for (let i = 0; i < h; i += 3) x.fillRect(0, i, w, 1);
+      const v = x.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.hypot(w, h) * 0.6); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.28)'); x.fillStyle = v; x.fillRect(0, 0, w, h);
+      finishCache.set(key, c);
+    }
+    o.drawImage(finishCache.get(key), 0, 0);
+  }
+  function drawCourt(ctx, w, h, t, portrait) {
+    ctx.fillStyle = 'rgba(4,8,18,0.22)'; ctx.fillRect(0, 0, w, h);
+    const S = portrait ? w : h, L = portrait ? h : w;
+    const [bx, by] = ballAt(t, w, h, portrait);
+    ctx.save(); ctx.setLineDash([8, 10]); ctx.strokeStyle = 'rgba(200,220,255,0.35)'; ctx.lineWidth = 2; ctx.beginPath();
+    if (portrait) { ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); } else { ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); }
+    ctx.stroke(); ctx.restore();
+    const across = portrait ? bx : by;
+    const pad = (along, color, aim) => { const len = 80, thick = 10, c = clamp(aim, len / 2, S - len / 2); const [x, y] = portrait ? [c, along] : [along, c]; ctx.fillStyle = color; ctx.globalAlpha = 0.25; if (portrait) ctx.fillRect(x - len / 2 - 4, y - 4, len + 8, thick + 8); else ctx.fillRect(x - 4, y - len / 2 - 4, thick + 8, len + 8); ctx.globalAlpha = 1; if (portrait) ctx.fillRect(x - len / 2, y, len, thick); else ctx.fillRect(x, y - len / 2, thick, len); };
+    pad(16, '#19f0ff', across * 0.9 + S * 0.05); pad(L - 26, '#ff2bd6', across * 0.85 + S * 0.08);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(bx, by, 11, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(bx, by, 7, 0, TAU); ctx.fill();
+    if (!portrait) { ctx.font = font(700, 34); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(25,240,255,0.85)'; ctx.fillText('3', w / 2 - 50, 48); ctx.fillStyle = 'rgba(255,43,214,0.85)'; ctx.fillText('2', w / 2 + 50, 48); }
+  }
+
+  class View {
+    constructor(pal, W, H, P, seed) { this.W = W; this.H = H; this.P = P; this.scene = scene(W, H, P, pal, seed); this.lastBeat = -1; }
+    advance(dt, t, s) { this.scene.advance(dt, t, s); const beat = Math.floor(t * BPM / 60); if (ui.beat && beat !== this.lastBeat) { this.lastBeat = beat; this.scene.onBeat(beat); } }
+    draw(out, t, s, ball) {
+      const g = out.getContext('2d'), { M } = this.scene.layers;
+      // The view drifts slowly and leans toward the ball; nearer planes move more
+      const lean = ui.state === 'menu' ? 0 : ((this.P ? ball[1] / this.H : ball[0] / this.W) - 0.5) * 2;
+      const cam = Math.sin(t * 0.11) * 12 + lean * 14;
+      const off = (depth) => -M + cam * depth;
+      g.fillStyle = '#000'; g.fillRect(0, 0, this.W, this.H);
+      this.scene.draw(g, t, s, ball, off);
+      finish(g, this.W, this.H, this.P);
+    }
+  }
+
+  // ——— the page ———
+  const host = document.getElementById('cards');
+  const cards = PRESETS.filter((p) => p.id === 'B').map((p, i) => {
+    const card = document.createElement('article'); card.className = 'card';
+    card.innerHTML = `<h2><span class="tag">${p.id}</span>${p.title}</h2><p>${p.text}</p>
+      <canvas class="main" width="800" height="500" aria-label="Концепт ${p.id}: ${p.title}"></canvas>
+      <div class="previews">
+        <figure><canvas class="portrait" width="500" height="800" aria-label="Портрет ${p.id}"></canvas><figcaption>телефон, портрет</figcaption></figure>
+        <figure><canvas class="portal" width="400" height="250" aria-label="Миниатюра ${p.id}"></canvas><figcaption>карточка портала</figcaption></figure>
+      </div>`;
+    host.appendChild(card);
+    const [main, portrait, portal] = card.querySelectorAll('canvas');
+    return { el: card, main, portrait, portalCtx: portal.getContext('2d'), land: new View(p, 800, 500, false, 11 + i), port: new View(p, 500, 800, true, 21 + i), visible: true };
+  });
+  const io = new IntersectionObserver((es) => { for (const e of es) { const c = cards.find((k) => k.el === e.target); if (c) c.visible = e.isIntersecting; } });
+  cards.forEach((c) => io.observe(c.el));
+
+  const seg = document.getElementById('state');
+  const redraw = () => { if (!ui.motion) frame(performance.now()); };
+  seg.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; ui.state = b.dataset.state; seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); document.getElementById('court').checked = ui.court = STATES[ui.state].court; redraw(); });
+  document.getElementById('court').addEventListener('change', (e) => { ui.court = e.target.checked; redraw(); });
+  document.getElementById('beat').addEventListener('change', (e) => { ui.beat = e.target.checked; });
+  const startMotion = () => { if (!ui.motion) { ui.motion = true; document.getElementById('motion').checked = true; last = performance.now(); requestAnimationFrame(loop); } };
+  document.getElementById('motion').addEventListener('change', (e) => { ui.motion = e.target.checked; if (ui.motion) { last = performance.now(); requestAnimationFrame(loop); } });
+  document.getElementById('goal').addEventListener('click', () => { cards.forEach((c) => { c.land.scene.goal(); c.port.scene.goal(); }); startMotion(); });
+  document.getElementById('win').addEventListener('click', () => { cards.forEach((c) => { c.land.scene.win(); c.port.scene.win(); }); startMotion(); });
+
+  let heat = 0, lights = STATES.play.lights, last = performance.now(), clock = 3;
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (ui.motion) clock += dt;
+    const target = STATES[ui.state];
+    if (ui.motion) { heat += (target.heat - heat) * Math.min(1, dt * 1.5); lights += (target.lights - lights) * Math.min(1, dt * 2); } else { heat = target.heat; lights = target.lights; }
+    const pulse = ui.beat ? Math.pow(1 - ((clock * BPM / 60) % 1), 3) : 0;
+    const s = { heat, lights, pulse };
+    for (const c of cards) {
+      const bl = ballAt(clock, 800, 500, false), bp = ballAt(clock, 500, 800, true);
+      if (ui.motion) { c.land.advance(dt, clock, s); c.port.advance(dt, clock, s); }
+      if (!c.visible) continue;
+      c.land.draw(c.main, clock, s, bl); if (ui.court) drawCourt(c.main.getContext('2d'), 800, 500, clock, false);
+      c.port.draw(c.portrait, clock, s, bp); if (ui.court) drawCourt(c.portrait.getContext('2d'), 500, 800, clock, true);
+      c.portalCtx.drawImage(c.main, 0, 0, 400, 250);
+    }
+  }
+  function loop(now) { frame(now); if (ui.motion) requestAnimationFrame(loop); }
+  document.fonts.ready.then(() => { frame(performance.now()); if (ui.motion) requestAnimationFrame(loop); });
+})();
+</script>
